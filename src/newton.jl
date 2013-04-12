@@ -20,7 +20,7 @@ end
 # Newton-Raphson method (quadratic convergence)
 function newton(f::Function, fp::Function, x;
                 delta_tolerance=eps(1.0),
-                residual_tolerance=eps(1.0),
+                residual_tolerance=0.0,
                 max_iter=100)
     for i=1:max_iter
         fx = f(x)
@@ -43,7 +43,7 @@ end
 # Halley's method (cubic convergence)
 function halley(f::Function, fp::Function, fpp::Function, x;
                 delta_tolerance=eps(1.0),
-                residual_tolerance=eps(1.0),
+                residual_tolerance=0.0,
                 max_iter=100)
     for i=1:max_iter
         fx = f(x)
