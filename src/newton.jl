@@ -21,7 +21,8 @@ end
 function newton(f::Function, fp::Function, x;
                 delta_tolerance=eps(1.0),
                 residual_tolerance=0.0,
-                max_iter=100)
+                max_iter=100
+                )
     for i=1:max_iter
         fx = f(x)
         if check_residual(fx, residual_tolerance)
@@ -39,6 +40,11 @@ function newton(f::Function, fp::Function, x;
     end
     error("max_iter reached without convergence")
 end
+
+function newton(f::Function, x::Real; kwargs...)
+    newton(f, D(f), x; kwargs...)
+end
+
 
 # Halley's method (cubic convergence)
 function halley(f::Function, fp::Function, fpp::Function, x;
@@ -68,3 +74,6 @@ function halley(f::Function, fp::Function, fpp::Function, x;
     error("max_iter reached without convergence")
 end
 
+function halley(f::Function, x::Real; kwargs...)
+    halley(f, D(f), D2(f), x; kwargs...)
+end
