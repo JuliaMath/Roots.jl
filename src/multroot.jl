@@ -123,7 +123,7 @@ function pejroot{T<:Int}(p::Poly, z0::Vector, l::Vector{T};
         zk=zk1
     end
 
-    if !cvg && ctr >= maxsteps
+    if !cvg
         println("Failed to converge in $maxsteps steps. Returning last guess.")
     end
     zk1
