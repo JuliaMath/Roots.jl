@@ -30,6 +30,7 @@ Base.start(p::Poly) = 1
 Base.next(p::Poly, i) = (p[i], i + 1)
 Base.done(p::Poly, i) = i > length(p)
 Base.convert(::Type{Poly{Float64}},p=Poly{Int64}) = Poly(float(p.a))
+Base.convert(::Type{Function}, p::Poly) = x -> polyval(p,x)
 *{T, S}(A::Array{T,2}, p::Poly{S}) = Poly(A * p.a)
 
 
@@ -360,6 +361,11 @@ function find_fuzzy(zs)
 end
 
 ## Main interface to finding roots of polynomials with multiplicities
+##
+## The `multroot` function returns the roots and their multiplicities
+## for `Poly` objects. It performs better than `roots` if the
+## polynomial has multiplicities. 
+##
 ## Call as
 ##   julia> p = Poly([1, -7, 17, -17, 6])  # (x-1)^3 * (x-2) * (x-3)
 ##   julia> z, l = multroot(p) ## z=[0.9999999999999994,2.0000000000000058,2.9999999999999947], l=[2,1,1]

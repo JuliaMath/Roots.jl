@@ -12,8 +12,9 @@
 #
 # output:
 #     an estimate of the zero of f
-function fzero(f::Function, a, b;
-               tol=0.0, max_iter=100)
+function find_zero(f::Function, a, b;
+                   tol=0.0, 
+                   max_iter=100)
     if a >= b || sign(f(a))*sign(f(b)) >= 0
         error("on input a < b and f(a)f(b) < 0 must both hold")
     end

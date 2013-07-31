@@ -38,15 +38,7 @@
 ## e.g., find minimum of f(x) = x^2
 ## julia> thukral(D(x -> x^2), 1)
 
-function thukral(f::Function, xo::Real; 
-                 tol::Real=1e-14, max_iter::Int=20,
-                 verbose::Bool=false,    # return ctr
-                 i::Int=1,      # in {1, 2, 3, ...}
-                 j::Int=1, k::Int=1, l::Int=1 # in {1,2}
-                 )
-
-    function update(f::Function, xn::Real, tol::Real)
-        ## i,j,k,l = 1,1 ,1 ,1 ## in {1,2}
+function thukral_update(f::Function, xn::Real, tol::Real, i,j,k,l)
         
         beta = 1/i
         fxn = f(xn)
@@ -73,19 +65,67 @@ function thukral(f::Function, xo::Real;
 
         zn - omega[k]*psi[l]*((fzn - fyn)/(zn-yn) - (fyn - fxn)/(yn - xn) + (fzn - fxn)/(zn-xn))^(-1)*fzn
     end
-    update(f::Function, x::Ad, tol::Real) = update(f, x.val, tol)
+
+
+function thukral(f::Function, xo::Real; 
+                 tol::Real     = 100 * eps(1.0), 
+                 max_iter::Int = 20,
+                 i::Int=1,                            # in {1, 2, 3, ...}
+                 j::Int=1, k::Int=1, l::Int=1.        # in {1, 2}
+                 verbose::Bool=false    # return ctr
+                 )
+
+    update(f::Function, x::Real, tol::Real) = thukral_update(f, x, tol, i,j,k,l)
+    update(f::Function, x::Ad, tol::Real) = thukral_update(f, x.val, tol, i,j,k,l)
 
     xn = xo
-    ctr = 1
+    cvg = false
 
-    while (abs(f(xn)) > tol) & (ctr < max_iter)
+    for i in 1:max_iter
+        if (abs(f(xn))) <= tol
+            cvg = true
+            break
+        end
+        
         xn = update(f, xn, tol)
-        ctr += 1
+        verbose ? println("xn = ", xn, " step = ", i) : nothing
     end
 
-    if ctr == max_iter
-        throw("Method did not converge in $max_iter")
-    else
-        verbose ? (xn, ctr) : xn
-    end
+    cvg || error("$max_iter steps taken without convergence")
+    xn
 end
+
+## bracket answer, if algorithm leaves bracket, then switch to bracketing algorithm
+function thukral_bracket(f::Function, xo::Real, bracket::Vector;
+                         tol::Real     = 100.0 * eps(1.0),
+                         max_iter::Int = 20,
+                         i::Int=1,                         # in {1, 2, 3, ...}
+                         j::Int=1, k::Int=1, l::Int=1,     # in {1,2}
+                         verbose::Bool=false
+                         )
+    
+    update(f::Function, x::Real, tol::Real) = thukral_update(f, x, tol, i,j,k,l)
+    update(f::Function, x::Ad, tol::Real) = thukral_update(f, x.val, tol, i,j,k,l)
+
+    cvg = false
+    xn = xo
+
+    for i in 1:max_iter
+        xn = update(f, xn, tol)
+        
+        if isnan(xn) || isinf(xn) || xn < bracket[1] || xn > bracket[2]
+            return find_zero(f, bracket[1], bracket[2])
+        end
+
+        if abs(f(xn)) <= tol
+            cvg=true
+            break
+        end
+
+        verbose ? println("xn=", x, " step=", i) : nothing
+    end
+
+    cvg || throw("Method did not converge in $max_iter")
+    
+    verbose ? (xn, ctr) : xn
+end  
