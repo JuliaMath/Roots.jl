@@ -1,6 +1,6 @@
 # Root finding functions for Julia
 
-This package contains simple routines for finding the roots of
+This package contains simple routines for finding roots of
 continuous scalar functions of a single real variable. 
 
 
@@ -8,21 +8,21 @@ The following functions are provided:
 
 * `find_zero`: A robust and pretty efficient bracketing method guaranteed
   to find a root in the interval [a,b] provided the interval brackets a
-  root.
+  root due to Alefeld, Potra, and Shi.
 
 * `newton`: Newton's method for iteratively finding a root using f and
-its derivative f'. If the derivative is unknown, one is found for
-simple functions through forward automatic differentiation.
+  its derivative f'. If the derivative is unknown, one is found for
+  simple functions through forward automatic differentiation.
 
 * `halley`: Halley's third-order improvement to Newton's method using f,
   f', and f''. If the derivatives are unknown, they found for simple
   functions through forward automatic differentiation.
 
 * `thukral`: A derivative free, eighth-order iterative method due to
-  	     Thukral ["New Eighth-Order Derivative-Free Methods for
-  	     Solving Nonlinear Equations", Intl. Jrnl. of
-  	     Mathematics and Mathematical Sciences
-  	     (2012)](http://www.hindawi.com/journals/ijmms/2012/493456/).
+  Thukral ["New Eighth-Order Derivative-Free Methods for
+  Solving Nonlinear Equations", Intl. Jrnl. of
+  Mathematics and Mathematical Sciences
+  (2012)](http://www.hindawi.com/journals/ijmms/2012/493456/).
 
 * `multroot`: An improvement on the `roots` function of the
   `Polynomial` package when multiple roots are present. Follows
@@ -174,7 +174,7 @@ using Polynomial
 
 ## (x-1)^2*(x-2)^2*(x-3)^4
 p = Poly([1,-1])^2 * Poly([1, -2])^2 * Poly([1, -3])^4
-roots(p) ## not terrible, but multroot is better
+roots(p) ## not terrible, but multroot does better
 z,l = multroot(p) ## ([1.0000000000000004,1.999999999999997,3.0000000000000013],[2,2,4])
 ```
 	

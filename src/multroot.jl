@@ -1,13 +1,15 @@
 ## Polynomial root finder for polynomials with multiple roots
+##
 ## Based on "Computing multiple roots of inexact polynomials"
 ## http://www.neiu.edu/~zzeng/mathcomp/zroot.pdf
 ## Author: Zhonggang Zeng 
 ## Journal: Math. Comp. 74 (2005), 869-903 
 ##
-## Zeng has a MATLAB package `multroot`, from which this name is derived
+## Zeng has a MATLAB package `multroot`, from which this name is derived.
 ## Basic idea is
-## 1) for polynomial p we do gcd decomposition p = u * v; p' = u * w. Then roots(v) are the roots.
-## 2) can repeat with u to get multiplicities
+## 1) for polynomial p we do gcd decomposition p = u * v; p' = u * w. Then roots(v) are the roots without multiplicities.
+## 2) can repeat with u to get multiplicities.
+##
 ## This is from Gauss, as explained in paper. Zeng shows how to get u,v,w when the polynomials
 ## are inexact due to floating point approximations or even model error. This is done in his 
 ## algorithm II.
@@ -132,6 +134,8 @@ end
 
 
 ## GCD code
+
+## Various matrices that are needed:
 
 ## Cauchy matric C_k(p), defn 2.1
 function cauchy_matrix(p::Poly, k::Integer)
@@ -436,4 +440,4 @@ function multroot(p::Poly;
 end        
   
 ## can pass in vector too
-multroot(p::Vector; kwargs...) = multroot(Poly(p); kwargs...)
+multroot{T <: Real}(p::Vector{T}; kwargs...) = multroot(Poly(p); kwargs...)

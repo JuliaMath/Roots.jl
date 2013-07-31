@@ -1,16 +1,16 @@
 ##module AD
 
 ## Forward automatic differentiation code
-## Basic use is for f:R -> R, though 
-## can also handle f:R -> R^n
+## Basic use is for f:R -> R
 ##
 ## Unlike symbolic differentiation, this exports an operator D which
 ## maps a function to a function (not an operator that acts on expressions).
 ## f(x) = exp(-x)*sin(x)
 ## fp(x) = D(f)(x) ...
-##
+## fpp(x) = D(f, 2)(x) ...
 
 importall Base
+
 export D, D2
 
 immutable Ad
@@ -90,41 +90,41 @@ D2(f::Function) = D(f, 2)
 
 
 ## math ops
-+(x::Ad, y::Ad) = Ad(x.val + y.val, x.der + y.der)
++(x::Ad, y::Ad)           = Ad(x.val + y.val, x.der + y.der)
 +{T <: Real}(x::Ad, y::T) = +(promote(x,y)...)
 +{T <: Real}(x::T, y::Ad) = +(promote(x,y)...)
 
-.+(x::Array{Ad}, y::Array{Ad}) = Ad(x.val .+ y.val, x.der .+ y.der)
+.+(x::Array{Ad}, y::Array{Ad})           = Ad(x.val .+ y.val, x.der .+ y.der)
 .+{T <: Real}(x::Array{Ad}, y::Array{T}) = .+(promote(x,y)...)
 .+{T <: Real}(x::Array{T}, y::Array{Ad}) = .+(promote(x,y)...)
 
 
--(x::Ad)        = Ad(-x.val, -x.der)
+-(x::Ad) = Ad(-x.val, -x.der)
 
 
--(x::Ad, y::Ad) = Ad(x.val - y.val, x.der - y.der)
+-(x::Ad, y::Ad)           = Ad(x.val - y.val, x.der - y.der)
 -{T <: Real}(x::Ad, y::T) = -(promote(x,y)...)
 -{T <: Real}(x::T, y::Ad) = -(promote(x,y)...)
 
-.-(x::Array{Ad}, y::Array{Ad}) = Ad(x.val .- y.val, x.der .- y.der)
+.-(x::Array{Ad}, y::Array{Ad})           = Ad(x.val .- y.val, x.der .- y.der)
 .-{T <: Real}(x::Array{Ad}, y::Array{T}) = .-(promote(x,y)...)
 .-{T <: Real}(x::Array{T}, y::Array{Ad}) = .-(promote(x,y)...)
 
 
-*(x::Ad, y::Ad) = Ad(x.val * y.val, x.val * y.der + x.der * y.val)
+*(x::Ad, y::Ad)           = Ad(x.val * y.val, x.val * y.der + x.der * y.val)
 *{T <: Real}(x::Ad, y::T) = *(promote(x,y)...)
 *{T <: Real}(x::T, y::Ad) = *(promote(x,y)...)
 
-.*(x::Array{Ad}, y::Array{Ad}) = Ad(x.val .* y.val, x.val .* y.der .+ x.der .* y.val)
+.*(x::Array{Ad}, y::Array{Ad})           = Ad(x.val .* y.val, x.val .* y.der .+ x.der .* y.val)
 .*{T <: Real}(x::Array{Ad}, y::Array{T}) = .*(promote(x,y)...)
 .*{T <: Real}(x::Array{T}, y::Array{Ad}) = .*(promote(x,y)...)
 
 
-/(x::Ad, y::Ad) = Ad(x.val / y.val, (x.der * y.val - x.val * y.der)/(y.val^2))
+/(x::Ad, y::Ad)           = Ad(x.val / y.val, (x.der * y.val - x.val * y.der)/(y.val^2))
 /{T <: Real}(x::Ad, y::T) = /(promote(x,y)...)
 /{T <: Real}(x::T, y::Ad) = /(promote(x,y)...)
 
-./(x::Array{Ad}, y::Array{Ad}) = Ad(x.val ./ y.val, (x.der .* y.val .- x.val .* y.der)./(y.val.^2))
+./(x::Array{Ad}, y::Array{Ad})           = Ad(x.val ./ y.val, (x.der .* y.val .- x.val .* y.der)./(y.val.^2))
 ./{T <: Real}(x::Array{Ad}, y::Array{T}) = ./(promote(x,y)...)
 ./{T <: Real}(x::Array{T}, y::Array{Ad}) = ./(promote(x,y)...)
 
@@ -140,18 +140,18 @@ function ^(x::Ad, y::Integer)
     end
 end
 
-^(x::Ad, y::Ad) = exp(y * log(x))
+^(x::Ad, y::Ad)   = exp(y * log(x))
 ^(x::Ad, y::Real) = Ad(x.val ^ y, y * (x.val) ^ (y-1) * x.der)
 ^(x::Real, y::Ad) = exp(y * log(x))
 
 .^(x::Ad, y::Real) = Ad(x.val .^ y, y .* (x.val) .^ (y.-1) .* x.der)
-.^(x::Ad, y::Ad) = exp(y .* log(x))
+.^(x::Ad, y::Ad)   = exp(y .* log(x))
 .^(x::Real, y::Ad) = exp(y .* log(x))
 
 ## comparison
 isless(a::Ad, y::Real) = isless(a.val, y)
 isless(x::Real, b::Ad) = isless(x, b.val)
-isless(a::Ad, b::Ad) = isless(a.val, b.val)
+isless(a::Ad, b::Ad)   = isless(a.val, b.val)
 
 for k in (:<, :<=, :>=, :>, :(==))
     @eval begin
@@ -239,9 +239,9 @@ for (e, ex) in Calculus_derivative_rules
 
     @eval begin
         ($e)(x::Ad) = Ad($(e)(x.val), 
-            begin
-              tmp = @eval((x, xp) -> ($ex))
-              tmp(x.val, x.der)
-            end)
+        begin
+            tmp = @eval((x, xp) -> ($ex))
+            tmp(x.val, x.der)
+        end)
     end
 end

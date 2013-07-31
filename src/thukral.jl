@@ -71,7 +71,7 @@ function thukral(f::Function, xo::Real;
                  tol::Real     = 100 * eps(1.0), 
                  max_iter::Int = 20,
                  i::Int=1,                            # in {1, 2, 3, ...}
-                 j::Int=1, k::Int=1, l::Int=1.        # in {1, 2}
+                 j::Int=1, k::Int=1, l::Int=1,        # in {1, 2}
                  verbose::Bool=false    # return ctr
                  )
 
