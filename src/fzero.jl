@@ -14,7 +14,9 @@
 #     an estimate of the zero of f
 function find_zero(f::Function, a, b;
                    tol=0.0, 
-                   max_iter=100)
+                   max_iter=100,
+                   verbose::Bool=false
+                   )
     if a >= b || sign(f(a))*sign(f(b)) >= 0
         error("on input a < b and f(a)f(b) < 0 must both hold")
     end
@@ -61,6 +63,7 @@ function find_zero(f::Function, a, b;
                 a, b, d = bracket(f, ah, bh, ah + (bh - ah)/2,
                                   tol)
             end
+            if verbose println((a,n)) end
         end
     catch ex
         if isa(ex, StateConverged)

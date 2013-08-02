@@ -45,7 +45,7 @@ function newton(f::Function, fp::Function, x;
             cvg = true
             break
         end
-        verbose ? println("xn=", x, " step=", i) : nothing
+        verbose && println("xn=$x, f(xn) = $(f(x)), step=$i")
     end
     cvg || error("$max_iter steps taken without convergence")
     
@@ -83,7 +83,7 @@ function halley(f::Function, fp::Function, fpp::Function, x;
         if check_delta(del, delta)
             cvg = true
         end
-        verbose ? println("xn=", x, " step=", i) : nothing
+        verbose && println("xn=$x, f(xn) = $(f(x)), step=$i")
     end
     cvg || throw("$max_iter steps taken without convergence")
     

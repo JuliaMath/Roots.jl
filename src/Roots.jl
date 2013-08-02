@@ -7,6 +7,14 @@ export fzero,
        multroot,
        D, D2
 
+
+## load in files
+include("fzero.jl")
+include("adiff.jl")
+include("newton.jl")
+include("thukral.jl")
+include("multroot.jl")
+
 ## Main interface
 ##
 ## Dispatch handles many cases with most rapidly converging algorithm
@@ -34,18 +42,13 @@ newton(p::Poly, x0::Real; kwargs...) = newton(convert(Function, p), convert(Func
 fzero(f::Function, x0::Real; kwargs...) = thukral(f, x0; kwargs...)
 fzero{T <: Real}(f::Function, bracket::Vector{T}; kwargs...) = find_zero(f, bracket[1], bracket[2]; kwargs...)
 fzero{T <: Real}(f::Function, x0::Real, bracket::Vector{T}; kwargs...) = thukral_bracket(f, x0, bracket; kwargs...)
+## use newton if two functions passed
+fzer0(f::Function, fp::Function, x0::Real; kwargs...) = newton(f, fp, x0; kwargs...)
 
 
 newton(f::Function, x::Real; kwargs...) =  newton(f, D(f), x; kwargs...)
 halley(f::Function, x::Real; kwargs...) = halley(f, D(f), D2(f), x; kwargs...)
 
-
-## load in files
-include("fzero.jl")
-include("adiff.jl")
-include("newton.jl")
-include("thukral.jl")
-include("multroot.jl")
 
 end
 
