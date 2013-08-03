@@ -102,19 +102,18 @@ function thukral_update8(f::Function, x0::Real, tol::Real;
     yn = xn - inc
     fyn = f(yn)
     
-    phi = j == 1 ? 1.0 /(1 - fyn/fwn) :  (1 + fyn/fwn)
+    phi = j == 1 ? 1.0 /(1.0 - fyn/fwn) :  (1.0 + fyn/fwn)
+
     inc = phi* fyn / secant(fxn, fyn, xn, yn)
-    abs(inc) <= tol && return(wn)
+    abs(inc) <= tol && return(yn)
 
     zn = yn - inc
     fzn = f(zn)
-    
+
     omega = k == 1 ?  1.0 / (1- fzn/fwn) : 1 + fzn/fwn  + fzn*fzn/fwn/fwn
     psi = (l == 1) ? 1 - 2*fyn*fyn*fyn/(fwn*fwn*fxn) : 1.0 / (1 + 2*fyn*fyn*fyn/(fwn*fwn*fxn))
+
     inc = omega * psi * fzn / (secant(fzn, fyn, zn, yn) - secant(fyn, fxn, yn, xn) + secant(fzn, fxn, zn, xn)) 
-
-    println("xn=$xn, wn=$wn, inc=$(wn-xn), yn=$yn, inc=$(yn-wn), zn=$zn, inc=$inc")
-
 
     zn - inc
 end
@@ -158,7 +157,7 @@ end
 
 ## Main interface
 ## 
-## We have 5, 8 and 16 order methods. Empirically it seems 8 does the best
+## We have 5, 8 and 16 order methods. Empirically it seems 16 converges sometimes when 8 does not, though 8 is a bit faster.
 ## 
 ## some tests. (See also http://ir.igsnrr.ac.cn/bitstream/311030/8840/1/%E4%BE%AF%E9%BA%9F%E7%A7%91(SCI)2.pdf)
 ## ------
@@ -188,7 +187,7 @@ function thukral(f::Function, x0::Real;
                  delta::Real = 4 * eps(1.0),
                  max_iter::Int = 100,
                  verbose::Bool=false,
-                 order::Int=8, # 8 or 16
+                 order::Int=16, # 5, 8 or 16
                  kwargs...      # pass to thukral_update 8, these being beta,j,k,l
                  )
 
@@ -228,7 +227,7 @@ function thukral_bracket(f::Function, x0::Real, bracket::Vector;
                          tol::Real     = 10.0 * eps(1.0),
                          max_iter::Int = 100,
                          verbose::Bool=false,
-                         order::Int=8,
+                         order::Int=16,
                          kwargs...
                          )
     
