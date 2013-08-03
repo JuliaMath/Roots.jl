@@ -7,7 +7,7 @@ function secant(fa::Ad, fb, a, b)
     fa, fb, a, b = promote(fa, fb, a, b)
     secant(fa, fb, a, b)
 end
-approx_deriv(f::Function, fx::Real, x::Real) = f(x + fx)/fx
+approx_deriv(f::Function, fx::Real, x::Real) = (f(x + fx) - fx)/fx
 function secant2(f, fz, fx, z, x) 
     (approx_deriv(f, fx, x) - secant(fz, fx, z, x))/(x-z)
 end
@@ -130,7 +130,7 @@ function LiMuHou_update(f::Function, xn::Real, delta::Real; beta::Real=1.0)
 
     ## this is poor if fxn >> 0; we use a hybrid approach with
     ## a step based on f/f' with f' estimated by central difference if fxn is to big
-    if abs(fxn) < 1e-2 * beta
+    if abs(fxn) < 1e-2 
         ## regularly scheduled program
         inc = fxn / gxn
     else
@@ -139,14 +139,12 @@ function LiMuHou_update(f::Function, xn::Real, delta::Real; beta::Real=1.0)
         fpxn = (f(xn+h) - f(xn-h)) / 2h
         inc = fxn/fpxn
     end
-    abs(inc) <= delta && return(xn)
     yn = xn - inc
-    
 
     fyn = f(yn)
     inc = fyn / gxn
-    abs(inc) <= delta && return(yn)
     zn = yn - inc
+    abs(inc) <= delta && return(zn)
 
     fzn = f(zn)
     inc = fzn / F(f, fxn, fyn, fzn, xn, yn, zn)
