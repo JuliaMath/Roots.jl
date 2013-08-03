@@ -63,7 +63,8 @@ function find_zero(f::Function, a, b;
                 a, b, d = bracket(f, ah, bh, ah + (bh - ah)/2,
                                   tol)
             end
-            if verbose println((a,n)) end
+
+            verbose && println("a=$a, n=$n")
         end
     catch ex
         if isa(ex, StateConverged)

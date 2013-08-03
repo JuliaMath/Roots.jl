@@ -26,6 +26,7 @@ ad(x::Array{Ad}) = Ad(x, ones(length(x)))
 
 ## conversion
 convert(::Type{Ad}, x::Real) = Ad(x, 0)
+convert(::Type{Real}, x::Ad) = x.val
 promote_rule{T <: Real}(::Type{Ad}, ::Type{T}) = Ad
 
 
@@ -229,6 +230,7 @@ Calculus_derivative_rules = [
     ( :besselj1,    :(  xp * (besselj0(x) - besselj(2, x)) / 2   ))
     ( :bessely0,    :( -xp * bessely1(x)                         ))
     ( :bessely1,    :(  xp * (bessely0(x) - bessely(2, x)) / 2   ))
+    ( :abs,         :( x == 0 ? NaN : sign(x)                    ))
     ## ( :erfcx,   :(  xp * (2 * x * erfcx(x) - 2 / sqrt(pi))   ))  # uncertain
     ## ( :dawson,  :(  xp * (1 - 2x * dawson(x))                ))  # uncertain
 
