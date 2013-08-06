@@ -1,4 +1,9 @@
 ## Various higher order, derivative free root finding algorithms
+## These are all basically based on an update step which is 3 or 4 newton's method calls
+## of the type xn1 = xn - w f(xn)/f'(xn) with different choices for the weights
+## and different derivative-free approximations for f'(xn).
+##
+## The 8th order thukral method is consistently faster and uses fewer allocated bytes
 
 ## some helpers
 secant(fa::Real, fb::Real, a::Real, b::Real) = (fa - fb)/(a-b)
@@ -14,7 +19,8 @@ end
 function F(f::Function, fx, fy, fz, x, y, z)
     secant(fz, fy, z, y)  + secant2(f, fz, fx, z, x) * (z-y)
 end
-
+isissue(x) = isnan(x) || isinf(x) # check approx derivatives with this
+isissue(x, y) = isissue(x) || abs(x/y) > 1e1 || abs(x/y) < 1e-1
 
 ## 16th order, derivative free root finding algorithm
 ## http://article.sapub.org/10.5923.j.ajcam.20120203.08.html
@@ -26,50 +32,65 @@ end
 ## R. Thukral
 ## Research Centre, 39 Deanswood Hill, Leeds, West Yorkshire, LS17 5JS, England
 ## from p 114 (17)
-function thukral_update16(f::Function, x0::Real, tol::Real; beta::Real=1)
+function thukral_update16(f::Function, x0::Real, tol::Real; kwargs...)
+
     xn = x0
     fxn = f(xn)
 
-    ## can have issues if fxn is too big, we replace here with hybrid step
-    if abs(fxn) > 1e-2 * beta
+    wn = xn + fxn
+    
+    ## first step is of size fxn. If that is big, this whole thing has problems
+    ## with convergence. Here we replace with a step based on the approximate derivative
+    if abs(fxn) > 1e-1
         h = 1e-6
         fp = (f(xn+h) - f(xn-h)) / (2h)
         return (xn - fxn/fp)
     end
 
-    wn = xn + fxn / beta
     fwn = f(wn)
 
-    inc = fxn / secant(fwn, fxn, wn, xn)
-    abs(inc) <= tol && return(xn)
-    
+    secxnwn = secant(fwn, fxn, wn, xn)
+    inc = fxn / secxnwn
+    isnan(inc) && return(wn)
+
 
     yn = xn - inc
     fyn = f(yn)
 
 
-    phi3 = secant(fxn, fwn, xn, wn) / secant(fyn, fwn, yn, wn)
-    inc = phi3 * fyn / secant(fxn, fyn, xn , yn)
-    abs(inc) <= tol && return(yn)
+    secxnyn = secant(fxn, fyn, xn, yn)
+    secwnyn = secant(fyn, fwn, yn, wn)
+    (isnan(secxnyn) || isnan(secwnyn)) && return(yn)
 
+
+    phi3 =  secxnwn / secwnyn
+    inc = phi3 * fyn / secxnyn
     zn = yn - inc
     fzn = f(zn)
 
+    secxnzn = secant(fxn, fzn, xn, zn)
+    secynzn = secant(fyn, fzn, yn, zn)
+    
+    (isnan(secxnzn) || isnan(secynzn)) && return(zn)
 
     u2, u3, u4 = fzn/fwn, fyn/fxn, fyn/fwn 
     eta = 1.0 / (1 + 2*u3*u4*u4) / (1 - u2)
 
-    inc = eta * fzn / (secant(fyn, fzn, yn, zn) - secant(fxn, fyn, xn, yn) + secant(fxn, fzn, xn, zn))
-    abs(inc) <= tol && return(zn)
+    inc = eta * fzn / (secynzn - secxnyn + secxnzn)
 
     an = zn -  inc
     fan = f(an)
+    
+    secynan = secant(fyn, fan, yn, an)
+    secznan = secant(fzn, fan, zn, an)
+    (isnan(secynan) || isnan(secznan)) && return(an)
 
     u1, u5, u6 = fzn/fxn, fan/fxn, fan/fwn
-    sigma = 1 + u1*u2 - u1 *u3*u4*u4 + u5 + u6 + u1*u1*u4 + u2*u2*u3 + 3*u1*u4*u4*(u3*u3 - u4*u4) / secant(fxn, fyn, xn, yn)
+    sigma = 1 + u1*u2 - u1 *u3*u4*u4 + u5 + u6 + u1*u1*u4 + u2*u2*u3 + 3*u1*u4*u4*(u3*u3 - u4*u4) / secxnyn
     
-    inc = sigma * secant(fyn, fzn, yn, zn) * fan / secant(fyn, fan, yn, an) / secant(fzn, fan, zn, an)
+    inc = sigma * secynzn * fan / secynan / secznan
     zn - inc
+
 end
 
 
@@ -81,41 +102,51 @@ function thukral_update8(f::Function, x0::Real, tol::Real;
                          beta::Real=1,
                          j::Int=1, k::Int=1, l::Int=1 
                          )
-        
+
+    
     xn = x0
     fxn = f(xn)
+    
 
-    ## first step is based on f'(xn) approx f(xn + f(xn))/f(xn)
-    ## can have issues if fxn is too big, we replace here with hybrid step
-    if  abs(fxn) > 1e-2 * beta
+    ## this is poor if fxn >> 0; we use a hybrid approach with
+    ## a step based on f/f' with f' estimated by central difference if fxn is too big
+    if abs(fxn/beta) > 1e-1
         h = 1e-6
         fp = (f(xn+h) - f(xn-h)) / (2h)
         return (xn - fxn/fp)
     end
+    
 
-    wn = xn + fxn/beta
+    wn = xn + fxn/beta          # beta can tune how large first step is.
     fwn = f(wn)
+    adiff1 = (fwn - fxn) / (fxn/beta) / beta
+    inc = fxn/adiff1
 
-    inc =  fxn * fxn / (fwn - fxn)
-    abs(inc) <= tol && return(wn)
 
     yn = xn - inc
     fyn = f(yn)
+    secxnyn = secant(fxn, fyn, xn, yn)
+    adiff2 = secxnyn
     
     phi = j == 1 ? 1.0 /(1.0 - fyn/fwn) :  (1.0 + fyn/fwn)
-
-    inc = phi* fyn / secant(fxn, fyn, xn, yn)
-    abs(inc) <= tol && return(yn)
-
+    
+    inc = phi * fyn * (isissue(adiff2, adiff1)  ? adiff1 : adiff2)
     zn = yn - inc
     fzn = f(zn)
 
-    omega = k == 1 ?  1.0 / (1- fzn/fwn) : 1 + fzn/fwn  + fzn*fzn/fwn/fwn
-    psi = (l == 1) ? 1 - 2*fyn*fyn*fyn/(fwn*fwn*fxn) : 1.0 / (1 + 2*fyn*fyn*fyn/(fwn*fwn*fxn))
+    secynzn = secant(fzn, fyn, zn, yn)
+    secxnzn = secant(fzn, fxn, zn, xn)
+    rynxn, rynwn, rznwn = fyn/fxn, fyn/fwn, fzn/fwn
 
-    inc = omega * psi * fzn / (secant(fzn, fyn, zn, yn) - secant(fyn, fxn, yn, xn) + secant(fzn, fxn, zn, xn)) 
+    omega = k == 1 ?  1.0 / (1- rznwn) : 1 + rznwn  + rznwn*rznwn
+    psi = (l == 1) ? 1 - 2*rynwn*rynwn*rynxn : 1.0 / (1 + 2*rynwn*rynwn*rynxn)
+
+    adiff3 = secynzn - secxnyn + secxnzn
+
+    inc = omega * psi * fzn / (isissue(adiff3, adiff2) ? (isissue(adiff2) ? adiff1 : adiff2) : adiff3)
 
     zn - inc
+
 end
 
 ## Fifth order method
@@ -123,37 +154,56 @@ end
 ## DOI 10.1007/s11075-010-9434-5
 ## Fifth-order iterative method for finding multiple roots of nonlinear equations
 ## Xiaowu Li·Chunlai Mu· Jinwen Ma ·Linke Hou
-function LiMuHou_update(f::Function, xn::Real, delta::Real; beta::Real=1.0)
+function LiMuHou_update(f::Function, xn::Real, delta::Real; kwargs...)
     
     fxn = f(xn)
     gxn = approx_deriv(f, fxn, xn)
 
     ## this is poor if fxn >> 0; we use a hybrid approach with
-    ## a step based on f/f' with f' estimated by central difference if fxn is to big
-    if abs(fxn) < 1e-2 
-        ## regularly scheduled program
-        inc = fxn / gxn
-    else
-        ## use secant line with h=1e-6?
+    ## a step based on f/f' with f' estimated by central difference if fxn is too big
+    if abs(fxn) > 1e-1
         h = 1e-6
-        fpxn = (f(xn+h) - f(xn-h)) / 2h
-        inc = fxn/fpxn
+        fp = (f(xn+h) - f(xn-h)) / (2h)
+        return (xn - fxn/fp)
     end
+    
+
+    inc = fxn / gxn
+    isnan(inc) && return(xn)
+
     yn = xn - inc
 
     fyn = f(yn)
     inc = fyn / gxn
+    isnan(inc) && return(yn)
+
     zn = yn - inc
-    abs(inc) <= delta && return(zn)
+
+
 
     fzn = f(zn)
     inc = fzn / F(f, fxn, fyn, fzn, xn, yn, zn)
+    
+    isnan(inc) && return(zn)
 
     zn - inc
 end
 
 
 ## Main interface
+##
+## @param f a scalar function f:R -> R. Trying to find solution to f(x) = 0.
+## @param x0 initial guess for root. Iterative methods need a reasonable initial starting point.
+## @param tol. Stop iterating when |f(xn)| <= tol.
+## @param delta. Stop iterating when |xn+1 - xn| <= delta.
+## @param max_iter. Stop iterating if more than this many steps, throw error.
+## @param order. One of 5, 8, or 16. Specifies which algorithm to use. Default is 8 which seems to win both in 
+##        speed of execution and in memory consumption.
+## @param verbose. If true, will print out each step taken
+## @param kwargs... For order 8, there are some parameters that can be
+##        specified to change the algorithm. In particular, one can specify
+##        beta which controls the size of the first step in an approximate
+##        derivative: (f(x0 + f(x(0))/beta) - f(x0).
 ## 
 ## We have 5, 8 and 16 order methods. Empirically it seems 16 converges sometimes when 8 does not, though 8 is a bit faster.
 ## 
@@ -171,21 +221,35 @@ end
 ## ## some comparison for a tricky function
 ## julia> f(x) = (log(x) + sqrt(x^4+1)-2)^7
 ## julia> newton(f, 1, verbose=true) ## 26 steps! elapsed time: 0.064031741 seconds (148824 bytes allocated)
-## julia> thukral(f, 1, order-16, verbose=true) ## 12 steps, elapsed time: 0.000199814 seconds (30296 bytes allocated)
-## julia> thukral(f, 1, order=8, verbose=true) ## 7 steps, elapsed time: 0.000157921 seconds (14592 bytes allocated)
+## julia> thukral(f, 1, order-16, verbose=true) ## 12 steps, 0.000281969 seconds (35136 bytes allocated)
+## julia> thukral(f, 1, order=8, verbose=true)  ##  8 steps; 0.000244341 seconds (15952 bytes allocated)
+## julia> thukral(f, 1, order=5, verbose=true)  ## 11 steps; 0.000288236 seconds (21016 bytes allocated)
 ## julia> fzero(f, [1,2]) ## 42 steps, elapsed time: 0.001219398 seconds (166808 bytes allocated)
+##
+## Can often get more accuracy with relatively little cost by using BigFloat:
+## julia> f(x) = (8x*exp(-x^2) -2x - 3)^8
+## julia> @time fzero(f, x0) - -1.7903531791589544 ## only 3e-3! High multiplicity, |f(xstar)| < 1e-15
+## julia> @time fzero(f, BigFloat(x0)) - -1.7903531791589544 ## now 6e-11. Took 100 times as long
+## julia> @time newton(f, x0) |> f ## about same time as with BigFloat and similar accuracy; 27 steps
 ##
 ## Because these are derivative free, they can be used with functions
 ## defined by automatic differentiation
 ## e.g., find minimum of f(x) = x^2
 ## julia> thukral(D(x -> x^2), 1)
 ##
+## ## This won't always be perfect though. For example, the function
+## ## A(t) = 100sin(t)*cos(t) + 100*sin(t) will only get to within
+## ## 1e-14 when trying to find fzero(D(A), 1):
+## julia> A(t) = 100sin(t)*cos(t) + 100*sin(t) 
+## julia> fzero(D(A), 1) |> D(A)
+## 2.842170943040401e-14
+
 function thukral(f::Function, x0::Real;
-                 tol::Real = 10.0 * eps(1.0),
-                 delta::Real = 4 * eps(1.0),
+                 tol::Real   = 10.0 * eps(one(eltype(float(x0)))),
+                 delta::Real =  4.0 * eps(one(eltype(float(x0)))),
                  max_iter::Int = 100,
                  verbose::Bool=false,
-                 order::Int=16, # 5, 8 or 16
+                 order::Int=8, # 5, 8 or 16
                  kwargs...      # pass to thukral_update 8, these being beta,j,k,l
                  )
 
@@ -198,11 +262,16 @@ function thukral(f::Function, x0::Real;
     end
     update(f::Function, x::Ad) = update(f, x.val)
 
+
     xn, xn1, del = x0, Inf, Inf
     cvg = false
 
-    for i in 0:max_iter
-        if abs(f(xn)) <= tol || del <= delta
+    for i in 1:max_iter
+        if abs(f(xn)) <= tol
+            cvg = true
+            break
+        end
+        if abs(del) <= delta
             cvg = true
             break
         end
@@ -221,11 +290,11 @@ end
 
 ## bracket answer, if algorithm leaves bracket, then switch to bracketing algorithm
 function thukral_bracket(f::Function, x0::Real, bracket::Vector;
-                         delta::Real   = 10.0 * eps(1.0),
-                         tol::Real     = 10.0 * eps(1.0),
+                         tol::Real   = 10.0 * eps(one(eltype(float(x0)))),
+                         delta::Real =  4.0 * eps(one(eltype(float(x0)))),
                          max_iter::Int = 100,
                          verbose::Bool=false,
-                         order::Int=16,
+                         order::Int=8,
                          kwargs...
                          )
     
@@ -245,24 +314,33 @@ function thukral_bracket(f::Function, x0::Real, bracket::Vector;
 
     cvg = false
     xn = x0
+    del = Inf
     for i in 1:max_iter
         xn1 = update(f, xn)
-        if isnan(xn1) || isinf(xn1) || xn1 < a || xn1 > b
-            xn1 = newton_quadratic(f::Function, a, b, xn, 3)
+        
+        if isissue(xn1)   # no valid step returned
+            xn1 = a + (b-a)/2
         end
-        xn = xn1
+        if xn1 < a || xn1 > b   # outside of bracket 
+            xn1 = a + (b-a)/2
+        end
+        del = xn1 - xn
 
-        if abs(f(xn)) <= tol || b - a < delta
+        ## check tolerances
+        if abs(f(xn1)) <= tol || abs(del) < delta
             cvg=true
             break
         end
         
-        f(a) * f(xn) < 0 ? (b = b - (b-xn)/2) : (a=a + (xn-a)/2)
+        ## update bracket
+        f(a) * f(xn) < 0 ? (b = xn) : (a=xn)
 
-        verbose ? println("xn=", xn, " step=", i) : nothing
+        xn = xn1
+
+        verbose ? println("xn1=", xn1, " step=", i) : nothing
     end
 
-    cvg || throw("Method did not converge in $max_iter")
+    cvg || error("Method did not converge in $max_iter")
     
     xn
 end  
