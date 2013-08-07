@@ -19,7 +19,7 @@ end
 function F(f::Function, fx, fy, fz, x, y, z)
     secant(fz, fy, z, y)  + secant2(f, fz, fx, z, x) * (z-y)
 end
-isissue(x) = isnan(x) || isinf(x) # check approx derivatives with this
+isissue(x) = isnan(x) || isinf(x) || x == 0.0 # check approx derivatives with this
 isissue(x, y) = isissue(x) || abs(x/y) > 1e1 || abs(x/y) < 1e-1
 
 ## 16th order, derivative free root finding algorithm
@@ -122,6 +122,7 @@ function thukral_update8(f::Function, x0::Real, tol::Real;
     adiff1 = (fwn - fxn) / (fxn/beta) / beta
     inc = fxn/adiff1
 
+    isissue(adiff1) && return(xn)
 
     yn = xn - inc
     fyn = f(yn)
@@ -131,6 +132,8 @@ function thukral_update8(f::Function, x0::Real, tol::Real;
     phi = j == 1 ? 1.0 /(1.0 - fyn/fwn) :  (1.0 + fyn/fwn)
     
     inc = phi * fyn * (isissue(adiff2, adiff1)  ? adiff1 : adiff2)
+
+
     zn = yn - inc
     fzn = f(zn)
 
