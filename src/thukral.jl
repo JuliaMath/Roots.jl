@@ -328,9 +328,9 @@ function thukral_bracket(f::Function, x0::Real, bracket::Vector;
             xn1 = a + (b-a)/2
         end
         del = xn1 - xn
-
+        xn = xn1
         ## check tolerances
-        if abs(f(xn1)) <= tol || abs(del) < delta
+        if abs(f(xn)) <= tol || abs(del) < delta
             cvg=true
             break
         end
@@ -338,12 +338,11 @@ function thukral_bracket(f::Function, x0::Real, bracket::Vector;
         ## update bracket
         f(a) * f(xn) < 0 ? (b = xn) : (a=xn)
 
-        xn = xn1
-
-        verbose ? println("xn1=", xn1, " step=", i) : nothing
+        verbose ? println("xn1=", xn, " step=", i) : nothing
     end
 
     cvg || error("Method did not converge in $max_iter")
     
     xn
+    
 end  
