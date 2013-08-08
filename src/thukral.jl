@@ -32,64 +32,67 @@ isissue(x, y) = isissue(x) || abs(x/y) > 1e1 || abs(x/y) < 1e-1
 ## R. Thukral
 ## Research Centre, 39 Deanswood Hill, Leeds, West Yorkshire, LS17 5JS, England
 ## from p 114 (17)
-function thukral_update16(f::Function, x0::Real, tol::Real; kwargs...)
+function thukral_update16(f::Function, x0::Real, delta::Real; kwargs...)
 
     xn = x0
     fxn = f(xn)
 
     wn = xn + fxn
-    
+    fwn = f(wn)
+
     ## first step is of size fxn. If that is big, this whole thing has problems
     ## with convergence. Here we replace with a step based on the approximate derivative
-    if abs(fxn) > 1e-1
+    if abs(fxn) > 1e-2
         h = 1e-6
         fp = (f(xn+h) - f(xn-h)) / (2h)
         return (xn - fxn/fp)
     end
 
-    fwn = f(wn)
+    adiff1 = secxnwn = secant(fxn, fwn, xn, wn)
+    isissue(adiff1) && return(xn) # can't improve
+    
+    inc = fxn / adiff1
+    isnan(inc) && return(xn)
 
-    secxnwn = secant(fwn, fxn, wn, xn)
-    inc = fxn / secxnwn
-    isnan(inc) && return(wn)
+    yn = xn - fxn/adiff1
+    abs(inc) < delta && return(yn)
 
-
-    yn = xn - inc
     fyn = f(yn)
 
-
+    adiff2 = secxnyn = secant(fxn, fyn, xn, yn)
     secxnyn = secant(fxn, fyn, xn, yn)
-    secwnyn = secant(fyn, fwn, yn, wn)
-    (isnan(secxnyn) || isnan(secwnyn)) && return(yn)
+    secwnyn = secant(fwn, fyn, wn, yn)
 
+    u3, u4 = fyn/fxn, fyn/fwn
+    phi1, phi2, phi3 = 1/(1 - u4), 1 + u4 + u4^2, secxnwn / secwnyn
 
-    phi3 =  secxnwn / secwnyn
-    inc = phi3 * fyn / secxnyn
+    inc = phi3 * fyn / (!isissue(adiff2) ? adiff2 : adiff1)
+    isnan(inc) && return(yn)
+
     zn = yn - inc
+    abs(inc) < delta && return(zn)
     fzn = f(zn)
 
-    secxnzn = secant(fxn, fzn, xn, zn)
+    u1, u2 = fzn/fxn, fzn/fwn
+
+    eta = 1/(1 + 2u3*u4^2)/(1 - u2)
+
     secynzn = secant(fyn, fzn, yn, zn)
-    
-    (isnan(secxnzn) || isnan(secynzn)) && return(zn)
+    secxnzn = secant(fxn, fzn, xn, zn)
+    adiff3 = secynzn - secxnyn + secxnzn
 
-    u2, u3, u4 = fzn/fwn, fyn/fxn, fyn/fwn 
-    eta = 1.0 / (1 + 2*u3*u4*u4) / (1 - u2)
-
-    inc = eta * fzn / (secynzn - secxnyn + secxnzn)
-
-    an = zn -  inc
+    an = zn - eta * fzn / (!isissue(adiff3) ? adiff3 : (!isissue(adiff2) ? adiff2 : adiff1))
     fan = f(an)
-    
+
+    u5, u6 = fan/fxn, fan/fwn
+    sigma = 1 + u1*u2 - u1*u3*u4^2 + u5 + u6 + u1^2*u4 + u2^2*u3 + 3u1*u4^2*(u3^2 - u4^2) / secxnyn
     secynan = secant(fyn, fan, yn, an)
     secznan = secant(fzn, fan, zn, an)
-    (isnan(secynan) || isnan(secznan)) && return(an)
+    adiff4 = secynzn / secynan / secznan
 
-    u1, u5, u6 = fzn/fxn, fan/fxn, fan/fwn
-    sigma = 1 + u1*u2 - u1 *u3*u4*u4 + u5 + u6 + u1*u1*u4 + u2*u2*u3 + 3*u1*u4*u4*(u3*u3 - u4*u4) / secxnyn
-    
-    inc = sigma * secynzn * fan / secynan / secznan
-    zn - inc
+    xn1 = zn - sigma * fan / (!isissue(adiff4) ? adiff4 :(!isissue(adiff3) ? adiff3 : (!isissue(adiff2) ? adiff2 : adiff1)))
+
+    xn1
 
 end
 
@@ -98,7 +101,7 @@ end
 ## Rajinder Thukral
 ## very fast (8th order) derivative free iterative root finder.
 ## We use this as the default. Seems faster than update16 and takes less memory
-function thukral_update8(f::Function, x0::Real, tol::Real;
+function thukral_update8(f::Function, x0::Real, delta::Real;
                          beta::Real=1,
                          j::Int=1, k::Int=1, l::Int=1 
                          )
@@ -110,7 +113,7 @@ function thukral_update8(f::Function, x0::Real, tol::Real;
 
     ## this is poor if fxn >> 0; we use a hybrid approach with
     ## a step based on f/f' with f' estimated by central difference if fxn is too big
-    if abs(fxn/beta) > 1e-1
+    if abs(fxn/beta) > 1e-2
         h = 1e-6
         fp = (f(xn+h) - f(xn-h)) / (2h)
         return (xn - fxn/fp)
@@ -119,22 +122,25 @@ function thukral_update8(f::Function, x0::Real, tol::Real;
 
     wn = xn + fxn/beta          # beta can tune how large first step is.
     fwn = f(wn)
-    adiff1 = (fwn - fxn) / (fxn/beta) / beta
-    inc = fxn/adiff1
-
+    adiff1 = (fwn - fxn) / (fxn/beta) 
+    inc = (1 / beta) * fxn/adiff1
+    
     isissue(adiff1) && return(xn)
 
     yn = xn - inc
+    abs(inc) < delta && return(yn)
+    
     fyn = f(yn)
     secxnyn = secant(fxn, fyn, xn, yn)
     adiff2 = secxnyn
     
     phi = j == 1 ? 1.0 /(1.0 - fyn/fwn) :  (1.0 + fyn/fwn)
     
-    inc = phi * fyn * (isissue(adiff2, adiff1)  ? adiff1 : adiff2)
-
+    inc = phi * fyn / (isissue(adiff2, adiff1)  ? adiff1 : adiff2)
+    isnan(inc) && return(yn)
 
     zn = yn - inc
+    abs(inc) < delta && return(zn)
     fzn = f(zn)
 
     secynzn = secant(fzn, fyn, zn, yn)
@@ -148,6 +154,7 @@ function thukral_update8(f::Function, x0::Real, tol::Real;
 
     inc = omega * psi * fzn / (isissue(adiff3, adiff2) ? (isissue(adiff2) ? adiff1 : adiff2) : adiff3)
 
+    ##
     zn - inc
 
 end
@@ -157,7 +164,7 @@ end
 ## DOI 10.1007/s11075-010-9434-5
 ## Fifth-order iterative method for finding multiple roots of nonlinear equations
 ## Xiaowu Li·Chunlai Mu· Jinwen Ma ·Linke Hou
-function LiMuHou_update(f::Function, xn::Real, delta::Real; kwargs...)
+function LiMuMaHou_update(f::Function, xn::Real, delta::Real; kwargs...)
     
     fxn = f(xn)
     gxn = approx_deriv(f, fxn, xn)
@@ -175,6 +182,8 @@ function LiMuHou_update(f::Function, xn::Real, delta::Real; kwargs...)
     isnan(inc) && return(xn)
 
     yn = xn - inc
+    abs(inc) < delta && return(yn)
+    
 
     fyn = f(yn)
     inc = fyn / gxn
@@ -223,11 +232,11 @@ end
 ##
 ## ## some comparison for a tricky function
 ## julia> f(x) = (log(x) + sqrt(x^4+1)-2)^7
-## julia> newton(f, 1, verbose=true) ## 26 steps! elapsed time: 0.064031741 seconds (148824 bytes allocated)
-## julia> thukral(f, 1, order-16, verbose=true) ## 12 steps, 0.000281969 seconds (35136 bytes allocated)
-## julia> thukral(f, 1, order=8, verbose=true)  ##  8 steps; 0.000244341 seconds (15952 bytes allocated)
-## julia> thukral(f, 1, order=5, verbose=true)  ## 11 steps; 0.000288236 seconds (21016 bytes allocated)
-## julia> fzero(f, [1,2]) ## 42 steps, elapsed time: 0.001219398 seconds (166808 bytes allocated)
+## julia> newton(f, 1, verbose=true)            ## 26 steps; 0.064031741 seconds (148824 bytes allocated)
+## julia> thukral(f, 1, order=16, verbose=true) ## 15 steps; 0.000126401 seconds (23320 bytes allocated)
+## julia> thukral(f, 1, order=8, verbose=true)  ## 18 steps; 8.7874e-5 seconds (13704 bytes allocated)
+## julia> thukral(f, 1, order=5, verbose=true)  ## 11 steps; 9.7764e-5 seconds (9992 bytes allocated)
+## julia> fzero(f, [1,2])                       ## 42 steps; 0.000698867 seconds (159024 bytes allocated)
 ##
 ## Can often get more accuracy with relatively little cost by using BigFloat:
 ## julia> f(x) = (8x*exp(-x^2) -2x - 3)^8
@@ -259,7 +268,7 @@ function thukral(f::Function, x0::Real;
     if order == 16
         update(f::Function, x::Real) = thukral_update16(f, x, delta; kwargs...)
     elseif order == 5
-        update(f::Function, x::Real) = LiMuHou_update(f, x, delta; kwargs...)
+        update(f::Function, x::Real) = LiMuMaHou_update(f, x, delta; kwargs...)
     else
         update(f::Function, x::Real) = thukral_update8(f, x, delta; kwargs...)
     end
@@ -307,11 +316,11 @@ function thukral_bracket(f::Function, x0::Real, bracket::Vector;
     a <= x0 <= b || error("x0 not in [a,b]")
 
     if order == 16
-        update(f::Function, x::Real) = thukral_update16(f, x, delta)
+        update(f::Function, x::Real) = thukral_update16(f, x, delta; kwargs...)
     elseif order == 5
-        update(f::Function, x::Real) = LiMuHou_update(f, x, delta)
+        update(f::Function, x::Real) = LiMuMaHou_update(f, x, delta; kwargs...)
     else
-        update(f::Function, x::Real) = thukral_update8(f, x, delta; kwargs...)
+        update(f::Function, x::Real) = thukral_update8(f, x; kwargs...)
     end
     update(f::Function, x::Ad) = update(f, x.val)
 
