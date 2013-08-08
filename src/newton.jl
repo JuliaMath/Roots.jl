@@ -19,52 +19,75 @@ end
 
 # Newton-Raphson method (quadratic convergence)
 function newton(f::Function, fp::Function, x;
-                delta_tolerance=eps(1.0),
-                residual_tolerance=0.0,
-                max_iter=100)
+                delta::Real       = 100.0 * eps(1.0),
+                tol::Real         = 100.0 * eps(1.0),
+                max_iter::Integer = 100,
+                verbose::Bool     = false
+                )
+
+    cvg = false
     for i=1:max_iter
         fx = f(x)
-        if check_residual(fx, residual_tolerance)
-            return x
+        if check_residual(fx, tol)
+            cvg = true
+            break
         end
+
         fpx = fp(x)
         if fpx == 0
-            error("derivative is zero")
+            throw("derivative is zero")
         end
-        delta = fx/fpx
-        x -= delta
-        if check_delta(delta, delta_tolerance)
-            return x
+
+        del = fx/fpx
+        x -= del
+
+        if check_delta(del, delta)
+            cvg = true
+            break
         end
+        verbose && println("xn=$x, f(xn) = $(f(x)), step=$i")
     end
-    error("max_iter reached without convergence")
+    cvg || error("$max_iter steps taken without convergence")
+    
+    return x
 end
+
+
 
 # Halley's method (cubic convergence)
 function halley(f::Function, fp::Function, fpp::Function, x;
-                delta_tolerance=eps(1.0),
-                residual_tolerance=0.0,
-                max_iter=100)
+                delta::Real       = 100 * eps(1.0),
+                tol::Real         = 100 * eps(1.0),
+                max_iter::Integer = 100,
+                verbose::Bool     = false
+)
+
+    cvg = false
     for i=1:max_iter
         fx = f(x)
-        if check_residual(fx, residual_tolerance)
-            return x
+        if check_residual(fx, tol)
+            cvg = true
+            break
         end
         fpx = fp(x)
         if fpx == 0
-            error("derivative is zero")
+            throw("derivative is zero")
         end
         fppx = fpp(x)
         if fppx == 0 # fall back to Newton
-            delta = fx/fpx
+            del = fx/fpx
         else
-            delta = 2fx*fpx/(2fpx^2 - fx*fppx)
+            del = 2fx*fpx/(2fpx^2 - fx*fppx)
         end
-        x -= delta
-        if check_delta(delta, delta_tolerance)
-            return x
+        x -= del
+        if check_delta(del, delta)
+            cvg = true
         end
+        verbose && println("xn=$x, f(xn) = $(f(x)), step=$i")
     end
-    error("max_iter reached without convergence")
+    cvg || throw("$max_iter steps taken without convergence")
+    
+    return x
+
 end
 

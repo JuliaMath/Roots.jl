@@ -12,19 +12,22 @@
 #
 # output:
 #     an estimate of the zero of f
-function fzero(f::Function, a, b;
-               tolerance=0.0, max_iter=100)
+function find_zero(f::Function, a, b;
+                   tol=0.0, 
+                   max_iter=100,
+                   verbose::Bool=false
+                   )
     if a >= b || sign(f(a))*sign(f(b)) >= 0
         error("on input a < b and f(a)f(b) < 0 must both hold")
     end
-    if tolerance < 0.0
+    if tol < 0.0
         error("tolerance must be >= 0.0")
     end
     try
         # start with a secant approximation
         c = secant(f, a, b)
         # re-bracket and check termination
-        a, b, d = bracket(f, a, b, c, tolerance)
+        a, b, d = bracket(f, a, b, c, tol)
         for n = 2:max_iter
             # use either a cubic (if possible) or quadratic interpolation
             if n > 2 && distinct(f, a, b, d, e)
@@ -33,7 +36,7 @@ function fzero(f::Function, a, b;
                 c = newton_quadratic(f, a, b, d, 2)
             end
             # re-bracket and check termination
-            ab, bb, db = bracket(f, a, b, c, tolerance)
+            ab, bb, db = bracket(f, a, b, c, tol)
             eb = d
             # use another cubic (if possible) or quadratic interpolation
             if distinct(f, ab, bb, db, eb)
@@ -42,13 +45,13 @@ function fzero(f::Function, a, b;
                 cb = newton_quadratic(f, ab, bb, db, 3)
             end
             # re-bracket and check termination
-            ab, bb, db = bracket(f, ab, bb, cb, tolerance)
+            ab, bb, db = bracket(f, ab, bb, cb, tol)
             # double length secant step; if we fail, use bisection
             u = abs(f(ab)) < abs(f(bb)) ? ab : bb
             cb = u - 2*f(u)/(f(bb) - f(ab))*(bb - ab)
             ch = abs(cb - u) > (bb - ab)/2 ? ab + (bb - ab)/2 : cb
             # re-bracket and check termination
-            ah, bh, dh = bracket(f, ab, bb, ch, tolerance)
+            ah, bh, dh = bracket(f, ab, bb, ch, tol)
             # if not converging fast enough bracket again on a bisection
             if bh - ah < 0.5*(b - a)
                 a = ah
@@ -58,8 +61,10 @@ function fzero(f::Function, a, b;
             else
                 e = dh
                 a, b, d = bracket(f, ah, bh, ah + (bh - ah)/2,
-                                  tolerance)
+                                  tol)
             end
+
+            verbose && println("a=$a, n=$n")
         end
     catch ex
         if isa(ex, StateConverged)
@@ -80,9 +85,9 @@ end
 
 # calculate a scaled tolerance
 # based on algorithm on page 340 of [1]
-function tole(a, b, fa, fb, tolerance)
+function tole(a, b, fa, fb, tol)
     u = abs(fa) < abs(fb) ? abs(a) : abs(b)
-    2u*eps(1.0) + tolerance
+    2u*eps(1.0) + tol
 end
 
 
@@ -91,7 +96,7 @@ end
 #     - f: the function
 #     - a, b: the current bracket with a < b, f(a)f(b) < 0
 #     - c within (a,b): current best guess of the root
-#     - tolerance: desired accuracy
+#     - tol: desired accuracy
 #
 # if root is not yet found, return
 #     ab, bb, d
@@ -104,13 +109,13 @@ end
 # root.
 #
 # based on algorithm on page 341 of [1]
-function bracket(f::Function, a, b, c, tolerance)
+function bracket(f::Function, a, b, c, tol)
     if !(a <= c <= b)
         error("c must be in (a,b)")
     end
     fa = f(a)
     fb = f(b)
-    delta = 0.7*tole(a, b, fa, fb, tolerance)
+    delta = 0.7*tole(a, b, fa, fb, tol)
     if b - a <= 4delta
         c = (a + b)/2
     elseif c <= a + 2delta
@@ -132,7 +137,7 @@ function bracket(f::Function, a, b, c, tolerance)
     end
     faa = f(aa)
     fbb = f(bb)
-    if bb - aa < 2*tole(aa, bb, faa, fbb, tolerance)
+    if bb - aa < 2*tole(aa, bb, faa, fbb, tol)
         x0 = abs(faa) < abs(fbb) ? aa : bb 
         throw(StateConverged(x0))
     end

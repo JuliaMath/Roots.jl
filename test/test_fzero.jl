@@ -1,4 +1,4 @@
-using Test
+using Base.Test
 import Roots.fzero
 
 # test problems from Table 1 of paper referenced in fzero.jl
