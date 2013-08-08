@@ -1,4 +1,4 @@
-using Test
+using Base.Test
 import Roots.newton, Roots.halley
 
 @test_approx_eq newton(sin, cos, 0.5) 0.0
