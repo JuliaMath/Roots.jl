@@ -320,7 +320,7 @@ function thukral_bracket(f::Function, x0::Real, bracket::Vector;
     elseif order == 5
         update(f::Function, x::Real) = LiMuMaHou_update(f, x, delta; kwargs...)
     else
-        update(f::Function, x::Real) = thukral_update8(f, x; kwargs...)
+        update(f::Function, x::Real) = thukral_update8(f, x, delta; kwargs...)
     end
     update(f::Function, x::Ad) = update(f, x.val)
 
