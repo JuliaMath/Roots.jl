@@ -202,6 +202,38 @@ function LiMuMaHou_update(f::Function, xn::Real, delta::Real; kwargs...)
 end
 
 
+## simple quadratic convergence
+## http://en.wikipedia.org/wiki/Steffensen's_method
+function Steffenson(g::Function, x::Real, tol::Real; max_iter::Int=100, kwargs...)
+
+    function f(x) 
+        gx = g(x)
+        gp = (g(x + gx) - gx) / gx
+        x - gx/gp
+    end
+
+    p0, p = x, Inf
+    for i=1:max_iter
+        p1=f(p0)
+        isnan(p1) && return(p0)
+        p2=f(p1)
+        isnan(p2) && return(p1)
+
+        p=p0-(p1-p0)^2/(p2-2*p1+p0) # Aitkens
+        if abs(p-p0) < tol
+            break         
+        end
+        p0=p;      
+    end
+
+    if abs(p - p0) >= tol
+        error("didn't converge")
+    end
+    
+    p
+end
+
+
 ## Main interface
 ##
 ## @param f a scalar function f:R -> R. Trying to find solution to f(x) = 0.
@@ -269,6 +301,8 @@ function thukral(f::Function, x0::Real;
         update(f::Function, x::Real) = thukral_update16(f, x, delta; kwargs...)
     elseif order == 5
         update(f::Function, x::Real) = LiMuMaHou_update(f, x, delta; kwargs...)
+    elseif order == 2
+        return Steffenson(f, x0, delta, max_iter=max_iter)
     else
         update(f::Function, x::Real) = thukral_update8(f, x, delta; kwargs...)
     end
