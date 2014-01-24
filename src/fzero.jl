@@ -79,9 +79,11 @@ end
 
 # type to throw on succesful convergence
 type StateConverged
-    x0::Float64
+    x0
 end
 
+# type to throw on failure
+type ConvergenceFailed end
 
 # calculate a scaled tolerance
 # based on algorithm on page 340 of [1]

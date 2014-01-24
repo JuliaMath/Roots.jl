@@ -32,7 +32,7 @@ Base.start(p::Poly) = 1
 Base.next(p::Poly, i) = (p[i], i + 1)
 Base.done(p::Poly, i) = i > length(p)
 Base.convert(::Type{Poly{Float64}},p=Poly{Int64}) = Poly(float(p.a))
-Base.convert(::Type{Function}, p::Poly) = x -> polyval(p,x)
+Base.convert(::Type{Function}, p::Poly) = x -> Polynomial.polyval(p,x)
 *{T, S}(A::Array{T,2}, p::Poly{S}) = Poly(A * p.a)
 
 
