@@ -9,11 +9,18 @@
 ## allocated bytes, though a lower order method may be faster at times.
 
 ## some helpers
-secant(fa::Real, fb::Real, a::Real, b::Real) = (fa - fb)/(a-b)
+function secant(fa::Real, fb::Real, a::Real, b::Real) 
+    abs(a-b) == 0.0 && throw(StateConverged(b))
+    (fa - fb)/(a-b)
+end
 
-approx_deriv(f::Function, fx::Real, x::Real) = (f(x + fx) - fx)/fx
+function approx_deriv(f::Function, fx::Real, x::Real)
+    fx == 0.0 && throw(StateConverged(x))
+    (f(x + fx) - fx)/fx
+end
 
 function secant2(f, fz, fx, z, x) 
+    abs(x-z) == 0.0 && throw(StateConverged(x))
     (approx_deriv(f, fx, x) - secant(fz, fx, z, x))/(x-z)
 end
 
@@ -34,7 +41,7 @@ isissue(x, y) = isissue(x) || abs(x/y) > 1e1 || abs(x/y) < 1e-1
 ## R. Thukral
 ## Research Centre, 39 Deanswood Hill, Leeds, West Yorkshire, LS17 5JS, England
 ## from p 114 (17)
-function thukral_update16(f::Function, x0::Real, delta::Real; kwargs...)
+function thukral_update16(f::Function, x0::Real; kwargs...)
 
     xn = x0
     fxn = f(xn)
@@ -42,58 +49,49 @@ function thukral_update16(f::Function, x0::Real, delta::Real; kwargs...)
     wn = xn + fxn
     fwn = f(wn)
 
+    fxn == 0.0 && throw(StateConverged(xn))
+    fwn == 0.0 && throw(StateConverged(wn))
+
     ## first step is of size fxn. If that is big, this whole thing has
     ## problems with convergence. Here we replace with a step based on
     ## the approximate derivative
-    if abs(fxn) > 1e-2
+    if abs(fxn) > 1e-2 
         h = 1e-6
-        fp = (f(xn+h) - f(xn-h)) / (2h)
-        return (xn - fxn/fp)
+        return(secant_step(f(xn+h), f(xn-h), xn+h, xn-h))
     end
 
-    adiff1 = secxnwn = secant(fxn, fwn, xn, wn)
-    isissue(adiff1) && return(xn) # can't improve
+    secxnwn = secant(fxn, fwn, xn, wn)
     
-    inc = fxn / adiff1
-    isnan(inc) && return(xn)
-
-    yn = xn - fxn/adiff1
-    abs(inc) < delta && return(yn)
-
+    yn = xn - fxn/secxnwn
     fyn = f(yn)
 
-    adiff2 = secxnyn = secant(fxn, fyn, xn, yn)
     secxnyn = secant(fxn, fyn, xn, yn)
     secwnyn = secant(fwn, fyn, wn, yn)
 
     u3, u4 = fyn/fxn, fyn/fwn
     phi1, phi2, phi3 = 1/(1 - u4), 1 + u4 + u4^2, secxnwn / secwnyn
 
-    inc = phi3 * fyn / (!isissue(adiff2) ? adiff2 : adiff1)
-    isnan(inc) && return(yn)
 
-    zn = yn - inc
-    abs(inc) < delta && return(zn)
+    zn = yn - phi3 * fyn / secxnyn
     fzn = f(zn)
 
     u1, u2 = fzn/fxn, fzn/fwn
-
     eta = 1/(1 + 2u3*u4^2)/(1 - u2)
 
     secynzn = secant(fyn, fzn, yn, zn)
     secxnzn = secant(fxn, fzn, xn, zn)
-    adiff3 = secynzn - secxnyn + secxnzn
+    sec = secynzn - secxnyn + secxnzn
+    sec == 0.0 && throw(StateConverged(zn))
 
-    an = zn - eta * fzn / (!isissue(adiff3) ? adiff3 : (!isissue(adiff2) ? adiff2 : adiff1))
+    an = zn - eta * fzn / sec
     fan = f(an)
 
     u5, u6 = fan/fxn, fan/fwn
     sigma = 1 + u1*u2 - u1*u3*u4^2 + u5 + u6 + u1^2*u4 + u2^2*u3 + 3u1*u4^2*(u3^2 - u4^2) / secxnyn
     secynan = secant(fyn, fan, yn, an)
     secznan = secant(fzn, fan, zn, an)
-    adiff4 = secynzn / secynan / secznan
 
-    xn1 = zn - sigma * fan / (!isissue(adiff4) ? adiff4 :(!isissue(adiff3) ? adiff3 : (!isissue(adiff2) ? adiff2 : adiff1)))
+    xn1 = zn  - sigma * secynzn * fan / secynan / secznan
 
     xn1
 
@@ -104,7 +102,7 @@ end
 ## Rajinder Thukral
 ## very fast (8th order) derivative free iterative root finder.
 ## We use this as the default. Seems faster than update16 and takes less memory
-function thukral_update8(f::Function, x0::Real, delta::Real;
+function thukral_update8(f::Function, x0::Real;
                          beta::Real=1,
                          j::Int=1, k::Int=1, l::Int=1 
                          )
@@ -113,6 +111,7 @@ function thukral_update8(f::Function, x0::Real, delta::Real;
     xn = x0
     fxn = f(xn)
     
+    fxn == 0.0 && throw(StateConverged(xn))
 
     ## this is poor if fxn >> 0; we use a hybrid approach with a step
     ## based on f/f' with f' estimated by central difference if fxn is
@@ -126,40 +125,32 @@ function thukral_update8(f::Function, x0::Real, delta::Real;
 
     wn = xn + fxn/beta          # beta can tune how large first step is.
     fwn = f(wn)
-    adiff1 = (fwn - fxn) / (fxn/beta) 
-    inc = (1 / beta) * fxn/adiff1
-    
-    isissue(adiff1) && throw(StateConverged(xn))
+    fwn == 0.0 && throw(StateConverged(wn))
+    abs(fwn - fxn) == 0.0 && throw(StateConverged(wn))
 
-    yn = xn - inc
-    abs(inc) < delta && throw(StateConverged(yn))
-    
+    yn = xn - fxn*fxn/(fwn-fxn)
     fyn = f(yn)
-    secxnyn = secant(fxn, fyn, xn, yn)
-    adiff2 = secxnyn
-    
+
     phi = j == 1 ? 1.0 /(1.0 - fyn/fwn) :  (1.0 + fyn/fwn)
     
-    inc = phi * fyn / (isissue(adiff2, adiff1)  ? adiff1 : adiff2)
-    isnan(inc) && throw(StateConverged(yn))
-
-    zn = yn - inc
-    abs(inc) < delta && throw(StateConverged(zn))
+    abs(fxn - fyn) == 0.0 && throw(StateConverged(yn))
+    secxnyn = secant(fxn, fyn, xn, yn)
+    zn = yn - phi * fyn / secxnyn
     fzn = f(zn)
+
 
     secynzn = secant(fzn, fyn, zn, yn)
     secxnzn = secant(fzn, fxn, zn, xn)
-    rynxn, rynwn, rznwn = fyn/fxn, fyn/fwn, fzn/fwn
 
+
+    rynxn, rynwn, rznwn = fyn/fxn, fyn/fwn, fzn/fwn
     omega = k == 1 ?  1.0 / (1- rznwn) : 1 + rznwn  + rznwn*rznwn
     psi = (l == 1) ? 1 - 2*rynwn*rynwn*rynxn : 1.0 / (1 + 2*rynwn*rynwn*rynxn)
 
-    adiff3 = secynzn - secxnyn + secxnzn
-
-    inc = omega * psi * fzn / (isissue(adiff3, adiff2) ? (isissue(adiff2) ? adiff1 : adiff2) : adiff3)
-
-    ##
-    zn - inc
+    ## return inc, not new update
+    sec = (secynzn - secxnyn + secxnzn)
+    sec == 0.0 && throw(StateConverged(zn))
+    zn - omega * psi * fzn / sec
 
 end
 
@@ -167,44 +158,29 @@ end
 ## Numer Algor
 ## DOI 10.1007/s11075-010-9434-5
 ## Fifth-order iterative method for finding multiple roots of
-## nonlinear equations
+##   nonlinear equations
 ## Xiaowu Li·Chunlai Mu· Jinwen Ma ·Linke Hou
-function LiMuMaHou_update(f::Function, xn::Real, delta::Real; kwargs...)
+function LiMuMaHou_update(f::Function, xn::Real; kwargs...)
     
     fxn = f(xn)
-    gxn = approx_deriv(f, fxn, xn)
 
     ## this is poor if fxn >> 0; we use a hybrid approach with a step
     ## based on f/f' with f' estimated by central difference if fxn is
     ## too big
-    if abs(fxn) > 1e-1
+    if abs(fxn) > 1e-2
         h = 1e-6
         fp = (f(xn+h) - f(xn-h)) / (2h)
         return (xn - fxn/fp)
     end
-    
 
-    inc = fxn / gxn
-    isnan(inc) && throw(StateConverged(xn))
-
-    yn = xn - inc
-    abs(inc) < delta && throw(StateConverged(yn))
-    
-
+    gxn = approx_deriv(f, fxn, xn)
+    yn = xn - fxn / gxn
     fyn = f(yn)
-    inc = fyn / gxn
-    isnan(inc) && throw(StateConverged(yn))
 
-    zn = yn - inc
-
-
-
+    zn = yn - fyn / gxn
     fzn = f(zn)
-    inc = fzn / F(f, fxn, fyn, fzn, xn, yn, zn)
-    
-    isnan(inc) && throw(StateConverged(zn))
 
-    zn - inc
+    zn - fzn / F(f, fxn, fyn, fzn, xn, yn, zn)
 end
  
 ## Some special cases
@@ -261,10 +237,23 @@ function steffensen(g::Function, x0::Real;
     end
 end
 
+function steffensen_update(f::Function, x::Real; kwargs...)
+    fx = f(x)
+    if abs(fx) > 1e-2 
+        h = 1e-6
+        return(secant_step(f(x+h), f(x-h), x+h, x-h))
+    end
+
+    den = f(x+fx) - fx
+    den == 0.0 && throw(StateConverged(x))
+
+    x - fx*fx/den
+end
+
 ## Order 1 secant method
 function secant_method(f::Function, x0::Real, x1::Real;
                 tol::Real   = 10.0 * eps(one(eltype(float(x1)))),
-                delta::Real =  4.0 * eps(one(eltype(float(x1)))),
+                delta::Real =  zero(x1),
                 max_iter::Int=100, 
                 verbose::Bool=false,
                 kwargs...)
@@ -278,12 +267,8 @@ function secant_method(f::Function, x0::Real, x1::Real;
             verbose && println("a=$a, b=$b, ctr=$(i-1)")
 
             inc = fb/secant(fa, fb, a, b)
-
-            isissue(inc) && throw(StateConverged(b))
-            
             a, b = b, b-inc
             fa, fb = fb, f(b)
-
             abs(inc) <= delta && throw(StateConverged(b))
             abs(fb) <= tol && throw(StateConverged(b))
 
@@ -299,6 +284,8 @@ function secant_method(f::Function, x0::Real, x1::Real;
         end
     end
 end
+
+secant_step(fa, fb, a, b) = b - fb / secant(fa, fb, a, b)
 
 ## Main interface
 ##
@@ -368,14 +355,16 @@ function derivative_free(f::Function, x0::Real;
                  )
 
     if order == 16
-        update(f::Function, x::Real) = thukral_update16(f, x, delta; kwargs...)
+        update(f::Function, x::Real) = thukral_update16(f, x; kwargs...)
     elseif order == 5
-        update(f::Function, x::Real) = LiMuMaHou_update(f, x, delta; kwargs...)
+        update(f::Function, x::Real) = LiMuMaHou_update(f, x; kwargs...)
     elseif order == 2
+#        update(f::Function, x::Real) = steffensen_update(f, x)
+        ## much faster
         return(steffensen(f, x0, tol=tol, delta=delta, max_iter=max_iter,
                           verbose=verbose, kwargs...))
     else
-        update(f::Function, x::Real) = thukral_update8(f, x, delta; kwargs...)
+        update(f::Function, x::Real) = thukral_update8(f, x; kwargs...)
     end
 
 
@@ -391,7 +380,7 @@ function derivative_free(f::Function, x0::Real;
             del = abs(xn1 - xn)
             xn = xn1
         
-            verbose && println("xn= $xn, f(xn) = $(f(xn)), del=$del, ctr=$i")
+            verbose && println("x_$i = $xn;\t f(x_$i) = $(f(xn))")
         end
         throw(ConvergenceFailed())
     catch e
@@ -406,7 +395,7 @@ end
 ## bracket answer, if algorithm leaves bracket, then switch to bracketing algorithm
 function derivative_free_bracket(f::Function, x0::Real, bracket::Vector;
                          tol::Real   = 10.0 * eps(one(eltype(float(x0)))),
-                         delta::Real =  4.0 * eps(one(eltype(float(x0)))),
+                         delta::Real =  zero(x0),
                          max_iter::Int = 200,
                          verbose::Bool=false,
                          order::Int=8,
@@ -420,11 +409,13 @@ function derivative_free_bracket(f::Function, x0::Real, bracket::Vector;
     a <= x0 <= b || error("x0 not in [a,b]")
 
     if order == 16
-        update(f::Function, x::Real) = thukral_update16(f, x, delta; kwargs...)
+        update(f::Function, x::Real) = thukral_update16(f, x; kwargs...)
     elseif order == 5
-        update(f::Function, x::Real) = LiMuMaHou_update(f, x, delta; kwargs...)
+        update(f::Function, x::Real) = LiMuMaHou_update(f, x; kwargs...)
+    elseif order == 2
+        update(f::Function, x::Real) = steffensen_update(f, x; kwargs...)
     else
-        update(f::Function, x::Real) = thukral_update8(f, x, delta; kwargs...)
+        update(f::Function, x::Real) = thukral_update8(f, x; kwargs...)
     end
 
     try
@@ -443,7 +434,7 @@ function derivative_free_bracket(f::Function, x0::Real, bracket::Vector;
             xn = xn1
             ## check tolerances
             abs(f(xn)) <= tol && throw(StateConverged(xn))
-            abs(del) < delta && throw(StateConverged(xn))
+            abs(del) <= delta && throw(StateConverged(xn))
             
             ## update bracket
             f(a) * f(xn) < 0 ? (b = xn) : (a=xn)

@@ -10,6 +10,7 @@ function test2(x)
     -2*sum([(2i - 5)^2/(x - i^2)^3 for i = 1:20])
 end
 @test_approx_eq fzero(test2, 1 + 1e-9, 4 - 1e-9) 3.0229153472730568
+## fails -- a bit too far off
 @test_approx_eq fzero(test2, 100 + 1e-9, 121 - 1e-9) 110.02653274766949
 
 # 3

@@ -32,7 +32,7 @@ for (f1, x0, xstar) in tests
     println("--- Test $ctr ---")
     for i in 1:3
         try 
-            a = fzero(f1, BigFloat(x0), order=orders[i], delta=eps(), tol=eps())
+            a = fzero(f1, BigFloat(x0), order=orders[i])#, delta=eps(), tol=eps())
             out[ctr, 2*i-1] = begin tic(); fzero(f1, BigFloat(x0), order=orders[i]); toc() end
             out[ctr, 2*i  ] = abs(a - xstar)
         catch

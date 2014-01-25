@@ -10,7 +10,9 @@ algorithm based on its arguments:
   `find_zero` algorithm to find a root within the bracket `[a,b]`.
 
 * `fzero(p::Union(Function, Poly), x0::Real; order::Int=8)` calls a
-  derivative-free method for orders 2, 5, 8 (default), and 16
+  derivative-free method for orders 2, 5, 8 (default), and 16. The
+  order 2 Steffensen method can be faster, but is more sensitive to a
+  good initial guess.
 
 * `fzero(p::Union(Function, Poly), x0::Real, bracket::Vector)` calls
   a derivative-free algorithm with initial guess `x0` with steps constrained
@@ -21,8 +23,6 @@ algorithm based on its arguments:
   present. Follows algorithms due to Zeng, ["Computing multiple roots
   of inexact polynomials", Math. Comp. 74 (2005),
   869-903](http://www.ams.org/journals/mcom/2005-74-250/S0025-5718-04-01692-8/home.html).
-
-
 
 
 For historical purposes, there are implementations of Newton's method
