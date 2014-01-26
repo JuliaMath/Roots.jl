@@ -6,7 +6,7 @@ function D(f::Function, k::Int)
 
     function(x)
         x = series(tuple(x, 1.0, ntuple(k-1, x->0.0)...)...)
-        factorial(k) * f(x).(symbol(pop!(names(x)))) # or use polydir!
+        factorial(k) * f(x).(symbol(pop!(names(x)))) # or use polyder!
     end
 end
 

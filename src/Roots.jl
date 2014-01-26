@@ -22,7 +22,9 @@ include("multroot.jl")
 ##
 ## args:
 ## f: Function of R -> R. May also be of `Poly` type.
+##
 ## x0: initial guess for iterative algorithms. Required for non-poly, non-bracketed problems
+##
 ## bracket: bracket [a,b] with f(a) * f(b) < 0. Bracketing guarantees a root will be found in the interval.
 ##
 ## kwargs: 
@@ -48,7 +50,8 @@ newton(p::Poly, x0::Real; kwargs...) = newton(convert(Function, p), convert(Func
 ##
 
 ## Functions
-fzero(f::Function, x0::Real; kwargs...) = derivative_free(f, x0; kwargs...)
+
+## bracket
 fzero(f::Function, a::Real, b::Real; kwargs...) = find_zero(f, a, b; kwargs...)
 function fzero{T <: Real}(f::Function, bracket::Vector{T}; kwargs...) 
     find_zero(f, bracket[1], bracket[2]; kwargs...)
@@ -56,6 +59,9 @@ end
 function fzero{T <: Real}(f::Function, x0::Real, bracket::Vector{T}; kwargs...) 
     derivative_free_bracket(f, x0, bracket; kwargs...)
 end
+
+## derivative free
+fzero(f::Function, x0::Real; kwargs...) = derivative_free(f, x0; kwargs...)
 
 ## use newton if two functions passed
 fzero(f::Function, fp::Function, x0::Real; kwargs...) = newton(f, fp, x0; kwargs...)

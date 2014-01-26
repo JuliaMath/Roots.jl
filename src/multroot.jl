@@ -18,7 +18,7 @@
 ## the multiplicities l and is operationalized in evalG and evalJ from Zeng's paper.   
 
 using Polynomial
-import Base.*
+
 
 ## poly funs to add to Polynomial.jl
 polyder(p::Poly) = polydir(p)
