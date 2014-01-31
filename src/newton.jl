@@ -19,8 +19,8 @@ end
 
 # Newton-Raphson method (quadratic convergence)
 function newton(f::Function, fp::Function, x;
-                delta::Real       = 100.0 * eps(1.0),
-                tol::Real         = 100.0 * eps(1.0),
+                delta::Real       = 0.0,
+                tol::Real         = eps(),
                 max_iter::Integer = 100,
                 verbose::Bool     = false
                 )
@@ -56,8 +56,8 @@ end
 
 # Halley's method (cubic convergence)
 function halley(f::Function, fp::Function, fpp::Function, x;
-                delta::Real       = 100 * eps(1.0),
-                tol::Real         = 100 * eps(1.0),
+                delta::Real       = 0.0,
+                tol::Real         = eps(),
                 max_iter::Integer = 100,
                 verbose::Bool     = false
 )
