@@ -1,12 +1,14 @@
 ## Various higher order, derivative free root finding algorithms
 ##
-## Mostly these are basically based on an update step which is 3 or 4
-## newton's method calls of the type xn1 = xn - w f(xn)/f'(xn) with
+## These are basically based on an update step which is 3 or 4
+## Newton's method calls of the type xn1 = xn - w f(xn)/f'(xn) with
 ## different choices for the weights and different derivative-free
 ## approximations for f'(xn).
 ##
-## The 8th order thukral method seems consistently faster and uses fewer
-## allocated bytes, though a lower order method may be faster at times.
+## The 2nd order Steffensen method is faster at times than the 5, 8 or
+## 16th order ones, but 8th is the default as it seems more robust to
+## initial condition, as we replace an initial Steffensen step with a
+## secant line approximation when f(x) is too large.
 
 ## some helpers
 function secant(fa::Real, fb::Real, a::Real, b::Real) 
@@ -54,7 +56,7 @@ function thukral_update16(f::Function, x0::Real; kwargs...)
 
     ## first step is of size fxn. If that is big, this whole thing has
     ## problems with convergence. Here we replace with a step based on
-    ## the approximate derivative
+    ## the central difference
     if abs(fxn) > 1e-1 
         h = 1e-6
         return(secant_step(f(xn+h), f(xn-h), xn+h, xn-h))
@@ -113,9 +115,9 @@ function thukral_update8(f::Function, x0::Real;
     
     fxn == 0.0 && throw(StateConverged(xn))
 
-    ## this is poor if fxn >> 0; we use a hybrid approach with a step
-    ## based on f/f' with f' estimated by central difference if fxn is
-    ## too big
+    ## first step is of size fxn. If that is big, this whole thing has
+    ## problems with convergence. Here we replace with a step based on
+    ## the central difference
     if abs(fxn/beta) > 1e-1
         h = 1e-6
         fp = (f(xn+h) - f(xn-h)) / (2h)
@@ -392,7 +394,8 @@ function derivative_free(f::Function, x0::Real;
     end
 end
 
-## bracket answer, if algorithm leaves bracket, then switch to bracketing algorithm
+## bracket answer, if algorithm leaves bracket, then switch to
+## bracketing algorithm
 function derivative_free_bracket(f::Function, x0::Real, bracket::Vector;
                          tol::Real   = 10.0 * eps(one(eltype(float(x0)))),
                          delta::Real =  zero(x0),
