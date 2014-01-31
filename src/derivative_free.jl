@@ -55,7 +55,7 @@ function thukral_update16(f::Function, x0::Real; kwargs...)
     ## first step is of size fxn. If that is big, this whole thing has
     ## problems with convergence. Here we replace with a step based on
     ## the approximate derivative
-    if abs(fxn) > 1e-2 
+    if abs(fxn) > 1e-1 
         h = 1e-6
         return(secant_step(f(xn+h), f(xn-h), xn+h, xn-h))
     end
@@ -116,7 +116,7 @@ function thukral_update8(f::Function, x0::Real;
     ## this is poor if fxn >> 0; we use a hybrid approach with a step
     ## based on f/f' with f' estimated by central difference if fxn is
     ## too big
-    if abs(fxn/beta) > 1e-2
+    if abs(fxn/beta) > 1e-1
         h = 1e-6
         fp = (f(xn+h) - f(xn-h)) / (2h)
         return (xn - fxn/fp)
@@ -167,7 +167,7 @@ function LiMuMaHou_update(f::Function, xn::Real; kwargs...)
     ## this is poor if fxn >> 0; we use a hybrid approach with a step
     ## based on f/f' with f' estimated by central difference if fxn is
     ## too big
-    if abs(fxn) > 1e-2
+    if abs(fxn) > 1e-1
         h = 1e-6
         fp = (f(xn+h) - f(xn-h)) / (2h)
         return (xn - fxn/fp)
@@ -239,7 +239,7 @@ end
 
 function steffensen_update(f::Function, x::Real; kwargs...)
     fx = f(x)
-    if abs(fx) > 1e-2 
+    if abs(fx) > 1e-1 
         h = 1e-6
         return(secant_step(f(x+h), f(x-h), x+h, x-h))
     end
