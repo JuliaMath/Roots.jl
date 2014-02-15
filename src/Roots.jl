@@ -52,7 +52,9 @@ newton(p::Poly, x0::Real; kwargs...) = newton(convert(Function, p), convert(Func
 ## Functions
 
 ## bracket
-fzero(f::Function, a::Real, b::Real; kwargs...) = find_zero(f, a, b; kwargs...)
+function fzero(f::Function, a::Real, b::Real; kwargs...) 
+    find_zero(f, promote(float(a), b)...; kwargs...)
+end
 function fzero{T <: Real}(f::Function, bracket::Vector{T}; kwargs...) 
     find_zero(f, bracket[1], bracket[2]; kwargs...)
 end
