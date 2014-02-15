@@ -56,7 +56,7 @@ function fzero(f::Function, a::Real, b::Real; kwargs...)
     find_zero(f, promote(float(a), b)...; kwargs...)
 end
 function fzero{T <: Real}(f::Function, bracket::Vector{T}; kwargs...) 
-    find_zero(f, bracket[1], bracket[2]; kwargs...)
+    fzero(f, bracket[1], bracket[2]; kwargs...)
 end
 function fzero{T <: Real}(f::Function, x0::Real, bracket::Vector{T}; kwargs...) 
     derivative_free_bracket(f, x0, bracket; kwargs...)
