@@ -50,7 +50,6 @@ function find_zero(f::Function, a::Float64, b::Float64)
         
         x1 = _middle(x0, x2)
         y1 = f(x1)
-        println((x1,y1))
         sign(y1) == 0 && return x1
     end
     
