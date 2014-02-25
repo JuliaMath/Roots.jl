@@ -1,6 +1,7 @@
 ## Bisection_method for floats and int
 
 ## From Jason Merrill https://gist.github.com/jwmerrill/9012954
+## cf. http://squishythinking.com/2014/02/22/bisecting-floats/
 # Alternative "mean" definition that operates on the binary representation
 # of a float. Using this definition, bisection will never take more than
 # 64 steps.
@@ -27,8 +28,8 @@ end
 
 function find_zero(f::Function, a::Float64, b::Float64)
     prod = f(a) * f(b)
-    if prod > 0 stop("[a,b] is not a bracket") end
-    if prod == 0.0 stop("f(a) or f(b) is a zero!") end
+    if prod > 0 error("[a,b] is not a bracket") end
+    if sign(prod) == 0.0 error("f(a) or f(b) is a zero!") end
 
     x0 = a
     x2 = b
@@ -49,6 +50,8 @@ function find_zero(f::Function, a::Float64, b::Float64)
         
         x1 = _middle(x0, x2)
         y1 = f(x1)
+        println((x1,y1))
+        sign(y1) == 0 && return x1
     end
     
     return abs(y0) < abs(y2) ? x0 : x2
