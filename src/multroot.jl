@@ -21,7 +21,6 @@ using Polynomial
 
 
 ## poly funs to add to Polynomial.jl
-polyder(p::Poly) = polydir(p)
 degree(p::Poly) = length(p) - 1
 coeffs(p::Poly) = p.a
 Base.norm(p::Poly, args...) = norm(p.a, args...)
@@ -31,7 +30,7 @@ monic!(p::Poly) = (p.a = p.a/leading_term(p))
 Base.start(p::Poly) = 1
 Base.next(p::Poly, i) = (p[i], i + 1)
 Base.done(p::Poly, i) = i > length(p)
-Base.convert(::Type{Poly{Float64}},p=Poly{Int64}) = Poly(float(p.a))
+#Base.convert(::Type{Poly{Float64}},p=Poly{Int64}) = Poly(float(p.a))
 Base.convert(::Type{Function}, p::Poly) = x -> Polynomial.polyval(p,x)
 *{T, S}(A::Array{T,2}, p::Poly{S}) = Poly(A * p.a)
 
@@ -150,7 +149,7 @@ end
 
 ## p21
 function sylvester_discriminant_matrix(p::Poly, k::Integer)
-    a = cauchy_matrix(polydir(p), k+1)
+    a = cauchy_matrix(Polynomial.polyder(p), k+1)
     b = cauchy_matrix(p, k)
     [a b]
 end
@@ -264,7 +263,7 @@ function solve_y_sigma(A::Array; tol=1e-8, maxsteps::Int=200)
     end
 
 
-    xk = rand(size(A)[2]) * 2 - 1 # in (-1,1)
+    xk = rand(size(A)[2]) * 2 .- 1 # in (-1,1)
 
     function update(x)
         y = conj(r)' \ x
@@ -304,7 +303,7 @@ function gcd_degree(p::Poly;
                     rho::Real=1e-10, phi::Real=1e2 # to refine um, vm,wm
                     )
     if degree(p) <= 1
-        return (degree(p), Poly([1.]), p, monic(polyder(p)))
+        return (degree(p), Poly([1.]), p, monic(Polynomial.polyder(p)))
     end
 
     normp = norm(p)
@@ -328,7 +327,7 @@ function gcd_degree(p::Poly;
             u0 = monic(Poly(weighted_least_square(B, p.a, wts)))
             ## u0, v0, w0 are initial guesses, these are now improved
             ## with agcd
-            um, vm, wm, residual= agcd(p, polyder(p), u0, v0, w0) # refine tolerance?
+            um, vm, wm, residual= agcd(p, Polynomial.polyder(p), u0, v0, w0) # refine tolerance?
 
             if residual < rho * normp
                 ## return degree, gcd factorization u,v,w
@@ -344,7 +343,7 @@ function gcd_degree(p::Poly;
         if size(Sh)[2] > size(Sh)[1]
             ## won't have a solution -- more columns than rows (DimensionMismatch("Matrix cannot have less rows than columns"))
             ## return m=1, u=1, v=p and w = p'
-            return (0, Poly([1.0]), p, polydir(p))
+            return (0, Poly([1.0]), p, Polynomial.polyder(p))
         end
         
     end
@@ -358,7 +357,7 @@ function find_fuzzy(zs)
     l = ones(Int, length(rs))
 
     for r in os
-        a, ind = findmin(abs(rs - r))
+        a, ind = findmin(abs(rs .- r))
         l[ind] += 1
     end
     return (rs, l)
