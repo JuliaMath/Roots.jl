@@ -10,9 +10,9 @@ algorithm based on its arguments:
   `find_zero` algorithm to find a root within the bracket `[a,b]`.
 
 * `fzero(p::Union(Function, Poly), x0::Real; order::Int=8)` calls a
-  derivative-free method for orders 2, 5, 8 (default), and 16. The
+  derivative-free method for orders  2 (default), 5, 8, and 16. The
   order 2 Steffensen method can be faster, but is more sensitive to a
-  good initial guess.
+  good initial guess. The order 8 method is more robust and often as fast.
 
 * `fzero(p::Union(Function, Poly), x0::Real, bracket::Vector)` calls
   a derivative-free algorithm with initial guess `x0` with steps constrained

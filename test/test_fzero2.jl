@@ -24,7 +24,7 @@ tests = [
          ]
 
 out = zeros(length(tests), 8)
-orders = [5, 8, 16]
+orders = [2, 5, 8, 16]
 
 using Roots
 ctr = 1
@@ -41,14 +41,16 @@ for (f1, x0, xstar) in tests
         catch
             println("Failed ctr=$ctr, i=$i")
         end
-        println("newton")
-        try
-            newton(f1, BigFloat(x0))
-            out[ctr, 7] = begin tic(); a = newton(f1, BigFloat(x0)); toc() end
-            out[ctr, 8] = abs(a - xstar)
-        catch e
-        end
     end
+    println("newton")
+    try
+        newton(f1, BigFloat(x0))
+        out[ctr, 7] = begin tic(); a = newton(f1, BigFloat(x0)); toc() end
+        out[ctr, 8] = abs(a - xstar)
+    catch e
+    end
+    
     ctr += 1
 end
  
+out

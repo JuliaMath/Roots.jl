@@ -103,7 +103,7 @@ end
 ## http://www.hindawi.com/journals/ijmms/2012/493456/
 ## Rajinder Thukral
 ## very fast (8th order) derivative free iterative root finder.
-## We use this as the default. Seems faster than update16 and takes less memory
+## seems faster than order 5 and 8 and more robust than order 2 method
 function thukral_update8(f::Function, x0::Real;
                          beta::Real=1,
                          j::Int=1, k::Int=1, l::Int=1 
@@ -298,61 +298,29 @@ secant_step(fa, fb, a, b) = b - fb / secant(fa, fb, a, b)
 ## @param delta. Stop iterating when |xn+1 - xn| <= delta.
 ## @param max_iter. Stop iterating if more than this many steps, throw error.
 ## @param order. One of 2, 5, 8, or 16. Specifies which algorithm to
-##        use. Default is 8 which seems to win both in speed of
-##        execution and in memory consumption.
+##        use. Default is 2 (Steffensen's method), as this is generally faster, but
+##        it is less robust to the initial guess
 ## @param verbose. If true, will print out each step taken
 ## @param kwargs... For order 8, there are some parameters that can be
 ##        specified to change the algorithm. In particular, one can specify
 ##        beta which controls the size of the first step in an approximate
 ##        derivative: (f(x0 + f(x(0))/beta) - f(x0).
 ## 
-## We have 5, 8 and 16 order methods. Empirically it seems 16
-## converges sometimes when 8 does not, though 8 is a bit faster.
-## 
-## some tests. (See also http://ir.igsnrr.ac.cn/bitstream/311030/8840/1/%E4%BE%AF%E9%BA%9F%E7%A7%91(SCI)2.pdf)
-## ------
-## julia> Roots.derivative_free(x -> (x-2)*(x^10 + x + 1)*exp(-x-1), 1.9)
-## 2.0
 ##
-## julia> Roots.derivative_free(x -> x^11 + x + 1, -1)
-## -0.844397528792023
-##
-## julia> Roots.derivative_free(u -> sin(u)^2 - u^2 + 1, 1)
-## 1.4044916482153411
-##
-## ## some comparison for a tricky function
-## julia> f(x) = (log(x) + sqrt(x^4+1)-2)^7     ## steps, time, bytes
-## julia> newton(f, 1, verbose=true)            ## error
-## julia> fzero(f, 1, order=16, verbose=true)   ## 16, 0.000428278, 37832 
-## julia> fzero(f, 1, order=8, verbose=true)    ## 9,  0.000287994, 16720
-## julia> fzero(f, 1, order=5, verbose=true)    ## 11, 0.000261059, 19776 
-## julia> fzero(f, 1, order=2, verbose=true)    ## failed
-## julia> fzero(f, [1,2])                       ## 42, 0.003013366, 224484 
-##
-## Can often get more accuracy with relatively little cost by using BigFloat:
-## julia> f(x) = (8x*exp(-x^2) -2x - 3)^8; x0 = -1
-## julia> @time fzero(f, x0) - -1.7903531791589544 ## only 3e-3! High multiplicity, |f(xstar)| < 1e-15
-## julia> @time fzero(f, BigFloat(x0)) - -1.7903531791589544 ## now 7e-11. Took 100 times as long
-## julia> @time newton(f, x0) |> f ## about same time as with BigFloat and similar accuracy; 27 steps
+## The file test/test_fzero2 generates some timed comparisons
 ##
 ## Because these are derivative free, they can be used with functions
 ## defined by automatic differentiation
-## e.g., find minimum of f(x) = x^2
+## e.g., find critical point of f(x) = x^2
 ## julia> fzero(D(x -> x^2), 1)
-##
-## ## This won't always be perfect though. For example, the function
-## ## c will only get to within
-## ## 1e-14 when trying to find fzero(D(A), 1):
-## julia> A(t) = 100sin(t)*cos(t) + 100*sin(t) 
-## julia> fzero(D(A), 1) |> D(A)
-## 2.842170943040401e-14
+
 
 function derivative_free(f::Function, x0::Real;
                  tol::Real   = 10.0 * eps(one(eltype(float(x0)))),
                  delta::Real =  4.0 * eps(one(eltype(float(x0)))),
                  max_iter::Int = 200,
                  verbose::Bool=false,
-                 order::Int=8, # 5, 8 or 16
+                 order::Int=2, # 2, 5, 8 or 16
                  kwargs...      # pass to thukral_update 8, these being beta,j,k,l
                  )
 
