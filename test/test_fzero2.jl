@@ -30,17 +30,24 @@ using Roots
 ctr = 1
 for (f1, x0, xstar) in tests
     println("--- Test $ctr ---")
-    for i in 1:3
+    i = 0
+    for order in orders
+        i = i + 1
+        println("order = $order")
         try 
-            a = fzero(f1, BigFloat(x0), order=orders[i], delta=eps(), tol=eps())
-            out[ctr, 2*i-1] = begin tic(); fzero(f1, BigFloat(x0), order=orders[i]); toc() end
+            a = fzero(f1, BigFloat(x0), order=order)#, delta=eps(), tol=eps())
+            out[ctr, 2*i-1] = begin tic(); fzero(f1, BigFloat(x0), order=order); toc() end
             out[ctr, 2*i  ] = abs(a - xstar)
         catch
             println("Failed ctr=$ctr, i=$i")
         end
-        a = newton(f1, BigFloat(x0))
-        out[ctr, 7] = begin tic(); newton(f1, BigFloat(x0)); toc() end
-        out[ctr, 8] = abs(a - xstar)
+        println("newton")
+        try
+            newton(f1, BigFloat(x0))
+            out[ctr, 7] = begin tic(); a = newton(f1, BigFloat(x0)); toc() end
+            out[ctr, 8] = abs(a - xstar)
+        catch e
+        end
     end
     ctr += 1
 end

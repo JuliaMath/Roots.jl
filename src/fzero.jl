@@ -1,3 +1,62 @@
+## Bisection_method for floats and int
+
+## From Jason Merrill https://gist.github.com/jwmerrill/9012954
+## cf. http://squishythinking.com/2014/02/22/bisecting-floats/
+# Alternative "mean" definition that operates on the binary representation
+# of a float. Using this definition, bisection will never take more than
+# 64 steps.
+function _middle(x::Float64, y::Float64)
+  # Use the usual float rules for combining non-finite numbers
+  if !isfinite(x) || !isfinite(y)
+    return x + y
+  end
+ 
+  # Always return 0.0 when inputs have opposite sign
+  if sign(x) != sign(y) && x != 0.0 && y != 0.0
+    return 0.0
+  end
+ 
+  negate = x < 0.0 || y < 0.0
+ 
+  xint = reinterpret(Uint64, abs(x))
+  yint = reinterpret(Uint64, abs(y))
+  unsigned = reinterpret(Float64, (xint + yint) >> 1)
+ 
+  return negate ? -unsigned : unsigned
+end
+ 
+
+function find_zero(f::Function, a::Float64, b::Float64)
+    prod = f(a) * f(b)
+    if prod > 0 error("[a,b] is not a bracket") end
+    if sign(prod) == 0.0 error("f(a) or f(b) is a zero!") end
+
+    x0 = a
+    x2 = b
+    x1 = _middle(x0, x2)
+    
+    y0 = f(x0)
+    y1 = f(x1)
+    y2 = f(x2)
+    
+    while x0 < x1 && x1 < x2
+        if sign(y0) == sign(y1)
+            x0, x2 = x1, x2
+            y0, y2 = y1, y2
+        else
+            x0, x2 = x0, x1
+            y0, y2 = y0, y1
+        end
+        
+        x1 = _middle(x0, x2)
+        y1 = f(x1)
+        sign(y1) == 0 && return x1
+    end
+    
+    return abs(y0) < abs(y2) ? x0 : x2
+end
+
+
 # fzero finds the root of a continuous function within a provided
 # interval [a, b], without requiring derivatives. It is based on algorithm 4.2
 # described in: 1. G. E. Alefeld, F. A. Potra, and Y. Shi, "Algorithm 748:
@@ -12,7 +71,7 @@
 #
 # output:
 #     an estimate of the zero of f
-function find_zero(f::Function, a, b;
+function find_zero(f::Function, a::Union(BigFloat, BigInt), b::Union(BigFloat, BigInt);
                    tol=0.0, 
                    max_iter=100,
                    verbose::Bool=false
@@ -79,9 +138,11 @@ end
 
 # type to throw on succesful convergence
 type StateConverged
-    x0::Float64
+    x0
 end
 
+# type to throw on failure
+type ConvergenceFailed end
 
 # calculate a scaled tolerance
 # based on algorithm on page 340 of [1]
