@@ -295,11 +295,12 @@ secant_step(fa, fb, a, b) = b - fb / secant(fa, fb, a, b)
 ## @param x0 initial guess for root. Iterative methods need a
 ##        reasonable initial starting point.
 ## @param tol. Stop iterating when |f(xn)| <= tol.
+## @param reltol. Stop iterating when |f(xn)| <= reltol * |xn|.
 ## @param delta. Stop iterating when |xn+1 - xn| <= delta.
 ## @param max_iter. Stop iterating if more than this many steps, throw error.
 ## @param order. One of 2, 5, 8, or 16. Specifies which algorithm to
-##        use. Default is 2 (Steffensen's method), as this is generally faster, but
-##        it is less robust to the initial guess
+##        use. Default is 8. The order 2 Steffensen method can be faster
+##        and use less memory, but is more sensitive to the initial guess
 ## @param verbose. If true, will print out each step taken
 ## @param kwargs... For order 8, there are some parameters that can be
 ##        specified to change the algorithm. In particular, one can specify
@@ -316,21 +317,22 @@ secant_step(fa, fb, a, b) = b - fb / secant(fa, fb, a, b)
 
 
 function derivative_free(f::Function, x0::Real;
-                 tol::Real   = 10.0 * eps(one(eltype(float(x0)))),
+                 tol::Real      = 10.0 * eps(one(eltype(float(x0)))),
+                 reltol::Real   = 10.0 * eps(one(eltype(float(x0)))),
                  delta::Real =  4.0 * eps(one(eltype(float(x0)))),
                  max_iter::Int = 200,
                  verbose::Bool=false,
-                 order::Int=2, # 2, 5, 8 or 16
+                 order::Int=8, # 2, 5, 8 or 16
                  kwargs...      # pass to thukral_update 8, these being beta,j,k,l
                  )
 
     if order == 16
         update(f::Function, x::Real) = thukral_update16(f, x; kwargs...)
+    elseif order == 8
+        update(f::Function, x::Real) = thukral_update8(f, x; kwargs...)
     elseif order == 5
         update(f::Function, x::Real) = LiMuMaHou_update(f, x; kwargs...)
     elseif order == 2
-#        update(f::Function, x::Real) = steffensen_update(f, x)
-        ## much faster
         return(steffensen(f, x0, tol=tol, delta=delta, max_iter=max_iter,
                           verbose=verbose, kwargs...))
     else
@@ -339,17 +341,19 @@ function derivative_free(f::Function, x0::Real;
 
 
 
-    xn, xn1, del = x0, Inf, Inf
+    xn, xn1 = x0, Inf
 
     try
         for i in 1:max_iter
             abs(f(xn)) <= tol && throw(StateConverged(xn))
-            abs(del) <= delta && throw(StateConverged(xn))
+            abs(f(xn)) <= reltol * abs(xn) && throw(StateConverged(xn))
 
             xn1 = update(f, xn)
             del = abs(xn1 - xn)
+            abs(del) <= delta && throw(StateConverged(xn))
+
+
             xn = xn1
-        
             verbose && println("x_$i = $xn;\t f(x_$i) = $(f(xn))")
         end
         throw(ConvergenceFailed())
