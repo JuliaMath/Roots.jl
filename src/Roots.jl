@@ -1,7 +1,8 @@
 module Roots
 using Polynomial
 
-export fzero,
+export fzero, @fzero,
+       fzeros, @fzeros,
        find_zero, 
        newton, halley,
        secant_method, steffensen,
@@ -61,6 +62,34 @@ end
 function fzero{T <: Real}(f::Function, x0::Real, bracket::Vector{T}; kwargs...) 
     derivative_free_bracket(f, x0, bracket; kwargs...)
 end
+
+## simplify calling of function (no x ->, rather @fzero...)
+macro fzero(expr::Expr, a, b)
+    quote
+        fzero(x -> $(expr), $(a), $(b))
+    end
+end
+
+macro fzero(expr::Expr, a)
+    quote
+        fzero(x -> $(expr), $(a))
+    end
+end
+
+
+## find all zeros in a bracket
+function fzeros{T <: Real}(f::Function, bracket::Vector{T}; kwargs...) 
+    find_zeros(f, bracket[1], bracket[2]; kwargs...)
+end
+fzeros(f::Function, a::Real, b::Real; kwargs...) = find_zeros(f, a, b; kwargs...)
+
+
+macro fzeros(expr::Expr, a, b)
+    quote
+        fzeros(x -> $(expr), $(a), $(b))
+    end
+end
+
 
 ## derivative free
 fzero(f::Function, x0::Real; kwargs...) = derivative_free(f, x0; kwargs...)

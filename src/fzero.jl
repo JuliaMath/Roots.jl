@@ -283,3 +283,25 @@ function distinct(f::Function, a, b, d, e)
       almost_equal(f2, f3) || almost_equal(f2, f4) || almost_equal(f3, f4))
 end
 
+
+## split interval [a,b] into no_pts intervals, apply find_zero to each, accumulae
+function find_zeros(f::Function, a::Real, b::Real, args...;no_pts::Int=200, kwargs...)
+    a, b = a < b ? (a,b) : (b,a)
+
+    rts = eltype(promote(float(a),b))[]
+    xs = linspace(a, b, no_pts)    
+
+    for i in 1:(length(xs)-1)
+        if f(xs[i]) * f(xs[i+1]) < 0
+            push!(rts, fzero(f, xs[i:(i+1)]))
+        end
+        if f(xs[i]) == 0.0
+            push!(rts, xs[i])
+        end
+    end
+    if f(b) == 0
+        push!(rts, b)
+    end
+
+    rts
+end

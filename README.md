@@ -7,7 +7,9 @@ algorithm based on its arguments:
 
 * `fzero(p::Union(Function, Poly), a::Real, b::Real)` and
   `fzero(p::Union(Function, Poly), bracket::Vector)` call the
-  `find_zero` algorithm to find a root within the bracket `[a,b]`.
+  `find_zero` algorithm to find a root within the bracket `[a,b]`. For convenience,
+  `fzeros(f::Function, a::Real, b::Real)` will split the interval `[a,b]` and apply `fzero` to each
+  bracketing subintervals to search for all zeros in the intervals
 
 * `fzero(p::Union(Function, Poly), x0::Real; order::Int=8)` calls a
   derivative-free method for orders  2, 5, 8  (default), and 16. The
@@ -38,10 +40,14 @@ f(x) = exp(x) - x^4
 ## bracketing
 fzero(f, [8, 9])		# 8.613169456441398
 fzero(f, -10, 0)		# -0.8155534188089606
+fzeros(f, -10, 10)		# -0.815553, 1.42961  and 8.61317 
+
 ## use a derivative free method
 fzero(f, 3)			# 1.4296118247255558
+
 ## use a different order
 fzero(sin, 3, order=16)		# 3.141592653589793
+
 ## BigFloat values yield more precision
 fzero(sin, BigFloat(3.0))	# 3.1415926535897932384...with 256 bits of precision
 ```
@@ -50,7 +56,8 @@ Polynomial root finding is a bit better when multiple roots are present.
 
 ```
 using Roots, Polynomial
-p = Poly([1, -7, 16, -12])	# (x-1)^2 * (x-3)
+x = Poly([1,0])
+p = (x-1)^2 * (x-3)
 fzero(p)			# compare to roots(p)
 fzero(p, [2.5, 3.5])
 ```
@@ -79,11 +86,11 @@ as = rand(5)
 function M(x) 
   sum([(x-a)^2 for a in as])
 end
-fzero(D(M), .5) - mean(as)	# 0
+fzero(D(M), .5) - mean(as)	# 0.0
 
 ## median
 function m(x) 
   sum([abs(x-a) for a in as])
 end
-fzero(D(m), 0, 1)  - median(as)
+fzero(D(m), 0, 1)  - median(as)	# 0.0
 ```
