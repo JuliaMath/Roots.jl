@@ -141,6 +141,7 @@ type StateConverged
     x0
 end
 
+
 # type to throw on failure
 type ConvergenceFailed end
 

@@ -298,9 +298,10 @@ secant_step(fa, fb, a, b) = b - fb / secant(fa, fb, a, b)
 ## @param reltol. Stop iterating when |f(xn)| <= reltol * |xn|.
 ## @param delta. Stop iterating when |xn+1 - xn| <= delta.
 ## @param max_iter. Stop iterating if more than this many steps, throw error.
-## @param order. One of 2, 5, 8, or 16. Specifies which algorithm to
-##        use. Default is 8. The order 2 Steffensen method can be faster
-##        and use less memory, but is more sensitive to the initial guess
+## @param order. One of 0, 1, 2, 5, 8, or 16. Specifies which algorithm to
+##        use. Default is 0 for the slower, more robust SOLVE function. 
+##        Order 8 is faster and pretty robust. The order 2 Steffensen method can be even faster
+##        and use less memory, but is more sensitive to the initial guess.
 ## @param verbose. If true, will print out each step taken
 ## @param kwargs... For order 8, there are some parameters that can be
 ##        specified to change the algorithm. In particular, one can specify
@@ -322,7 +323,7 @@ function derivative_free(f::Function, x0::Real;
                  delta::Real =  4.0 * eps(one(eltype(float(x0)))),
                  max_iter::Int = 200,
                  verbose::Bool=false,
-                 order::Int=8, # 2, 5, 8 or 16
+                 order::Int=0, #0, 1, 2, 5, 8 or 16
                  kwargs...      # pass to thukral_update 8, these being beta,j,k,l
                  )
 
@@ -335,8 +336,11 @@ function derivative_free(f::Function, x0::Real;
     elseif order == 2
         return(steffensen(f, x0, tol=tol, delta=delta, max_iter=max_iter,
                           verbose=verbose, kwargs...))
+    elseif order == 1
+        x1 = x0 + f(x0)
+        return(secant_method(f, x0, x1; kwargs...))
     else
-        update(f::Function, x::Real) = thukral_update8(f, x; kwargs...)
+        return(SOLVE(f, x0))
     end
 
 

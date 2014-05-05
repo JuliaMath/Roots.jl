@@ -16,6 +16,7 @@ include("adiff.jl")
 include("newton.jl")
 include("derivative_free.jl")
 include("multroot.jl")
+include("SOLVE.jl")
 
 ## Main interface
 ##

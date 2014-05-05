@@ -20,7 +20,7 @@ end
 # Newton-Raphson method (quadratic convergence)
 function newton(f::Function, fp::Function, x;
                 delta::Real       = 0.0,
-                tol::Real         = eps(),
+                tol::Real         = 100* eps(one(eltype(float(x)))),
                 max_iter::Integer = 100,
                 verbose::Bool     = false
                 )
@@ -45,7 +45,7 @@ function newton(f::Function, fp::Function, x;
             cvg = true
             break
         end
-        verbose && println("xn=$x, f(xn) = $(f(x)), step=$i")
+        verbose && println("xn = $x, f(xn) = $(f(x)), step=$i")
     end
     cvg || error("$max_iter steps taken without convergence")
     
@@ -57,7 +57,7 @@ end
 # Halley's method (cubic convergence)
 function halley(f::Function, fp::Function, fpp::Function, x;
                 delta::Real       = 0.0,
-                tol::Real         = eps(),
+                tol::Real         = 100* eps(one(eltype(float(x)))),
                 max_iter::Integer = 100,
                 verbose::Bool     = false
 )
@@ -83,7 +83,7 @@ function halley(f::Function, fp::Function, fpp::Function, x;
         if check_delta(del, delta)
             cvg = true
         end
-        verbose && println("xn=$x, f(xn) = $(f(x)), step=$i")
+        verbose && println("xn = $x, f(xn) = $(f(x)), step=$i")
     end
     cvg || throw("$max_iter steps taken without convergence")
     

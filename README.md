@@ -11,10 +11,17 @@ algorithm based on its arguments:
   `fzeros(f::Function, a::Real, b::Real)` will split the interval `[a,b]` and apply `fzero` to each
   bracketing subintervals to search for all zeros in the intervals
 
-* `fzero(p::Union(Function, Poly), x0::Real; order::Int=8)` calls a
-  derivative-free method for orders  2, 5, 8  (default), and 16. The
-  order 2 Steffensen method can be faster, but is more sensitive to a
-  good initial guess. The order 8 method is more robust and often as fast.
+* `fzero(p::Union(Function, Poly), x0::Real; order::Int=0)` calls a
+  derivative-free method. The default is slow but more robust to the
+  quality of the initial guess. If a bracket can be found, the
+  returned value will satisfy `f(x)==0.0` or
+  `f(prevfloat(x))*f(nextfloat(x)) <= 0`. Otherwise a value is returned
+  with `f(x)` very nearly 0.0 or an error is thrown. For faster
+  convergence and less memory usage, an order can be
+  specified. Possible values are 1, 2, 5, 8, and 16. The order 2
+  Steffensen method can be the fastest, but is more sensitive to a good
+  initial guess. The order 8 method is more robust and often as
+  fast. The higher-order method may be faster when using `Big` values.
 
 * `fzero(p::Union(Function, Poly), x0::Real, bracket::Vector)` calls
   a derivative-free algorithm with initial guess `x0` with steps constrained
