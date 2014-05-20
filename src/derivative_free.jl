@@ -252,41 +252,6 @@ function steffensen_update(f::Function, x::Real; kwargs...)
     x - fx*fx/den
 end
 
-## Order 1 secant method
-function secant_method(f::Function, x0::Real, x1::Real;
-                tol::Real   = 10.0 * eps(one(eltype(float(x1)))),
-                delta::Real =  zero(x1),
-                max_iter::Int=100, 
-                verbose::Bool=false,
-                kwargs...)
-
-    a, b, fa, fb = x0, x1, f(x0), f(x1)
-    
-    try
-        fb == 0 && throw(StateConverged(b))
-
-        for i in 1:max_iter
-            verbose && println("a=$a, b=$b, ctr=$(i-1)")
-
-            inc = fb/secant(fa, fb, a, b)
-            a, b = b, b-inc
-            fa, fb = fb, f(b)
-            abs(inc) <= delta && throw(StateConverged(b))
-            abs(fb) <= tol && throw(StateConverged(b))
-
-        end
-
-        throw(ConvergenceFailed())
-
-    catch e
-        if isa(e, StateConverged)
-            e.x0
-        else
-            throw(e)
-        end
-    end
-end
-
 secant_step(fa, fb, a, b) = b - fb / secant(fa, fb, a, b)
 
 ## Main interface

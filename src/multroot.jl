@@ -253,6 +253,9 @@ end
 ## return sigma=smallest eigen value and eigen vector of A^H*A
 ## lemma 2.4, p5
 function solve_y_sigma(A::Array; tol=1e-8, maxsteps::Int=200)
+    
+    linfinity = norm(A, Inf)
+
     q, r= Base.qr(A)
     if abs(det(r)) < 1e2 * eps()      # basically 0
         ## Lemma 2.4 does not apply. Return 0 and eigenvalue for A^H*A
@@ -277,9 +280,10 @@ function solve_y_sigma(A::Array; tol=1e-8, maxsteps::Int=200)
     (xk, sigmak1) = update(xk)
     cvg = false
 
+    reltol = linfinity^(1/4) * tol
     for ctr = 1:maxsteps
         xk, sigmak1 = update(xk)
-        if abs(sigmak1 - sigmak) < tol
+        if abs(sigmak1 - sigmak) < reltol
             cvg = true
             break
         end
@@ -303,7 +307,7 @@ function gcd_degree(p::Poly;
                     rho::Real=1e-10, phi::Real=1e2 # to refine um, vm,wm
                     )
     if degree(p) <= 1
-        return (degree(p), Poly([1.]), p, monic(Polynomial.polyder(p)))
+        return (degree(p), Poly([1.0]), p, monic(Polynomial.polyder(p)))
     end
 
     normp = norm(p)

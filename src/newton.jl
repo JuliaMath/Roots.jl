@@ -1,4 +1,8 @@
-# gradient based root finding methods
+## A collection of historical methods for pedagogical purposes.
+##
+## secant_method, newton, and halley
+##
+## These have an argument `verbose` that can be specified to get a trace of the algorithm
 
 # convergence tests
 function check_tolerance(tolerance)
@@ -16,6 +20,43 @@ function check_delta(delta, tolerance)
     check_tolerance(tolerance)
     abs(delta) < tolerance
 end     
+
+
+## Order 1 secant method
+function secant_method(f::Function, x0::Real, x1::Real;
+                tol::Real   = 10.0 * eps(one(eltype(float(x1)))),
+                delta::Real =  zero(x1),
+                max_iter::Int=100, 
+                verbose::Bool=false,
+                kwargs...)
+
+    a, b, fa, fb = x0, x1, f(x0), f(x1)
+    
+    try
+        fb == 0 && throw(StateConverged(b))
+
+        for i in 1:max_iter
+            verbose && println("a=$a, b=$b, ctr=$(i-1)")
+
+            inc = fb/secant(fa, fb, a, b)
+            a, b = b, b-inc
+            fa, fb = fb, f(b)
+            abs(inc) <= delta && throw(StateConverged(b))
+            abs(fb) <= tol && throw(StateConverged(b))
+
+        end
+
+        throw(ConvergenceFailed())
+
+    catch e
+        if isa(e, StateConverged)
+            e.x0
+        else
+            throw(e)
+        end
+    end
+end
+
 
 # Newton-Raphson method (quadratic convergence)
 function newton(f::Function, fp::Function, x;

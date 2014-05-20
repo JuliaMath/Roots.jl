@@ -27,7 +27,7 @@ The basic function call specifies a bracket using vector notation:
 
 ```
 x = fzero(f, [0, 1])
-[x, f(x)]
+[x f(x)]
 ```
 
 For that function `f(x) == 0.0`. Next consider $f(x) = \sin(x)$. A known root is $\pi$. Basic trignometry tells us that $[\pi/2, 3\pi2]$ will be a bracket:
@@ -35,31 +35,40 @@ For that function `f(x) == 0.0`. Next consider $f(x) = \sin(x)$. A known root is
 ```
 f(x) = sin(x)
 x = fzero(f, [pi/2, 3pi/2])
-[x, f(x)]
+[x f(x)]
 ```
 
 This value of `x` does not produce `f(x) == 0.0`, however, it is as close as can be:
 
 ```
-f(prevfloat(x)) * f(nextfloat(x)) < 0.0
+f(prevfloat(x)) * f(x) < 0.0 || f(x) * f(nextfloat(x)) < 0.0
 ```
 
 That is at `x` the function is changing sign.
 
-(The latter guarantee should actually just be either `f(x)*f(prevfloat(x)) < 0` or `f(x) * f(nextfloat(x)) < 0`, but that is a bit much to write, and only a very deviously defined function could be an exception.)
-
-The basic algorithm used for bracketing when the values are simple floating point values is the bisection method. Though there are algorithms that mathematically should converge faster (and one is used for the case where `BigFloat` numbers are used) by exploiting floating point computations this algorithm uses fewer function calls and runs faster.
+The basic algorithm used for bracketing when the values are simple
+floating point values is the bisection method. Though there are
+algorithms that mathematically should converge faster (and one is used
+for the case where `BigFloat` numbers are used) by exploiting floating
+point computations this algorithm uses fewer function calls and runs
+faster.
 
 ## Using an initial guess
 
-If a bracket is not known, but a good initial guess is, the `fzero` provides an interface to some different algorithms. The basic algorithm is modeled after an algorithm used for [HP-34 calculators](http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1979-12.pdf). This algorithm is much more robust to the quality of the initial guess and does not rely on tolerances for a stopping rule. In many cases it satisfies the criteria for bracketing.
+If a bracket is not known, but a good initial guess is, the `fzero`
+function provides an interface to some different algorithms. The basic
+algorithm is modeled after an algorithm used for [HP-34
+calculators](http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1979-12.pdf). This
+algorithm is much more robust to the quality of the initial guess and
+does not rely on tolerances for a stopping rule. In many cases it
+satisfies the criteria for a bracketing solution.
 
 For example, we have:
 
 ```
 f(x) = cos(x) - x
 x = fzero(f , 1)
-[x, f(x)]
+[x f(x)]
 ```
 
 And 
@@ -67,7 +76,7 @@ And
 ```
 f(x) = x^3 - 2x - 5
 x = fzero(f, 2)
-[x, f(x), f(prevfloat(x)) * f(nextfloat(x))]
+[x f(x) f(prevfloat(x)) * f(nextfloat(x))]
 ```
 
 For even more precision, `BigFloat` numbers can be used
@@ -79,30 +88,38 @@ x = fzero(sin, big(3))
 
 ### Higher order methods
 
-The default call to `fzero` uses a second order method at best and then bracketing, which involves potentially many more function calls. For some functions, a higher-order method might be better suited. There are algorithms of order 1 (secant method), 2 ([Steffensen](http://en.wikipedia.org/wiki/Steffensen's_method)), 5, 8, and 16. The order 2 method is generally more efficient, but is more sensitive to the initial guess than, say, the order 8 method. These algorithms are accessed by specifying a value for the `order` argument:
+The default call to `fzero` uses a second order method at best and
+then bracketing, which involves potentially many more function
+calls. For some functions, a higher-order method might be better
+suited. There are algorithms of order 1 (secant method), 2
+([Steffensen](http://en.wikipedia.org/wiki/Steffensen's_method)), 5,
+8, and 16. The order 2 method is generally more efficient, but is more
+sensitive to the initial guess than, say, the order 8 method. These
+algorithms are accessed by specifying a value for the `order`
+argument:
 
 ```
-f(x) = 2x - exp (-x)
+f(x) = 2x - exp(-x)
 x = fzero(f, 1, order=2)
-[x, f(x)]
+[x f(x)]
 ```
 
 ```
 f(x) = (x + 3) * (x - 1)^2
 x = fzero(f, -2, order=5)
-(x, f(x))
+[x f(x)]
 ```
 
 ```
 x = fzero(f, 2, order=8)
-(x, f(x))
+[x f(x)]
 ```
 
 The latter shows that zeros need not be simple zeros (i.e. $f'(x) = 0$ if defined) to be found. For the higher-order methods, there is a tolerance that can be specified so that a value is returned as a zero if `abs(f(x)) < tol`. The default method for `fzero` uses a very strict tolerance for this, otherwise defaulting to an error that at times might be very close to the actual zero. For this problem it finds the exact value:
 
 ```
 x = fzero(f, 2)
-(x, f(x))
+[x f(x)]
 ```
 
 But not for a similar problem:
@@ -122,14 +139,14 @@ For a classic example where basically the large second derivative is the issue, 
 ```
 f(x) = cbrt(x)
 x = fzero(f, 1, order=8)	# all of 2, 5, 8, and 16 fail
-(x, f(x))
+[x f(x)]
 ```
 
 However, the default finds the root here
 
 ```
 x = fzero(f, 1)
-(x, f(x))
+[x f(x)]
 ```
 
 Finally, we show another example illustrating that the default `fzero` call is more forgiving to an initial guess. The devilish function defined below comes from a [test suite](http://people.sc.fsu.edu/~jburkardt/cpp_src/test_zero/test_zero.html) of difficult functions. The default method finds the zero:
@@ -153,9 +170,11 @@ In this example, some other orders work. Basically the high order oscillation ca
 
 ## Polynomials
 
-The `Polynomial` package provides a type for working with polynomial functions that allows many typical polynomial operations to be defined. In this context, the `roots` function is used to find the roots of a polynomial.
+The `Polynomial` package provides a type for working with polynomial
+functions that allows many typical polynomial operations to be
+defined. In this context, the `roots` function is used to find the
+roots of a polynomial.
 
-The `fzero` function will also find the roots. The algorithm does a better job when there are multiple roots, as it implements an algorithm that first identifies the multiplicity structure of the roots, and then tries to improve these values.
 
 For example, 
 
@@ -164,10 +183,37 @@ x = Poly([1.0,0])			# "1x + 0"
 roots((x-1)*(x-2)*(x-3))
 ```
 
-The same is done with `fzero`:
+The `fzeros` function will find the real roots of a univariate polynomial:
 
 ```
-fzero((x-1)*(x-2)*(x-3))
+fzeros((x-1)*(x-2)*(x-3))
+```
+
+Or
+
+```
+fzeros(x*(x-1)*(x^2 + 1)^4)
+```
+
+It can have numeric issues when the degree gets too large, or the roots are too close together. For example
+
+```
+delta = 1e-3; fzeros((x-delta)*x*(x+delta)) # all fine
+delta = 1e-4; fzeros((x-delta)*x*(x+delta)) # misses 0.0
+delta = 1e-5; fzeros((x-delta)*x*(x+delta)) # returns just 0.0
+```
+
+
+
+The `multroot` function will also find the roots. The algorithm does a
+better job when there are multiple roots, as it implements an
+algorithm that first identifies the multiplicity structure of the
+roots, and then tries to improve these values.
+
+
+
+```
+multroot((x-1)*(x-2)*(x-3))	# roots, multiplicity
 ```
 
 The `roots` function degrades as there are multiplicities:
@@ -180,10 +226,12 @@ roots(p)
 Whereas,
 
 ```
-fzero(p)
+multroot(p)
 ```
 
-The difference gets dramatic when the degree is quite large (which is more of a mathematical possibility perhaps than a practical concern):
+The difference gets dramatic when the multiplicities get quite large
+(which is more of a mathematical possibility perhaps than a practical
+concern):
 
 ```
 p = (x-1)^20 * (x-2)^5
@@ -194,36 +242,24 @@ plot(x = real(r), y=imag(r))
 But,
 
 ```
-fzero(p)
+multroot(p)
 ```
 
-
-The `roots` function does not produce the accuracy that can be found using one of the algorithms of `fzero` for functions. For example
-
-```
-p = (x - sqrt(5))^3
-r = roots(p)
-r[1] - sqrt(5)
-```
-
-The `fzero` method can improve this, but if only one value is sought, a starting point can be given and the accuracy improved:
-
-```
-x = fzero(p, 2)
-(x, polyval(p, x))
-```
 
 
 
 ## Classical methods
 
-The package provides some classical methods for root finding: `newton`, `halley`, and `secant_method`. We can see how each works on a problem studied by Newton himself. Newton's method uses  the function and its derivative:
+The package provides some classical methods for root finding:
+`newton`, `halley`, and `secant_method`. We can see how each works on
+a problem studied by Newton himself. Newton's method uses the function
+and its derivative:
 
 ```
 f(x) = x^3 - 2x - 5
 fp(x) = 3x^2 - 2
 x = newton(f, fp, 2)
-[x, f(x), f(prevfloat(x)) * f(nextfloat(x))]
+[x f(x) f(prevfloat(x)) * f(nextfloat(x))]
 ```
 
 To see the algorithm in progress, the argument `verbose=true` may be specified. In this case only 4 steps are needed:
@@ -236,7 +272,7 @@ The secant method needs two starting points, here we start with 2 and 3:
 
 ```
 x = secant_method(f, 2,3, verbose=true)
-[x, f(x), f(prevfloat(x)) * f(nextfloat(x))]
+[x f(x) f(prevfloat(x)) * f(nextfloat(x))]
 ```
 
 Halley's method has cubic convergence, as compared to Newton's quadratic convergence. It uses the second derivative as well:
@@ -244,7 +280,7 @@ Halley's method has cubic convergence, as compared to Newton's quadratic converg
 ```
 fpp(x) = 6x
 x = halley(f, fp, fpp, 2, verbose=true)
-[x, f(x), f(prevfloat(x)) * f(nextfloat(x))]
+[x f(x) f(prevfloat(x)) * f(nextfloat(x))]
 ```
 
 
@@ -271,7 +307,7 @@ f(x) = 1/x^2 + x^3
 fzero(D(f), 1)
 ```
 
-For more complicated expressions, `D` will not work. In this example, we have a function $f(x, theta)$ that models the flight of an arrow on a windy day:
+For more complicated expressions, `D` will not work. In this example, we have a function $f(x, \theta)$ that models the flight of an arrow on a windy day:
 
 ```
 function flight(x, theta)
@@ -282,6 +318,8 @@ function flight(x, theta)
 end
 ```
 
+
+
 The total distance flown is when `flight(x) == 0.0` for some `x > 0`: This can be solved for different `theta` with `fzero`. In the following, we note that `log(a/(a-x))` will have an asymptote at `a`, so we start our search at `a-1`:
 
 ```
@@ -291,10 +329,23 @@ function howfar(theta)
 end
 ```	 
 
-To maximize this function, the derivative can not be taken by `D`. Here we use a central-difference approximation and start the search at 45 degrees, the angle which maximizes the trajectory on a non-windy day:
+To see the trajectory if shot at 30 degrees, we have:
+
+
+```
+theta = 30
+plot(x -> flight(x,  theta), 0, howfar(theta))
+```
+
+
+To maximize the range we solve for the lone critical point of `howfar` within the range. The
+derivative can not be taken automatically with `D`, here we use a
+central-difference approximation and start the search at 45 degrees,
+the angle which maximizes the trajectory on a non-windy day:
 
 ```
 h = 1e-5
 howfarp(theta) = (howfar(theta+h) - howfar(theta-h)) / (2h)
 fzero(howfarp, 45)
 ```
+

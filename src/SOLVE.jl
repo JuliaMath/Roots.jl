@@ -165,7 +165,7 @@ function secant_method_no_bracket(f::Function, a, b)
         ## increasing value, try quadratic
         if fgamma >= fbeta
             quad_ctr = quad_ctr + 1
-            if quad_ctr > 10
+            if quad_ctr > 5*10
                 abs(fbeta) <  eps(zero(b))^(1/5) ? throw(StateConverged(beta)) : throw(Dithering(beta))
             end
             ## secant line stopped decreasing

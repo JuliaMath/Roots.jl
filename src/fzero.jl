@@ -27,17 +27,19 @@ end
  
 
 function find_zero(f::Function, a::Float64, b::Float64)
-    prod = f(a) * f(b)
-    if prod > 0 error("[a,b] is not a bracket") end
-    if sign(prod) == 0.0 error("f(a) or f(b) is a zero!") end
 
-    x0 = a
-    x2 = b
+    x0, y0 = a, f(a)
+    x2, y2 = b, f(b)
+
+    y0 == 0 && return a
+    y2 == 0.0 && return b
+    if sign(y0) * sign(y2) > 0
+        error("[a,b] is not a bracket") 
+    end
+
     x1 = _middle(x0, x2)
-    
-    y0 = f(x0)
     y1 = f(x1)
-    y2 = f(x2)
+
     
     while x0 < x1 && x1 < x2
         if sign(y0) == sign(y1)

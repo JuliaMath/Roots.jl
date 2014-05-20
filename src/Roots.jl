@@ -17,6 +17,7 @@ include("newton.jl")
 include("derivative_free.jl")
 include("multroot.jl")
 include("SOLVE.jl")
+include("real_roots.jl")
 
 ## Main interface
 ##
@@ -36,7 +37,8 @@ include("SOLVE.jl")
 ## max_iter: maximum number of steps before giving up on convergene
 ## 
 ## Poly types
-fzero(p::Poly) = multroot(p)
+fzeros(p::Poly) = real_roots(p)
+
 function fzero(p::Poly, x0::Real; kwargs...) 
     derivative_free(convert(Function, p), x0; kwargs...)
 end
@@ -78,7 +80,7 @@ macro fzero(expr::Expr, a)
 end
 
 
-## find all zeros in a bracket
+## find all *simple* zeros in a bracket
 function fzeros{T <: Real}(f::Function, bracket::Vector{T}; kwargs...) 
     find_zeros(f, bracket[1], bracket[2]; kwargs...)
 end

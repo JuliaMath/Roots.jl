@@ -7,30 +7,46 @@ algorithm based on its arguments:
 
 * `fzero(p::Union(Function, Poly), a::Real, b::Real)` and
   `fzero(p::Union(Function, Poly), bracket::Vector)` call the
-  `find_zero` algorithm to find a root within the bracket `[a,b]`. For convenience,
-  `fzeros(f::Function, a::Real, b::Real)` will split the interval `[a,b]` and apply `fzero` to each
-  bracketing subintervals to search for all zeros in the intervals
+  `find_zero` algorithm to find a root within the bracket `[a,b]`. 
+
+  For convenience, `fzeros(f::Function, a::Real, b::Real)` will split
+  the interval `[a,b]` and apply `fzero` to each bracketing
+  subintervals to search for all *simple* zeros in the intervals. The
+  call `fzeros(p::Poly)` will find all real roots of the
+  polynomial (provided the polynomial isn't a "difficult" one).
 
 * `fzero(p::Union(Function, Poly), x0::Real; order::Int=0)` calls a
   derivative-free method. The default is slow but more robust to the
   quality of the initial guess. If a bracket can be found, the
-  returned value will satisfy `f(x)==0.0` or
-  `f(prevfloat(x))*f(nextfloat(x)) <= 0`. Otherwise a value is returned
-  with `f(x)` very nearly 0.0 or an error is thrown. For faster
-  convergence and less memory usage, an order can be
+  returned value will satisfy `f(x)==0.0` or at least one of
+  `f(prevfloat(x)*f(x) < 0` or ``f(x)*f(nextfloat(x) < 0` (which is
+  not quite`f(prevfloat(x))*f(nextfloat(x)) <= 0`).
+
+  Otherwise a value
+  is returned with `f(x)` very nearly 0.0 or an error is thrown. For
+  faster convergence and less memory usage, an order can be
   specified. Possible values are 1, 2, 5, 8, and 16. The order 2
-  Steffensen method can be the fastest, but is more sensitive to a good
-  initial guess. The order 8 method is more robust and often as
+  Steffensen method can be the fastest, but is more sensitive to a
+  good initial guess. The order 8 method is more robust and often as
   fast. The higher-order method may be faster when using `Big` values.
 
 * `fzero(p::Union(Function, Poly), x0::Real, bracket::Vector)` calls
   a derivative-free algorithm with initial guess `x0` with steps constrained
   to remain in the specified bracket.
 
-* `fzero(p::Poly)` calls `multroot`, An improvement on the `roots`
-  function of the `Polynomial` package when multiple roots are
-  present. Follows algorithms due to Zeng, ["Computing multiple roots
-  of inexact polynomials", Math. Comp. 74 (2005),
+* `fzeros(p::Poly)` calls `real_roots`. This uses a somewhat slow
+  algorithm to find the real roots of a polynomial. The main issue
+  involved with this function is the finding of a GCD for `p` and its
+  derivative (which is used to find a square-free polynomial with the
+  roots of `p`). This can be subject to numeric issues when the
+  polynomial has high degree or nearby roots.
+
+  The `roots` function from the `Polynomial` package will find all the
+  roots of a polynomial. It suffers when the polynomial has high
+  multiplicities. The `multroot` function is provided to handle this
+  case a bit better.  The function follows algorithms due to Zeng,
+  ["Computing multiple roots of inexact polynomials", Math. Comp. 74
+  (2005),
   869-903](http://www.ams.org/journals/mcom/2005-74-250/S0025-5718-04-01692-8/home.html).
 
 
@@ -59,14 +75,23 @@ fzero(sin, 3, order=16)		# 3.141592653589793
 fzero(sin, BigFloat(3.0))	# 3.1415926535897932384...with 256 bits of precision
 ```
 
+
+The real roots of a polynomial can be found at once:
+
+```
+using Polynomial
+x = poly([0.0])
+fzeros(x^5 -x - 1)
+fzeros(x*(x-1)*(x-2)*(x^2 + x + 1))
+```
+
 Polynomial root finding is a bit better when multiple roots are present.
 
 ```
 using Roots, Polynomial
 x = Poly([1,0])
 p = (x-1)^2 * (x-3)
-fzero(p)			# compare to roots(p)
-fzero(p, [2.5, 3.5])
+multroot(p)			# compare to roots(p)
 ```
 
 The well-known methods can be used with or without supplied
