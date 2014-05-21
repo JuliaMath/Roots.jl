@@ -7,27 +7,21 @@ algorithm based on its arguments:
 
 * `fzero(p::Union(Function, Poly), a::Real, b::Real)` and
   `fzero(p::Union(Function, Poly), bracket::Vector)` call the
-  `find_zero` algorithm to find a root within the bracket `[a,b]`. 
+  `find_zero` algorithm to find a root within the bracket `[a,b]`.
+  When a bracket is used, the algorithm is guaranteed to converge to a
+  value `x` with either `f(x) == 0` or at least one of
+  `f(prevfloat(x)*f(x) < 0` or ``f(x)*f(nextfloat(x) < 0`. (The
+  function need not be continuous to apply the algorithm, as the last
+  condition can still hold.)
 
-  For convenience, `fzeros(f::Function, a::Real, b::Real)` will split
-  the interval `[a,b]` and apply `fzero` to each bracketing
-  subintervals to search for all *simple* zeros in the intervals. The
-  call `fzeros(p::Poly)` will find all real roots of the
-  polynomial (provided the polynomial isn't a "difficult" one).
 
 * `fzero(p::Union(Function, Poly), x0::Real; order::Int=0)` calls a
-  derivative-free method. The default is slow but more robust to the
-  quality of the initial guess. If a bracket can be found, the
-  returned value will satisfy `f(x)==0.0` or at least one of
-  `f(prevfloat(x)*f(x) < 0` or ``f(x)*f(nextfloat(x) < 0` (which is
-  not quite`f(prevfloat(x))*f(nextfloat(x)) <= 0`).
-
-  Otherwise a value
-  is returned with `f(x)` very nearly 0.0 or an error is thrown. For
-  faster convergence and less memory usage, an order can be
+  derivative-free method. The default method is a bit plodding but
+  more robust to the quality of the initial guess than some others.
+  For faster convergence and less memory usage, an order can be
   specified. Possible values are 1, 2, 5, 8, and 16. The order 2
-  Steffensen method can be the fastest, but is more sensitive to a
-  good initial guess. The order 8 method is more robust and often as
+  Steffensen method can be the fastest, but is in need of a good
+  initial guess. The order 8 method is more robust and often as
   fast. The higher-order method may be faster when using `Big` values.
 
 * `fzero(p::Union(Function, Poly), x0::Real, bracket::Vector)` calls
@@ -41,7 +35,14 @@ algorithm based on its arguments:
   roots of `p`). This can be subject to numeric issues when the
   polynomial has high degree or nearby roots.
 
-  The `roots` function from the `Polynomial` package will find all the
+
+  For convenience, `fzeros(f::Function, a::Real, b::Real)` will split
+  the interval `[a,b]` into many subintervals and apply `fzero` to
+  each bracketing subinterval. This naive algorithm will miss double
+  roots that lie within the same subinterval and miss roots where the
+  function does not cross the $x$ axis.
+
+* The `roots` function from the `Polynomial` package will find all the
   roots of a polynomial. It suffers when the polynomial has high
   multiplicities. The `multroot` function is provided to handle this
   case a bit better.  The function follows algorithms due to Zeng,
@@ -50,10 +51,10 @@ algorithm based on its arguments:
   869-903](http://www.ams.org/journals/mcom/2005-74-250/S0025-5718-04-01692-8/home.html).
 
 
-For historical purposes, there are implementations of Newton's method
-(`newton`), Halley's method (`halley`), and the secant method
-(`secant_method`). For the first two, if derivatives are not
-specified, they will be computed using the `PowerSeries` package.
+* For historical purposes, there are implementations of Newton's
+  method (`newton`), Halley's method (`halley`), and the secant method
+  (`secant_method`). For the first two, if derivatives are not
+  specified, they will be computed using the `PowerSeries` package.
 
 
 ## Usage examples
