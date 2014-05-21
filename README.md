@@ -128,4 +128,4 @@ end
 fzero(D(m), 0, 1)  - median(as)	# 0.0
 ```
 
-Some additional documentation can be read [here](http://nbviewer.ipython.org/url/github/JuliaLang/Roots.jl/blob/master/doc/roots.ipynb?create=1).
+Some additional documentation can be read [here](http://nbviewer.ipython.org/url/github.com/JuliaLang/Roots.jl/blob/master/doc/roots.ipynb?create=1).
