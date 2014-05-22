@@ -28,19 +28,21 @@ algorithm based on its arguments:
   a derivative-free algorithm with initial guess `x0` with steps constrained
   to remain in the specified bracket.
 
-* `fzeros(p::Poly)` calls `real_roots`. This uses a somewhat slow
-  algorithm to find the real roots of a polynomial. The main issue
-  involved with this function is the finding of a GCD for `p` and its
-  derivative (which is used to find a square-free polynomial with the
-  roots of `p`). This can be subject to numeric issues when the
-  polynomial has high degree or nearby roots.
+* `fzeros(f::Function)` (for a polynomial function) and
+  `fzeros(p::Poly)` calls `real_roots`, which implements a somewhat
+  slow algorithm to find the real roots of a polynomial. The main
+  issue involved with this function is the finding of a GCD for `p`
+  and its derivative (which is used to find a square-free polynomial
+  with the roots of `p`). This can be subject to numeric issues when
+  the polynomial has high degree or nearby roots.
 
 
-  For convenience, `fzeros(f::Function, a::Real, b::Real)` will split
-  the interval `[a,b]` into many subintervals and apply `fzero` to
-  each bracketing subinterval. This naive algorithm will miss double
-  roots that lie within the same subinterval and miss roots where the
-  function does not cross the $x$ axis.
+  For convenience, when `f` is not a polynomial function,
+  `fzeros(f::Function, a::Real, b::Real)` will split the interval
+  `[a,b]` into many subintervals and apply `fzero` to each bracketing
+  subinterval. This naive algorithm will miss double zeros that lie
+  within the same subinterval and miss zeros where the function does
+  not cross the $x$ axis.
 
 * The `roots` function from the `Polynomial` package will find all the
   roots of a polynomial. It suffers when the polynomial has high
@@ -77,7 +79,14 @@ fzero(sin, BigFloat(3.0))	# 3.1415926535897932384...with 256 bits of precision
 ```
 
 
-The real roots of a polynomial can be found at once:
+All real roots of a polynomial can be found at once:
+
+```
+f(x) = x^5 - x - 1
+fzeros(f)
+```
+
+Or using an explicit polynomial:
 
 ```
 using Polynomial
@@ -92,7 +101,14 @@ Polynomial root finding is a bit better when multiple roots are present.
 using Roots, Polynomial
 x = Poly([1,0])
 p = (x-1)^2 * (x-3)
-multroot(p)			# compare to roots(p)
+rts, mults = multroot(p)	# compare to roots(p)
+```
+
+Again, a polynomial function may be passed in
+
+```
+f(x) = (x-1)*(x-2)^2*(x-3)^3
+multroot(f)
 ```
 
 The well-known methods can be used with or without supplied

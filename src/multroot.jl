@@ -32,6 +32,14 @@ Base.next(p::Poly, i) = (p[i], i + 1)
 Base.done(p::Poly, i) = i > length(p)
 #Base.convert(::Type{Poly{Float64}},p=Poly{Int64}) = Poly(float(p.a))
 Base.convert(::Type{Function}, p::Poly) = x -> Polynomial.polyval(p,x)
+function Base.convert(::Type{Poly}, f::Function)
+    x = poly([0.0])
+    try
+        f(x)
+    catch e
+        error("f(x) is not a polynomial function")
+    end
+end
 *{T, S}(A::Array{T,2}, p::Poly{S}) = Poly(A * p.a)
 
 
@@ -444,3 +452,11 @@ end
   
 ## can pass in vector too
 multroot{T <: Real}(p::Vector{T}; kwargs...) = multroot(Poly(p); kwargs...)
+function multroot(f::Function; kwargs...)
+    try
+        p = convert(Poly, f)
+        multroot(p; kwargs...)
+    catch e
+        error("The function does not compute a univariate polynomial")
+    end
+end

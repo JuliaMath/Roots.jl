@@ -82,10 +82,21 @@ end
 
 ## find all *simple* zeros in a bracket
 function fzeros{T <: Real}(f::Function, bracket::Vector{T}; kwargs...) 
-    find_zeros(f, bracket[1], bracket[2]; kwargs...)
+    ## check if a poly
+    try
+        filter(x -> a <= x <= b, real_roots(convert(Poly, f)))
+    catch e
+        find_zeros(f, bracket[1], bracket[2]; kwargs...)
+    end
 end
 fzeros(f::Function, a::Real, b::Real; kwargs...) = find_zeros(f, a, b; kwargs...)
-
+function fzeros(f::Function)
+    try
+        real_roots(convert(Poly, f))
+    catch e
+        error("If f(x) is not a polynomial in x, then an interval to search over is needed")
+    end
+end
 
 macro fzeros(expr::Expr, a, b)
     quote
