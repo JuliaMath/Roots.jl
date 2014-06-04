@@ -17,21 +17,21 @@
 ## improve the root estimates from algorithm II (roots(v)). The pejorative manifold is defined by
 ## the multiplicities l and is operationalized in evalG and evalJ from Zeng's paper.   
 
-using Polynomial
+using Polynomials
+import Polynomials: degree
 
+## poly p[] is a_0 + a_1 x^1 + a_2x^2 + ... + a_nx^n
+## coeffs gives [a_0, ..., a_n], rcoeffs = [a_n, a_n-1, ..., a_1, a_0]
+coeffs(p::Poly) = [p[i] for i in 0:degree(p)]
+## rcoeffs needed as indexing in paper is an, an-1, ...
+rcoeffs(p::Poly) = reverse(coeffs(p))
+Base.norm(p::Poly, args...) = norm(coeffs(p), args...)
 
-## poly funs to add to Polynomial.jl
-degree(p::Poly) = length(p) - 1
-coeffs(p::Poly) = p.a
-Base.norm(p::Poly, args...) = norm(p.a, args...)
-leading_term(p::Poly) = p.a[1]
+leading_term(p::Poly) = p[degree(p)]
 monic(p::Poly) = p/leading_term(p)
-monic!(p::Poly) = (p.a = p.a/leading_term(p))
-Base.start(p::Poly) = 1
-Base.next(p::Poly, i) = (p[i], i + 1)
-Base.done(p::Poly, i) = i > length(p)
+
 #Base.convert(::Type{Poly{Float64}},p=Poly{Int64}) = Poly(float(p.a))
-Base.convert(::Type{Function}, p::Poly) = x -> Polynomial.polyval(p,x)
+Base.convert(::Type{Function}, p::Poly) = x -> Polynomials.polyval(p,x)
 function Base.convert(::Type{Poly}, f::Function)
     x = poly([0.0])
     try
@@ -40,7 +40,7 @@ function Base.convert(::Type{Poly}, f::Function)
         error("f(x) is not a polynomial function")
     end
 end
-*{T, S}(A::Array{T,2}, p::Poly{S}) = Poly(A * p.a)
+*{T, S}(A::Array{T,2}, p::Poly{S}) = Poly(A * rcoeffs(p))
 
 
 
@@ -59,9 +59,9 @@ function evalG(z::Vector, l::Vector)
 
     s = Poly([1.0])
     for i in 1:m
-        s = s * Poly([1.0,-z[i]])^l[i]
+        s = s * Poly([-z[i], 1.0])^l[i]
     end
-    s.a[2:end]
+    rcoeffs(s)[2:end]
 end
 
 ## get jacobian J_l(z), p16
@@ -70,17 +70,17 @@ function evalJ(z::Vector, l::Vector)
 
     m == length(l) || throw("Length mismatch")
 
-    u = prod([Poly([1.0, -z[j]])^(l[j]-1) for j in 1:m]) ## Pi (1-z)^(l-1)
+    u = prod([Poly([-z[j], 1.0])^(l[j]-1) for j in 1:m]) ## Pi (1-z)^(l-1)
 
     J = zeros(eltype(z), sum(l), m)
     for j in 1:m
         s = -l[j] * u
         for i in 1:m
             if i != j
-                s = s * Poly([1.0, -z[i]])
+                s = s * Poly([-z[i], 1.0])
             end
         end
-        J[:,j] = s.a
+        J[:,j] = rcoeffs(s)
     end
     J
 end
@@ -95,7 +95,7 @@ function pejroot{T<:Int}(p::Poly, z0::Vector, l::Vector{T};
                  maxsteps = 100
                       )
     
-    a = p.a[2:end]/p.a[1]       # monic
+    a = rcoeffs(monic(p))[2:end] # an_1, an_2, ..., a2, a1, a0
     
     if isa(w, Nothing)
         w = map(u -> min(1, 1/abs(u)), a)
@@ -144,37 +144,39 @@ end
 
 ## Various matrices that are needed:
 
-## Cauchy matric C_k(p), defn 2.1
+## Cauchy matrix C_k(p), defn 2.1
 function cauchy_matrix(p::Poly, k::Integer)
     n = degree(p) + 1
-    out = zeros(eltype(p.a), n + k - 1, k)
+    out = zeros(eltype(p), n + k - 1, k)
 
     for i in 1:k
-        out[(1:n) + (i-1), i] = p.a
+        out[(1:n) + (i-1), i] = rcoeffs(p)
     end
     out
 end
 
 ## p21
 function sylvester_discriminant_matrix(p::Poly, k::Integer)
-    a = cauchy_matrix(Polynomial.polyder(p), k+1)
+    a = cauchy_matrix(Polynomials.polyder(p), k+1)
     b = cauchy_matrix(p, k)
     [a b]
 end
 
 
-## lemma 4.1, (25)
+## Theorem 4.1, (25)
 ## Jacobian of F(u,v,w) -> [p, p;]
 function JF(u::Poly, v::Poly, w::Poly)
     m, k = degree(u), degree(v)
     n = m + k
-    
-    a = cauchy_matrix(v,m)
-    b = cauchy_matrix(w,m)
-    c = cauchy_matrix(u,k)
-    d = zeros(eltype(a), n-1, k)
-    e = zeros(eltype(a), n, k-1)
-    f = cauchy_matrix(u, k-1)
+    a = cauchy_matrix(v,m+1)
+    b = cauchy_matrix(w,m+1)
+    c = cauchy_matrix(u,k+1)
+    d = zeros(eltype(a), m + k + 1, k+1)
+    e = zeros(eltype(a), k + m + 1, k)
+    f = cauchy_matrix(u, k)
+
+    println((u,v,w))
+    println((a,b,c,d,e,f))
 
     [a c e; 
      b d f]
@@ -222,29 +224,35 @@ function agcd(p::Poly, q::Poly, u0::Poly, v0::Poly, w0::Poly)
     ## get degrees and make monic, compute weights
     m,n,k = map(degree, (u0, v0, w0))
     p,q,u0,v0,w0 = map(monic,  [p,q, u0, v0, w0])
-    wts = map(pj -> 1/max(1, abs(pj)), vcat(p.a[2:end], q.a[2:end]))
+#    wts = map(pj -> 1/max(1, abs(pj)), vcat(rcoeffs(p)[2:end], rcoeffs(q)[2:end]))
 
     s = u0 * v0 - p
     t = u0 * w0 - q
 
-    b = vcat(s.a[2:end], t.a[2:end])
-    xk = vcat(u0.a[2:end], v0.a[2:end], w0.a[2:end])
+    wts = map(pj -> 1/max(1, abs(pj)), vcat(rcoeffs(s)[2:end], rcoeffs(t)[2:end]))
+    b = vcat(rcoeffs(s)[2:end], rcoeffs(t)[2:end])
+    println((p,s,q,t,b,wts))
     max_coeff = [norm(b.*wts, Inf)]
+
+    xk = vcat(rcoeffs(u0)[2:end], rcoeffs(v0)[2:end], rcoeffs(w0)[2:end])
+
+
     
     j = 1
     ## refine values
     while j > 0
         A = JF(u0, v0, w0)
-        xk1 = xk - weighted_least_square(A, b, wts)
+        wls = weighted_least_square(A, b, wts)
+        xk1 = xk - wls
 
-        u = Poly([1.0, xk1[1:m]]) 
-        v = Poly([1.0, xk1[(m+1):(m+n)]]) 
-        w = Poly([1.0, xk1[(m+n+1):(m+n+k)]]) 
+        u = Poly(reverse([1.0, xk1[1:m]])) 
+        v = Poly(reverse([1.0, xk1[(m+1):(m+n)]]))
+        w = Poly(reverse([1.0, xk1[(m+n+1):(m+n+k)]]))
 
         s = u*v - p
         t = u*w - q
 
-        b = vcat(s.a[2:end], t.a[2:end])
+        b = vcat(rcoeffs(s)[2:end], rcoeffs(t)[2:end])
         push!(max_coeff, norm(b.*wts, Inf))
         j += 1
 
@@ -315,7 +323,7 @@ function gcd_degree(p::Poly;
                     rho::Real=1e-10, phi::Real=1e2 # to refine um, vm,wm
                     )
     if degree(p) <= 1
-        return (degree(p), Poly([1.0]), p, monic(Polynomial.polyder(p)))
+        return (degree(p), Poly([1.0]), p, monic(Polynomials.polyder(p)))
     end
 
     normp = norm(p)
@@ -329,17 +337,17 @@ function gcd_degree(p::Poly;
         if sigma < theta * normp
             ## compute um,vm,wm ...
             ## odd entries form v0, even entries form w0
-            v0 = monic(Poly(y[filter(isodd, [1:length(y)])]))
-            w0 = monic(Poly(y[filter(iseven, [1:length(y)])]))
+            v0 = monic(Poly(reverse(y[filter(isodd, [1:length(y)])])))
+            w0 = monic(Poly(reverse(y[filter(iseven, [1:length(y)])])))
             
             ## Solve C_(m+1)(v0) u0 = p for u0
             B = cauchy_matrix(v0, degree(p) - degree(v0) + 1)  
-            wts = [min(1, 1/abs(ak)) for ak in p]
+            wts = [min(1, 1/abs(ak)) for ak in rcoeffs(p)]
             
-            u0 = monic(Poly(weighted_least_square(B, p.a, wts)))
+            u0 = monic(Poly(reverse(weighted_least_square(B, rcoeffs(p), wts))))
             ## u0, v0, w0 are initial guesses, these are now improved
             ## with agcd
-            um, vm, wm, residual= agcd(p, Polynomial.polyder(p), u0, v0, w0) # refine tolerance?
+            um, vm, wm, residual= agcd(p, Polynomials.polyder(p), u0, v0, w0) # refine tolerance?
 
             if residual < rho * normp
                 ## return degree, gcd factorization u,v,w
@@ -355,7 +363,7 @@ function gcd_degree(p::Poly;
         if size(Sh)[2] > size(Sh)[1]
             ## won't have a solution -- more columns than rows (DimensionMismatch("Matrix cannot have less rows than columns"))
             ## return m=1, u=1, v=p and w = p'
-            return (0, Poly([1.0]), p, Polynomial.polyder(p))
+            return (0, Poly([1.0]), p, Polynomials.polyder(p))
         end
         
     end
@@ -414,7 +422,7 @@ function multroot(p::Poly;
                  phi::Real = 1e2          # residual growth factor
                  )
 
-    p = Poly(float(p.a)) 
+    p = Poly(float(coeffs(p)))  # floats, not Int
     u = [p]
     d = Int[]
     zs = Any[]

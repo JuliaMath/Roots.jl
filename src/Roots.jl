@@ -1,5 +1,5 @@
 module Roots
-using Polynomial
+using Polynomials
 
 export fzero, @fzero,
        fzeros, @fzeros,
