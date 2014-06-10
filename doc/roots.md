@@ -1,22 +1,32 @@
 # The Roots package
 
-The `Roots` package contains simple routines for finding roots of continuous scalar functions of a single real variable.  The basic interface is through the function `fzero`, which through multiple dispatch can handle many different cases.
+The `Roots` package contains simple routines for finding roots of
+continuous scalar functions of a single real variable.  The basic
+interface is through the function `fzero`, which through multiple
+dispatch can handle many different cases.
 
 We will use these pacakges
 
 ```
 using Gadfly			# for plotting
 using Roots
-using Polynomial
 ```
 
 ## Bracketing
 
-For a function $f: R \rightarrow R$ a bracket is a pair $a<b$ for which $f(a)\cdot f(b) < 0$. That is they have different signs. If $f$ is continuous this forces there to be a zero on the interval $[a,b]$, otherwise, if $f$ is only piecewise continuous, there must be a point $c$ in $[a,b]$ with the left limit and right limit at $c$ having different signs. These values can be found, up to floating point roundoff.
+For a function $f: R \rightarrow R$ a bracket is a pair $a<b$ for
+which $f(a)\cdot f(b) < 0$. That is they have different signs. If $f$
+is continuous this forces there to be a zero on the interval $[a,b]$,
+otherwise, if $f$ is only piecewise continuous, there must be a point
+$c$ in $[a,b]$ with the left limit and right limit at $c$ having
+different signs. These values can be found, up to floating point
+roundoff.
 
-That is, a value $a < c < b$ can be found with either `f(c) == 0.0` or `f(prevfloat(c)) * f(nextfloat(c)) <= 0`.
+That is, a value $a < c < b$ can be found with either `f(c) == 0.0` or
+`f(prevfloat(c)) * f(nextfloat(c)) <= 0`.
 
-To illustrate, consider the function $f(x) = \cos(x) - x$. From the graph we see readily that $[0,1]$ is a bracket:
+To illustrate, consider the function $f(x) = \cos(x) - x$. From the
+graph we see readily that $[0,1]$ is a bracket:
 
 ```
 f(x) = cos(x) - x
@@ -30,7 +40,9 @@ x = fzero(f, [0, 1])
 [x f(x)]
 ```
 
-For that function `f(x) == 0.0`. Next consider $f(x) = \sin(x)$. A known root is $\pi$. Basic trignometry tells us that $[\pi/2, 3\pi2]$ will be a bracket:
+For that function `f(x) == 0.0`. Next consider $f(x) = \sin(x)$. A
+known root is $\pi$. Basic trignometry tells us that $[\pi/2, 3\pi2]$
+will be a bracket:
 
 ```
 f(x) = sin(x)
@@ -115,7 +127,13 @@ x = fzero(f, 2, order=8)
 [x f(x)]
 ```
 
-The latter shows that zeros need not be simple zeros (i.e. $f'(x) = 0$ if defined) to be found. For the higher-order methods, there is a tolerance that can be specified so that a value is returned as a zero if `abs(f(x)) < tol`. The default method for `fzero` uses a very strict tolerance for this, otherwise defaulting to an error that at times might be very close to the actual zero. For this problem it finds the exact value:
+The latter shows that zeros need not be simple zeros (i.e. $f'(x) = 0$
+if defined) to be found. For the higher-order methods, there is a
+tolerance that can be specified so that a value is returned as a zero
+if `abs(f(x)) < tol`. The default method for `fzero` uses a very
+strict tolerance for this, otherwise defaulting to an error that at
+times might be very close to the actual zero. For this problem it
+finds the exact value:
 
 ```
 x = fzero(f, 2)
@@ -128,13 +146,29 @@ But not for a similar problem:
 fzero(x -> x^4, 1)
 ```
 
-(Though the answer is basically on track, the algorithm takes too long to improve itself to the very stringent range set. For problems where a bracket is found, this dithering won't happen.)
+(Though the answer is basically on track, the algorithm takes too long
+to improve itself to the very stringent range set. For problems where
+a bracket is found, this dithering won't happen.)
 
 
-The higher-order methods are basically various derivative-free versions of Newtons method which has update step $x - f(x)/f'(x)$. For example, Steffensen's method is essentially replacing $f'(x)$ with $(f(x + f(x)) - f(x))/f(x)$. This is just a forward-difference approximation to the derivative with "$h$" being $f(x)$, which presumably is close to $0$ already. The methods with higher order combine this with different secant line approaches that minimize the number of function calls. The default method uses a combination of Steffensen's method with modifications, a quadratic fit, and, if possible, a bracketing approach. It may need many more function calls than the higher-order methods. These higher-order methods can be susceptible to some of the usual issues found with Newton's method: poor initial guess, small first derivative, or large second derivative at the zero.
+The higher-order methods are basically various derivative-free
+versions of Newtons method which has update step $x - f(x)/f'(x)$. For
+example, Steffensen's method is essentially replacing $f'(x)$ with
+$(f(x + f(x)) - f(x))/f(x)$. This is just a forward-difference
+approximation to the derivative with "$h$" being $f(x)$, which
+presumably is close to $0$ already. The methods with higher order
+combine this with different secant line approaches that minimize the
+number of function calls. The default method uses a combination of
+Steffensen's method with modifications, a quadratic fit, and, if
+possible, a bracketing approach. It may need many more function calls
+than the higher-order methods. These higher-order methods can be
+susceptible to some of the usual issues found with Newton's method:
+poor initial guess, small first derivative, or large second derivative
+at the zero.
 
 
-For a classic example where basically the large second derivative is the issue, we have $f(x) = x^{1/3}$:
+For a classic example where basically the large second derivative is
+the issue, we have $f(x) = x^{1/3}$:
 
 ```
 f(x) = cbrt(x)
@@ -149,7 +183,11 @@ x = fzero(f, 1)
 [x f(x)]
 ```
 
-Finally, we show another example illustrating that the default `fzero` call is more forgiving to an initial guess. The devilish function defined below comes from a [test suite](http://people.sc.fsu.edu/~jburkardt/cpp_src/test_zero/test_zero.html) of difficult functions. The default method finds the zero:
+Finally, we show another example illustrating that the default `fzero`
+call is more forgiving to an initial guess. The devilish function
+defined below comes from a [test
+suite](http://people.sc.fsu.edu/~jburkardt/cpp_src/test_zero/test_zero.html)
+of difficult functions. The default method finds the zero:
 
 ```
 f(x) = cos(100*x)-4*erf(30*x-10)
@@ -166,11 +204,13 @@ Whereas, with `order=8` an error is raised.
 fzero(f, 1, order=8)
 ```
 
-In this example, some other orders work. Basically the high order oscillation can send the proxy tangent line off in nearly random directions.
+In this example, some other orders work. Basically the high order
+oscillation can send the proxy tangent line off in nearly random
+directions.
 
 ## Polynomials
 
-The `Polynomial` package provides a type for working with polynomial
+The `Polynomials` package provides a type for working with polynomial
 functions that allows many typical polynomial operations to be
 defined. In this context, the `roots` function is used to find the
 roots of a polynomial.
@@ -179,6 +219,7 @@ roots of a polynomial.
 For example, 
 
 ```
+using Polynomials
 x = Poly([1.0,0])			# "1x + 0"
 roots((x-1)*(x-2)*(x-3))
 ```
@@ -189,20 +230,14 @@ The `fzeros` function will find the real roots of a univariate polynomial:
 fzeros((x-1)*(x-2)*(x-3))
 ```
 
-Or
+It is often more convenient to call this with a polynomial function instead of a polynomial:
 
 ```
-fzeros(x*(x-1)*(x^2 + 1)^4)
+f(x) = x*(x-1)*(x^2 + 1)^4
+fzeros(f)
 ```
 
-It can have numeric issues when the degree gets too large, or the roots are too close together. For example
-
-```
-delta = 1e-3; fzeros((x-delta)*x*(x+delta)) # all fine
-delta = 1e-4; fzeros((x-delta)*x*(x+delta)) # misses 0.0
-delta = 1e-5; fzeros((x-delta)*x*(x+delta)) # returns just 0.0
-```
-
+It can have numeric issues when the degree gets too large, or the roots are too close together.
 
 
 The `multroot` function will also find the roots. The algorithm does a
@@ -275,7 +310,8 @@ x = secant_method(f, 2,3, verbose=true)
 [x f(x) f(prevfloat(x)) * f(nextfloat(x))]
 ```
 
-Halley's method has cubic convergence, as compared to Newton's quadratic convergence. It uses the second derivative as well:
+Halley's method has cubic convergence, as compared to Newton's
+quadratic convergence. It uses the second derivative as well:
 
 ```
 fpp(x) = 6x
@@ -284,7 +320,10 @@ x = halley(f, fp, fpp, 2, verbose=true)
 ```
 
 
-For many function, the derivatives can be computed automatically. The `PowerSeries` function provides a means. This package wraps the process into an operator, `D` which returns the derivative of a function `f`:
+For many function, the derivatives can be computed automatically. The
+`PowerSeries` function provides a means. This package wraps the
+process into an operator, `D` which returns the derivative of a
+function `f`:
 
 ```
 newton(f, D(f), 2)
@@ -296,18 +335,24 @@ Or for Halley's method
 halley(f, D(f), D(f,2), 2)
 ```
 
-(The operator `D2(f)` is a convenience for `D(f,2)`.) Specifying the derivative(s) can be skipped, the functions will default to the above calls.
+(The operator `D2(f)` is a convenience for `D(f,2)`.) Specifying the
+derivative(s) can be skipped, the functions will default to the above
+calls.
 
 ## Finding critical points
 
-The `D` function makes it straightforward to find critical points (where the derivative is $0$ or undefined). For example, the critical point of the function $f(x) = 1/x^2 + x^3, x > 0$ can be found with:
+The `D` function makes it straightforward to find critical points
+(where the derivative is $0$ or undefined). For example, the critical
+point of the function $f(x) = 1/x^2 + x^3, x > 0$ can be found with:
 
 ```
 f(x) = 1/x^2 + x^3
 fzero(D(f), 1)
 ```
 
-For more complicated expressions, `D` will not work. In this example, we have a function $f(x, \theta)$ that models the flight of an arrow on a windy day:
+For more complicated expressions, `D` will not work. In this example,
+we have a function $f(x, \theta)$ that models the flight of an arrow
+on a windy day:
 
 ```
 function flight(x, theta)
@@ -320,7 +365,10 @@ end
 
 
 
-The total distance flown is when `flight(x) == 0.0` for some `x > 0`: This can be solved for different `theta` with `fzero`. In the following, we note that `log(a/(a-x))` will have an asymptote at `a`, so we start our search at `a-1`:
+The total distance flown is when `flight(x) == 0.0` for some `x > 0`:
+This can be solved for different `theta` with `fzero`. In the
+following, we note that `log(a/(a-x))` will have an asymptote at `a`,
+so we start our search at `a-1`:
 
 ```
 function howfar(theta)
@@ -338,10 +386,11 @@ plot(x -> flight(x,  theta), 0, howfar(theta))
 ```
 
 
-To maximize the range we solve for the lone critical point of `howfar` within the range. The
-derivative can not be taken automatically with `D`, here we use a
-central-difference approximation and start the search at 45 degrees,
-the angle which maximizes the trajectory on a non-windy day:
+To maximize the range we solve for the lone critical point of `howfar`
+within the range. The derivative can not be taken automatically with
+`D`, here we use a central-difference approximation and start the
+search at 45 degrees, the angle which maximizes the trajectory on a
+non-windy day:
 
 ```
 h = 1e-5

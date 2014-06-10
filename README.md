@@ -44,7 +44,7 @@ algorithm based on its arguments:
   within the same subinterval and miss zeros where the function does
   not cross the $x$ axis.
 
-* The `roots` function from the `Polynomial` package will find all the
+* The `roots` function from the `Polynomials` package will find all the
   roots of a polynomial. It suffers when the polynomial has high
   multiplicities. The `multroot` function is provided to handle this
   case a bit better.  The function follows algorithms due to Zeng,
@@ -89,7 +89,7 @@ fzeros(f)
 Or using an explicit polynomial:
 
 ```
-using Polynomial
+using Polynomials
 x = poly([0.0])
 fzeros(x^5 -x - 1)
 fzeros(x*(x-1)*(x-2)*(x^2 + x + 1))
@@ -98,8 +98,8 @@ fzeros(x*(x-1)*(x-2)*(x^2 + x + 1))
 Polynomial root finding is a bit better when multiple roots are present.
 
 ```
-using Roots, Polynomial
-x = Poly([1,0])
+using Roots, Polynomials
+x = poly([0.0])
 p = (x-1)^2 * (x-3)
 rts, mults = multroot(p)	# compare to roots(p)
 ```

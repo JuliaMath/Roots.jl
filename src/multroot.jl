@@ -30,7 +30,6 @@ Base.norm(p::Poly, args...) = norm(coeffs(p), args...)
 leading_term(p::Poly) = p[degree(p)]
 monic(p::Poly) = p/leading_term(p)
 
-#Base.convert(::Type{Poly{Float64}},p=Poly{Int64}) = Poly(float(p.a))
 Base.convert(::Type{Function}, p::Poly) = x -> Polynomials.polyval(p,x)
 function Base.convert(::Type{Poly}, f::Function)
     x = poly([0.0])
@@ -44,6 +43,13 @@ end
 
 
 
+## map monic(p) to a point in C^n
+## p = 1x^n + a1x^n-1 + ... + an_1 x + an -> (a1,a2,...,an)
+function p2a(p::Poly) 
+    p = monic(p)
+    rcoeffs(p)[2:end]
+end
+
 
 function weighted_least_square(A::Array, b::Vector, w::Vector)
     ## solve weighted least squares problem W*(Ax - b) = 0
@@ -52,32 +58,27 @@ function weighted_least_square(A::Array, b::Vector, w::Vector)
 end
 
 ## get value of gl(z). From p16
-function evalG(z::Vector, l::Vector)
-    m = length(z)
+function evalG(zs::Vector, ls::Vector)
+    length(zs) == length(ls) || throw("Length mismatch")
 
-    length(z) == length(l) || throw("Length mismatch")
-
-    s = Poly([1.0])
-    for i in 1:m
-        s = s * Poly([-z[i], 1.0])^l[i]
-    end
-    rcoeffs(s)[2:end]
+    s = prod([poly([z])^l for (z,l) in zip(zs, ls)])  # \prod (x-z_i)^l_i
+    p2a(s)
+#    rcoeffs(s)[2:end]
 end
 
 ## get jacobian J_l(z), p16
-function evalJ(z::Vector, l::Vector)
-    m = length(z) 
+function evalJ(zs::Vector, ls::Vector)
+    length(zs) == length(ls) || throw("Length mismatch")
+    m = length(zs)
 
-    m == length(l) || throw("Length mismatch")
+    u = prod([poly([z])^(l-1) for (z,l) in zip(zs, ls)]) ## Pi (1-z)^(l-1)
 
-    u = prod([Poly([-z[j], 1.0])^(l[j]-1) for j in 1:m]) ## Pi (1-z)^(l-1)
-
-    J = zeros(eltype(z), sum(l), m)
+    J = zeros(eltype(zs), sum(ls), m)
     for j in 1:m
-        s = -l[j] * u
+        s = -ls[j] * u
         for i in 1:m
             if i != j
-                s = s * Poly([-z[i], 1.0])
+                s = s * poly([zs[i]])
             end
         end
         J[:,j] = rcoeffs(s)
@@ -85,31 +86,26 @@ function evalJ(z::Vector, l::Vector)
     J
 end
 
-## Gauss Newton iteration to solve weighted least squares problem
+## Gauss-Newton iteration to solve weighted least squares problem
 ## G_l(z) = a, where a is related to monic version of polynomial p
 ## l is known multiplicity structure of polynomial p = (x-z1)^l1 * (x-z2)^l2 * ... * (x-zn)^ln
 ## Algorithm I, p17
 function pejroot{T<:Int}(p::Poly, z0::Vector, l::Vector{T};
-                 w::Union(Vector, Nothing)=nothing, # weight vector
+                 wts::Union(Vector, Nothing)=nothing, # weight vector
                  tol = 1e-8,
                  maxsteps = 100
                       )
     
-    a = rcoeffs(monic(p))[2:end] # an_1, an_2, ..., a2, a1, a0
+    a = p2a(p) #rcoeffs(monic(p))[2:end] # an_1, an_2, ..., a2, a1, a0
     
-    if isa(w, Nothing)
-        w = map(u -> min(1, 1/abs(u)), a)
+    if isa(wts, Nothing)
+        wts = map(u -> min(1, 1/abs(u)), a)
     end
-    W = diagm(w)
+    W = diagm(wts)
 
-    ## Could make this more efficient I'm sure
+    ## Solve WJ Δz = W(Gl(z) - a) in algorithm I
     G(z) = (evalG(z, l) - a)
-    function Jplus(z) 
-        Jk = evalJ(z, l)
-        B = conj(Jk)' * W^2 
-        (B * Jk) \ B
-    end
-    update(z, l) = z - Jplus(z) * G(z)
+    update(z, l) = z -  weighted_least_square(evalJ(z,l), G(z), wts)
 
     zk = copy(z0); zk1 = update(zk, l)
     deltaold = norm(zk1 - zk,2); zk = zk1
@@ -124,6 +120,7 @@ function pejroot{T<:Int}(p::Poly, z0::Vector, l::Vector{T};
             break
         end
 
+        ## add extra abs(delta) < 100*eps() condition
         if delta^2 / (deltaold - delta) < tol || abs(delta) < 100*eps()
             cvg = true
             break
@@ -145,6 +142,7 @@ end
 ## Various matrices that are needed:
 
 ## Cauchy matrix C_k(p), defn 2.1
+## will be size (n+k) x k
 function cauchy_matrix(p::Poly, k::Integer)
     n = degree(p) + 1
     out = zeros(eltype(p), n + k - 1, k)
@@ -156,6 +154,7 @@ function cauchy_matrix(p::Poly, k::Integer)
 end
 
 ## p21
+## will be of size (n + k + 1) x (2k + 1)
 function sylvester_discriminant_matrix(p::Poly, k::Integer)
     a = cauchy_matrix(Polynomials.polyder(p), k+1)
     b = cauchy_matrix(p, k)
@@ -163,20 +162,19 @@ function sylvester_discriminant_matrix(p::Poly, k::Integer)
 end
 
 
-## Theorem 4.1, (25)
-## Jacobian of F(u,v,w) -> [p, p;]
+## Lemma 4.1, (25)
+## Jacobian F(u,v,w) = [p,p'] is J(u,v,w)
 function JF(u::Poly, v::Poly, w::Poly)
     m, k = degree(u), degree(v)
     n = m + k
     a = cauchy_matrix(v,m+1)
     b = cauchy_matrix(w,m+1)
-    c = cauchy_matrix(u,k+1)
-    d = zeros(eltype(a), m + k + 1, k+1)
-    e = zeros(eltype(a), k + m + 1, k)
-    f = cauchy_matrix(u, k)
 
-    println((u,v,w))
-    println((a,b,c,d,e,f))
+    c = cauchy_matrix(u,k+1)
+    d = zeros(eltype(a), m+k, k+1)
+
+    e = zeros(eltype(a), m+k+1, k)
+    f = cauchy_matrix(u, k)
 
     [a c e; 
      b d f]
@@ -207,10 +205,105 @@ function Shatk1(Shatk::Array)
     Sh
 end
 
+
+## converge on right singular vector of A associated with singular value sigma (not a double value)
+function lemma24(A::Matrix; tol::Real=1e-8)
+    MAXSTEPS = 100
+    ## how to @assert that sigma_2 > sigma_1?
+    q,r = Base.qr(A)
+
+    x = A'[:,1]                 # initial guess. Must not have Ax=0
+    σ, σ1 = 1e8, 0
+
+    function update(x)
+        y = conj(r)' \ x
+        z = r \ y
+        x = z/norm(z,2)
+        sigma = norm(r * x, 2)  # y/norm(z,2)
+        (x, minimum(abs(sigma)))
+    end
+
+    ctr = 1
+
+
+    ## how long do we update? Size is only issue, not accuracy so we iterate until we stop changing much
+    ## XXX This needs engineering
+    while (ctr < MAXSTEPS)
+        x, σ1 = update(x)
+        if abs((σ - σ1) / σ1) < 1.1
+            break
+        else
+            σ = σ1
+        end
+
+        ctr += 1
+    end
+
+    if ctr < MAXSTEPS
+        return(σ1, x)
+    else
+        error("no convergence?")
+    end
+end
+
+
+## p21 implementation
+## take p, return *guesses* for m, u, v, w 
+## with: 
+## m = number of distinct roots
+## u * v = p
+## u * w = monic(p')
+## Basic idea is that m = n-k if S_k(p) is the first singular Sylvester Discriminant Matrix
+## The computation solve_y_sigma(Sh) finds σ and y, with σ the smallest eigenvalue of "R" in Q,R.
+## the initial guesses for u, v, w are derived from the eigenvalue y
+##
+## Main issue is the determination of what is 0. Paper suggests using θ * norm(p,2) but that
+## fails to work for W_n (Wilcoxon poly) by n=5. 
+function initial_gcd_system(p::Poly;
+                    θ::Real=1e-12, # used to determine if singular value is essentialy 0
+                    δ::Real=1e-12  # used to control solving of singular value
+                    )
+
+    j = 1
+    n, normp = degree(p), norm(p, 2)
+    Sh = Shat(p, j)
+    σ, y = lemma24(Sh, tol = δ) 
+
+    while (σ >  θ * normp) && (size(Sh)[2] <= size(Sh)[1])
+        σ, y = lemma24(Sh, tol = δ)
+        j += 1
+        Sh = Shatk1(Sh)
+    end
+
+
+    if σ <  θ * normp
+
+        ##  initial guess for u, v, w.from Section 4.1.3
+        v = monic(Poly(reverse(y[1:2:length(y)])))
+        w = monic(Poly(reverse(y[2:2:length(y)])))
+            
+        ## Solve C_(m+1)(v0) u0 = p for u0
+        B = cauchy_matrix(v, degree(p) - degree(v) + 1)  
+        wts = Float64[min(1, 1/abs(ak)) for ak in rcoeffs(p)]
+    
+        u = monic(Poly(reverse(weighted_least_square(B, rcoeffs(p), wts))))
+    else
+        ## no reduction
+        u = Poly([1.0])
+        v = p
+        w = Polynomials.polyder(p)
+    end
+
+    return(degree(v), u, v, w)
+end
+
 ## Algorithm 2
 
 ## compute approximate gcd starting with guess
-function agcd(p::Poly, q::Poly, u0::Poly, v0::Poly, w0::Poly)
+## This is section 4.1.2
+function agcd(p::Poly, q::Poly, u0::Poly, v0::Poly, w0::Poly;
+              ρ::Real = 1e-10   # residual tolerance
+)
     ## for monic polynomials p and q return
     ## p(x) = u(x) v(x)
     ## q(x) = u(x) w(x) with v, w co-prime
@@ -221,167 +314,64 @@ function agcd(p::Poly, q::Poly, u0::Poly, v0::Poly, w0::Poly)
 
     ## Return approximate values of u, v, w, err
     
-    ## get degrees and make monic, compute weights
-    m,n,k = map(degree, (u0, v0, w0))
-    p,q,u0,v0,w0 = map(monic,  [p,q, u0, v0, w0])
-#    wts = map(pj -> 1/max(1, abs(pj)), vcat(rcoeffs(p)[2:end], rcoeffs(q)[2:end]))
-
-    s = u0 * v0 - p
-    t = u0 * w0 - q
-
-    wts = map(pj -> 1/max(1, abs(pj)), vcat(rcoeffs(s)[2:end], rcoeffs(t)[2:end]))
-    b = vcat(rcoeffs(s)[2:end], rcoeffs(t)[2:end])
-    println((p,s,q,t,b,wts))
-    max_coeff = [norm(b.*wts, Inf)]
-
-    xk = vcat(rcoeffs(u0)[2:end], rcoeffs(v0)[2:end], rcoeffs(w0)[2:end])
-
-
-    
-    j = 1
-    ## refine values
-    while j > 0
-        A = JF(u0, v0, w0)
-        wls = weighted_least_square(A, b, wts)
-        xk1 = xk - wls
-
-        u = Poly(reverse([1.0, xk1[1:m]])) 
-        v = Poly(reverse([1.0, xk1[(m+1):(m+n)]]))
-        w = Poly(reverse([1.0, xk1[(m+n+1):(m+n+k)]]))
-
-        s = u*v - p
-        t = u*w - q
-
-        b = vcat(rcoeffs(s)[2:end], rcoeffs(t)[2:end])
-        push!(max_coeff, norm(b.*wts, Inf))
-        j += 1
-
-        if max_coeff[j] >= max_coeff[j-1]
-            return(u, v, w, pop!(max_coeff))
-        end
-
-        u0 = u; v0=v; w0=w
-        xk = xk1
-    end
-end
-
-## Helper function to gcd_degree
-## return sigma=smallest eigen value and eigen vector of A^H*A
-## lemma 2.4, p5
-function solve_y_sigma(A::Array; tol=1e-8, maxsteps::Int=200)
-    
-    linfinity = norm(A, Inf)
-
-    q, r= Base.qr(A)
-    if abs(det(r)) < 1e2 * eps()      # basically 0
-        ## Lemma 2.4 does not apply. Return 0 and eigenvalue for A^H*A
-        B = conj(A)' * A
-        (vals, vecs) = eig(B)
-        (val, i) = findmin(abs(vals))
-        return (val, vecs[:,i])
-    end
-
-
-    xk = rand(size(A)[2]) * 2 .- 1 # in (-1,1)
-
-    function update(x)
-        y = conj(r)' \ x
-        z = r \ y
-        x = z / norm(z,2)
-        sigma = norm(r*x,2)
-        (x, sigma)
-    end
-
-    (xk, sigmak) = update(xk)
-    (xk, sigmak1) = update(xk)
-    cvg = false
-
-    reltol = linfinity^(1/4) * tol
-    for ctr = 1:maxsteps
-        xk, sigmak1 = update(xk)
-        if abs(sigmak1 - sigmak) < reltol
-            cvg = true
-            break
-        end
-        sigmak = sigmak1
-    end
-    if !cvg
-        println("sigmak=", sigmak, "y=", xk)
-        throw("Could not solve for y and sigma")
-    end
-    (sigmak1, xk)
-end
-
-## compute degree of gcd and return improved guesses u0, v0, w0 for p, p'
-## used in 26 to get d=degree(v0), roots(v0)
-## p21
-## use implicit inverse iteration (2.4) to find smallest singular value
-## zetaj of Shat(p,j) and corresponding right singluar vector yj
-function gcd_degree(p::Poly; 
-                    theta::Real=1e-8, # for checking if sigma small
-                    delta::Real=1e-8, # passed in iteration to find sigma solve_y_sigma
-                    rho::Real=1e-10, phi::Real=1e2 # to refine um, vm,wm
-                    )
-    if degree(p) <= 1
-        return (degree(p), Poly([1.0]), p, monic(Polynomials.polyder(p)))
-    end
-
-    normp = norm(p)
-    Sh = Shat(p, 1)
-    
-    residual, sigma = Inf, Inf
-    l = 1
-
-    while l > 0
-        sigma, y = solve_y_sigma(Sh, tol=delta) 
-        if sigma < theta * normp
-            ## compute um,vm,wm ...
-            ## odd entries form v0, even entries form w0
-            v0 = monic(Poly(reverse(y[filter(isodd, [1:length(y)])])))
-            w0 = monic(Poly(reverse(y[filter(iseven, [1:length(y)])])))
-            
-            ## Solve C_(m+1)(v0) u0 = p for u0
-            B = cauchy_matrix(v0, degree(p) - degree(v0) + 1)  
-            wts = [min(1, 1/abs(ak)) for ak in rcoeffs(p)]
-            
-            u0 = monic(Poly(reverse(weighted_least_square(B, rcoeffs(p), wts))))
-            ## u0, v0, w0 are initial guesses, these are now improved
-            ## with agcd
-            um, vm, wm, residual= agcd(p, Polynomials.polyder(p), u0, v0, w0) # refine tolerance?
-
-            if residual < rho * normp
-                ## return degree, gcd factorization u,v,w
-                return (degree(um), um, vm, wm)
-            else
-                rho = phi*rho
-            end
-        end
-
-        Sh = Shatk1(Sh)
-        l = l + 1
-
-        if size(Sh)[2] > size(Sh)[1]
-            ## won't have a solution -- more columns than rows (DimensionMismatch("Matrix cannot have less rows than columns"))
-            ## return m=1, u=1, v=p and w = p'
-            return (0, Poly([1.0]), p, Polynomials.polyder(p))
-        end
+    u, v, w = map(copy, (u0, v0, w0))
+    q = Roots.monic(Polynomials.polyder(p))
+    m,n,k = map(Polynomials.degree, (u, v, w))
+    wts =  map(pj -> 1/max(1, abs(pj)), vcat(rcoeffs(p), rcoeffs(q)))
+       
+    ## compute F(u,v,w) - [p, p'] = [u*v, u*w] - [p, p']
+    Fmp(p, q, u, v, w) =  [[Roots.rcoeffs(p) for p in [u*v, u*w]]...] - [[Roots.rcoeffs(p) for p in [p, q]]...] 
+    residual_error(p,q,u,v,w) = norm(Fmp(p,q,u,v,w) .* wts, Inf)
         
+    ## iterate to solve
+    ## uvw_j+1 = uvw_j - Jw[F - p]
+
+    function update(u, v, w)
+        A = Roots.JF(u, v, w)
+        b = Fmp(p,q,u,v,w)
+
+        inc = Roots.weighted_least_square(A, b, wts)
+
+        x = vcat(rcoeffs(u), rcoeffs(v), rcoeffs(w))
+        x = x - inc
+
+        m,n = Roots.degree(u), Roots.degree(v)
+        u = Poly(reverse(x[1:(1+m)]))
+        v = Poly(reverse(x[(m+2):(m+n+2)]))
+        w = Poly(reverse(x[(m+2+n+1):end]))
+        
+        err = residual_error(p,q,u,v,w)
+        (err, u, v, w)
     end
+
+    err0, err1 = Inf, residual_error(p,q,u,v,w)
+
+    ctr = 1
+    while true
+        try
+            err1, u1, v1, w1 = update(u, v, w)
+            if err1 < err0
+                err0, u, v, w = err1, u1, v1, w1
+            else
+                break
+            end
+        catch e
+            break               # possibly singluar
+        end
+
+        (ctr += 1) > 20 && break
+    end
+
+    if err0 < ρ
+        u,v,w = map(Roots.monic, (u,v,w))
+        (u,v,w,err0)
+    else
+        ## failed to converge, so we return the initial guess
+        (u0,v0,w0, err0)
+    end
+
 end
 
-## helper function to disambiguate roots and multiplicities
-## find roots and multiplicites for roots
-function find_fuzzy(zs)
-    rs = zs[1]
-    os = vcat(zs[2:end]...)
-    l = ones(Int, length(rs))
-
-    for r in os
-        a, ind = findmin(abs(rs .- r))
-        l[ind] += 1
-    end
-    return (rs, l)
-end
 
 ## Main interface to finding roots of polynomials with multiplicities
 ##
@@ -389,77 +379,97 @@ end
 ## for `Poly` objects. It performs better than `roots` if the
 ## polynomial has multiplicities. 
 ##
-## Call as
-##   julia> p = Poly([1, -7, 17, -17, 6])  # (x-1)^3 * (x-2) * (x-3)
-##   julia> z, l = multroot(p) ## z=[0.9999999999999994,2.0000000000000058,2.9999999999999947], l=[2,1,1]
-##   julia> roots(p)           ## [0.9999999491767974, 1.0000000508232112, 1.9999999999999756, 3.0000000000000187]
-##   ## About the same. Now for something more challenging  ## (x-1)^2*(x-2)^2*(x-3)^4
-##   julia> p = Poly([1.0, -18.0, 139.0, -600.0, 1579.0, -2586.0, 2565.0, -1404.0, 324.0])
-##   julia> roots(p)             
-##            1.0-0.0im
-##            1.0-0.0im
-##            2.0-0.0im
-##            2.0-0.0im
-##   2.99828-0.00172297im
-##   2.99828+0.00172297im
-##   3.00172-0.00172259im
-##   3.00172+0.00172259im
-##   julia> z,l = multroot(p) ## ([1.0000000000000004,1.999999999999997,3.0000000000000013],[2,2,4])
+## julia> x = poly([0.0]);
+## julia> p = (x-1)^4 * (x-2)^3 * (x-3)^3 * (x-4)l
+## julia> multroot(p)
+## ([1.0,2.0,3.0,4.0],[4,3,3,1])
+## ## For "prettier" printing, results can be coerced to a dict
+## julia> [k => v for (k,v) in zip(multroot(p)...)]
+## Dict{Any,Int64} with 4 entries:
+##   1.0000000000000007 => 4
+##   3.000000000000018  => 3
+##   1.9999999999999913 => 3
+##   3.999999999999969  => 1
+## ## Large order polynomials prove difficult. We can't match the claims in Zeng's paper
+## ## as we don't get the pejorative manifold structure right.
+## julia> p = poly([1.0:10.0]);
+## julia> multroot(p) ## should be 1,2,3,4,...,10 all with multplicity 1:
+## ([1.00005,1.99935,2.98623,4.3713,6.98881,9.65272],[1,1,1,2,3,2])
 ##
-##  Answers have slight randomness possible, as one algorithm has random initial starting guess
-##  TODO: Not sure I have tolerances working properly. 
-##  Somethings don't work well:
-##  julia> p = Poly([1,2,1]) # (x-1)^2
-##  julia> multroot(p^14)    # ([-1.0],[28])
-##  julia> multroot(p^15)    # ([1.1273742514712568,-1.1326950594766867],[18,12]) # failed to converge
-##  ## though still better than `roots` in some sense: 
-##  julia> using Winston
-##  julia> r = roots(p^15); plot(real(r), imag(r)) ## way off
-##
+## nearby roots can be an issue
+## julia> delta = 0.001  ## delta = 0.01 works as desired.
+## julia> p = (x-1 - delta)*(x-1)*(x-1 + delta)
+## julia> multroot(p)
+## ([0.998846,1.00058],[1,2])
 function multroot(p::Poly;
-                 theta::Real=1e-8,  # singular threshold
-                 rho::Real = 1e-10, # residual tolerance
-                 phi::Real = 1e2          # residual growth factor
-                 )
+                  θ::Real=1e-10, # singular threshold
+                  ρ::Real=1e-10, # initial residual tolerance
+                  ϕ::Real=1e2,   # residual tolerance growth factor
+                  δ::Real=1e-8   # passed to solve y sigma
 
+                  )
+
+    @assert degree(p) > 0
+    if degree(p) == 1
+        return(roots(p), [1])
+    end
+
+    
     p = Poly(float(coeffs(p)))  # floats, not Int
-    u = [p]
-    d = Int[]
-    zs = Any[]
-    p0 = u[end]
+    q = Polynomials.polyder(p)
+    ## initial
+    m, u_j0, v_j0, w_j0 = initial_gcd_system(p, θ = θ, δ = δ)
+    u_j, v_j, w_j, residual= agcd(p, q, u_j0, v_j0, w_j0, ρ = ρ) 
+    ρ = max(ρ, ϕ * residual)
 
-    while true
-        if degree(p0) == 0 
-            break
-        end
+    ## bookkeeping
+    zs = roots(v_j)
+    ls = ones(Int, length(zs))
+
+    p0 = u_j
+
+    while degree(p0) > 0
         if degree(p0) == 1
-            push!(d, 1)
-            push!(zs, roots(p0))
+            z = roots(p0)[1]
+            _, ind = findmin(abs(zs .- z))
+            ls[ind] = ls[ind] + 1
             break
         end
-        (m, u0, v0, w0) = gcd_degree(p0; theta=theta)
+
+        m, u_j0, v_j0, w_j0 = initial_gcd_system(p0, θ = θ, δ = δ)
+        u_j, v_j, w_j, residual= agcd(p0, Polynomials.polyder(p0), u_j0, v_j0, w_j0, ρ = ρ) 
 
         ## need to worry about residual between
         ## u0 * v0 - monic(p0) and u0 * w0 - monic(polyder(p0))
-        push!(d, degree(v0))
-        push!(zs, roots(v0))
-        push!(u, u0)
-        p0 = u[end]
+        ## resiudal tolerance grows with m, here it depends on 
+        ## initial value and previous residual times a growth tolerance, ϕ
+        ρ = max(ρ, ϕ * residual)
+
+        ## update multiplicities
+        for z in roots(v_j)
+            _, ind = findmin(abs(zs .- z))
+            ls[ind] = ls[ind] + 1
+        end
+
+        ## rename
+        p0 = u_j
     end
 
-    ## now finish off. We have candidates for the roots zs, and multiplicities l
-    ## if there are multiple roots we refine candidates through `pejroot`
-    if length(d) == 1
-        return(zs[1], ones(Int, length(zs[1])))
+
+    if maximum(ls) == 1
+        return(zs, ls)
     else
-        zs, l = find_fuzzy(zs)
-        zs = pejroot(p, zs, l)
-        return(zs, l)
+        zs = pejroot(p, zs, ls)
+        return(zs, ls)
     end
-end        
-  
+end 
+
+## Different interfaces
+
 ## can pass in vector too
 multroot{T <: Real}(p::Vector{T}; kwargs...) = multroot(Poly(p); kwargs...)
+
+## Can pass in function
 function multroot(f::Function; kwargs...)
     try
         p = convert(Poly, f)

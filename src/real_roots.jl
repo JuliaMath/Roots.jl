@@ -1,10 +1,15 @@
 ## Find real zeros of a polynomial
+##
 ## This follows simplest algorithm outlined here: http://en.wikipedia.org/wiki/Vincent's_theorem
+##
 ## Basically there are these steps:
 ## * we make the polynomial square free by finding psf = gcd(p, p') using gcd code from multroot
+##
 ## * we consider the positive roots of the polynomial x->psf(x) and x->psf(-x)
+##
 ## * for each an upper bound on the maximal real root is found using the Cauchy method.
 ##   other tighter bounds are possible, but this is easier to implement
+##
 ## * we then do a bisection method on [0, ub]. The number of real roots in [a,b] is bounded above
 ##   by descarte's sign change rule on a modified polynomial. It this is 0, there is no root, 1 there is one
 ##   root we find using fzero, more than 1, then we bisect interval. 
@@ -17,7 +22,7 @@
 
   
 function descartes_bound(p::Poly)
-    ps = p.a
+    ps = rcoeffs(p)
     b = map(sign, ps)
     sum(map(*, b[1:end-1], b[2:end]) .< 0)        
 end
@@ -26,7 +31,7 @@ end
 function ab_test(p::Poly, a, b)
     @assert a < b
 
-    as = reverse(p.a)
+    as = coeffs(p)
     n = length(as) - 1
     x = poly([0.0], p.var)
     q = sum([as[i]*(a+b*x)^(i-1)*(1+x)^(n+1-i) for i in 1:(n+1)])
@@ -35,7 +40,7 @@ end
       
 
 function upperbound(p::Poly)
-    as = reverse(p.a)             # a0, a1, ..., an
+    as = coeffs(p)             # a0, a1, ..., an
     as = as/sign(as[end])
     n = length(as) - 1
     ps = map(sign, as)         # signs
@@ -59,58 +64,76 @@ end
 ## positive roots are all in (0, ub)
 ## p is square-free
 function VAG(p::Poly, a, b) 
+
     if a > b
         a,b = b, a
     end
 
-    rts = Float64[]
-    nr = ab_test(p, a, b)
+    rts = Set()
+    
 
-    if nr == 1
-        push!(rts, fzero(p, [a, b]))
-    elseif nr > 1
-        gamma = (a + b)/2
-        tmp = Polynomial.polyval(p, gamma)
-        if Polynomial.polyval(p, gamma) == 0.0
-            append!(rts, [gamma])
+    nr = ab_test(p, a, b)
+    if nr == 0
+        return(rts)
+    elseif nr == 1
+        ## Sometimes our bracket isn't
+        pa, pb = Polynomials.polyval(p,a), Polynomials.polyval(p,b)
+        if pa == 0.0
+            push!(rts, a)
+        elseif pb == 0.0
+            push!(rts, b)
+        elseif Polynomials.polyval(p,a) * Polynomials.polyval(p,b) < 0.0
+            push!(rts, fzero(p, [a, b]))
+        else
+            ## println("Not a bracket! Numeric issues with $a, $b, $pa, $pb")
+            push!(rts, a)
         end
-        if a< gamma < b
-            append!(rts, VAG(p, a, gamma))
-            append!(rts, VAG(p, gamma, b))
+    elseif nr > 1
+        if (b - a) < 1e-8
+            return(rts)
+        end
+
+        gamma = (a + b)/2
+        if Polynomials.polyval(p, gamma) == 0.0
+            push!(rts, gamma)
+        end
+        if a < gamma < b
+            rts = rts ∪ VAG(p, a, gamma)
+            rts = rts ∪ VAG(p, gamma, b)
         end
     end
-    
-    return(rts)
+
+   rts
 end
     
 
 
 ## find values on left and right of 0
 function VAG(p::Poly; tol::Real=4*eps())
-    rts = Float64[]
+    rts = Set()
 
-    if abs(Polynomial.polyval(p, 0.0)) <= tol
+    if abs(Polynomials.polyval(p, 0.0)) <= tol
         push!(rts, 0.0)
     end
 
-    ## positive roots
-    append!(rts, VAG(p, tol, upperbound(p)))
+    ## positive roots ## what to do with p(upperbound(p)) == 0.0
+    rts = rts ∪ VAG(p, tol, upperbound(p))
+
     ## negative roots. Need p->-p
-    as = reverse(p.a)
+    as = rcoeffs(p)
     as[2:2:length(as)] = -as[2:2:length(as)]
-    q = Poly(as)
-    append!(rts, -VAG(q, tol, upperbound(q)))
+    q = Poly(reverse(as))
+
+    rts ∪ Set(-collect(VAG(q, tol, upperbound(q))))
 end
 
 
 ## find real_roots of a polynomial
+## Not exported. Call via fzeros(p::Poly) or fzeros(f::Function)
+##
 function real_roots(p::Poly)
-    try
-        ## need square free
-        n, u, v, w = Roots.gcd_degree(p)
-        VAG(v)
-    catch e
-        ## assume that polynomial is square free!
-        VAG(p)
-    end
+    ## need square free
+    m, u, v, w = initial_gcd_system(p)
+    u, v, w, residual= agcd(p, Polynomials.polyder(p), u, v, w) 
+    VAG(v) |> collect |> float
 end    
