@@ -1,12 +1,16 @@
 # Root finding functions for Julia
 
+[![Roots](http://pkg.julialang.org/badges/Roots_0.3.svg)](http://pkg.julialang.org/?pkg=Roots&ver=0.3)
+
+
+
 This package contains simple routines for finding roots of continuous
 scalar functions of a single real variable. The basic interface is
 through the function `fzero` which dispatches to an appropriate
 algorithm based on its arguments:
 
-* `fzero(p::Union(Function, Poly), a::Real, b::Real)` and
-  `fzero(p::Union(Function, Poly), bracket::Vector)` call the
+* `fzero(f::Function, a::Real, b::Real)` and
+  `fzero(f::Function, bracket::Vector)` call the
   `find_zero` algorithm to find a root within the bracket `[a,b]`.
   When a bracket is used, the algorithm is guaranteed to converge to a
   value `x` with either `f(x) == 0` or at least one of
@@ -15,26 +19,27 @@ algorithm based on its arguments:
   condition can still hold.)
 
 
-* `fzero(p::Union(Function, Poly), x0::Real; order::Int=0)` calls a
+* `fzero(f::Function, x0::Real; order::Int=0)` calls a
   derivative-free method. The default method is a bit plodding but
   more robust to the quality of the initial guess than some others.
-  For faster convergence and less memory usage, an order can be
+  For faster convergence and fewer function calls, an order can be
   specified. Possible values are 1, 2, 5, 8, and 16. The order 2
   Steffensen method can be the fastest, but is in need of a good
   initial guess. The order 8 method is more robust and often as
   fast. The higher-order method may be faster when using `Big` values.
 
-* `fzero(p::Union(Function, Poly), x0::Real, bracket::Vector)` calls
+* `fzero(f::Function, x0::Real, bracket::Vector)` calls
   a derivative-free algorithm with initial guess `x0` with steps constrained
   to remain in the specified bracket.
 
 * `fzeros(f::Function)` (for a polynomial function) and
-  `fzeros(p::Poly)` calls `real_roots`, which implements a somewhat
-  slow algorithm to find the real roots of a polynomial. The main
-  issue involved with this function is the finding of a GCD for `p`
-  and its derivative (which is used to find a square-free polynomial
-  with the roots of `p`). This can be subject to numeric issues when
-  the polynomial has high degree or nearby roots.
+  `fzeros(p::Poly)` (for a `Polynomials.jl` instance) calls
+  `real_roots`, which implements a somewhat slow algorithm to find the
+  real roots of a polynomial. The main issue involved with this
+  function is the finding of a GCD for `p` and its derivative (which
+  is used to find a square-free polynomial with the roots of
+  `p`). This can be subject to numeric issues when the polynomial has
+  high degree or nearby roots.
 
 
   For convenience, when `f` is not a polynomial function,
@@ -51,6 +56,7 @@ algorithm based on its arguments:
   ["Computing multiple roots of inexact polynomials", Math. Comp. 74
   (2005),
   869-903](http://www.ams.org/journals/mcom/2005-74-250/S0025-5718-04-01692-8/home.html).
+  This function can be called via `multroot(f::Function)` or `multroot(p::Poly)`.
 
 
 * For historical purposes, there are implementations of Newton's
@@ -98,7 +104,6 @@ fzeros(x*(x-1)*(x-2)*(x^2 + x + 1))
 Polynomial root finding is a bit better when multiple roots are present.
 
 ```
-using Roots, Polynomials
 x = poly([0.0])
 p = (x-1)^2 * (x-3)
 rts, mults = multroot(p)	# compare to roots(p)
