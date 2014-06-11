@@ -132,8 +132,8 @@ function pejroot{T<:Int}(p::Poly, z0::Vector, l::Vector{T};
 
     if !cvg println(""" 
 Returning the initial estimates, as the
-        algorithm failed to improve estimates for the roots on the given
-        pejorative manifold.  
+algorithm failed to improve estimates for the roots on the given
+pejorative manifold.  
 """) 
         return(z0) 
     end 
@@ -216,6 +216,14 @@ function lemma24(A::Matrix; tol::Real=1e-8)
     ## how to @assert that sigma_2 > sigma_1?
     q,r = Base.qr(A)
 
+    ## won't work if r is rank deficient
+    if rank(r) < size(r)[2]
+        λs, vs = eig(r)
+        _, ind = findmin(abs(λs))
+        return(λs[ind], vs[:,ind])
+    end
+
+
     x = A'[:,1]                 # initial guess. Must not have Ax=0
     σ, σ1 = 1e8, 0
 
@@ -231,7 +239,7 @@ function lemma24(A::Matrix; tol::Real=1e-8)
 
 
     ## how long do we update? Size is only issue, not accuracy so we iterate until we stop changing much
-    ## XXX This needs engineering
+    ## ??? This needs engineering
     while (ctr < MAXSTEPS)
         x, σ1 = update(x)
         if abs((σ - σ1) / σ1) < 1.1
