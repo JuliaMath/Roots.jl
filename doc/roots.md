@@ -220,24 +220,32 @@ For example,
 
 ```
 using Polynomials
-x = Poly([1.0,0])			# "1x + 0"
+x = poly([0.0])			# (x - 0.0)
 roots((x-1)*(x-2)*(x-3))
 ```
+
+As a convenience, this package adds a function interface to `roots`:
+
+```
+f(x) = (x-1)*(x-2)*(x^2 + x + 1)
+roots(f)
+```
+
 
 The `fzeros` function will find the real roots of a univariate polynomial:
 
 ```
-fzeros((x-1)*(x-2)*(x-3))
+fzeros( (x-1)*(x-2)*(x^2 + x + 1))
 ```
 
-It is often more convenient to call this with a polynomial function instead of a polynomial:
+As with roots, this function be called with a function:
 
 ```
 f(x) = x*(x-1)*(x^2 + 1)^4
 fzeros(f)
 ```
 
-It can have numeric issues when the degree gets too large, or the roots are too close together.
+The algorithm can have numeric issues when the polynomial degree gets too large, or the roots are too close together.
 
 
 The `multroot` function will also find the roots. The algorithm does a

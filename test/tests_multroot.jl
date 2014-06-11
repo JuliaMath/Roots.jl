@@ -1,5 +1,5 @@
 using Roots
-using Polynomial
+using Polynomials
 using Base.Test
 
 ## can use functions
@@ -7,7 +7,7 @@ f(x) = (x-1)*(x-2)^2*(x-3)^3
 zs, mults = multroot(f)
 @test mults == [1,2,3]
 
-x = Poly([1.0, 0.0])
+x = poly([0.0])
 
 p = (x-1)*(x-2)^2*(x-3)^3
 zs, mults = multroot(p)

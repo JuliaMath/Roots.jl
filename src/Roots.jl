@@ -1,5 +1,8 @@
 module Roots
+
 using Polynomials
+import Polynomials: roots
+export roots
 
 export fzero, @fzero,
        fzeros, @fzeros,

@@ -130,10 +130,14 @@ function pejroot{T<:Int}(p::Poly, z0::Vector, l::Vector{T};
         zk=zk1
     end
 
-    if !cvg
-        println("Failed to converge in $maxsteps steps. Returning last guess.")
-    end
-    zk1
+    if !cvg println(""" 
+Returning the initial estimates, as the
+        algorithm failed to improve estimates for the roots on the given
+        pejorative manifold.  
+""") 
+        return(z0) 
+    end 
+    return(zk1)
 end
 
 
@@ -478,3 +482,7 @@ function multroot(f::Function; kwargs...)
         error("The function does not compute a univariate polynomial")
     end
 end
+
+## add funciton interface to Polynomials.roots
+Polynomials.roots(f::Function) = roots(convert(Poly, f))
+
