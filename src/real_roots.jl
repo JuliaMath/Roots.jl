@@ -132,8 +132,14 @@ end
 ## Not exported. Call via fzeros(p::Poly) or fzeros(f::Function)
 ##
 function real_roots(p::Poly)
-    ## need square free
-    m, u, v, w = initial_gcd_system(p)
-    u, v, w, residual= agcd(p, Polynomials.polyder(p), u, v, w) 
-    VAG(v) |> collect |> float
+    if Roots.degree(p) <= 0
+        p[0] == 0.0 ? 0.0 : error("constant polynomial is non-zero")
+    elseif Roots.degree(p) == 1
+        -p[0]
+    else
+        ## need square free
+        m, u, v, w = initial_gcd_system(p)
+        u, v, w, residual= agcd(p, Polynomials.polyder(p), u, v, w) 
+        VAG(v) |> collect |> float
+    end
 end    

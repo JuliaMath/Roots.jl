@@ -34,7 +34,11 @@ Base.convert(::Type{Function}, p::Poly) = x -> Polynomials.polyval(p,x)
 function Base.convert(::Type{Poly}, f::Function)
     x = poly([0.0])
     try
-        f(x)
+        out = f(x)
+        if !isa(out, Poly)
+            out = Poly([out])
+        end
+        out
     catch e
         error("f(x) is not a polynomial function")
     end

@@ -7,7 +7,7 @@
 This package contains simple routines for finding roots of continuous
 scalar functions of a single real variable. The basic interface is
 through the function `fzero` which dispatches to an appropriate
-algorithm based on its arguments:
+algorithm based on its argument(s):
 
 * `fzero(f::Function, a::Real, b::Real)` and
   `fzero(f::Function, bracket::Vector)` call the
@@ -50,7 +50,7 @@ algorithm based on its arguments:
   not cross the $x$ axis.
 
 * The `roots` function from the `Polynomials` package will find all the
-  roots of a polynomial. It suffers when the polynomial has high
+  roots of a polynomial. Its performance degrades when the polynomial has high
   multiplicities. The `multroot` function is provided to handle this
   case a bit better.  The function follows algorithms due to Zeng,
   ["Computing multiple roots of inexact polynomials", Math. Comp. 74

@@ -94,11 +94,13 @@ function fzeros{T <: Real}(f::Function, bracket::Vector{T}; kwargs...)
 end
 fzeros(f::Function, a::Real, b::Real; kwargs...) = find_zeros(f, a, b; kwargs...)
 function fzeros(f::Function)
+    p = poly([0.0])
     try
-        real_roots(convert(Poly, f))
+        p = convert(Poly, f)
     catch e
         error("If f(x) is not a polynomial in x, then an interval to search over is needed")
     end
+    real_roots(p)
 end
 
 macro fzeros(expr::Expr, a, b)
