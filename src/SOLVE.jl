@@ -176,7 +176,7 @@ function secant_method_no_bracket(f::Function, a, b)
             ## quadratic interpolation to get gamma
             den = (beta - alpha) * (fbeta - fgamma)  - (beta - fgamma) * (fbeta - falpha)
             if den == 0.0
-                Throw(PossibleExtremaReached(alpha))
+                throw(PossibleExtremaReached(alpha))
             end
             gamma = beta -  ((beta - alpha)^2 * (fbeta - fgamma) - (beta - gamma)^2 * (fbeta - falpha))/den/2
 
