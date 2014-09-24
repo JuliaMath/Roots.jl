@@ -61,8 +61,8 @@ end
 ## in which case it uses bisection method
 ## could use brent's method, might be faster
 ## finds value x with f(x) == 0.0 of f(prevfloat(x)) * f(nextfloat(x)) <= 0
-function secant_method_bracket(f::Function, a, b)
-    alpha, beta, gamma = min(a, b), max(a,b), (a + b)/2
+function secant_method_bracket(f::Function, a, b, gamma=(a+b)/2)
+    alpha, beta = min(a, b), max(a,b)
     falpha, fbeta = f(alpha), f(beta)
     m, M = alpha, beta
 

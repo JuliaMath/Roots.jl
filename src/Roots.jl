@@ -49,7 +49,7 @@ function fzero{T <: Real}(p::Poly, bracket::Vector{T}; kwargs...)
     find_zero(convert(Function, p), bracket[1], bracket[2]; kwargs...)
 end
 function fzero{T <: Real}(p::Poly, x0::Real, bracket::Vector{T}; kwargs...) 
-    derivative_free_bracket(convert(Function,p), x0, bracket; kwargs...)
+    fzero(convert(Function,p), x0, bracket; kwargs...)
 end
 
 ##
@@ -66,7 +66,16 @@ function fzero{T <: Real}(f::Function, bracket::Vector{T}; kwargs...)
     fzero(f, bracket[1], bracket[2]; kwargs...)
 end
 function fzero{T <: Real}(f::Function, x0::Real, bracket::Vector{T}; kwargs...) 
-    derivative_free_bracket(f, x0, bracket; kwargs...)
+    a,b = sort(map(float,bracket))
+    try
+        ex = secant_method_bracket(f, a, b, float(x0))
+    catch ex
+        if isa(ex, StateConverged) 
+            return(ex.x0)
+        else
+            throw(ex)
+        end
+    end
 end
 
 ## simplify calling of function (no x ->, rather @fzero...)
