@@ -127,7 +127,7 @@ x = fzero(f, 2, order=8)
 [x f(x)]
 ```
 
-The latter shows that zeros need not be simple zeros (i.e. $f'(x) = 0$
+The latter shows that zeros need not be simple zeros (i.e. $f'(x) = 0$,
 if defined) to be found. For the higher-order methods, there is a
 tolerance that can be specified so that a value is returned as a zero
 if `abs(f(x)) < tol`. The default method for `fzero` uses a very
@@ -329,9 +329,9 @@ x = halley(f, fp, fpp, 2, verbose=true)
 
 
 For many function, the derivatives can be computed automatically. The
-`PowerSeries` function provides a means. This package wraps the
+`PowerSeries` package provides a means. This package wraps the
 process into an operator, `D` which returns the derivative of a
-function `f`:
+function `f` (for simple-enough functions):
 
 ```
 newton(f, D(f), 2)
