@@ -130,12 +130,12 @@ end
 
 ## find real_roots of a polynomial
 ## Not exported. Call via fzeros(p::Poly) or fzeros(f::Function)
-##
+## return array of roots
 function real_roots(p::Poly)
     if Roots.degree(p) <= 0
-        p[0] == 0.0 ? 0.0 : error("constant polynomial is non-zero")
+        p[0] == 0.0 ? [0.0] : error("constant polynomial is non-zero")
     elseif Roots.degree(p) == 1
-        -p[0]/p[1]
+        [-p[0]/p[1]]
     else
         ## need square free
         m, u, v, w = initial_gcd_system(p)
