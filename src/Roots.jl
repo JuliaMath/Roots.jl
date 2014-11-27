@@ -2,10 +2,12 @@ module Roots
 
 using Polynomials
 import Polynomials: roots
+using PowerSeries
+
 export roots
 
-export fzero, @fzero,
-       fzeros, @fzeros,
+export fzero,
+       fzeros,
        find_zero, 
        newton, halley,
        secant_method, steffensen,
@@ -99,11 +101,6 @@ function fzeros(f::Function)
     real_roots(p)
 end
 
-macro fzeros(expr::Expr, a, b)
-    quote
-        fzeros(x -> $(expr), $(a), $(b))
-    end
-end
 
 
 ## derivative free

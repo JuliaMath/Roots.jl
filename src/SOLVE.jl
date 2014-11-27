@@ -1,3 +1,13 @@
+
+type PossibleExtremaReached
+    x0::Real
+end
+
+type Dithering
+    x0::Real
+end
+
+
 ## SOLVE button from the HP-34C
 ## follows roughly algorithm described http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1979-12.pdf
 ## though some modifications were made.
@@ -48,14 +58,6 @@ function SOLVE(f::Function, x0::Real)
     error("huh? Shouldn't get here")
 end
 
-
-type PossibleExtremaReached
-    x0
-end
-
-type Dithering
-    x0
-end
 
 ## Use steffensen or secant method within a bracket unless it dithers
 ## in which case it uses bisection method

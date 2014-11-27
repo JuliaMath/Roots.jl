@@ -1,5 +1,11 @@
 ## Bisection_method for floats and int
 
+# type to throw on succesful convergence
+type StateConverged
+    x0::Real
+end
+
+
 ## From Jason Merrill https://gist.github.com/jwmerrill/9012954
 ## cf. http://squishythinking.com/2014/02/22/bisecting-floats/
 # Alternative "mean" definition that operates on the binary representation
@@ -137,11 +143,6 @@ function find_zero(f::Function, a::Union(BigFloat, BigInt), b::Union(BigFloat, B
     error("root not found within max_iter iterations")
 end
 
-
-# type to throw on succesful convergence
-type StateConverged
-    x0
-end
 
 
 # type to throw on failure
