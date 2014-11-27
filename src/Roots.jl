@@ -78,25 +78,12 @@ function fzero{T <: Real}(f::Function, x0::Real, bracket::Vector{T}; kwargs...)
     end
 end
 
-## simplify calling of function (no x ->, rather @fzero...)
-macro fzero(expr::Expr, a, b)
-    quote
-        fzero(x -> $(expr), $(a), $(b))
-    end
-end
-
-macro fzero(expr::Expr, a)
-    quote
-        fzero(x -> $(expr), $(a))
-    end
-end
-
 
 ## find all *simple* zeros in a bracket
 function fzeros{T <: Real}(f::Function, bracket::Vector{T}; kwargs...) 
     ## check if a poly
     try
-        filter(x -> a <= x <= b, real_roots(convert(Poly, f)))
+        filter(x -> bracket[1] <= x <= bracket[2], real_roots(convert(Poly, f)))
     catch e
         find_zeros(f, bracket[1], bracket[2]; kwargs...)
     end
