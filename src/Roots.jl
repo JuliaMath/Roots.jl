@@ -129,6 +129,23 @@ fzero(f::Function, fp::Function, x0::Real; kwargs...) = newton(f, fp, x0; kwargs
 newton(f::Function, x::Real; kwargs...) =  newton(f, D(f), x; kwargs...)
 halley(f::Function, x::Real; kwargs...) = halley(f, D(f), D2(f), x; kwargs...)
 
+type MaxEvalError
+    count
+    func
+end
+
+## Make a wrapper around the given function, which counts the number
+## of evaluations, and throws MaxEvalError when the given maxcount is
+## exceeded.
+function maxeval(maxcount::Int, f::Function)
+    counter = 0
+    (args...) -> begin
+        counter >= maxcount && throw(MaxEvalError(counter, f))
+        counter += 1
+        f(args...)
+    end
+end
+
 
 end
 
