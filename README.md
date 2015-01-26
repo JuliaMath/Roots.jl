@@ -1,9 +1,5 @@
 # Root finding functions for Julia
 
-[![Roots](http://pkg.julialang.org/badges/Roots_0.3.svg)](http://pkg.julialang.org/?pkg=Roots&ver=0.3)
-
-
-
 This package contains simple routines for finding roots of continuous
 scalar functions of a single real variable. The basic interface is
 through the function `fzero` which dispatches to an appropriate
