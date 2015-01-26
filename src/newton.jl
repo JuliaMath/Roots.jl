@@ -52,7 +52,7 @@ function secant_method(f::Function, x0::Real, x1::Real;
         if isa(e, StateConverged)
             e.x0
         else
-            throw(e)
+            rethrow(e)
         end
     end
 end

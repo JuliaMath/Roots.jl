@@ -52,10 +52,10 @@ function SOLVE(f::Function, x0::Real; ftol::Real=eps(zero(0.0))^(1/5), maxeval::
             if abs(f(guess)) < ftol
                 return guess
             else
-                throw(ex)
+                rethrow(ex)
             end
         else
-            throw(ex)
+            rethrow(ex)
         end
     end
     error("huh? Shouldn't get here")

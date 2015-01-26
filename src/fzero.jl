@@ -165,7 +165,7 @@ function a42(f::Function, a, b;
         if isa(ex, StateConverged)
             return ex.x0
         else
-            throw(ex)
+            rethrow(ex)
         end
     end
     error("root not found within max_iter iterations")

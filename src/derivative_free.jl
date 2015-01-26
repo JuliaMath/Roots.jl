@@ -340,7 +340,7 @@ function derivative_free(f::Function, x0::Real;
         if isa(e, StateConverged)
             e.x0
         else
-            throw(e)
+            rethrow(e)
         end
     end
 end
