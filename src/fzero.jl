@@ -106,7 +106,6 @@ output:
 By John Travers
 
 """
-
 function a42(f::Function, a, b;
                    tol=zero(float(a)), 
                    max_iter=100,
@@ -118,6 +117,24 @@ function a42(f::Function, a, b;
     if tol < 0.0
         error("tolerance must be >= 0.0")
     end
+    c = secant(f, a, b)
+    a42a(f, a, b, c,
+         tol=tol, max_iter=max_iter, verbose=verbose)
+end
+
+"""
+
+Split Alefeld, F. A. Potra, and Y. Shi algorithm 4.2 into a function
+where `c` is passed in.
+
+Solve f(x) = 0 over bracketing interval [a,b] starting at c, with a < c < b
+
+"""
+function a42a(f::Function, a, b, c;
+                   tol=zero(float(a)), 
+                   max_iter=100,
+                   verbose::Bool=false
+                   )
     try
         # start with a secant approximation
         c = secant(f, a, b)
@@ -160,7 +177,21 @@ function a42(f::Function, a, b;
             end
 
             verbose && println("a=$a, n=$n")
+            
+            if nextfloat(ch) * prevfloat(ch) <= 0
+                println("ch basically 0")
+                throw(StateConverged(ch))
+            end
+            if abs(f(ch)) <= tol
+                println("abs(f(ch)) <= tol")
+                throw(StateConverged(ch))
+            end
+            if nextfloat(a) >= b
+                println("[a,b] as small as possible")
+                throw(StateConverged(a))
+            end
         end
+        throw(Error("$max_iter exceeded before convergence"))
     catch ex
         if isa(ex, StateConverged)
             return ex.x0

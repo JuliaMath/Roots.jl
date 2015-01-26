@@ -62,55 +62,36 @@ function SOLVE(f::Function, x0::Real; ftol::Real=eps(zero(0.0))^(1/5), maxeval::
 end
 
 
-"""
+""" 
 
-Use Steffensen or secant method within a bracket unless algorithm dithers
-in which case it uses bisection method
+Solve f(x) = 0 if we have a bracket [a,b] and starting point a < c < b
 
-could also use algorithm 4.2 of  G. E. Alefeld, F. A. Potra, and Y. Shi
-finds value x with f(x) == 0.0 of f(prevfloat(x)) * f(nextfloat(x)) <= 0
+Use Algorithm 4.2 of Alefeld, Potra, Shi unless it dithers, in which case the root is found by bisection.
 
 """
-function secant_method_bracket(f::Function, a, b, gamma=(a+b)/2; ftol::Real=eps(zero(0.0))^(1/5), maxeval::Int=1000)
-    alpha, beta = min(a, b), max(a,b)
-    falpha, fbeta = f(alpha), f(beta)
-    m, M = alpha, beta
-
-    @assert falpha * fbeta < 0
-    
-    ctr = 0
-    while nextfloat(m) < M
-        ## give secant 10 tries, then go failsafe
-        ctr > 10 ? throw(StateConverged(fzero(f, [m, M]))) : (ctr = ctr + 1)
-        if abs(fbeta) < abs(beta - alpha)
-            step = fbeta*fbeta/(f(beta + fbeta) - fbeta)
-        else
-            step = (beta - alpha) * fbeta / (fbeta - falpha)
-        end
-        ## gamma is secant line guess or steffensen
-        gamma = beta - step
-        if gamma <= m || gamma >= M
-            gamma = (alpha + beta) / 2 ## "bend via bracket"
-        end
-        if (gamma == alpha || gamma == beta)
-            throw(StateConverged(gamma) )
-        end
-
-        fgamma = f(gamma)
-        if fgamma == 0.0
-            throw(StateConverged(gamma))
-        end
-
-        if fgamma * f(M) < 0
-            m, M = gamma, M
-        else
-            m, M = m, gamma
-        end
-        alpha, beta, falpha, fbeta = beta, gamma, fbeta, fgamma
-
+function have_bracket(f::Function, a, b, c; maxeval=10)
+    ## try a42a unless it fails, then go to failsafe
+    a,b = sort([a,b])
+    f(a) == 0.0 && return(a)
+    f(b) == 0.0 && return(b)
+    if f(a) * f(b) > 0
+        error("Interval [$a, $b] is not a bracket")
     end
-    throw(StateConverged(gamma))
+    if !(a < c < b)
+        error("Value $c is not in interval ($a, $b)")
+    end
+
+    try
+        x0 = Roots.a42a(f, a, b, c, tol=zero(float(a)), max_iter=maxeval)
+    catch e
+        if isa(e, Roots.StateConverged)
+            return e.x0
+        else
+            return Roots.fzero(f, a, b)
+        end
+    end
 end
+            
 
 ## assume f(b) > 0
 ## steffensen of secant line method, but we don't assume a bracket
@@ -151,7 +132,7 @@ function secant_method_no_bracket(f::Function, a, b; ftol=eps(zero(0.0))^(1/5), 
         end
         gamma = beta - step
 
-        ## bend in some cases. What is best bending scheme?
+        ## bend in some cases. XXX What is best bending scheme? XXX
         if abs(gamma-beta) >= 500 * abs(beta - alpha)
 #            gamma = beta + (1/4) * (beta - alpha) / (fbeta - falpha) * fbeta
             gamma = beta - cbrt( (beta - alpha) / (fbeta - falpha) * fbeta)
@@ -170,7 +151,9 @@ function secant_method_no_bracket(f::Function, a, b; ftol=eps(zero(0.0))^(1/5), 
             throw(StateConverged(gamma))
         end
         if fgamma < 0
-            secant_method_bracket(f, gamma, beta)
+            x0 = have_bracket(f, gamma, beta, (0.5)*(gamma + beta),
+                              maxeval=10)
+            throw(StateConverged(x0))
         end
         
         ## increasing value, try quadratic
