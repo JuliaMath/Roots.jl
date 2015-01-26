@@ -7,24 +7,27 @@ type Dithering
     x0::Real
 end
 
+"""
 
-## SOLVE button from the HP-34C
-## follows roughly algorithm described http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1979-12.pdf
-## though some modifications were made.
-##
-## Goal is to return a value `x` with either:
-## * `f(x) == 0.0` or 
-## * `f(prevfloat(x)) * f(nextfloat(x)) < 0`.
-## if a bracket is found that can be done. 
-##
-## Otherwise, values with `abs(f(x)) < eps()^(1/5)` are given status of answers
-## and others are marked as a possible extrema.
-##
-## If the algorithm gets stuck, a Dithering error is thrown.
-##
-## While this is slower than fzero with order 2, 5, 8, or 16 it is 
-## more robust to initial condition
-function SOLVE(f::Function, x0::Real)
+SOLVE button from the HP-34C
+follows roughly algorithm described http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1979-12.pdf
+though some modifications were made.
+
+Goal is to return a value `x` with either:
+* `f(x) == 0.0` or 
+* `f(prevfloat(x)) * f(nextfloat(x)) < 0`.
+if a bracket is found that can be done. 
+
+Otherwise, values with `f(x) < ftol` are given status of answers
+and others are marked as a possible extrema.
+
+If the algorithm gets stuck, a Dithering error is thrown.
+
+While this is slower than fzero with order 2, 5, 8, or 16 it is 
+more robust to the initial condition.
+
+"""
+function SOLVE(f::Function, x0::Real; ftol::Real=eps(zero(0.0))^(1/5), maxeval::Int=1000)
     x0 =  float(x0)
     fx0 = f(x0)
     if f(x0) == 0.0 return x0 end
@@ -33,9 +36,9 @@ function SOLVE(f::Function, x0::Real)
         step = max(1/100, min(abs(fx0), abs(x0/100)))
         if fx0 < 0
             g(x) = -f(x)
-            secant_method_no_bracket(g, x0 - step, x0)
+            secant_method_no_bracket(g, x0 - step, x0, ftol=ftol, maxeval=maxeval)
         else
-            secant_method_no_bracket(f, x0 - step, x0)
+            secant_method_no_bracket(f, x0 - step, x0, ftol=ftol, maxeval=maxeval)
         end
     catch ex
         if isa(ex, StateConverged)
@@ -46,7 +49,7 @@ function SOLVE(f::Function, x0::Real)
                 return guess
             end
             # heuristic for case where it thinks it is at a minimum
-            if abs(f(guess)) < eps(zero(x0))^(1/5) 
+            if abs(f(guess)) < ftol
                 return guess
             else
                 throw(ex)
@@ -59,11 +62,16 @@ function SOLVE(f::Function, x0::Real)
 end
 
 
-## Use steffensen or secant method within a bracket unless it dithers
-## in which case it uses bisection method
-## could use brent's method, might be faster
-## finds value x with f(x) == 0.0 of f(prevfloat(x)) * f(nextfloat(x)) <= 0
-function secant_method_bracket(f::Function, a, b, gamma=(a+b)/2)
+"""
+
+Use Steffensen or secant method within a bracket unless algorithm dithers
+in which case it uses bisection method
+
+could also use algorithm 4.2 of  G. E. Alefeld, F. A. Potra, and Y. Shi
+finds value x with f(x) == 0.0 of f(prevfloat(x)) * f(nextfloat(x)) <= 0
+
+"""
+function secant_method_bracket(f::Function, a, b, gamma=(a+b)/2; ftol::Real=eps(zero(0.0))^(1/5), maxeval::Int=1000)
     alpha, beta = min(a, b), max(a,b)
     falpha, fbeta = f(alpha), f(beta)
     m, M = alpha, beta
@@ -107,13 +115,14 @@ end
 ## assume f(b) > 0
 ## steffensen of secant line method, but we don't assume a bracket
 ## we "bend" large trajectories 
-function secant_method_no_bracket(f::Function, a, b)
+function secant_method_no_bracket(f::Function, a, b; ftol=eps(zero(0.0))^(1/5), maxeval::Int=1000)
     alpha, beta = a, b ## beta keeps smallest values
     falpha, fbeta = f(alpha), f(beta)
 
     ## checks -- have a bracket
     if falpha * fbeta < 0
-        secant_method_bracket(f, alpha, beta)
+        a42(f, alpha, beta)
+        # secant_method_bracket(f, alpha, beta)
     end
     
     ## keep fbeta smallest
@@ -125,8 +134,8 @@ function secant_method_no_bracket(f::Function, a, b)
 
     ctr, quad_ctr = 0, 0
     while fbeta > 0
-        if ctr > 1000
-            if abs(f(beta)) < eps(zero(b))^(1/5) 
+        if ctr > maxeval
+            if abs(f(beta)) < ftol
                 throw(StateConverged(beta))
             else
                 throw(Dithering(beta))
@@ -168,7 +177,7 @@ function secant_method_no_bracket(f::Function, a, b)
         if fgamma >= fbeta
             quad_ctr = quad_ctr + 1
             if quad_ctr > 5*10
-                abs(fbeta) <  eps(zero(b))^(1/5) ? throw(StateConverged(beta)) : throw(Dithering(beta))
+                abs(fbeta) <  ftol ? throw(StateConverged(beta)) : throw(Dithering(beta))
             end
             ## secant line stopped decreasing
             if alpha == gamma || gamma == beta

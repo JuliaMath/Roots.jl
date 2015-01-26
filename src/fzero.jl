@@ -31,7 +31,14 @@ function _middle(x::Float64, y::Float64)
   return negate ? -unsigned : unsigned
 end
  
+"""
 
+Find zero using modified bisection method for float64 arguments.
+
+This is guaranteed to take no more than 64 steps. The `a42` alternative has
+fewer iterations, but this seems to find the value with fewer function evaluations.
+
+"""
 function find_zero(f::Function, a::Float64, b::Float64)
 
     x0, y0 = a, f(a)
@@ -65,22 +72,43 @@ function find_zero(f::Function, a::Float64, b::Float64)
 end
 
 
-# fzero finds the root of a continuous function within a provided
-# interval [a, b], without requiring derivatives. It is based on algorithm 4.2
-# described in: 1. G. E. Alefeld, F. A. Potra, and Y. Shi, "Algorithm 748:
-# enclosing zeros of continuous functions," ACM Trans. Math. Softw. 21,
-# 327–344 (1995).
-#
-# input:
-#     f: function to find the root of
-#     a, b: the initial bracket, with: a < b, f(a)*f(b) < 0
-#     tolerance: acceptable error (it's safe to set zero for machine precision)
-#     max_iter:  maximum number of iterations
-#
-# output:
-#     an estimate of the zero of f
+"""
+
+find_zero using Algorithm 4.2  of Alefeld, Potra and Shi for Big numbers
+
+"""
 function find_zero(f::Function, a::Union(BigFloat, BigInt), b::Union(BigFloat, BigInt);
-                   tol=0.0, 
+                   tol=zero(a), 
+                   max_iter::Int=100,
+                   verbose::Bool=false
+                   )
+    a42(f, a, b; tol=tol, max_iter=max_iter, verbose=verbose)
+end
+
+"""    
+
+Finds the root of a continuous function within a provided
+interval [a, b], without requiring derivatives. It is based on algorithm 4.2
+described in: 1. G. E. Alefeld, F. A. Potra, and Y. Shi, "Algorithm 748:
+enclosing zeros of continuous functions," ACM Trans. Math. Softw. 21,
+327–344 (1995).
+
+
+input:
+    `f`: function to find the root of
+    `a`, `b`: the initial bracket, with: a < b, f(a)*f(b) < 0
+    `tol`: acceptable error (it's safe to set zero for machine precision)
+    `max_iter`:  maximum number of iterations
+
+output:
+    an estimate of the zero of f
+
+By John Travers
+
+"""
+
+function a42(f::Function, a, b;
+                   tol=zero(float(a)), 
                    max_iter=100,
                    verbose::Bool=false
                    )
@@ -288,7 +316,7 @@ function distinct(f::Function, a, b, d, e)
 end
 
 
-## split interval [a,b] into no_pts intervals, apply find_zero to each, accumulae
+## split interval [a,b] into no_pts intervals, apply find_zero to each, accumulate
 function find_zeros(f::Function, a::Real, b::Real, args...;no_pts::Int=200, kwargs...)
     a, b = a < b ? (a,b) : (b,a)
 

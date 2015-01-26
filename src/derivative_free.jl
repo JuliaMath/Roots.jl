@@ -254,34 +254,44 @@ end
 
 secant_step(fa, fb, a, b) = b - fb / secant(fa, fb, a, b)
 
-## Main interface
-##
-## @param f a scalar function f:R -> R. Trying to find solution to f(x) = 0.
-## @param x0 initial guess for root. Iterative methods need a
-##        reasonable initial starting point.
-## @param tol. Stop iterating when |f(xn)| <= tol.
-## @param reltol. Stop iterating when |f(xn)| <= reltol * |xn|.
-## @param delta. Stop iterating when |xn+1 - xn| <= delta.
-## @param max_iter. Stop iterating if more than this many steps, throw error.
-## @param order. One of 0, 1, 2, 5, 8, or 16. Specifies which algorithm to
-##        use. Default is 0 for the slower, more robust SOLVE function. 
-##        Order 8 is faster and pretty robust. The order 2 Steffensen method can be even faster
-##        and use less memory, but is more sensitive to the initial guess.
-## @param verbose. If true, will print out each step taken
-## @param kwargs... For order 8, there are some parameters that can be
-##        specified to change the algorithm. In particular, one can specify
-##        beta which controls the size of the first step in an approximate
-##        derivative: (f(x0 + f(x(0))/beta) - f(x0).
-## 
-##
-## The file test/test_fzero2 generates some timed comparisons
-##
-## Because these are derivative free, they can be used with functions
-## defined by automatic differentiation
-## e.g., find critical point of f(x) = x^2
-## julia> fzero(D(x -> x^2), 1)
+"""
+Main interface for derivative free methods
 
+* `f` a scalar function `f:R -> R`. Trying to find solution to `f(x) = 0`.
 
+* `x0` initial guess for root. Iterative methods need a reasonable
+initial starting point.
+
+* `tol`. Stop iterating when |f(xn)| <= tol.
+
+* `reltol`. Stop iterating when |f(xn)| <= reltol * |xn|.
+
+* `delta`. Stop iterating when |xn+1 - xn| <= delta.
+
+* `max_iter`. Stop iterating if more than this many steps, throw error.
+
+* `order`. One of 0, 1, 2, 5, 8, or 16. Specifies which algorithm to
+use. Default is 0 for the slower, more robust SOLVE function.  Order 8
+is faster and pretty robust. The order 2 Steffensen method can be even
+faster and use less memory, but is more sensitive to the initial
+guess.
+
+* `verbose`. If true, will print out each step taken
+
+* `kwargs...` For order 8, there are some parameters that can be
+specified to change the algorithm. In particular, one can specify beta
+which controls the size of the first step in an approximate
+derivative: (f(x0 + f(x(0))/beta) - f(x0).
+
+The file test/test_fzero2 generates some timed comparisons
+
+Because these are derivative free, they can be used with functions
+defined by automatic differentiation
+e.g., find critical point of f(x) = x^2
+```
+fzero(D(x -> x^2), 1)
+```
+"""
 function derivative_free(f::Function, x0::Real;
                  tol::Real      = 10.0 * eps(one(eltype(float(x0)))),
                  reltol::Real   = 10.0 * eps(one(eltype(float(x0)))),
@@ -305,7 +315,7 @@ function derivative_free(f::Function, x0::Real;
         x1 = x0 + f(x0)
         return(secant_method(f, x0, x1; kwargs...))
     else
-        return(SOLVE(f, x0))
+        return(SOLVE(f, x0; ftol=tol, maxeval=max_iter, kwargs...))
     end
 
 
