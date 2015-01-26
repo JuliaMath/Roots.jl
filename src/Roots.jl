@@ -94,7 +94,7 @@ function fzero{T <: Real}(f::Function, x0::Real, bracket::Vector{T}; kwargs...)
         if isa(ex, StateConverged) 
             return(ex.x0)
         else
-            throw(ex)
+            rethrow(ex)
         end
     end
 end
