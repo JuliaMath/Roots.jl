@@ -1,8 +1,16 @@
+## Bracketing methods for root finding
+
 ## Bisection_method for floats and int
 
 # type to throw on succesful convergence
 type StateConverged
     x0::Real
+end
+
+
+# type to throw on failure
+type ConvergenceFailed
+    reason
 end
 
 
@@ -39,7 +47,7 @@ This is guaranteed to take no more than 64 steps. The `a42` alternative has
 fewer iterations, but this seems to find the value with fewer function evaluations.
 
 """
-function find_zero(f::Function, a::Float64, b::Float64)
+function find_zero(f::Function, a::Float64, b::Float64; verbose::Bool=false)
 
     x0, y0 = a, f(a)
     x2, y2 = b, f(b)
@@ -66,6 +74,7 @@ function find_zero(f::Function, a::Float64, b::Float64)
         x1 = _middle(x0, x2)
         y1 = f(x1)
         sign(y1) == 0 && return x1
+        verbose && println("$x1")
     end
     
     return abs(y0) < abs(y2) ? x0 : x2
@@ -78,11 +87,11 @@ find_zero using Algorithm 4.2  of Alefeld, Potra and Shi for Big numbers
 
 """
 function find_zero(f::Function, a::Union(BigFloat, BigInt), b::Union(BigFloat, BigInt);
-                   tol=zero(a), 
-                   max_iter::Int=100,
+                   xtol=zero(a), 
+                   maxeval::Int=100,
                    verbose::Bool=false
                    )
-    a42(f, a, b; tol=tol, max_iter=max_iter, verbose=verbose)
+    a42(f, a, b; xtol=xtol, maxeval=maxeval, verbose=verbose)
 end
 
 """    
@@ -97,8 +106,8 @@ enclosing zeros of continuous functions," ACM Trans. Math. Softw. 21,
 input:
     `f`: function to find the root of
     `a`, `b`: the initial bracket, with: a < b, f(a)*f(b) < 0
-    `tol`: acceptable error (it's safe to set zero for machine precision)
-    `max_iter`:  maximum number of iterations
+    `xtol`: acceptable error (it's safe to set zero for machine precision)
+    `maxeval`:  maximum number of iterations
 
 output:
     an estimate of the zero of f
@@ -107,19 +116,20 @@ By John Travers
 
 """
 function a42(f::Function, a, b;
-                   tol=zero(float(a)), 
-                   max_iter=100,
+                   xtol=zero(float(a)), 
+                   maxeval::Int=15,
                    verbose::Bool=false
                    )
     if a >= b || sign(f(a))*sign(f(b)) >= 0
         error("on input a < b and f(a)f(b) < 0 must both hold")
     end
-    if tol < 0.0
+    if xtol < 0.0
         error("tolerance must be >= 0.0")
     end
+
     c = secant(f, a, b)
     a42a(f, a, b, c,
-         tol=tol, max_iter=max_iter, verbose=verbose)
+         xtol=xtol, maxeval=maxeval, verbose=verbose)
 end
 
 """
@@ -131,16 +141,18 @@ Solve f(x) = 0 over bracketing interval [a,b] starting at c, with a < c < b
 
 """
 function a42a(f::Function, a, b, c;
-                   tol=zero(float(a)), 
-                   max_iter=100,
+                   xtol=zero(float(a)), 
+                   maxeval::Int=15,
                    verbose::Bool=false
-                   )
+              )
+
+    
     try
         # start with a secant approximation
         c = secant(f, a, b)
         # re-bracket and check termination
-        a, b, d = bracket(f, a, b, c, tol)
-        for n = 2:max_iter
+        a, b, d = bracket(f, a, b, c, xtol)
+        for n = 2:maxeval
             # use either a cubic (if possible) or quadratic interpolation
             if n > 2 && distinct(f, a, b, d, e)
                 c = ipzero(f, a, b, d, e)
@@ -148,7 +160,7 @@ function a42a(f::Function, a, b, c;
                 c = newton_quadratic(f, a, b, d, 2)
             end
             # re-bracket and check termination
-            ab, bb, db = bracket(f, a, b, c, tol)
+            ab, bb, db = bracket(f, a, b, c, xtol)
             eb = d
             # use another cubic (if possible) or quadratic interpolation
             if distinct(f, ab, bb, db, eb)
@@ -157,13 +169,13 @@ function a42a(f::Function, a, b, c;
                 cb = newton_quadratic(f, ab, bb, db, 3)
             end
             # re-bracket and check termination
-            ab, bb, db = bracket(f, ab, bb, cb, tol)
+            ab, bb, db = bracket(f, ab, bb, cb, xtol)
             # double length secant step; if we fail, use bisection
             u = abs(f(ab)) < abs(f(bb)) ? ab : bb
             cb = u - 2*f(u)/(f(bb) - f(ab))*(bb - ab)
             ch = abs(cb - u) > (bb - ab)/2 ? ab + (bb - ab)/2 : cb
             # re-bracket and check termination
-            ah, bh, dh = bracket(f, ab, bb, ch, tol)
+            ah, bh, dh = bracket(f, ab, bb, ch, xtol)
             # if not converging fast enough bracket again on a bisection
             if bh - ah < 0.5*(b - a)
                 a = ah
@@ -173,25 +185,19 @@ function a42a(f::Function, a, b, c;
             else
                 e = dh
                 a, b, d = bracket(f, ah, bh, ah + (bh - ah)/2,
-                                  tol)
+                                  xtol)
             end
 
             verbose && println("a=$a, n=$n")
             
             if nextfloat(ch) * prevfloat(ch) <= 0
-                println("ch basically 0")
-                throw(StateConverged(ch))
-            end
-            if abs(f(ch)) <= tol
-                println("abs(f(ch)) <= tol")
                 throw(StateConverged(ch))
             end
             if nextfloat(a) >= b
-                println("[a,b] as small as possible")
                 throw(StateConverged(a))
             end
         end
-        throw(Error("$max_iter exceeded before convergence"))
+        throw(ConvergenceFailed("More than $maxeval iterations before convergence"))
     catch ex
         if isa(ex, StateConverged)
             return ex.x0
@@ -199,13 +205,10 @@ function a42a(f::Function, a, b, c;
             rethrow(ex)
         end
     end
-    error("root not found within max_iter iterations")
+    throw(ConvergenceFailed("More than $maxeval iterations before convergence"))
 end
 
 
-
-# type to throw on failure
-type ConvergenceFailed end
 
 # calculate a scaled tolerance
 # based on algorithm on page 340 of [1]
@@ -347,7 +350,12 @@ function distinct(f::Function, a, b, d, e)
 end
 
 
-## split interval [a,b] into no_pts intervals, apply find_zero to each, accumulate
+
+"""
+Searches for simple zeros in an interval [a, b].
+
+Split interval [a,b] in to `no_pts` subintervals. Return the roots for each bracketing interval.
+"""
 function find_zeros(f::Function, a::Real, b::Real, args...;no_pts::Int=200, kwargs...)
     a, b = a < b ? (a,b) : (b,a)
 

@@ -11,43 +11,50 @@ function check_tolerance(tolerance)
     end
 end
 
-function check_residual(fx, tolerance)
-    check_tolerance(tolerance)
-    abs(fx) < tolerance
+function check_residual(fx, ftol)
+    check_tolerance(ftol)
+    abs(fx) < ftol
 end
 
-function check_delta(delta, tolerance)
-    check_tolerance(tolerance)
-    abs(delta) < tolerance
+function check_delta(x, delta, xtol, xtolrel)
+    check_tolerance(xtol)
+    abs(delta) <= max(xtol, abs(x)*xtolrel)
 end     
 
 
 ## Order 1 secant method
 function secant_method(f::Function, x0::Real, x1::Real;
-                tol::Real   = 10.0 * eps(one(eltype(float(x1)))),
-                delta::Real =  zero(x1),
-                max_iter::Int=100, 
-                verbose::Bool=false,
+                       ftol::Real     = 10.0 * eps(one(eltype(float(x1)))),
+                       xtol::Real     = 10.0 * eps(one(eltype(float(x1)))),
+                       xtolrel::Real = eps(one(eltype(float(x1)))),
+                       maxeval::Int   = 100, 
+                       verbose::Bool  = false,
                 kwargs...)
 
     a, b, fa, fb = x0, x1, f(x0), f(x1)
+
+    abs(fb) <= ftol && throw(StateConverged(b))
+    abs(b-a) <= max(xtol, abs(b)*xtolrel) && throw("a,b too close")
     
     try
-        fb == 0 && throw(StateConverged(b))
+        fb == 0.0 && throw(StateConverged(b))
 
-        for i in 1:max_iter
-            verbose && println("a=$a, b=$b, ctr=$(i-1)")
-
+        for i in 1:maxeval
+            
             inc = fb/secant(fa, fb, a, b)
             a, b = b, b-inc
             fa, fb = fb, f(b)
-            abs(inc) <= delta && throw(StateConverged(b))
-            abs(fb) <= tol && throw(StateConverged(b))
 
+            verbose && println("$i: a=$a, b=$b, f(b)=$fb, inc=$inc")
+
+            (isinf(b) | isinf(fb)) && throw(ConvergenceFailed("Function values diverged"))
+            abs(fb) <= ftol && throw(StateConverged(b))
+#            abs(inc) <= max(xtol, abs(b)*xtolrel) && throw(StateConverged(b))
+            
+            
         end
-
-        throw(ConvergenceFailed())
-
+        throw(ConvergenceFailed("More than $maxeval steps taken before convergence"))
+        
     catch e
         if isa(e, StateConverged)
             e.x0
@@ -60,16 +67,17 @@ end
 
 # Newton-Raphson method (quadratic convergence)
 function newton(f::Function, fp::Function, x;
-                delta::Real       = 10  * eps(one(eltype(float(x)))),
-                tol::Real         = 100 * eps(one(eltype(float(x)))),
-                max_iter::Integer = 100,
-                verbose::Bool     = false
+                ftol::Real       = 100 * eps(one(eltype(float(x)))),
+                xtol::Real       = 10  * eps(one(eltype(float(x)))),
+                xtolrel::Real    = eps(one(eltype(float(x)))),
+                maxeval::Integer = 100,
+                verbose::Bool    = false
                 )
 
     cvg = false
-    for i=1:max_iter
+    for i=1:maxeval
         fx = f(x)
-        if check_residual(fx, tol)
+        if check_residual(fx, ftol)
             cvg = true
             break
         end
@@ -82,13 +90,13 @@ function newton(f::Function, fp::Function, x;
         del = fx/fpx
         x -= del
 
-        if check_delta(del, delta)
+        if check_delta(x, del, xtol, xtolrel)
             cvg = true
             break
         end
         verbose && println("xn = $x, f(xn) = $(f(x)), step=$i")
     end
-    cvg || error("$max_iter steps taken without convergence")
+    cvg || error("$maxeval steps taken without convergence")
     
     return x
 end
@@ -97,16 +105,17 @@ end
 
 # Halley's method (cubic convergence)
 function halley(f::Function, fp::Function, fpp::Function, x;
-                delta::Real       = 10  * eps(one(eltype(float(x)))),
-                tol::Real         = 100 * eps(one(eltype(float(x)))),
-                max_iter::Integer = 100,
-                verbose::Bool     = false
+                ftol::Real       = 100 * eps(one(eltype(float(x)))),
+                xtol::Real       = 10  * eps(one(eltype(float(x)))),
+                xtolrel::Real    = eps(one(eltype(float(x)))),
+                maxeval::Integer = 100,
+                verbose::Bool    = false
 )
 
     cvg = false
-    for i=1:max_iter
+    for i=1:maxeval
         fx = f(x)
-        if check_residual(fx, tol)
+        if check_residual(fx, ftol)
             cvg = true
             break
         end
@@ -121,12 +130,12 @@ function halley(f::Function, fp::Function, fpp::Function, x;
             del = 2fx*fpx/(2fpx^2 - fx*fppx)
         end
         x -= del
-        if check_delta(del, delta)
+        if check_delta(x, del, xtol, xtolrel)
             cvg = true
         end
         verbose && println("xn = $x, f(xn) = $(f(x)), step=$i")
     end
-    cvg || throw("$max_iter steps taken without convergence")
+    cvg || throw("$maxeval steps taken without convergence")
     
     return x
 

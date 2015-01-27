@@ -40,19 +40,19 @@ include("real_roots.jl")
 
 """
 
-Find zero of a function
+Find zero of a function using an iterative algorithm
 
 * `f`: a scalar function 
 * `x0`: an initial guess
 
 Keyword arguments:
 
-* `tol`: tolerance for a guess `abs(f(x)) < tol`
-* `reltol`: relative tolerance
-* `delta`: stop if `abs(xold - xnew) <= delta`
-* `max_iter`: maximum number of steps
+* `ftol`: tolerance for a guess `abs(f(x)) < ftol`
+* `xtol`: stop if `abs(xold - xnew) <= xtol`
+* `xtolrel`: stop if `abs(xold - xnew) <= xtolrel * abs(xnew)`
+* `maxeval`: maximum number of steps
 * `verbose`: Boolean. Set `true` to trace algorithm
-* `order`: Can specify order of algorithm
+* `order`: Can specify order of algorithm. 0 is most robust, also 1, 2, 5, 8, 16.
 * `kwargs...` passed on to different algorithms
 
 """
@@ -71,6 +71,17 @@ Arguments:
 * `b` right endpont of interval
 
 For a bracket to be valid, it must be that `f(a)*f(b) < 0`.
+
+For `Float64` values, the answer is such that `f(x) == 0.0` or
+`f(prevfloat(x)) * f(x) <= 0` or `f(nextfloat(x)) * f(x) <= 0$.
+
+For `Big` values, the same is not necessarily true. A default
+tolerance the size of the increment is used. The `xtol` argument can
+be adjusted to increase the default.
+
+Example:
+    `fzero(sin, 3, 4)` # find pi
+    `fzero(sin, [big(3), 4]) find pi with more digits
 """
 function fzero(f::Function, a::Real, b::Real; kwargs...) 
     find_zero(f, promote(float(a), b)...; kwargs...)
@@ -89,7 +100,7 @@ Find a zero within a bracket with an initial guess to *possibly* speed things al
 function fzero{T <: Real}(f::Function, x0::Real, bracket::Vector{T}; kwargs...) 
     a,b = sort(map(float,bracket))
     try
-        ex = secant_method_bracket(f, a, b, float(x0))
+        ex = a42a(f, a, b, float(x0); kwargs...)
     catch ex
         if isa(ex, StateConverged) 
             return(ex.x0)
@@ -143,22 +154,22 @@ Find real zeros of a polynomial
 
 args:
 
-`f`: Function of R -> R. May also be of `Poly` type.
-
-`x0`: initial guess for iterative algorithms. Required for non-poly, non-bracketed problems
-
-bracket: bracket [a,b] with f(a) * f(b) < 0. Bracketing guarantees a root will be found in the interval.
-
-kwargs: 
-
-`tol`: test if | f(x_n) | <= tol
-`delta`: test if | x_{n+1} - x_n } <= delta
-`max_iter`: maximum number of steps before giving up on convergene
-
+`f`: a Polynomial function of R -> R. May also be of `Poly` type.
 
 """
 fzeros(p::Poly) = real_roots(p)
 
+
+
+function fzeros(f::Function)
+    p = poly([0.0])
+    try
+        p = convert(Poly, f)
+    catch e
+        error("If f(x) is not a polynomial in x, then an interval to search over is needed")
+    end
+    real_roots(p)
+end
 
 """
 Attempt to find all simple zeroes of `f` within an interval `[a,b]`.
@@ -174,17 +185,6 @@ function fzeros{T <: Real}(f::Function, bracket::Vector{T}; kwargs...)
     end
 end
 fzeros(f::Function, a::Real, b::Real; kwargs...) = find_zeros(f, a, b; kwargs...)
-
-function fzeros(f::Function)
-    p = poly([0.0])
-    try
-        p = convert(Poly, f)
-    catch e
-        error("If f(x) is not a polynomial in x, then an interval to search over is needed")
-    end
-    real_roots(p)
-end
-
 
 
 

@@ -11,8 +11,11 @@
 ## secant line approximation when f(x) is too large.
 
 ## some helpers
-function secant(fa::Real, fb::Real, a::Real, b::Real) 
-    abs(a-b) == 0.0 && throw(StateConverged(b))
+function secant(fa::Real, fb::Real, a::Real, b::Real)
+    if abs(a-b) == 0.0
+        fb == 0.0 && throw(StateConverged(b))
+        throw(DomainError())
+    end
     (fa - fb)/(a-b)
 end
 
@@ -22,7 +25,10 @@ function approx_deriv(f::Function, fx::Real, x::Real)
 end
 
 function secant2(f, fz, fx, z, x) 
-    abs(x-z) == 0.0 && throw(StateConverged(x))
+    if abs(x-z) == 0.0
+        fx == 0.0 && throw(StateConverged(x))
+        throw(DomainError())
+    end
     (approx_deriv(f, fx, x) - secant(fz, fx, z, x))/(x-z)
 end
 
@@ -128,7 +134,8 @@ function thukral_update8(f::Function, x0::Real;
     wn = xn + fxn/beta          # beta can tune how large first step is.
     fwn = f(wn)
     fwn == 0.0 && throw(StateConverged(wn))
-    abs(fwn - fxn) == 0.0 && throw(StateConverged(wn))
+
+    abs(fwn - fxn) == 0.0 && throw(ConvergenceFailed("convergence failed"))
 
     yn = xn - fxn*fxn/(fwn-fxn)
     fyn = f(yn)
@@ -151,7 +158,7 @@ function thukral_update8(f::Function, x0::Real;
 
     ## return inc, not new update
     sec = (secynzn - secxnyn + secxnzn)
-    sec == 0.0 && throw(StateConverged(zn))
+    sec == 0.0 && throw(ConvergenceFailed("Algorithm got stuck"))
     zn - omega * psi * fzn / sec
 
 end
@@ -190,9 +197,9 @@ end
 ## Order 2 method
 ## http://en.wikipedia.org/wiki/Steffensen's_method
 function steffensen(g::Function, x0::Real; 
-                    tol::Real   = 10.0 * eps(one(eltype(float(x0)))),
-                    delta::Real =  4.0 * eps(one(eltype(float(x0)))),
-                    max_iter::Int=100, 
+                    ftol::Real   = 10.0 * eps(one(eltype(float(x0)))),
+                    xtol::Real =  4.0 * eps(one(eltype(float(x0)))),
+                    maxeval::Int=20, 
                     verbose::Bool=false,
                     kwargs...)
 
@@ -202,39 +209,40 @@ function steffensen(g::Function, x0::Real;
         gx = g(x)
         gx == 0.0 && throw(StateConverged(x))
 
-        gp = (g(x + gx) - gx) / gx
-        gp == 0.0 && throw(StateConverged(x))
-
-        x - gx/gp
+        dg = g(x + gx) - gx
+        dg == 0.0 && throw(ConvergenceFailed("Division by 0"))
+        
+        x - gx * gx / dg
     end
 
     p0, p = x0, Inf
 
     try
-        for i in 1:max_iter
+        for i in 1:maxeval
             verbose && println("p0 = $p0, p=$p, ctr=$(i-1)")
 
             p1 = f(p0)
 
-            abs(p1) <= tol && throw(StateConverged(p0))
-            isnan(p1) && throw(StateConverged(p0))
+            abs(p1) <= ftol && throw(StateConverged(p0))
+
+            isnan(p1) && throw(ConvergenceFailed("NaN exception"))
 
             p2 = f(p1)
-            isnan(p2) && throw(StateConverged(p1))
+            isnan(p2) && throw(ConvergenceFailed("NaN exception"))
 
             ## Aitkens step
             p=p0-(p1-p0)^2/(p2-2*p1+p0)
 
-            abs(p-p0) <= tol && throw(StateConverged(p))
+            abs(p-p0) <= ftol && throw(StateConverged(p))
             p0=p
         end
-        throw(ConvergenceFailed())
+        throw(ConvergenceFailed("More than $maxeval iterations before convergence"))
 
     catch e
         if isa(e, StateConverged)
             e.x0
         else
-            throw(ConvergenceFailed())
+            rethrow(e)
         end
     end
 end
@@ -262,13 +270,13 @@ Main interface for derivative free methods
 * `x0` initial guess for root. Iterative methods need a reasonable
 initial starting point.
 
-* `tol`. Stop iterating when |f(xn)| <= tol.
+* `ftol`. Stop iterating when |f(xn)| <= ftol.
 
-* `reltol`. Stop iterating when |f(xn)| <= reltol * |xn|.
+* `xtol`. Stop iterating when |xn+1 - xn| <= xtol.
 
-* `delta`. Stop iterating when |xn+1 - xn| <= delta.
+* `xtolrel`. Stop iterating when |xn+1 - xn| <= |xn| * xtolrel
 
-* `max_iter`. Stop iterating if more than this many steps, throw error.
+* `maxeval`. Stop iterating if more than this many steps, throw error.
 
 * `order`. One of 0, 1, 2, 5, 8, or 16. Specifies which algorithm to
 use. Default is 0 for the slower, more robust SOLVE function.  Order 8
@@ -293,14 +301,14 @@ fzero(D(x -> x^2), 1)
 ```
 """
 function derivative_free(f::Function, x0::Real;
-                 tol::Real      = 10.0 * eps(one(eltype(float(x0)))),
-                 reltol::Real   = 10.0 * eps(one(eltype(float(x0)))),
-                 delta::Real =  4.0 * eps(one(eltype(float(x0)))),
-                 max_iter::Int = 200,
-                 verbose::Bool=false,
-                 order::Int=0, #0, 1, 2, 5, 8 or 16
-                 kwargs...      # pass to thukral_update 8, these being beta,j,k,l
-                 )
+                         ftol::Real = 10.0 * eps(one(eltype(float(x0)))),
+                         xtol::Real =  4.0 * eps(one(eltype(float(x0)))),
+                         xtolrel::Real = 10.0 * eps(one(eltype(float(x0)))),
+                         maxeval::Int = 30,
+                         verbose::Bool=false,
+                         order::Int=0, #0, 1, 2, 5, 8 or 16
+                         kwargs...      # pass to thukral_update 8, these being beta,j,k,l
+                         )
 
     if order == 16
         update(f::Function, x::Real) = thukral_update16(f, x; kwargs...)
@@ -309,13 +317,13 @@ function derivative_free(f::Function, x0::Real;
     elseif order == 5
         update(f::Function, x::Real) = LiMuMaHou_update(f, x; kwargs...)
     elseif order == 2
-        return(steffensen(f, x0, tol=tol, delta=delta, max_iter=max_iter,
+        return(steffensen(f, x0, ftol=ftol, xtol=xtol, maxeval=maxeval,
                           verbose=verbose, kwargs...))
     elseif order == 1
         x1 = x0 + f(x0)
-        return(secant_method(f, x0, x1; kwargs...))
+        return(secant_method(f, x0, x1; ftol=ftol, xtol=xtol, xtolrel=xtolrel, maxeval=maxeval, verbose=verbose, kwargs...))
     else
-        return(SOLVE(f, x0; ftol=tol, maxeval=max_iter, kwargs...))
+        return(SOLVE(f, x0; ftol=ftol, maxeval=maxeval, verbose=verbose, kwargs...))
     end
 
 
@@ -323,19 +331,26 @@ function derivative_free(f::Function, x0::Real;
     xn, xn1 = x0, Inf
 
     try
-        for i in 1:max_iter
-            abs(f(xn)) <= tol && throw(StateConverged(xn))
-            abs(f(xn)) <= reltol * abs(xn) && throw(StateConverged(xn))
+        for i in 1:maxeval
+            fxn = f(xn)
+
+            abs(fxn) <= ftol && throw(StateConverged(xn))
+            isnan(xn) && throw(ConvergenceFailed("sequence diverged"))
+
 
             xn1 = update(f, xn)
+            isinf(xn1) &&  throw(ConvergenceFailed("sequence diverged"))
+            isnan(xn1) &&  throw(ConvergenceFailed("sequence diverged"))
+            
             del = abs(xn1 - xn)
-            abs(del) <= delta && throw(StateConverged(xn))
 
+            abs(del) <= max(xtol, abs(xn1) * xtolrel) && throw(StateConverged(xn1))
 
             xn = xn1
+
             verbose && println("x_$i = $xn;\t f(x_$i) = $(f(xn))")
         end
-        throw(ConvergenceFailed())
+        throw(ConvergenceFailed("More than $maxeval iterations before convergence"))
     catch e
         if isa(e, StateConverged)
             e.x0

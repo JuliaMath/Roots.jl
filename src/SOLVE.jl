@@ -27,7 +27,11 @@ While this is slower than fzero with order 2, 5, 8, or 16 it is
 more robust to the initial condition.
 
 """
-function SOLVE(f::Function, x0::Real; ftol::Real=eps(zero(0.0))^(1/5), maxeval::Int=1000)
+function SOLVE(f::Function, x0::Real;
+               ftol::Real=eps(zero(0.0))^(1/5),
+               maxeval::Int=30,
+               verbose::Bool=false)
+
     x0 =  float(x0)
     fx0 = f(x0)
     if f(x0) == 0.0 return x0 end
@@ -36,9 +40,9 @@ function SOLVE(f::Function, x0::Real; ftol::Real=eps(zero(0.0))^(1/5), maxeval::
         step = max(1/100, min(abs(fx0), abs(x0/100)))
         if fx0 < 0
             g(x) = -f(x)
-            secant_method_no_bracket(g, x0 - step, x0, ftol=ftol, maxeval=maxeval)
+            secant_method_no_bracket(g, x0 - step, x0, ftol=ftol, maxeval=maxeval, verbose=verbose)
         else
-            secant_method_no_bracket(f, x0 - step, x0, ftol=ftol, maxeval=maxeval)
+            secant_method_no_bracket(f, x0 - step, x0, ftol=ftol, maxeval=maxeval, verbose=verbose)
         end
     catch ex
         if isa(ex, StateConverged)
@@ -69,25 +73,27 @@ Solve f(x) = 0 if we have a bracket [a,b] and starting point a < c < b
 Use Algorithm 4.2 of Alefeld, Potra, Shi unless it dithers, in which case the root is found by bisection.
 
 """
-function have_bracket(f::Function, a, b, c; maxeval=10)
+function have_bracket(f::Function, a, b, c; maxeval=10, verbose=false)
     ## try a42a unless it fails, then go to failsafe
-    a,b = sort([a,b])
+    verbose && println("Have a bracket")
     f(a) == 0.0 && return(a)
     f(b) == 0.0 && return(b)
     if f(a) * f(b) > 0
         error("Interval [$a, $b] is not a bracket")
     end
+    a,b = sort([a,b])
     if !(a < c < b)
         error("Value $c is not in interval ($a, $b)")
     end
 
     try
-        x0 = Roots.a42a(f, a, b, c, tol=zero(float(a)), max_iter=maxeval)
+        x0 = a42a(f, a, b, c, xtol=zero(float(a)), maxeval=maxeval, verbose=verbose)
     catch e
-        if isa(e, Roots.StateConverged)
+        if isa(e, StateConverged)
             return e.x0
         else
-            return Roots.fzero(f, a, b)
+            verbose && println("Switching to bisection method")
+            return fzero(f, a, b, verbose=verbose)
         end
     end
 end
@@ -96,14 +102,14 @@ end
 ## assume f(b) > 0
 ## steffensen of secant line method, but we don't assume a bracket
 ## we "bend" large trajectories 
-function secant_method_no_bracket(f::Function, a, b; ftol=eps(zero(0.0))^(1/5), maxeval::Int=1000)
+function secant_method_no_bracket(f::Function, a, b; ftol=eps(zero(0.0))^(1/5), maxeval::Int=100, verbose::Bool=false)
+    
     alpha, beta = a, b ## beta keeps smallest values
     falpha, fbeta = f(alpha), f(beta)
 
     ## checks -- have a bracket
     if falpha * fbeta < 0
-        a42(f, alpha, beta)
-        # secant_method_bracket(f, alpha, beta)
+        a42(f, alpha, beta, maxeval=maxeval)
     end
     
     ## keep fbeta smallest
@@ -133,12 +139,15 @@ function secant_method_no_bracket(f::Function, a, b; ftol=eps(zero(0.0))^(1/5), 
         gamma = beta - step
 
         ## bend in some cases. XXX What is best bending scheme? XXX
-        if abs(gamma-beta) >= 500 * abs(beta - alpha)
+        if abs(gamma-beta) >= 5e2 * abs(beta - alpha)
+            step = cbrt( (beta - alpha) / (fbeta - falpha) * fbeta)
 #            gamma = beta + (1/4) * (beta - alpha) / (fbeta - falpha) * fbeta
-            gamma = beta - cbrt( (beta - alpha) / (fbeta - falpha) * fbeta)
+            gamma = beta - step
         end
 
         fgamma = f(gamma)
+
+        
         # try
         #     fgamma = f(gamma) ## what to do with domain error?
         # catch e
@@ -151,8 +160,7 @@ function secant_method_no_bracket(f::Function, a, b; ftol=eps(zero(0.0))^(1/5), 
             throw(StateConverged(gamma))
         end
         if fgamma < 0
-            x0 = have_bracket(f, gamma, beta, (0.5)*(gamma + beta),
-                              maxeval=10)
+            x0 = have_bracket(f, gamma, beta, (0.5)*(gamma + beta), maxeval=20)
             throw(StateConverged(x0))
         end
         
@@ -175,11 +183,13 @@ function secant_method_no_bracket(f::Function, a, b; ftol=eps(zero(0.0))^(1/5), 
             gamma = beta -  ((beta - alpha)^2 * (fbeta - fgamma) - (beta - gamma)^2 * (fbeta - falpha))/den/2
 
             fgamma = f(gamma)
+
             if fgamma == 0
                 throw(StateConverged(gamma))
             end
             if fgamma < 0
-                secant_method_bracket(f, gamma, beta)
+                x0 = have_bracket(f, gamma, beta, (0.5)*(gamma + beta), maxeval=20)
+                throw(StateConverged(x0))
             end
         else
             quad_ctr = 0        # reset
@@ -192,7 +202,12 @@ function secant_method_no_bracket(f::Function, a, b; ftol=eps(zero(0.0))^(1/5), 
         else
             throw(PossibleExtremaReached(beta))
         end
+        verbose && println("step $ctr: $beta")
     end
-    throw(StateConverged(beta))
+    if abs(f(beta)) < ftol  
+        throw(StateConverged(beta))
+    else
+        throw(ConvergenceFailed("More than $maxeval iterations before convergence"))
+    end
 end
   
