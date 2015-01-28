@@ -55,6 +55,8 @@ Keyword arguments:
 * `order`: Can specify order of algorithm. 0 is most robust, also 1, 2, 5, 8, 16.
 * `kwargs...` passed on to different algorithms
 
+This is a polyalgorithm redirecting different algorithms based on the value of `order`. 
+
 """
 fzero(f::Function, x0::Real; kwargs...) = derivative_free(f, float(x0); kwargs...)
 
@@ -69,17 +71,20 @@ Arguments:
 * `f` function
 * `a` left endpont of interval
 * `b` right endpont of interval
+* `xtol` optional additional tolerance on sub-bracket size.
 
 For a bracket to be valid, it must be that `f(a)*f(b) < 0`.
 
-For `Float64` values, the answer is such that `f(x) == 0.0` or
-`f(prevfloat(x)) * f(x) <= 0` or `f(nextfloat(x)) * f(x) <= 0$.
+For `Float64` values, the answer is such that `f(prevfloat(x)) *
+f(nextfloat(x)) < 0` unless a non-zero value of `xtol` is specified in
+which case, it stops when the sub-bracketing produces an bracket with
+length less than `max(xtol, abs(x1)*xtolrel)`.
 
-For `Big` values, the same is not necessarily true. A default
-tolerance the size of the increment is used. The `xtol` argument can
-be adjusted to increase the default.
+For `Big` values, which defaults to the algorithm of Alefeld, Potra, and Shi, a
+default tolerance is used for the sub-bracket length that can be enlarged with `xtol`.
 
 Example:
+
     `fzero(sin, 3, 4)` # find pi
     `fzero(sin, [big(3), 4]) find pi with more digits
 """
@@ -88,7 +93,7 @@ function fzero(f::Function, a::Real, b::Real; kwargs...)
 end
 
 """
-Find a zero with bracket specified via `[a,b]`
+Find a zero with bracket specified via `[a,b]`, as `fzero(sin, [3,4])`.
 """
 function fzero{T <: Real}(f::Function, bracket::Vector{T}; kwargs...) 
     fzero(f, bracket[1], bracket[2]; kwargs...)
@@ -112,9 +117,7 @@ end
 
 
 """
-
-Find zero using Newton's method
-
+Find zero using Newton's method.
 """
 fzero(f::Function, fp::Function, x0::Real; kwargs...) = newton(f, fp, x0; kwargs...)
 
@@ -132,6 +135,8 @@ Arguments:
 Returns:
 
 An approximate root or an error.
+
+See `fzeros(p)` to return all real roots.
 
 """
 function fzero(p::Poly, x0::Real; kwargs...) 

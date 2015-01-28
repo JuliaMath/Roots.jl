@@ -31,26 +31,27 @@ function secant_method(f::Function, x0::Real, x1::Real;
                        verbose::Bool  = false,
                 kwargs...)
 
-    a, b, fa, fb = x0, x1, f(x0), f(x1)
+    a,b = sort([x0,x1])
+    fa, fb = f(a), f(b)
 
-    abs(fb) <= ftol && throw(StateConverged(b))
-    abs(b-a) <= max(xtol, abs(b)*xtolrel) && throw("a,b too close")
+    abs(fb) <= ftol && return(b)
+    abs(b-a) <= max(xtol, abs(b)*xtolrel) && throw(ConvergenceFailed("a,b too close"))
     
     try
-        fb == 0.0 && throw(StateConverged(b))
+        abs(fb) <= ftol && throw(StateConverged(b))
 
         for i in 1:maxeval
+            verbose && println("$i: a=$a, b=$b, f(b)=$fb")
+            sec = secant(fa, fb, a, b)
+            ((sec == 0.0) | isnan(sec)) && throw(ConvergenceFailed("Division by 0"))
+            inc = fb / sec
             
-            inc = fb/secant(fa, fb, a, b)
             a, b = b, b-inc
             fa, fb = fb, f(b)
 
-            verbose && println("$i: a=$a, b=$b, f(b)=$fb, inc=$inc")
 
             (isinf(b) | isinf(fb)) && throw(ConvergenceFailed("Function values diverged"))
             abs(fb) <= ftol && throw(StateConverged(b))
-#            abs(inc) <= max(xtol, abs(b)*xtolrel) && throw(StateConverged(b))
-            
             
         end
         throw(ConvergenceFailed("More than $maxeval steps taken before convergence"))

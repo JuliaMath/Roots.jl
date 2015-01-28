@@ -194,6 +194,7 @@ end
 function run_tests()
     @printf "%s\n" run_tests(fzero, name="fzero")
     @printf "%s\n" run_tests((f, b) -> fzero(f, mean(b)), name="fzero(x0)")
+    @printf "%s\n" run_tests((f, b) -> fzero(f, b), name="fzero(b)")
     @printf "%s\n" run_tests((f, b) -> fzero(f, mean(b), b), name="fzero(x0,b)")
     @printf "%s\n" run_tests((f, b) -> fzero(f, mean(b), order=1), name="fzero/1")
     @printf "%s\n" run_tests((f, b) -> fzero(f, mean(b), order=2), name="fzero/2")

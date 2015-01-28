@@ -47,8 +47,12 @@ This is guaranteed to take no more than 64 steps. The `a42` alternative has
 fewer iterations, but this seems to find the value with fewer function evaluations.
 
 """
-function find_zero(f::Function, a::Float64, b::Float64; verbose::Bool=false)
+function find_zero(f::Function, a::Float64, b::Float64; xtol::Real=0.0, xtolrel::Real=0.0, verbose::Bool=false)
 
+    if (xtol < 0.0) | (xtolrel < 0.0)
+        error("Tolerances must be non-negative")
+    end
+    
     x0, y0 = a, f(a)
     x2, y2 = b, f(b)
 
@@ -73,7 +77,10 @@ function find_zero(f::Function, a::Float64, b::Float64; verbose::Bool=false)
         
         x1 = _middle(x0, x2)
         y1 = f(x1)
+
         sign(y1) == 0 && return x1
+        abs(x2 - x0) <= max(xtol, xtolrel*abs(x1)) && return(x1)
+
         verbose && println("$x1")
     end
     

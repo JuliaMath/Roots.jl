@@ -12,32 +12,25 @@
 
 ## some helpers
 function secant(fa::Real, fb::Real, a::Real, b::Real)
-    if abs(a-b) == 0.0
-        fb == 0.0 && throw(StateConverged(b))
-        throw(DomainError())
-    end
     (fa - fb)/(a-b)
 end
 
-function approx_deriv(f::Function, fx::Real, x::Real)
-    fx == 0.0 && throw(StateConverged(x))
+function approx_deriv(f::Function, fx::Real, x::Real, ftol=0.0)
+    abs(fx) <= ftol && throw(StateConverged(x))
     (f(x + fx) - fx)/fx
 end
 
-function secant2(f, fz, fx, z, x) 
+function secant2(f, fz, fx, z, x, ftol=0.0) 
     if abs(x-z) == 0.0
-        fx == 0.0 && throw(StateConverged(x))
+        abs(fx) <= ftol && throw(StateConverged(x))
         throw(DomainError())
     end
     (approx_deriv(f, fx, x) - secant(fz, fx, z, x))/(x-z)
 end
 
-function F(f::Function, fx, fy, fz, x, y, z)
-    secant(fz, fy, z, y)  + secant2(f, fz, fx, z, x) * (z-y)
+function F(f::Function, fx, fy, fz, x, y, z, ftol=0.0)
+    secant(fz, fy, z, y)  + secant2(f, fz, fx, z, x, ftol) * (z-y)
 end
-
-isissue(x) = isnan(x) || isinf(x) || x == 0.0 # check approx derivatives with this
-isissue(x, y) = isissue(x) || abs(x/y) > 1e1 || abs(x/y) < 1e-1
 
 ## 16th order, derivative free root finding algorithm
 ## http://article.sapub.org/10.5923.j.ajcam.20120203.08.html
@@ -49,47 +42,54 @@ isissue(x, y) = isissue(x) || abs(x/y) > 1e1 || abs(x/y) < 1e-1
 ## R. Thukral
 ## Research Centre, 39 Deanswood Hill, Leeds, West Yorkshire, LS17 5JS, England
 ## from p 114 (17)
-function thukral_update16(f::Function, x0::Real; kwargs...)
+function thukral_update16(f::Function, x0::Real, ftol::Real; kwargs...)
 
     xn = x0
     fxn = f(xn)
-
-    wn = xn + fxn
-    fwn = f(wn)
-
-    fxn == 0.0 && throw(StateConverged(xn))
-    fwn == 0.0 && throw(StateConverged(wn))
+    abs(fxn) <= ftol && throw(StateConverged(xn))
 
     ## first step is of size fxn. If that is big, this whole thing has
     ## problems with convergence. Here we replace with a step based on
     ## the central difference
-    if abs(fxn) > 1e-1 
+    if abs(fxn) > 1e-1
         h = 1e-6
-        return(secant_step(f(xn+h), f(xn-h), xn+h, xn-h))
+        fp = (f(xn+h) - f(xn-h)) / (2h)
+        return (xn - fxn/fp)
     end
+    
+    wn = xn + fxn
+    fwn = f(wn)
+    abs(fwn) <= ftol && throw(StateConverged(wn))
+
 
     secxnwn = secant(fxn, fwn, xn, wn)
+    ((secxnwn == 0.0) | isnan(secxnwn)) && throw(ConvergenceFailed("Division by 0"))
     
     yn = xn - fxn/secxnwn
     fyn = f(yn)
+    abs(fyn) <= ftol && throw(StateConverged(wn))
 
     secxnyn = secant(fxn, fyn, xn, yn)
+    ((secxnyn == 0.0) | isnan(secxnyn)) && throw(ConvergenceFailed("Division by 0"))
+    
     secwnyn = secant(fwn, fyn, wn, yn)
-
+    ((secwnyn == 0.0) | isnan(secwnyn)) && throw(ConvergenceFailed("Division by 0"))
+      
     u3, u4 = fyn/fxn, fyn/fwn
     phi1, phi2, phi3 = 1/(1 - u4), 1 + u4 + u4^2, secxnwn / secwnyn
 
 
     zn = yn - phi3 * fyn / secxnyn
     fzn = f(zn)
-
+    abs(fzn) <= ftol && throw(StateConverged(zn))
+    
     u1, u2 = fzn/fxn, fzn/fwn
     eta = 1/(1 + 2u3*u4^2)/(1 - u2)
 
     secynzn = secant(fyn, fzn, yn, zn)
     secxnzn = secant(fxn, fzn, xn, zn)
     sec = secynzn - secxnyn + secxnzn
-    sec == 0.0 && throw(StateConverged(zn))
+    ((sec == 0.0) | isnan(sec)) && throw(ConvergenceFailed("Division by 0"))
 
     an = zn - eta * fzn / sec
     fan = f(an)
@@ -98,8 +98,10 @@ function thukral_update16(f::Function, x0::Real; kwargs...)
     sigma = 1 + u1*u2 - u1*u3*u4^2 + u5 + u6 + u1^2*u4 + u2^2*u3 + 3u1*u4^2*(u3^2 - u4^2) / secxnyn
     secynan = secant(fyn, fan, yn, an)
     secznan = secant(fzn, fan, zn, an)
-
-    xn1 = zn  - sigma * secynzn * fan / secynan / secznan
+    sec = secynan * secznan
+    ((sec == 0.0) | isnan(sec)) && throw(ConvergenceFailed("Division by 0"))
+    
+    xn1 = zn  - sigma * secynzn * fan / sec
 
     xn1
 
@@ -110,7 +112,7 @@ end
 ## Rajinder Thukral
 ## very fast (8th order) derivative free iterative root finder.
 ## seems faster than order 5 and 8 and more robust than order 2 method
-function thukral_update8(f::Function, x0::Real;
+function thukral_update8(f::Function, x0::Real, ftol::Real;
                          beta::Real=1,
                          j::Int=1, k::Int=1, l::Int=1 
                          )
@@ -119,7 +121,7 @@ function thukral_update8(f::Function, x0::Real;
     xn = x0
     fxn = f(xn)
     
-    fxn == 0.0 && throw(StateConverged(xn))
+    abs(fxn) <= ftol && throw(StateConverged(xn))
 
     ## first step is of size fxn. If that is big, this whole thing has
     ## problems with convergence. Here we replace with a step based on
@@ -133,24 +135,24 @@ function thukral_update8(f::Function, x0::Real;
 
     wn = xn + fxn/beta          # beta can tune how large first step is.
     fwn = f(wn)
-    fwn == 0.0 && throw(StateConverged(wn))
-
-    abs(fwn - fxn) == 0.0 && throw(ConvergenceFailed("convergence failed"))
+    abs(fwn) <= ftol && throw(StateConverged(wn))
+    abs(fwn - fxn) == 0.0 && throw(ConvergenceFailed("Division by 0"))
 
     yn = xn - fxn*fxn/(fwn-fxn)
     fyn = f(yn)
-
+    abs(fyn) <= ftol && throw(StateConverged(yn))
+    
     phi = j == 1 ? 1.0 /(1.0 - fyn/fwn) :  (1.0 + fyn/fwn)
     
-    abs(fxn - fyn) == 0.0 && throw(StateConverged(yn))
+    abs(fxn - fyn) == 0.0 && throw(ConvergenceFailed("Division by 0"))
     secxnyn = secant(fxn, fyn, xn, yn)
+    ((secxnyn == 0.0) | isnan(secxnyn)) && throw(ConvergenceFailed("Division by 0"))
+    
     zn = yn - phi * fyn / secxnyn
     fzn = f(zn)
 
-
     secynzn = secant(fzn, fyn, zn, yn)
     secxnzn = secant(fzn, fxn, zn, xn)
-
 
     rynxn, rynwn, rznwn = fyn/fxn, fyn/fwn, fzn/fwn
     omega = k == 1 ?  1.0 / (1- rznwn) : 1 + rznwn  + rznwn*rznwn
@@ -158,7 +160,8 @@ function thukral_update8(f::Function, x0::Real;
 
     ## return inc, not new update
     sec = (secynzn - secxnyn + secxnzn)
-    sec == 0.0 && throw(ConvergenceFailed("Algorithm got stuck"))
+    ((sec == 0.0) | isnan(sec)) && throw(ConvergenceFailed("Division by 0"))
+    
     zn - omega * psi * fzn / sec
 
 end
@@ -169,10 +172,10 @@ end
 ## Fifth-order iterative method for finding multiple roots of
 ##   nonlinear equations
 ## Xiaowu Li·Chunlai Mu· Jinwen Ma ·Linke Hou
-function LiMuMaHou_update(f::Function, xn::Real; kwargs...)
+function LiMuMaHou_update(f::Function, xn::Real, ftol::Real; kwargs...)
     
     fxn = f(xn)
-
+    
     ## this is poor if fxn >> 0; we use a hybrid approach with a step
     ## based on f/f' with f' estimated by central difference if fxn is
     ## too big
@@ -182,14 +185,21 @@ function LiMuMaHou_update(f::Function, xn::Real; kwargs...)
         return (xn - fxn/fp)
     end
 
-    gxn = approx_deriv(f, fxn, xn)
+    gxn = approx_deriv(f, fxn, xn, ftol)
+    gxn == 0.0 && throw(ConvergenceFailed("Division by 0"))
+    
     yn = xn - fxn / gxn
     fyn = f(yn)
-
+    abs(fyn) <= ftol && throw(StateConverged(yn))
+    
     zn = yn - fyn / gxn
     fzn = f(zn)
+    abs(fzn) <= ftol && throw(StateConverged(zn))
+    
+    sec = F(f, fxn, fyn, fzn, xn, yn, zn, ftol)
+    sec == 0.0 && throw(ConvergenceFailed("Division by 0"))
 
-    zn - fzn / F(f, fxn, fyn, fzn, xn, yn, zn)
+    zn - fzn / sec
 end
  
 ## Some special cases
@@ -204,10 +214,10 @@ function steffensen(g::Function, x0::Real;
                     kwargs...)
 
     ## we use a fixed point method
-    function f(x) 
+    function f(x, ftol) 
 
         gx = g(x)
-        gx == 0.0 && throw(StateConverged(x))
+        abs(gx) <= ftol && throw(StateConverged(x))
 
         dg = g(x + gx) - gx
         dg == 0.0 && throw(ConvergenceFailed("Division by 0"))
@@ -216,24 +226,24 @@ function steffensen(g::Function, x0::Real;
     end
 
     p0, p = x0, Inf
-
+    verbose && println("p0=$p0, p=$p, ctr=0")
+    
     try
         for i in 1:maxeval
-            verbose && println("p0 = $p0, p=$p, ctr=$(i-1)")
-
-            p1 = f(p0)
-
-            abs(p1) <= ftol && throw(StateConverged(p0))
-
-            isnan(p1) && throw(ConvergenceFailed("NaN exception"))
-
-            p2 = f(p1)
-            isnan(p2) && throw(ConvergenceFailed("NaN exception"))
-
+            p1 = f(p0, ftol)
+            p2 = f(p1, ftol)
+            
             ## Aitkens step
-            p=p0-(p1-p0)^2/(p2-2*p1+p0)
+            d = (p2 - 2*p1 + p0)
+            d == 0.0 && throw(ConvergenceFailed("Division by 0"))
 
+            p=p0 - (p1 - p0)*(p1 - p0) / d
+
+            ## fixed point?
+            verbose && println("p0 = $p0, p=$p, ctr=$i")
             abs(p-p0) <= ftol && throw(StateConverged(p))
+
+
             p0=p
         end
         throw(ConvergenceFailed("More than $maxeval iterations before convergence"))
@@ -247,20 +257,6 @@ function steffensen(g::Function, x0::Real;
     end
 end
 
-function steffensen_update(f::Function, x::Real; kwargs...)
-    fx = f(x)
-    if abs(fx) > 1e-1 
-        h = 1e-6
-        return(secant_step(f(x+h), f(x-h), x+h, x-h))
-    end
-
-    den = f(x+fx) - fx
-    den == 0.0 && throw(StateConverged(x))
-
-    x - fx*fx/den
-end
-
-secant_step(fa, fb, a, b) = b - fb / secant(fa, fb, a, b)
 
 """
 Main interface for derivative free methods
@@ -311,16 +307,16 @@ function derivative_free(f::Function, x0::Real;
                          )
 
     if order == 16
-        update(f::Function, x::Real) = thukral_update16(f, x; kwargs...)
+        update(f::Function, x::Real, ftol) = thukral_update16(f, x, ftol; kwargs...)
     elseif order == 8
-        update(f::Function, x::Real) = thukral_update8(f, x; kwargs...)
+        update(f::Function, x::Real, ftol) = thukral_update8(f, x, ftol; kwargs...)
     elseif order == 5
-        update(f::Function, x::Real) = LiMuMaHou_update(f, x; kwargs...)
+        update(f::Function, x::Real, ftol) = LiMuMaHou_update(f, x, ftol; kwargs...)
     elseif order == 2
         return(steffensen(f, x0, ftol=ftol, xtol=xtol, maxeval=maxeval,
                           verbose=verbose, kwargs...))
     elseif order == 1
-        x1 = x0 + f(x0)
+        x1 = x0 + min(1e-2, abs(f(x0)))
         return(secant_method(f, x0, x1; ftol=ftol, xtol=xtol, xtolrel=xtolrel, maxeval=maxeval, verbose=verbose, kwargs...))
     else
         return(SOLVE(f, x0; ftol=ftol, maxeval=maxeval, verbose=verbose, kwargs...))
@@ -333,12 +329,9 @@ function derivative_free(f::Function, x0::Real;
     try
         for i in 1:maxeval
             fxn = f(xn)
-
             abs(fxn) <= ftol && throw(StateConverged(xn))
-            isnan(xn) && throw(ConvergenceFailed("sequence diverged"))
 
-
-            xn1 = update(f, xn)
+            xn1 = update(f, xn, ftol)
             isinf(xn1) &&  throw(ConvergenceFailed("sequence diverged"))
             isnan(xn1) &&  throw(ConvergenceFailed("sequence diverged"))
             
