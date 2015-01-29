@@ -27,6 +27,6 @@ zs, mults = multroot(p^14)
 
 f(x) = (x-1)*(x-2)*(x-3)^3*(x^2+1)
 rts = fzeros(f)
-@test sort(rts) == [1.0, 2.0, 3.0]
+@test maximum(abs(sort(rts) - [1.0, 2.0, 3.0])) <= 1e-12
 
 
