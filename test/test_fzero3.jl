@@ -70,7 +70,7 @@ function make_graphic()
         for k in 1:n
             for j in 1:length(orders)
                 try
-                    xstar = fzero(f1, xs[k], order=orders[j])
+                    xstar = fzero(f1, xs[k], order=orders[j], maxeval=100)
                     m[(N+1)*(i-1)+j, k] = howgood(f1, xstar)
                 catch e
                     m[(N+1)*(i-1)+j, k] = "x"

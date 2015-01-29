@@ -94,7 +94,7 @@ end
 ## G_l(z) = a, where a is related to monic version of polynomial p
 ## l is known multiplicity structure of polynomial p = (x-z1)^l1 * (x-z2)^l2 * ... * (x-zn)^ln
 ## Algorithm I, p17
-function pejroot{T<:Int}(p::Poly, z0::Vector, l::Vector{T};
+function pejroot(p::Poly, z0::Vector, l::Vector{Int};
                  wts::Union(Vector, Nothing)=nothing, # weight vector
                  tol = 1e-8,
                  maxsteps = 100
@@ -331,6 +331,7 @@ function agcd(p::Poly, q::Poly, u0::Poly, v0::Poly, w0::Poly;
     ## Return approximate values of u, v, w, err
     
     u, v, w = map(copy, (u0, v0, w0))
+    ## not general, we use q here
     q = Roots.monic(Polynomials.polyder(p))
     m,n,k = map(Polynomials.degree, (u, v, w))
     wts =  map(pj -> 1/max(1, abs(pj)), vcat(rcoeffs(p), rcoeffs(q)))

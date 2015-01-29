@@ -6,9 +6,7 @@ import Polynomials: roots
 using PowerSeries
 
 ## * Docile is used for documentation
-if VERSION < v"0.4.0-dev"
-    using Docile
-end
+using Docile
 @document
 
 export roots
@@ -43,7 +41,7 @@ include("real_roots.jl")
 Find zero of a function using an iterative algorithm
 
 * `f`: a scalar function 
-* `x0`: an initial guess
+* `x0`: an initial guess, finite valued.
 
 Keyword arguments:
 
@@ -58,8 +56,11 @@ Keyword arguments:
 This is a polyalgorithm redirecting different algorithms based on the value of `order`. 
 
 """
-fzero(f::Function, x0::Real; kwargs...) = derivative_free(f, float(x0); kwargs...)
-
+function fzero(f::Function, x0::Real; kwargs...)
+    x0 = float(x0)
+    isinf(x0) && throw(ConvergenceFailed("An initial value must be finite"))
+    derivative_free(f, float(x0); kwargs...)
+end
 
 """
 Find zero of a function within a bracket
@@ -88,15 +89,17 @@ Example:
     `fzero(sin, 3, 4)` # find pi
     `fzero(sin, [big(3), 4]) find pi with more digits
 """
-function fzero(f::Function, a::Real, b::Real; kwargs...) 
-    find_zero(f, promote(float(a), b)...; kwargs...)
+function fzero(f::Function, a::Real, b::Real; kwargs...)
+    a,b = promote(float(a), b)
+    (isinf(a) | isinf(b)) && throw(ConvergenceFailed("A bracketing interval must be bounded"))
+    find_zero(f,a,b; kwargs...)
 end
 
 """
 Find a zero with bracket specified via `[a,b]`, as `fzero(sin, [3,4])`.
 """
 function fzero{T <: Real}(f::Function, bracket::Vector{T}; kwargs...) 
-    fzero(f, bracket[1], bracket[2]; kwargs...)
+    fzero(f, float(bracket[1]), float(bracket[2]); kwargs...)
 end
 
 """
@@ -104,6 +107,7 @@ Find a zero within a bracket with an initial guess to *possibly* speed things al
 """
 function fzero{T <: Real}(f::Function, x0::Real, bracket::Vector{T}; kwargs...) 
     a,b = sort(map(float,bracket))
+    (isinf(a) | isinf(b)) && throw(ConvergenceFailed("A bracketing interval must be bounded"))    
     try
         ex = a42a(f, a, b, float(x0); kwargs...)
     catch ex
@@ -119,7 +123,7 @@ end
 """
 Find zero using Newton's method.
 """
-fzero(f::Function, fp::Function, x0::Real; kwargs...) = newton(f, fp, x0; kwargs...)
+fzero(f::Function, fp::Function, x0::Real; kwargs...) = newton(f, fp, float(x0); kwargs...)
 
 
 
@@ -139,15 +143,17 @@ An approximate root or an error.
 See `fzeros(p)` to return all real roots.
 
 """
-function fzero(p::Poly, x0::Real; kwargs...) 
-    derivative_free(convert(Function, p), x0; kwargs...)
+function fzero(p::Poly, x0::Real; kwargs...)
+    isinf(x0)  && throw(ConvergenceFailed("Initial value must be finite"))
+    derivative_free(convert(Function, p), float(x0); kwargs...)
 end
 
 function fzero{T <: Real}(p::Poly, bracket::Vector{T}; kwargs...) 
-    find_zero(convert(Function, p), bracket[1], bracket[2]; kwargs...)
+    a, b = float(bracket[1]), float(bracket[2])
+    fzero(convert(Function, p), a, b; kwargs...)
 end
 function fzero{T <: Real}(p::Poly, x0::Real, bracket::Vector{T}; kwargs...) 
-    fzero(convert(Function,p), x0, bracket; kwargs...)
+    fzero(convert(Function,p), float(x0), map(float,bracket); kwargs...)
 end
 
 
@@ -186,23 +192,23 @@ function fzeros{T <: Real}(f::Function, bracket::Vector{T}; kwargs...)
     try
         filter(x -> bracket[1] <= x <= bracket[2], real_roots(convert(Poly, f)))
     catch e
-        find_zeros(f, bracket[1], bracket[2]; kwargs...)
+        find_zeros(f, float(bracket[1]), float(bracket[2]); kwargs...)
     end
 end
-fzeros(f::Function, a::Real, b::Real; kwargs...) = find_zeros(f, a, b; kwargs...)
+fzeros(f::Function, a::Real, b::Real; kwargs...) = find_zeros(f, float(a), float(b); kwargs...)
 
 
 
 
 
 ## use Automatic differentiation here
-newton(f::Function, x::Real; kwargs...) =  newton(f, D(f), x; kwargs...)
+newton(f::Function, x0::Real; kwargs...) =  newton(f, D(f), float(x0); kwargs...)
 
 ##
-newton(p::Poly, x0::Real; kwargs...) = newton(convert(Function, p), convert(Function, polyder(p)), x0; kwargs...)
+newton(p::Poly, x0::Real; kwargs...) = newton(convert(Function, p), convert(Function, polyder(p)), float(x0); kwargs...)
 ##
 
-halley(f::Function, x::Real; kwargs...) = halley(f, D(f), D2(f), x; kwargs...)
+halley(f::Function, x0::Real; kwargs...) = halley(f, D(f), D2(f), float(x0); kwargs...)
 
 
 end

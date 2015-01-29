@@ -23,34 +23,41 @@ tests = [
          (x -> (log(x) + sqrt(x^4 + 1) -2)^7,      1.0,  1.222813963628973)
          ]
 
-out = zeros(length(tests), 8)
-orders = [2, 5, 8, 16]
 
 using Roots
-ctr = 1
-for (f1, x0, xstar) in tests
-    println("--- Test $ctr ---")
-    i = 0
+ord(x) = string(ifloor(log10(x)))
+orders = [0, 1, 2, 5, 8, 16]
+out = Any[]
+for (ctr, (f1, x0, xstar)) in enumerate(tests)
+    m = String[]
     for order in orders
-        i = i + 1
-        println("order = $order")
         try 
-            a = fzero(f1, BigFloat(x0), order=order)#, delta=eps(), tol=eps())
-            out[ctr, 2*i-1] = begin tic(); fzero(f1, BigFloat(x0), order=order); toc() end
-            out[ctr, 2*i  ] = abs(a - xstar)
+            a = fzero(f1, x0, order=order, maxeval=100)
+            tm = begin tic(); fzero(f1, x0, order=order, maxeval=100); toc() end
+            push!(m, ord(tm))
+            push!(m, ord(abs(a-xstar)))
         catch
-            println("Failed ctr=$ctr, i=$i")
+            push!(m, "***")
+            push!(m, "***")
         end
     end
-    println("newton")
     try
-        newton(f1, BigFloat(x0))
-        out[ctr, 7] = begin tic(); a = newton(f1, BigFloat(x0)); toc() end
-        out[ctr, 8] = abs(a - xstar)
+        newton(f1, x0)
+        tm =  begin tic(); a = newton(f1, x0); toc() end
+        push!(m, ord(tm))
+        push!(m, ord(abs(a-xstar)))
     catch e
+        push!(m, "***")
+        push!(m, "***")
     end
-    
-    ctr += 1
+    push!(out, m)
 end
- 
-out
+
+## values in pairs time/accuracy or ****** if failure
+## sensitive to maxeval value
+ for i in out
+     for k in 1:length(i)/2
+         @printf "%3s%3s " i[2*(k-1)+1] i[2*k]
+     end
+         @printf "\n"
+ end

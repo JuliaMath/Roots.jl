@@ -4,22 +4,6 @@
 ##
 ## These have an argument `verbose` that can be specified to get a trace of the algorithm
 
-# convergence tests
-function check_tolerance(tolerance)
-    if tolerance < 0.0
-        error("tolerance must be >= 0.0")
-    end
-end
-
-function check_residual(fx, ftol)
-    check_tolerance(ftol)
-    abs(fx) < ftol
-end
-
-function check_delta(x, delta, xtol, xtolrel)
-    check_tolerance(xtol)
-    abs(delta) <= max(xtol, abs(x)*xtolrel)
-end     
 
 
 ## Order 1 secant method
@@ -31,6 +15,10 @@ function secant_method(f::Function, x0::Real, x1::Real;
                        verbose::Bool  = false,
                 kwargs...)
 
+    if (ftol < 0) | (xtol < 0) | (xtolrel < 0)
+        throw(ConvergenceFailed("Tolerances must be non-negative"))
+    end
+    
     a,b = sort([x0,x1])
     fa, fb = f(a), f(b)
 
@@ -42,9 +30,9 @@ function secant_method(f::Function, x0::Real, x1::Real;
 
         for i in 1:maxeval
             verbose && println("$i: a=$a, b=$b, f(b)=$fb")
-            sec = secant(fa, fb, a, b)
-            ((sec == 0.0) | isnan(sec)) && throw(ConvergenceFailed("Division by 0"))
-            inc = fb / sec
+            appsec = secant(fa, fb, a, b)
+            ((appsec == 0.0) | isnan(appsec)) && throw(ConvergenceFailed("Division by 0"))
+            inc = fb / appsec
             
             a, b = b, b-inc
             fa, fb = fb, f(b)
@@ -75,10 +63,14 @@ function newton(f::Function, fp::Function, x;
                 verbose::Bool    = false
                 )
 
+    if (ftol < 0) | (xtol < 0) | (xtolrel < 0)
+        throw(ConvergenceFailed("Tolerances must be non-negative"))
+    end
+    
     cvg = false
     for i=1:maxeval
         fx = f(x)
-        if check_residual(fx, ftol)
+        if abs(fx) <= ftol
             cvg = true
             break
         end
@@ -91,7 +83,7 @@ function newton(f::Function, fp::Function, x;
         del = fx/fpx
         x -= del
 
-        if check_delta(x, del, xtol, xtolrel)
+        if abs(del) <= max(xtol, abs(x)*xtolrel)
             cvg = true
             break
         end
@@ -113,10 +105,14 @@ function halley(f::Function, fp::Function, fpp::Function, x;
                 verbose::Bool    = false
 )
 
+    if (ftol < 0) | (xtol < 0) | (xtolrel < 0)
+        throw(ConvergenceFailed("Tolerances must be non-negative"))
+    end
+
     cvg = false
     for i=1:maxeval
         fx = f(x)
-        if check_residual(fx, ftol)
+        if abs(fx) <= ftol
             cvg = true
             break
         end
@@ -131,7 +127,7 @@ function halley(f::Function, fp::Function, fpp::Function, x;
             del = 2fx*fpx/(2fpx^2 - fx*fppx)
         end
         x -= del
-        if check_delta(x, del, xtol, xtolrel)
+        if abs(del) <= max(xtol, abs(x) * xtolrel)
             cvg = true
         end
         verbose && println("xn = $x, f(xn) = $(f(x)), step=$i")

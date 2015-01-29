@@ -40,12 +40,12 @@ function SOLVE(f::Function, x0::Real;
     
     try
         ## get initial guess. Use Steffensen guess if reasonable size
-        step = max(1/100, min(abs(fx0), abs(x0/100)))
+        stepsize = max(1/100, min(abs(fx0), abs(x0/100)))
         if fx0 < 0
             g(x) = -f(x)
-            secant_method_no_bracket(g, x0 - step, x0, ftol=ftol, xtol=xtol, xtolrel=xtolrel, maxeval=maxeval, verbose=verbose)
+            secant_method_no_bracket(g, x0 - stepsize, x0, ftol=ftol, xtol=xtol, xtolrel=xtolrel, maxeval=maxeval, verbose=verbose)
         else
-            secant_method_no_bracket(f, x0 - step, x0, ftol=ftol, xtol=xtol, xtolrel=xtolrel, maxeval=maxeval, verbose=verbose)
+            secant_method_no_bracket(f, x0 - stepsize, x0, ftol=ftol, xtol=xtol, xtolrel=xtolrel, maxeval=maxeval, verbose=verbose)
         end
     catch ex
         if isa(ex, StateConverged)
@@ -91,7 +91,7 @@ function have_bracket(f::Function, a, b, c=(0.5)*(a+b);
     end
 
     try
-        x0 = a42a(f, a, b, c, xtol=zero(float(a)), maxeval=maxeval, verbose=verbose)
+        x0 = a42a(f, a, b, c, xtol=xtol, maxeval=maxeval, verbose=verbose)
     catch e
         if isa(e, StateConverged)
             return e.x0
@@ -141,17 +141,17 @@ function secant_method_no_bracket(f::Function, a, b;
         end
         ## use steffensen or secant line depending on fbeta's size
         if abs(fbeta) < abs(beta - alpha)
-            step = fbeta * fbeta / (f(beta + fbeta) - fbeta)  # steffensen
+            stepsize = fbeta * fbeta / (f(beta + fbeta) - fbeta)  # steffensen
         else
-            step =  fbeta * (beta - alpha)  / (fbeta - falpha) # secant line
+            stepsize =  fbeta * (beta - alpha)  / (fbeta - falpha) # secant line
         end
-        gamma = beta - step
+        gamma = beta - stepsize
 
         ## bend in some cases. XXX What is best bending scheme? XXX
         if abs(gamma-beta) >= 5e2 * abs(beta - alpha)
-            step = cbrt( (beta - alpha) / (fbeta - falpha) * fbeta)
+            stepsize = cbrt( (beta - alpha) / (fbeta - falpha) * fbeta)
 #            gamma = beta + (1/4) * (beta - alpha) / (fbeta - falpha) * fbeta
-            gamma = beta - step
+            gamma = beta - stepsize
         end
 
         fgamma = f(gamma)
@@ -185,11 +185,11 @@ function secant_method_no_bracket(f::Function, a, b;
             end
 
             ## quadratic interpolation to get gamma
-            den = (beta - alpha) * (fbeta - fgamma)  - (beta - fgamma) * (fbeta - falpha)
-            if den == 0.0
+            denom = (beta - alpha) * (fbeta - fgamma)  - (beta - fgamma) * (fbeta - falpha)
+            if denom == 0.0
                 throw(PossibleExtremaReached(alpha))
             end
-            gamma = beta -  ((beta - alpha)^2 * (fbeta - fgamma) - (beta - gamma)^2 * (fbeta - falpha))/den/2
+            gamma = beta -  ((beta - alpha)^2 * (fbeta - fgamma) - (beta - gamma)^2 * (fbeta - falpha))/denom/2
 
             fgamma = f(gamma)
 

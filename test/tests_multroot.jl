@@ -22,7 +22,11 @@ zs, mults = multroot(p^14)
 @test mults == [28]
 
 
-## test for real roots
+## test for real roots of polynomial functions
+@test fzeros(x -> x - 1.0)[1] == 1.0 # linear
+
 f(x) = (x-1)*(x-2)*(x-3)^3*(x^2+1)
 rts = fzeros(f)
-@test length(rts) == 3
+@test sort(rts) == [1.0, 2.0, 3.0]
+
+

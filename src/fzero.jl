@@ -1,4 +1,4 @@
-## Bracketing methods for root finding
+## Methods for root finding which use a bracket
 
 ## Bisection_method for floats and int
 
@@ -7,10 +7,9 @@ type StateConverged
     x0::Real
 end
 
-
 # type to throw on failure
 type ConvergenceFailed
-    reason
+    reason::String
 end
 
 
@@ -41,10 +40,14 @@ end
  
 """
 
-Find zero using modified bisection method for float64 arguments.
+Find zero using modified bisection method for Float64 arguments.
 
-This is guaranteed to take no more than 64 steps. The `a42` alternative has
+This is guaranteed to take no more than 64 steps. The `a42` alternative usually has
 fewer iterations, but this seems to find the value with fewer function evaluations.
+
+Terminates with `x1` when the bracket length of `[x0,x2]` is `<= max(xtol, xtolrel*abs(x1))` where `x1` is the midpoint . The tolerances can be set to 0, in which case, the termination occurs when `nextfloat(x0) = x2`.
+
+Initial bracket, `[a,b]`, must be bounded.
 
 """
 function find_zero(f::Function, a::Float64, b::Float64; xtol::Real=0.0, xtolrel::Real=0.0, verbose::Bool=false)
@@ -81,7 +84,7 @@ function find_zero(f::Function, a::Float64, b::Float64; xtol::Real=0.0, xtolrel:
         sign(y1) == 0 && return x1
         abs(x2 - x0) <= max(xtol, xtolrel*abs(x1)) && return(x1)
 
-        verbose && println("$x1")
+        verbose && println("xi=$x1, f(xi) = $(f(x1))")
     end
     
     return abs(y0) < abs(y2) ? x0 : x2
@@ -147,7 +150,7 @@ where `c` is passed in.
 Solve f(x) = 0 over bracketing interval [a,b] starting at c, with a < c < b
 
 """
-function a42a(f::Function, a, b, c;
+function a42a(f::Function, a, b, c=(0.5)*(a+b);
                    xtol=zero(float(a)), 
                    maxeval::Int=15,
                    verbose::Bool=false
@@ -155,8 +158,6 @@ function a42a(f::Function, a, b, c;
 
     
     try
-        # start with a secant approximation
-        c = secant(f, a, b)
         # re-bracket and check termination
         a, b, d = bracket(f, a, b, c, xtol)
         for n = 2:maxeval

@@ -21,8 +21,8 @@ function approx_deriv(f::Function, fx::Real, x::Real, ftol=0.0)
 end
 
 function secant2(f, fz, fx, z, x, ftol=0.0) 
-    if abs(x-z) == 0.0
-        abs(fx) <= ftol && throw(StateConverged(x))
+    if (abs(x-z) == 0.0)
+        (abs(fx) <= ftol) && throw(StateConverged(x))
         throw(DomainError())
     end
     (approx_deriv(f, fx, x) - secant(fz, fx, z, x))/(x-z)
@@ -53,8 +53,7 @@ function thukral_update16(f::Function, x0::Real, ftol::Real; kwargs...)
     ## the central difference
     if abs(fxn) > 1e-1
         h = 1e-6
-        fp = (f(xn+h) - f(xn-h)) / (2h)
-        return (xn - fxn/fp)
+        return xn - fxn * 2h / (f(xn+h) - f(xn-h)) 
     end
     
     wn = xn + fxn
@@ -67,7 +66,7 @@ function thukral_update16(f::Function, x0::Real, ftol::Real; kwargs...)
     
     yn = xn - fxn/secxnwn
     fyn = f(yn)
-    abs(fyn) <= ftol && throw(StateConverged(wn))
+    abs(fyn) <= ftol && throw(StateConverged(yn))
 
     secxnyn = secant(fxn, fyn, xn, yn)
     ((secxnyn == 0.0) | isnan(secxnyn)) && throw(ConvergenceFailed("Division by 0"))
@@ -88,20 +87,20 @@ function thukral_update16(f::Function, x0::Real, ftol::Real; kwargs...)
 
     secynzn = secant(fyn, fzn, yn, zn)
     secxnzn = secant(fxn, fzn, xn, zn)
-    sec = secynzn - secxnyn + secxnzn
-    ((sec == 0.0) | isnan(sec)) && throw(ConvergenceFailed("Division by 0"))
+    appsec = secynzn - secxnyn + secxnzn
+    ((appsec == 0.0) | isnan(appsec)) && throw(ConvergenceFailed("Division by 0"))
 
-    an = zn - eta * fzn / sec
+    an = zn - eta * fzn / appsec
     fan = f(an)
 
     u5, u6 = fan/fxn, fan/fwn
     sigma = 1 + u1*u2 - u1*u3*u4^2 + u5 + u6 + u1^2*u4 + u2^2*u3 + 3u1*u4^2*(u3^2 - u4^2) / secxnyn
     secynan = secant(fyn, fan, yn, an)
     secznan = secant(fzn, fan, zn, an)
-    sec = secynan * secznan
-    ((sec == 0.0) | isnan(sec)) && throw(ConvergenceFailed("Division by 0"))
+    appsec = secynan * secznan
+    ((appsec == 0.0) | isnan(appsec)) && throw(ConvergenceFailed("Division by 0"))
     
-    xn1 = zn  - sigma * secynzn * fan / sec
+    xn1 = zn  - sigma * secynzn * fan / appsec
 
     xn1
 
@@ -128,8 +127,7 @@ function thukral_update8(f::Function, x0::Real, ftol::Real;
     ## the central difference
     if abs(fxn/beta) > 1e-1
         h = 1e-6
-        fp = (f(xn+h) - f(xn-h)) / (2h)
-        return (xn - fxn/fp)
+        return xn - fxn * (2h) / (f(xn+h) - f(xn-h))
     end
     
 
@@ -159,10 +157,10 @@ function thukral_update8(f::Function, x0::Real, ftol::Real;
     psi = (l == 1) ? 1 - 2*rynwn*rynwn*rynxn : 1.0 / (1 + 2*rynwn*rynwn*rynxn)
 
     ## return inc, not new update
-    sec = (secynzn - secxnyn + secxnzn)
-    ((sec == 0.0) | isnan(sec)) && throw(ConvergenceFailed("Division by 0"))
+    appsec = (secynzn - secxnyn + secxnzn)
+    ((appsec == 0.0) | isnan(appsec)) && throw(ConvergenceFailed("Division by 0"))
     
-    zn - omega * psi * fzn / sec
+    zn - omega * psi * fzn / appsec
 
 end
 
@@ -181,8 +179,7 @@ function LiMuMaHou_update(f::Function, xn::Real, ftol::Real; kwargs...)
     ## too big
     if abs(fxn) > 1e-1
         h = 1e-6
-        fp = (f(xn+h) - f(xn-h)) / (2h)
-        return (xn - fxn/fp)
+        return xn - fxn * (2h) / (f(xn+h) - f(xn-h)) 
     end
 
     gxn = approx_deriv(f, fxn, xn, ftol)
@@ -196,10 +193,10 @@ function LiMuMaHou_update(f::Function, xn::Real, ftol::Real; kwargs...)
     fzn = f(zn)
     abs(fzn) <= ftol && throw(StateConverged(zn))
     
-    sec = F(f, fxn, fyn, fzn, xn, yn, zn, ftol)
-    sec == 0.0 && throw(ConvergenceFailed("Division by 0"))
+    appsec = F(f, fxn, fyn, fzn, xn, yn, zn, ftol)
+    appsec == 0.0 && throw(ConvergenceFailed("Division by 0"))
 
-    zn - fzn / sec
+    zn - fzn / appsec
 end
  
 ## Some special cases
@@ -275,12 +272,16 @@ initial starting point.
 * `maxeval`. Stop iterating if more than this many steps, throw error.
 
 * `order`. One of 0, 1, 2, 5, 8, or 16. Specifies which algorithm to
-use. Default is 0 for the slower, more robust SOLVE function.  Order 8
-is faster and pretty robust. The order 2 Steffensen method can be even
-faster and use less memory, but is more sensitive to the initial
-guess.
+use.
 
-* `verbose`. If true, will print out each step taken
+- Default is 0 for the slower, more robust SOLVE function. 
+- order 1 is a secant method
+- order 2 is a Steffensen method
+- order 5 uses a method of Li Mu and Hou
+- order 8 of Thukral is a bit more robust than the secant method and Steffensen method
+- order 16 is a higher-order method due to Thurkal. It may be faster when used with `Big` values.
+
+* `verbose`. If true, will print out a summary for each step taken
 
 * `kwargs...` For order 8, there are some parameters that can be
 specified to change the algorithm. In particular, one can specify beta
