@@ -19,27 +19,26 @@ function secant_method(f::Function, x0::Real, x1::Real;
         throw(ConvergenceFailed("Tolerances must be non-negative"))
     end
     
-    a,b = sort([x0,x1])
-    fa, fb = f(a), f(b)
+    fx0, fx1 = f(x0), f(x1)
 
-    abs(fb) <= ftol && return(b)
-    abs(b-a) <= max(xtol, abs(b)*xtolrel) && throw(ConvergenceFailed("a,b too close"))
+    abs(fx1) <= ftol && return(x1)
+    abs(x1 - x0) <= max(xtol, abs(x1)*xtolrel) && throw(ConvergenceFailed("x0, x1 too close"))
     
     try
-        abs(fb) <= ftol && throw(StateConverged(b))
+        abs(fx1) <= ftol && throw(StateConverged(x1))
 
         for i in 1:maxeval
-            verbose && println("$i: a=$a, b=$b, f(b)=$fb")
-            appsec = secant(fa, fb, a, b)
-            ((appsec == 0.0) | isnan(appsec)) && throw(ConvergenceFailed("Division by 0"))
-            inc = fb / appsec
-            
-            a, b = b, b-inc
-            fa, fb = fb, f(b)
+            verbose && println("$i: x_$(i-1)=$x0, x_$i=$x1, f(x_$i)=$fx1")
+            appsecinv = (x1 - x0) / (fx1 - fx0)
+            ((appsecinv == 0.0) | isnan(appsecinv)) && throw(ConvergenceFailed("Division by 0"))
+
+            inc = fx1 * appsecinv
+            x0, x1 = x1, x1 - inc
+            fx0, fx1 = f(x0), f(x1)
 
 
-            (isinf(b) | isinf(fb)) && throw(ConvergenceFailed("Function values diverged"))
-            abs(fb) <= ftol && throw(StateConverged(b))
+            abs(fx1) <= ftol && throw(StateConverged(x1))
+            (isinf(x1) | isinf(fx1)) && throw(ConvergenceFailed("Function values diverged"))
             
         end
         throw(ConvergenceFailed("More than $maxeval steps taken before convergence"))
@@ -70,6 +69,8 @@ function newton(f::Function, fp::Function, x;
     cvg = false
     for i=1:maxeval
         fx = f(x)
+        verbose && println("x_$(i-1) = $x, f(x_$(i-1)) = $(f(x))")
+        
         if abs(fx) <= ftol
             cvg = true
             break
@@ -87,7 +88,8 @@ function newton(f::Function, fp::Function, x;
             cvg = true
             break
         end
-        verbose && println("xn = $x, f(xn) = $(f(x)), step=$i")
+        
+
     end
     cvg || error("$maxeval steps taken without convergence")
     
@@ -112,14 +114,15 @@ function halley(f::Function, fp::Function, fpp::Function, x;
     cvg = false
     for i=1:maxeval
         fx = f(x)
+        verbose && println("x_$(i-1) = $x, f(x_$(i-1)) = $(f(x))")
+        
         if abs(fx) <= ftol
             cvg = true
             break
         end
         fpx = fp(x)
-        if fpx == 0
-            throw("derivative is zero")
-        end
+        fpx == 0 && throw(ConvergenceFailed("Derivative is zero"))
+
         fppx = fpp(x)
         if fppx == 0 # fall back to Newton
             del = fx/fpx
@@ -127,10 +130,10 @@ function halley(f::Function, fp::Function, fpp::Function, x;
             del = 2fx*fpx/(2fpx^2 - fx*fppx)
         end
         x -= del
+
         if abs(del) <= max(xtol, abs(x) * xtolrel)
             cvg = true
         end
-        verbose && println("xn = $x, f(xn) = $(f(x)), step=$i")
     end
     cvg || throw("$maxeval steps taken without convergence")
     

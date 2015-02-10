@@ -337,7 +337,7 @@ function agcd(p::Poly, q::Poly, u0::Poly, v0::Poly, w0::Poly;
     wts =  map(pj -> 1/max(1, abs(pj)), vcat(rcoeffs(p), rcoeffs(q)))
        
     ## compute F(u,v,w) - [p, p'] = [u*v, u*w] - [p, p']
-    Fmp(p, q, u, v, w) =  [[Roots.rcoeffs(p) for p in [u*v, u*w]]...] - [[Roots.rcoeffs(p) for p in [p, q]]...] 
+    Fmp(p,q,u,v,w) = [rcoeffs(u*v); rcoeffs(u*w)] - [rcoeffs(p); rcoeffs(q)]
     residual_error(p,q,u,v,w) = norm(Fmp(p,q,u,v,w) .* wts, Inf)
         
     ## iterate to solve
