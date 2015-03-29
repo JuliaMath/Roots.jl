@@ -19,7 +19,8 @@ _iszero{T<:FloatingPoint}(b::T; xtol=1) = abs(b) <= 2*xtol*eps(T)
 
 ## extend to evaluate with other polynomials
 ## Allows for composition of polys
-function Polynomials.polyval{T<:Number, S<:Number}(p::Poly{T}, u::Poly{S})
+import Polynomials: polyval
+function polyval{T<:Number, S<:Number}(p::Poly{T}, u::Poly{S})
     ## mangle T, S???
     p.var == u.var || DomainError() # "Symbols must match"
     degree(p) == 0 && return(p)
@@ -101,6 +102,22 @@ function Pkc(p::Poly, k, c)
     2^(k*n) * Hλ(Tλ(p, c/2^k), 1/2^k)
 end
 
+
+## Upper bound on size of real roots that is tighter than cauchy
+## titan.princeton.edu/papers/claire/hertz-etal-99.ps
+function upperbound(p::Poly)
+    q, d = monic(p), degree(p)
+    
+    d == 0 && error("degree 0 is a constant")
+    d == 1 && abs(q[0])
+
+
+    a1 = abs(q[d-1])
+    B = maximum([abs(q[i]) for i in 0:(d-2)])
+
+    a,b,c = 1, -(1+a1), a1-B
+    (-b + sqrt(b^2 - 4a*c))/2
+end
 
 
 
