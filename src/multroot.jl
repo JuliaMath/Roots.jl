@@ -31,18 +31,34 @@ leading_term(p::Poly) = p[degree(p)]
 monic(p::Poly) = p/leading_term(p)
 
 Base.convert(::Type{Function}, p::Poly) = x -> Polynomials.polyval(p,x)
-function Base.convert(::Type{Poly}, f::Function)
-    x = poly([0.0])
+
+## convert a function to a polynomial with error if conversion is not possible
+QQR = Union(Int, BigInt, Rational{Int}, Rational{BigInt}, Float64)
+function Base.convert{T<:QQR}(::Type{Poly{T}}, f::Function)
     try
+        x = poly(zeros(T,1))
         out = f(x)
         if !isa(out, Poly)
-            out = Poly([out])
+            out = Poly([out])   # maybe a constant
         end
         out
     catch e
-        error("f(x) is not a polynomial function")
+        rethrow(e)
     end
 end
+function Base.convert(::Type{Poly}, f::Function)
+    ## try integers first, then float
+    for T in [BigInt, Int, Float64]
+        try
+            fn = convert(Poly{T}, f)
+            return(fn)
+        catch e
+        end
+    end
+    DomainError()
+end
+
+
 *{T, S}(A::Array{T,2}, p::Poly{S}) = Poly(A * rcoeffs(p))
 
 
@@ -489,7 +505,7 @@ multroot{T <: Real}(p::Vector{T}; kwargs...) = multroot(Poly(p); kwargs...)
 ## Can pass in function
 function multroot(f::Function; kwargs...)
     try
-        p = convert(Poly, f)
+        p = convert(Poly{Float64}, f)
         multroot(p; kwargs...)
     catch e
         error("The function does not compute a univariate polynomial")

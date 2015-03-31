@@ -5,14 +5,13 @@ scalar functions of a single real variable. The basic interface is
 through the function `fzero` which dispatches to an appropriate
 algorithm based on its argument(s):
 
-* `fzero(f::Function, a::Real, b::Real)` and
-  `fzero(f::Function, bracket::Vector)` call the
-  `find_zero` algorithm to find a root within the bracket `[a,b]`.
-  When a bracket is used, the algorithm is guaranteed to converge to a
-  value `x` with either `f(x) == 0` or at least one of
-  `f(prevfloat(x)*f(x) < 0` or ``f(x)*f(nextfloat(x) < 0`. (The
-  function need not be continuous to apply the algorithm, as the last
-  condition can still hold.)
+* `fzero(f::Function, a::Real, b::Real)` and `fzero(f::Function,
+  bracket::Vector)` call the `find_zero` algorithm to find a root
+  within the bracket `[a,b]`.  When a bracket is used with `Float64`
+  arguments, the algorithm is guaranteed to converge to a value `x`
+  with either `f(x) == 0` or at least one of `f(prevfloat(x)*f(x) < 0`
+  or ``f(x)*f(nextfloat(x) < 0`. (The function need not be continuous
+  to apply the algorithm, as the last condition can still hold.)
 
 
 * `fzero(f::Function, x0::Real; order::Int=0)` calls a
@@ -28,37 +27,46 @@ algorithm based on its argument(s):
   a derivative-free algorithm with initial guess `x0` with steps constrained
   to remain in the specified bracket.
 
-* `fzeros(f::Function)` (for a polynomial function) and
-  `fzeros(p::Poly)` (for a `Polynomials.jl` instance) calls
-  `real_roots`, which implements a somewhat slow algorithm to find the
-  real roots of a polynomial. The main issue involved with this
-  function is the finding of a GCD for `p` and its derivative (which
-  is used to find a square-free polynomial with the roots of
-  `p`). This can be subject to numeric issues when the polynomial has
-  high degree or nearby roots.
+* `fzeros(f::Function, a::Real, b::Real; no_pts::Int=200)` will split
+  the interval `[a,b]` into many subintervals and apply `fzero` to
+  each bracketing subinterval. This naive algorithm will miss double
+  zeros that lie within the same subinterval and miss zeros where the
+  function does not cross the $x$ axis.
 
 
-  For convenience, when `f` is not a polynomial function,
-  `fzeros(f::Function, a::Real, b::Real)` will split the interval
-  `[a,b]` into many subintervals and apply `fzero` to each bracketing
-  subinterval. This naive algorithm will miss double zeros that lie
-  within the same subinterval and miss zeros where the function does
-  not cross the $x$ axis.
+For polynomials either of class `Poly` (from the `Polynomials`
+package) or from functions which are of polynomial type there are
+specializations:
 
-* The `roots` function from the `Polynomials` package will find all the
-  roots of a polynomial. Its performance degrades when the polynomial has high
-  multiplicities. The `multroot` function is provided to handle this
-  case a bit better.  The function follows algorithms due to Zeng,
-  ["Computing multiple roots of inexact polynomials", Math. Comp. 74
-  (2005),
-  869-903](http://www.ams.org/journals/mcom/2005-74-250/S0025-5718-04-01692-8/home.html).
-  This function can be called via `multroot(f::Function)` or `multroot(p::Poly)`.
+* The `roots` function will dispatch to the `roots` function of the
+  `Polynomials` package to return all roots (real and possible
+  complex) of the polynomial.
 
 
-* For historical purposes, there are implementations of Newton's
-  method (`newton`), Halley's method (`halley`), and the secant method
-  (`secant_method`). For the first two, if derivatives are not
-  specified, they will be computed using the `PowerSeries` package.
+* `fzeros(f::Function)` calls `real_roots` to find the real roots of
+  the polynomial. For polynomials with integer coefficients, this can
+  be more precise. (The computation requires finding a GCD, which is
+  subject to numeric issues if non-integer coefficients are involved.)
+
+* The `factor` function will return a dictionary of roots and their
+  multiplicities. For polynomials with integer coefficients, all
+  potential rational roots will be checked and then the reduced
+  polynomial will be passed to `multroot`. Otherwise, `multroot` is
+  used directly.  The `roots` function from the `Polynomials` package
+  will find all the roots of a polynomial. Its performance degrades
+  when the polynomial has high multiplicities. The `multroot` function
+  is provided to handle this case a bit better.  The function follows
+  algorithms due to Zeng,
+  ["Computing multiple roots of inexact polynomials", Math. Comp. 74 (2005), 869-903](http://www.ams.org/journals/mcom/2005-74-250/S0025-5718-04-01692-8/home.html).
+  This function can also be called directly via
+  `multroot(f::Function)` or `multroot(p::Poly)`.
+
+
+
+For historical purposes, there are implementations of Newton's method
+(`newton`), Halley's method (`halley`), and the secant method
+(`secant_method`). For the first two, if derivatives are not
+specified, they will be computed using the `PowerSeries` package.
 
 
 ## Usage examples
@@ -92,10 +100,11 @@ Or using an explicit polynomial:
 
 ```
 using Polynomials
-x = poly([0.0])
+x = poly([0])
 fzeros(x^5 -x - 1)
 fzeros(x*(x-1)*(x-2)*(x^2 + x + 1))
 ```
+
 
 Polynomial root finding is a bit better when multiple roots are present.
 
@@ -111,6 +120,13 @@ Again, a polynomial function may be passed in
 f(x) = (x-1)*(x-2)^2*(x-3)^3
 multroot(f)
 ```
+
+It may be more natural to use `factor` to get the roots:
+
+```
+factor(f)
+```
+
 
 The well-known methods can be used with or without supplied
 derivatives. If not specified, the `PowerSeries` package is used for

@@ -16,7 +16,7 @@ export fzero,
        find_zero, 
        newton, halley,
        secant_method, steffensen,
-       multroot,
+       multroot, factor,
        D, D2
 
 
@@ -167,6 +167,8 @@ args:
 
 `f`: a Polynomial function of R -> R. May also be of `Poly` type.
 
+For polynomials in Z[x] or Q[x], the `real_roots` method will use `Poly{Rational{BigInt}}` arithmetic, which allows it to handle much larger degree polynomials accurately. This can be called directly using `Polynomial` objects.
+
 """
 fzeros(p::Poly) = real_roots(p)
 
@@ -179,13 +181,15 @@ function fzeros(f::Function)
     catch e
         error("If f(x) is not a polynomial in x, then an interval to search over is needed")
     end
-    real_roots(p)
+    Float64[x for x in real_roots(p)]
 end
 
 """
+
 Attempt to find all simple zeroes of `f` within an interval `[a,b]`.
 
-Simple algorithm simply splits `[a,b]` into 250 subintervals and checks each for a bracket.
+Simple algorithm that splits `[a,b]` into `no_pts::Int=200` subintervals and checks each for a bracket.
+
 """        
 function fzeros{T <: Real}(f::Function, bracket::Vector{T}; kwargs...) 
     ## check if a poly
@@ -198,6 +202,31 @@ end
 fzeros(f::Function, a::Real, b::Real; kwargs...) = find_zeros(f, float(a), float(b); kwargs...)
 
 
+"""
+
+Factor a polynomial function.
+
+Finds factors numerically.
+
+For polynomial functions with integer and rational tries to factor exactly over the rationals first.
+
+Returns a dictionary with keys that are factors and values that are multiplicities
+
+Example:
+```
+factor(x -> (x-1)^3*(x-2)) 
+```
+
+"""
+function Base.factor(f::Function)
+    p = poly([0.0])
+    try
+        p = convert(Poly, f)
+    catch e
+        error("`factor` only works with polynomial functions")
+    end
+    factor(p)
+end
 
 
 

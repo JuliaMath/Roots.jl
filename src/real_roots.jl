@@ -286,11 +286,13 @@ end
 neg_roots(p::Poly) = pos_roots(polyval(p, -variable(p)))
 
 ## use Rational{BigInt} to find real roots
-function real_roots{T <: QQ}(p::Poly{T})
+## returns Any[] array as we might mix Rational{BigInt} and BigFloat values
+function real_roots_sqfree(p::Poly)
+    ## Handle simple cases
+    degree(p) == 0 && error("Roots for degree 0 polynomials are either empty or all of R.")
+    degree(p) == 1 && return([ -p[0]/p[1] ])
+    
     rts = Any[]
-    p = convert(Poly{Rational{BigInt}}, p)
-    p = divrem(p, bgcd(p, Polynomials.polyder(p)))[1] # square free p/gcd(p, p')
-    p = p*(1//p[degree(p)])
     
     p,k = multiplicity(p, 0); k > 0 && push!(rts, 0) # 0
     append!(rts, pos_roots(p))                       # positive roots
@@ -298,6 +300,24 @@ function real_roots{T <: QQ}(p::Poly{T})
     rts
 end
 
+
+function real_roots{T <: QQ}(p::Poly{T})
+    p = convert(Poly{Rational{BigInt}}, p)
+    p = divrem(p, bgcd(p, Polynomials.polyder(p)))[1] # square free p/gcd(p, p')
+    p = p*(1//p[degree(p)])
+
+    real_roots_sqfree(p)
+end
+
+function real_roots(p::Poly)
+    ## Handle simple cases
+    if degree(p) > 1
+        m, u, v, w = initial_gcd_system(p)
+        u, p, w, residual= agcd(p, Polynomials.polyder(p), u, v, w)
+    end
+    
+    real_roots_sqfree(p)
+end
 
 ### Some functions to find all rational roots of a poly in Z[x], Q[x]
 ## return set of divisors of |n|, e.g. 12 -> [1,2,3,4,6,12]
@@ -317,9 +337,9 @@ function rational_roots{T <: Integer}(p::Poly{T})
     if p[0] == 0
         push!(rts, 0)
         p, k = multiplicity(p, 0)
-    else
-        ds = divisors(p[0])
     end
+
+    ds = divisors(p[0])
     ns = divisors(p[degree(p)])
     poss = unique([d//n for d in ds, n in ns])
     for rt in poss
@@ -340,15 +360,33 @@ end
 
 
 
-
-## factor over the rationals
-## return (d,q) where d a dictionary of roots, and q divides p but has no rational factors.
+## factor over the rationals, then call multroot on the remainder
+## return d where d a dictionary of roots
+## Okay, we should use keys which are `variable(p) - r` and not `r`...
 function Base.factor{T <: QQ}(p::Poly{T})
     rts = rational_roots(p)
-    d = Dict()
+    d = Dict{Number, Int}()
     for r in rts
         p,k = multiplicity(p,r)
         d[r] = k
     end
-    d,p
+    ##
+    if degree(p) > 0
+        p = convert(Poly{Float64}, p)
+        for (r,k) in zip(multroot(p)...)
+            d[r] = k
+        end
+    end
+    d
 end
+
+## Julian interface to multroot
+function Base.factor(p::Poly)
+    degree(p) == 0 && DomainError() # degree 0
+    d = Dict{Number, Int}()
+    for (r,k) in zip(multroot(p)...)
+        d[r] = k
+    end
+    d
+end
+    
