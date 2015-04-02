@@ -312,8 +312,7 @@ end
 function real_roots(p::Poly)
     ## Handle simple cases
     if degree(p) > 1
-        m, u, v, w = initial_gcd_system(p)
-        u, p, w, residual= agcd(p, Polynomials.polyder(p), u, v, w)
+        u, p, w, residual= agcd(p)
     end
     
     real_roots_sqfree(p)

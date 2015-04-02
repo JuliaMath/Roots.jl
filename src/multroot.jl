@@ -26,12 +26,19 @@ coeffs(p::Poly) = [p[i] for i in 0:degree(p)]
 ## rcoeffs needed as indexing in paper is an, an-1, ...
 rcoeffs(p::Poly) = reverse(coeffs(p))
 Base.norm(p::Poly, args...) = norm(coeffs(p), args...)
+normf(A::Matrix) = sqrt(sum(A.^2))
 
 leading_term(p::Poly) = p[degree(p)]
 monic(p::Poly) = p/leading_term(p)
 
-Base.convert(::Type{Function}, p::Poly) = x -> Polynomials.polyval(p,x)
+function Base.convert{T<:Integer}(::Type{Poly{T}}, p::Poly{Rational{T}})
+    l = reduce(lcm, [x.den for x in p.a])
+    q = l * p
+    Poly(T[x for x in q.a], p.var)
+end
 
+## convert Poly <--> function
+Base.convert(::Type{Function}, p::Poly) = x -> Polynomials.polyval(p,x)
 ## convert a function to a polynomial with error if conversion is not possible
 QQR = Union(Int, BigInt, Rational{Int}, Rational{BigInt}, Float64)
 function Base.convert{T<:QQR}(::Type{Poly{T}}, f::Function)
@@ -333,6 +340,7 @@ end
 
 ## compute approximate gcd starting with guess
 ## This is section 4.1.2
+## we use agcd(p) below that calls this.
 function agcd(p::Poly, q::Poly, u0::Poly, v0::Poly, w0::Poly;
               ρ::Real = 1e-10   # residual tolerance
 )
@@ -405,6 +413,67 @@ function agcd(p::Poly, q::Poly, u0::Poly, v0::Poly, w0::Poly;
 
 end
 
+    
+
+
+## Preconditioning code
+function geometric_mean(as)
+    as = abs(as)
+    as = filter(x -> x >= 1e-14, as)
+    prod(as)^(1/length(as))
+end
+
+function ratio(p,q)
+    is_nonzero(x) = x >= 1e-14
+    as = abs(filter(is_nonzero, p.a))
+    bs = abs(filter(is_nonzero, q.a))
+
+    max(maximum(as), maximum(bs)) / min(minimum(as), minimum(bs))
+end
+
+function precondition(p,q)
+    ## find alpha, gamma that minimize ratio of max coefficients to min coefficients, for getting zeros
+    alphas = [2.0^i for i in -5:5]
+    phis = [2.0^i for i in -5:5]
+    out = (1,1)
+    m = ratio(p,q)
+
+    for α in alphas
+        for ϕ in phis
+            r = ratio(polyval(p, ϕ * variable(p)), α * polyval(q, ϕ * variable(q)))
+            if r < m
+                out = (α, ϕ)
+            end
+        end
+    end
+
+    α, ϕ = out
+    p = Roots.polyval(p, ϕ * Roots.variable(p))
+    q = α * Roots.polyval(q, ϕ * Roots.variable(q))
+
+    p = p * (1 / geometric_mean(p.a))
+    q = q * (1 / geometric_mean(q.a))
+
+    p,q, ϕ, α
+    
+end
+
+## return (u,v,w,residual) for gcd of (p, p') (u*v=p, u*w=p')
+## We precondition here ala https://who.rocq.inria.fr/Jan.Elias/pdf/je_masterthesis.pdf
+## (We should write a general agcd(p,q) function, as this is specific to the task of agcd(p,p'))
+function agcd(p::Poly;
+              δ::Real=1e-8,
+              ρ::Real=1e-10)
+    q = Polynomials.polyder(p)
+    pp, qq, Φ, α = precondition(p, q)
+    θ = normf(Shat(pp,1)) * eps()
+    m, u_j0, v_j0, w_j0 = initial_gcd_system(pp, θ = θ, δ = δ)
+    u_j, v_j, w_j, residual= agcd(pp, qq, u_j0, v_j0, w_j0, ρ = ρ) 
+
+    x = (1/Φ) * variable(p)
+    (polyval(u_j, x), polyval(v_j, x), polyval(w_j, x), residual)
+end
+
 
 ## Main interface to finding roots of polynomials with multiplicities
 ##
@@ -426,23 +495,24 @@ end
 ## ## Large order polynomials prove difficult. We can't match the claims in Zeng's paper
 ## ## as we don't get the pejorative manifold structure right.
 ## julia> p = poly([1.0:10.0]);
-## julia> multroot(p) ## should be 1,2,3,4,...,10 all with multplicity 1:
-## ([1.00005,1.99935,2.98623,4.3713,6.98881,9.65272],[1,1,1,2,3,2])
+## julia> multroot(p) ## should be 1,2,3,4,...,10 all with multplicity 1, but
+## ([1.0068,2.14161,3.63283,5.42561,7.25056,8.81228,9.98925],[1,2,1,2,2,1,1])
 ##
 ## nearby roots can be an issue
-## julia> delta = 0.001  ## delta = 0.01 works as desired.
+## julia> delta = 0.0001  ## delta = 0.001 works as desired.
 ## julia> p = (x-1 - delta)*(x-1)*(x-1 + delta)
 ## julia> multroot(p)
-## ([0.998846,1.00058],[1,2])
+## ([0.999885,1.00006],[1,2])
 function multroot(p::Poly;
-                  θ::Real=1e-10, # singular threshold
+                  θ::Real=1.0,   # singular threshold, 1.0 is replaced by normf(A)*eps()
                   ρ::Real=1e-10, # initial residual tolerance
                   ϕ::Real=1e2,   # residual tolerance growth factor
                   δ::Real=1e-8   # passed to solve y sigma
 
                   )
 
-    @assert degree(p) > 0
+    degree(p) == 0 && error("Degree of `p` must be atleast 1")
+    
     if degree(p) == 1
         return(roots(p), [1])
     end
@@ -450,9 +520,11 @@ function multroot(p::Poly;
     
     p = Poly(float(coeffs(p)))  # floats, not Int
     q = Polynomials.polyder(p)
+
     ## initial
-    m, u_j0, v_j0, w_j0 = initial_gcd_system(p, θ = θ, δ = δ)
-    u_j, v_j, w_j, residual= agcd(p, q, u_j0, v_j0, w_j0, ρ = ρ) 
+    ##    m, u_j0, v_j0, w_j0 = initial_gcd_system(p, θ = θ, δ = δ)
+    ##    u_j, v_j, w_j, residual= agcd(p, q, u_j0, v_j0, w_j0, ρ = ρ)
+    u_j, v_j, w_j, residual= agcd(p, ρ = ρ) 
     ρ = max(ρ, ϕ * residual)
 
     ## bookkeeping
@@ -469,9 +541,9 @@ function multroot(p::Poly;
             break
         end
 
-        m, u_j0, v_j0, w_j0 = initial_gcd_system(p0, θ = θ, δ = δ)
-        u_j, v_j, w_j, residual= agcd(p0, Polynomials.polyder(p0), u_j0, v_j0, w_j0, ρ = ρ) 
-
+        ##m, u_j0, v_j0, w_j0 = initial_gcd_system(p0, θ = θ, δ = δ)
+        ##u_j, v_j, w_j, residual= agcd(p0, Polynomials.polyder(p0), u_j0, v_j0, w_j0, ρ = ρ) 
+        u_j, v_j, w_j, residual= agcd(p0, ρ=ρ)
         ## need to worry about residual between
         ## u0 * v0 - monic(p0) and u0 * w0 - monic(polyder(p0))
         ## resiudal tolerance grows with m, here it depends on 

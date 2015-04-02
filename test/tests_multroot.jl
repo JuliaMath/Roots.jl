@@ -24,7 +24,7 @@ zs, mults = multroot(p^14)
 
 ## test for real roots of polynomial functions
 
-## for polynomials in Z[x], Q[x] can algorithm to be accurate for higher degree
+## for polynomials in Z[x], Q[x] can use algorithm to be accurate for higher degree
 
 @test fzeros(x -> x - 1)[1] == 1.0 # linear
 f(x) = (x-1)*(x-2)*(x-3)^3*(x^2+1)
@@ -36,6 +36,11 @@ Roots.real_roots(p) ## can find this
 f(x) = (x-20)^5 - (x-20) + 1
 a = fzeros(f)[1]
 @assert abs(f(a)) <= 1e-14
+
+x = poly([0.0])
+@test abs(fzeros((x-20)^5 - (x-20) + 1)[1] - (20 + fzeros(x^5 - x + 1)[1])) <= 1e-5
+
+
 
 ## factor
 factor(x -> (x-2)^4*(x-3)^9)
