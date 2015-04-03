@@ -21,6 +21,8 @@ p = (x-1)^2
 zs, mults = multroot(p^14)
 @test mults == [28]
 
+## test for roots of polynomial functions
+roots(x -> x^5 - x + 1)
 
 ## test for real roots of polynomial functions
 
