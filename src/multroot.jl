@@ -585,5 +585,5 @@ function multroot(f::Function; kwargs...)
 end
 
 ## add funciton interface to Polynomials.roots
-Polynomials.roots(f::Function) = roots(convert(Poly, f))
+Polynomials.roots(f::Function) = roots(convert(Poly{Float64}, f))
 
