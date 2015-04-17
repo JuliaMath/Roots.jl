@@ -253,8 +253,15 @@ end
 ## return positive roots of a square-free polynomial
 function pos_roots(p::Poly)
 
+    
     rts = Any[]
 
+    degree(p) == 0 && return(rts)
+    if degree(p) == 1
+        c = -p[0]/p[1]
+        if c > 0  return([c]) else return(rts) end
+    end
+    
     ## in case 0 is a root, we remove from p. Should be unnecessary, but ...
     p,k = multiplicity(p, 0)
 
@@ -311,6 +318,7 @@ end
 
 function real_roots(p::Poly)
     ## Handle simple cases
+    p = convert(Poly{Float64}, p)
     if degree(p) > 1
         u, p, w, residual= agcd(p)
     end

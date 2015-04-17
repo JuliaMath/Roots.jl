@@ -25,6 +25,8 @@ zs, mults = multroot(p^14)
 roots(x -> x^5 - x + 1)
 
 ## test for real roots of polynomial functions
+fzeros(x -> x^5 - 1.5x + 1)
+
 
 ## for polynomials in Z[x], Q[x] can use algorithm to be accurate for higher degree
 
@@ -42,7 +44,7 @@ a = fzeros(f)[1]
 x = poly([0.0])
 @test abs(fzeros((x-20)^5 - (x-20) + 1)[1] - (20 + fzeros(x^5 - x + 1)[1])) <= 1e-5
 
-
+fzeros(x -> x^5 - 2x^4 + x^3)
 
 ## factor
 factor(x -> (x-2)^4*(x-3)^9)
