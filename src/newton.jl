@@ -4,140 +4,201 @@
 ##
 ## These have an argument `verbose` that can be specified to get a trace of the algorithm
 
-
-
-## Order 1 secant method
-function secant_method(f::Function, x0::Real, x1::Real;
-                       ftol::Real     = 10.0 * eps(one(eltype(float(x1)))),
-                       xtol::Real     = 10.0 * eps(one(eltype(float(x1)))),
-                       xtolrel::Real = eps(one(eltype(float(x1)))),
-                       maxeval::Int   = 100, 
-                       verbose::Bool  = false,
-                kwargs...)
-
-    if (ftol < 0) | (xtol < 0) | (xtolrel < 0)
-        throw(ConvergenceFailed("Tolerances must be non-negative"))
+function fn_template(meth, args...;
+                     verbose::Bool=false,kwargs...)
+    
+    out = meth(args...; verbose=verbose, kwargs...)
+    
+    if verbose
+        verbose_output(out)
     end
     
-    fx0, fx1 = f(x0), f(x1)
-
-    abs(fx1) <= ftol && return(x1)
-    abs(x1 - x0) <= max(xtol, abs(x1)*xtolrel) && throw(ConvergenceFailed("x0, x1 too close"))
-    
-    try
-        abs(fx1) <= ftol && throw(StateConverged(x1))
-
-        for i in 1:maxeval
-            verbose && println("$i: x_$(i-1)=$x0, x_$i=$x1, f(x_$i)=$fx1")
-            appsecinv = (x1 - x0) / (fx1 - fx0)
-            ((appsecinv == 0.0) | isnan(appsecinv)) && throw(ConvergenceFailed("Division by 0"))
-
-            inc = fx1 * appsecinv
-            x0, x1 = x1, x1 - inc
-            fx0, fx1 = f(x0), f(x1)
-
-
-            abs(fx1) <= ftol && throw(StateConverged(x1))
-            (isinf(x1) | isinf(fx1)) && throw(ConvergenceFailed("Function values diverged"))
-            
-        end
-        throw(ConvergenceFailed("More than $maxeval steps taken before convergence"))
-        
-    catch e
-        if isa(e, StateConverged)
-            e.x0
-        else
-            rethrow(e)
-        end
+    if out.state == :converged
+        out.x[end]
+    else
+        steps = out.iterations > 1 ? "steps" : "step"
+        throw(ConvergenceFailed("Failed to converge in $(out.iterations) $steps."))
     end
 end
 
+## order 1 secant method
+
+"""
+
+Implementation of secant method: `x_n1 = x_n - f(x_n) * f(x_n)/ (f(x_n) - f(x_{n-1}))`
+
+Arguments:
+
+* `f::Function` -- function to find zero of
+
+* `x0::Real` -- initial guess is [x0, x1]
+
+* `x1::Real` -- initial guess is [x0, x1]
+
+Keyword arguments:
+
+* `ftol`. Stop iterating when |f(xn)| <= max(1, |xn|) * ftol.
+
+* `xtol`. Stop iterating when |xn+1 - xn| <= xtol + max(1, |xn|) * xtolrel
+
+* `xtolrel`. Stop iterating when |xn+1 - xn| <= xtol + max(1, |xn|) * xtolrel
+
+* `maxeval`. Stop iterating if more than this many steps, throw error.
+
+* `maxfneval`. Stop iterating if more than this many function calls, throw error.
+
+* `verbose::Bool=false` Set to `true` to see trace.
+
+"""
+secant_method(f::Function, x0::Real, x1::Real;
+              kwargs...) = fn_template(secmeth, f, x0, x1; kwargs...)
+
+
+
+
+## Add derivatives for newton, halley
+type ZeroFunction3{T<:FloatingPoint} <: ZeroFunction
+    f
+    fp
+    fpp
+    x::Vector{T}
+    fxn::T
+    update::Function
+    state::Symbol
+    how::Symbol
+    iterations::Int
+    fncalls::Int
+    ftol::T
+    xtol::T
+    xtolrel::T
+end
 
 # Newton-Raphson method (quadratic convergence)
-function newton(f::Function, fp::Function, x;
-                ftol::Real       = 100 * eps(one(eltype(float(x)))),
-                xtol::Real       = 10  * eps(one(eltype(float(x)))),
-                xtolrel::Real    = eps(one(eltype(float(x)))),
-                maxeval::Integer = 100,
-                verbose::Bool    = false
-                )
+function newton_update(F)
+    x0 = F.x[end]
+    x1 = x0 - F.fxn/F.fp(x0)
 
-    if (ftol < 0) | (xtol < 0) | (xtolrel < 0)
-        throw(ConvergenceFailed("Tolerances must be non-negative"))
-    end
+    F.fncalls += 2
+    push!(F.x, x1)
+    F.fxn = F.f(x1)
+end
+ 
+function newtonmeth(f, fp,  x0::Real; kwargs...)
     
-    cvg = false
-    for i=1:maxeval
-        fx = f(x)
-        verbose && println("x_$(i-1) = $x, f(x_$(i-1)) = $(f(x))")
-        
-        if abs(fx) <= ftol
-            cvg = true
-            break
-        end
-
-        fpx = fp(x)
-        if fpx == 0
-            throw("derivative is zero")
-        end
-
-        del = fx/fpx
-        x -= del
-
-        if abs(del) <= max(xtol, abs(x)*xtolrel)
-            cvg = true
-            break
-        end
-        
-
-    end
-    cvg || error("$maxeval steps taken without convergence")
+    x = float(x0)
+    D = [k => v for (k,v) in kwargs]    
+    xtol    = get(D, :xtol, 100*eps(eltype(x)))
+    xtolrel = get(D, :xtolrel, eps(eltype(x)))
+    ftol    = get(D, :ftol, 100*eps(eltype(x)))
     
-    return x
+    maxeval = get(D, :maxeval, 100)
+    maxfneval = get(D, :maxfneval, 200)
+    
+    F = ZeroFunction3(f, fp, f,
+                      [x;],
+                      f(x),
+                      newton_update,
+                      :initial, :na,
+                      0, 1,
+                      xtol, ftol, xtolrel)
+
+    _findzero(F, maxeval; maxfneval=maxfneval)
 end
 
+"""
+
+Implementation of Newton's method: `x_n1 = x_n - f(x_n)/ f'(x_n)`
+
+Arguments:
+
+* `f::Function` -- function to find zero of
+
+* `fp::Function=D(f)` -- derivative of `f`. Defaults to automatic derivative
+
+* `x0::Real` -- initial guess
+
+Keyword arguments:
+
+* `ftol`. Stop iterating when |f(xn)| <= max(1, |xn|) * ftol.
+
+* `xtol`. Stop iterating when |xn+1 - xn| <= xtol + max(1, |xn|) * xtolrel
+
+* `xtolrel`. Stop iterating when |xn+1 - xn| <= xtol + max(1, |xn|) * xtolrel
+
+* `maxeval`. Stop iterating if more than this many steps, throw error.
+
+* `maxfneval`. Stop iterating if more than this many function calls, throw error.
+
+* `verbose::Bool=false` Set to `true` to see trace.
+
+"""
+newton(f::Function, fp::Function, x0::Real; kwargs...) = fn_template(newtonmeth, f, fp, x0; kwargs...)
+newton(f::Function, x0::Real; kwargs...) =  newton(f, D(f), float(x0); kwargs...)
+newton(p::Poly, x0::Real; kwargs...) = newton(convert(Function, p), float(x0); kwargs...)
 
 
 # Halley's method (cubic convergence)
-function halley(f::Function, fp::Function, fpp::Function, x;
-                ftol::Real       = 100 * eps(one(eltype(float(x)))),
-                xtol::Real       = 10  * eps(one(eltype(float(x)))),
-                xtolrel::Real    = eps(one(eltype(float(x)))),
-                maxeval::Integer = 100,
-                verbose::Bool    = false
-)
+function halley_update(F)
+    xn = F.x[end]
+    fxn, fpxn, fppxn = F.fxn, F.fp(xn), F.fpp(xn)
 
-    if (ftol < 0) | (xtol < 0) | (xtolrel < 0)
-        throw(ConvergenceFailed("Tolerances must be non-negative"))
-    end
+    xn1 = xn - 2fxn*fpxn / (2*fpxn*fpxn - fxn * fppxn)
 
-    cvg = false
-    for i=1:maxeval
-        fx = f(x)
-        verbose && println("x_$(i-1) = $x, f(x_$(i-1)) = $(f(x))")
-        
-        if abs(fx) <= ftol
-            cvg = true
-            break
-        end
-        fpx = fp(x)
-        fpx == 0 && throw(ConvergenceFailed("Derivative is zero"))
-
-        fppx = fpp(x)
-        if fppx == 0 # fall back to Newton
-            del = fx/fpx
-        else
-            del = 2fx*fpx/(2fpx^2 - fx*fppx)
-        end
-        x -= del
-
-        if abs(del) <= max(xtol, abs(x) * xtolrel)
-            cvg = true
-        end
-    end
-    cvg || throw("$maxeval steps taken without convergence")
-    
-    return x
-
+    F.fncalls += 3
+    push!(F.x, xn1)
+    F.fxn = F.f(xn1)
 end
 
+function halleymeth(f, fp, fpp, x0::Real, args...;
+                 kwargs...)
+
+    x = float(x0)
+    D = [k => v for (k,v) in kwargs]    
+    xtol    = get(D, :xtol, 100*eps(eltype(x)))
+    xtolrel = get(D, :xtolrel, eps(eltype(x)))
+    ftol    = get(D, :ftol, 100*eps(eltype(x)))
+    
+    maxeval = get(D, :maxeval, 100)
+    maxfneval = get(D, :maxfneval, 200)
+    
+    F = ZeroFunction3(f, fp, fpp,
+                      [x;],
+                      f(x),
+                      halley_update,
+                      :initial, :na,
+                      0, 1,
+                      xtol, ftol, xtolrel)
+
+    _findzero(F, maxeval; maxfneval=maxfneval)
+end
+
+"""
+
+Implementation of Halley's method. `xn1 = xn - 2f(xn)*f'(xn) / (2*f'(xn)^2 - f(xn) * f''(xn))`
+
+Arguments:
+
+* `f::Function` -- function to find zero of
+
+* `fp::Function=D(f)` -- derivative of `f`. Defaults to automatic derivative
+
+* `fpp:Function=D(f,2)` -- second derivative of `f`.
+
+* `x0::Real` -- initial guess
+
+Keyword arguments:
+
+* `ftol`. Stop iterating when |f(xn)| <= max(1, |xn|) * ftol.
+
+* `xtol`. Stop iterating when |xn+1 - xn| <= xtol + max(1, |xn|) * xtolrel
+
+* `xtolrel`. Stop iterating when |xn+1 - xn| <= xtol + max(1, |xn|) * xtolrel
+
+* `maxeval`. Stop iterating if more than this many steps, throw error.
+
+* `verbose::Bool=false` Set to `true` to see trace.
+
+"""
+halley(f::Function, fp::Function, fpp::Function, x0::Real; kwargs...) = fn_template(halleymeth, f, fp, fpp, x0; kwargs...)
+halley(f::Function, x0::Real; kwargs...) = halley(f, D(f), D2(f), float(x0); kwargs...)
+halley(p::Poly, x0::Real; kwargs...) = halley(convert(Function, p), float(x0); kwargs...)

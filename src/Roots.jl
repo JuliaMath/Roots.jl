@@ -1,9 +1,12 @@
 module Roots
 
+import Base: factor
+
 using Polynomials
 import Polynomials: roots
 
-using PowerSeries
+import PowerSeries: series
+using Compat
 
 ## * Docile is used for documentation
 using Docile
@@ -13,18 +16,17 @@ export roots
 
 export fzero,
        fzeros,
-       find_zero, 
        newton, halley,
        secant_method, steffensen,
-       multroot, factor,
+       multroot, 
        D, D2
 
 
 ## load in files
 include("fzero.jl")
 include("adiff.jl")
-include("newton.jl")
 include("derivative_free.jl")
+include("newton.jl")
 include("multroot.jl")
 include("SOLVE.jl")
 include("real_roots.jl")
@@ -40,14 +42,14 @@ include("real_roots.jl")
 
 Find zero of a function using an iterative algorithm
 
-* `f`: a scalar function 
+* `f`: a scalar function or callable object
 * `x0`: an initial guess, finite valued.
 
 Keyword arguments:
 
 * `ftol`: tolerance for a guess `abs(f(x)) < ftol`
-* `xtol`: stop if `abs(xold - xnew) <= xtol`
-* `xtolrel`: stop if `abs(xold - xnew) <= xtolrel * abs(xnew)`
+* `xtol`: stop if `abs(xold - xnew) <= xtol + max(1, |xnew|)*xtolrel`
+* `xtolrel`: see `xtol`
 * `maxeval`: maximum number of steps
 * `verbose`: Boolean. Set `true` to trace algorithm
 * `order`: Can specify order of algorithm. 0 is most robust, also 1, 2, 5, 8, 16.
@@ -56,7 +58,7 @@ Keyword arguments:
 This is a polyalgorithm redirecting different algorithms based on the value of `order`. 
 
 """
-function fzero(f::Function, x0::Real; kwargs...)
+function fzero(f, x0::Real; kwargs...)
     x0 = float(x0)
     isinf(x0) && throw(ConvergenceFailed("An initial value must be finite"))
     derivative_free(f, float(x0); kwargs...)
@@ -69,7 +71,7 @@ Uses a modified bisection method for non `big` arguments
 
 Arguments:
 
-* `f` function
+* `f` A scalar function or callable object
 * `a` left endpont of interval
 * `b` right endpont of interval
 * `xtol` optional additional tolerance on sub-bracket size.
@@ -89,7 +91,7 @@ Example:
     `fzero(sin, 3, 4)` # find pi
     `fzero(sin, [big(3), 4]) find pi with more digits
 """
-function fzero(f::Function, a::Real, b::Real; kwargs...)
+function fzero(f, a::Real, b::Real; kwargs...)
     a,b = promote(float(a), b)
     (isinf(a) | isinf(b)) && throw(ConvergenceFailed("A bracketing interval must be bounded"))
     find_zero(f,a,b; kwargs...)
@@ -98,14 +100,14 @@ end
 """
 Find a zero with bracket specified via `[a,b]`, as `fzero(sin, [3,4])`.
 """
-function fzero{T <: Real}(f::Function, bracket::Vector{T}; kwargs...) 
+function fzero{T <: Real}(f, bracket::Vector{T}; kwargs...) 
     fzero(f, float(bracket[1]), float(bracket[2]); kwargs...)
 end
 
 """
 Find a zero within a bracket with an initial guess to *possibly* speed things along.
 """
-function fzero{T <: Real}(f::Function, x0::Real, bracket::Vector{T}; kwargs...) 
+function fzero{T <: Real}(f, x0::Real, bracket::Vector{T}; kwargs...) 
     a,b = sort(map(float,bracket))
     (isinf(a) | isinf(b)) && throw(ConvergenceFailed("A bracketing interval must be bounded"))    
     try
@@ -174,7 +176,7 @@ fzeros(p::Poly) = real_roots(p)
 
 
 
-function fzeros(f::Function)
+function fzeros(f)
     p = poly([0.0])
     try
         p = convert(Poly, f)
@@ -191,7 +193,7 @@ Attempt to find all simple zeroes of `f` within an interval `[a,b]`.
 Simple algorithm that splits `[a,b]` into `no_pts::Int=200` subintervals and checks each for a bracket.
 
 """        
-function fzeros{T <: Real}(f::Function, bracket::Vector{T}; kwargs...) 
+function fzeros{T <: Real}(f, bracket::Vector{T}; kwargs...) 
     ## check if a poly
     try
         filter(x -> bracket[1] <= x <= bracket[2], real_roots(convert(Poly, f)))
@@ -227,17 +229,6 @@ function Base.factor(f::Function)
     end
     factor(p)
 end
-
-
-
-## use Automatic differentiation here
-newton(f::Function, x0::Real; kwargs...) =  newton(f, D(f), float(x0); kwargs...)
-
-##
-newton(p::Poly, x0::Real; kwargs...) = newton(convert(Function, p), convert(Function, polyder(p)), float(x0); kwargs...)
-##
-
-halley(f::Function, x0::Real; kwargs...) = halley(f, D(f), D2(f), float(x0); kwargs...)
 
 
 end

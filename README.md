@@ -28,10 +28,9 @@ algorithm based on its argument(s):
   to remain in the specified bracket.
 
 * `fzeros(f::Function, a::Real, b::Real; no_pts::Int=200)` will split
-  the interval `[a,b]` into many subintervals and apply `fzero` to
-  each bracketing subinterval. This naive algorithm will miss double
-  zeros that lie within the same subinterval and miss zeros where the
-  function does not cross the $x$ axis.
+  the interval `[a,b]` into many subintervals and search for zeros in
+  each using a bracketing method if possible. This naive algorithm
+  will miss double zeros that lie within the same subinterval.
 
 
 For polynomials either of class `Poly` (from the `Polynomials`

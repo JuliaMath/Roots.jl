@@ -267,7 +267,7 @@ function pos_roots(p::Poly)
 
     M = Roots.upperbound(p)
 
-    for k in 0:ifloor(M)  ## we consider [k, k+1) for roots until [k, ∞) has just 0, 1 more roots.
+    for k in 0:floor(Integer,M)  ## we consider [k, k+1) for roots until [k, ∞) has just 0, 1 more roots.
         q = Tλ(p, k)      ## shift p left by k so this is p on [k, ∞)
 
         no_left = descartes_bound(q)

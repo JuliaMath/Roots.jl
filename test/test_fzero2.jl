@@ -25,7 +25,7 @@ tests = [
 
 
 using Roots
-ord(x) = string(ifloor(log10(x)))
+ord(x) = string(floor(Integer,log10(x)))
 orders = [0, 1, 2, 5, 8, 16]
 out = Any[]
 for (ctr, (f1, x0, xstar)) in enumerate(tests)

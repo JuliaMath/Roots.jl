@@ -545,7 +545,7 @@ function multroot(p::Poly;
         ##u_j, v_j, w_j, residual= agcd(p0, Polynomials.polyder(p0), u_j0, v_j0, w_j0, ρ = ρ) 
         u_j, v_j, w_j, residual= agcd(p0, ρ=ρ)
         ## need to worry about residual between
-        ## u0 * v0 - monic(p0) and u0 * w0 - monic(polyder(p0))
+        ## u0 * v0 - monic(p0) and u0 * w0 - monic(Polynomials.polyder(p0))
         ## resiudal tolerance grows with m, here it depends on 
         ## initial value and previous residual times a growth tolerance, ϕ
         ρ = max(ρ, ϕ * residual)

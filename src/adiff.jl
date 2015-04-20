@@ -23,7 +23,7 @@ function D(f::Function, k::Int=1)
 
     function(x)
         y = series(tuple(x, 1.0, ntuple(k-1, z->0.0)...)...)
-        factorial(k) * f(y).(symbol(pop!(names(y)))) # or use polyder!
+        factorial(k) * f(y).(symbol(pop!(fieldnames(y))))
     end
 end
 

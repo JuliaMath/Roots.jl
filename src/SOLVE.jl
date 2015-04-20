@@ -27,7 +27,7 @@ While this is slower than fzero with order 2, 5, 8, or 16 it is
 more robust to the initial condition.
 
 """
-function SOLVE(f::Function, x0::Real;
+function SOLVE(f, x0::Real;
                ftol::Real=10*eps(one(float(x0))),
                xtol::Real=zero(x0),
                xtolrel::Real=zero(x0),
@@ -76,7 +76,7 @@ Solve f(x) = 0 if we have a bracket [a,b] and starting point a < c < b
 Use Algorithm 4.2 of Alefeld, Potra, Shi unless it dithers, in which case the root is found by bisection.
 
 """
-function have_bracket(f::Function, a, b, c=(0.5)*(a+b);
+function have_bracket(f, a, b, c=(0.5)*(a+b);
                       xtol::Real=zero(c), xtolrel::Real=zero(c), maxeval=10, verbose=false)
     ## try a42a unless it fails, then go to failsafe
     verbose && println("Have a bracket, switching to bracketing method")
@@ -97,7 +97,7 @@ function have_bracket(f::Function, a, b, c=(0.5)*(a+b);
             return e.x0
         else
             verbose && println("Dithering, switching to bisection method")
-            return fzero(f, a, b, verbose=verbose)
+            return find_zero(f, a, b, verbose=verbose)
         end
     end
 end
@@ -106,7 +106,7 @@ end
 ## assume f(b) > 0
 ## steffensen of secant line method, but we don't assume a bracket
 ## we "bend" large trajectories 
-function secant_method_no_bracket(f::Function, a, b;
+function secant_method_no_bracket(f, a, b;
                                   ftol=10*eps(one(float(a))), xtol::Real=10*eps(one(float(a))),
                                   xtolrel::Real=10*eps(one(float(a))),
                                   maxeval::Int=100, verbose::Bool=false)
@@ -134,7 +134,14 @@ function secant_method_no_bracket(f::Function, a, b;
             if abs(f(beta)) < ftol
                 throw(StateConverged(beta))
             else
-                throw(Dithering(beta))
+                ## try a higher order method? May get us there
+                out = kss5(f, beta, ftol=float(ftol), xtol=float(xtol), reltol=float(xtolrel))
+                xn = out.x[end]
+                if out.state == :converged && !isnan(xn) && !isinf(xn)
+                    throw(StateConverged(xn))
+                else
+                    throw(Dithering(beta))
+                end
             end
         else
             (ctr = ctr + 1)

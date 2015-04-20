@@ -37,7 +37,7 @@ The basic function call specifies a bracket using vector notation:
 
 ```
 x = fzero(f, [0, 1])
-[x f(x)]
+x, f(x)
 ```
 
 For that function `f(x) == 0.0`. Next consider $f(x) = \sin(x)$. A
@@ -47,7 +47,7 @@ will be a bracket:
 ```
 f(x) = sin(x)
 x = fzero(f, [pi/2, 3pi/2])
-[x f(x)]
+x, f(x)
 ```
 
 This value of `x` does not produce `f(x) == 0.0`, however, it is as close as can be:
@@ -80,7 +80,7 @@ For example, we have:
 ```
 f(x) = cos(x) - x
 x = fzero(f , 1)
-[x f(x)]
+x, f(x)
 ```
 
 And 
@@ -88,14 +88,14 @@ And
 ```
 f(x) = x^3 - 2x - 5
 x = fzero(f, 2)
-[x f(x) f(prevfloat(x)) * f(nextfloat(x))]
+x, f(x), f(prevfloat(x)) * f(nextfloat(x))
 ```
 
 For even more precision, `BigFloat` numbers can be used
 
 ```
 x = fzero(sin, big(3))
-[x, f(x), x - pi]
+x, f(x), x - pi
 ```
 
 ### Higher order methods
@@ -113,18 +113,18 @@ argument:
 ```
 f(x) = 2x - exp(-x)
 x = fzero(f, 1, order=2)
-[x f(x)]
+x, f(x)
 ```
 
 ```
 f(x) = (x + 3) * (x - 1)^2
 x = fzero(f, -2, order=5)
-[x f(x)]
+x, f(x)
 ```
 
 ```
 x = fzero(f, 2, order=8)
-[x f(x)]
+x, f(x)
 ```
 
 The latter shows that zeros need not be simple zeros (i.e. $f'(x) = 0$,
@@ -137,13 +137,13 @@ finds the exact value:
 
 ```
 x = fzero(f, 2)
-[x f(x)]
+x, f(x)
 ```
 
 But not for a similar problem:
 
 ```
-fzero(x -> x^4, 1)
+fzero(x -> x^6, 1)
 ```
 
 (Though the answer is basically on track, the algorithm takes too long
@@ -164,7 +164,7 @@ possible, a bracketing approach. It may need many more function calls
 than the higher-order methods. These higher-order methods can be
 susceptible to some of the usual issues found with Newton's method:
 poor initial guess, small first derivative, or large second derivative
-at the zero.
+near the zero.
 
 
 For a classic example where basically the large second derivative is
@@ -173,14 +173,13 @@ the issue, we have $f(x) = x^{1/3}$:
 ```
 f(x) = cbrt(x)
 x = fzero(f, 1, order=8)	# all of 2, 5, 8, and 16 fail
-[x f(x)]
 ```
 
 However, the default finds the root here
 
 ```
 x = fzero(f, 1)
-[x f(x)]
+x,  f(x)
 ```
 
 Finally, we show another example illustrating that the default `fzero`
@@ -198,15 +197,14 @@ plot(f, -2, 2)
 fzero(f, 1)
 ```
 
-Whereas, with `order=8` an error is raised.
+Whereas, with `order=n` methods fail. For example,
 
 ```
 fzero(f, 1, order=8)
 ```
 
-In this example, some other orders work. Basically the high order
-oscillation can send the proxy tangent line off in nearly random
-directions.
+Basically the high order oscillation can send the proxy tangent line
+off in nearly random directions.
 
 ## Polynomials
 
@@ -245,7 +243,8 @@ f(x) = x*(x-1)*(x^2 + 1)^4
 fzeros(f)
 ```
 
-The algorithm can have numeric issues when the polynomial degree gets too large, or the roots are too close together.
+The algorithm can have numeric issues when the polynomial degree gets
+too large, or the roots are too close together.
 
 
 The `multroot` function will also find the roots. The algorithm does a
@@ -259,6 +258,9 @@ roots, and then tries to improve these values.
 multroot((x-1)*(x-2)*(x-3))	# roots, multiplicity
 ```
 
+The `factor` function provides a more pleasant output.
+
+
 The `roots` function degrades as there are multiplicities:
 
 ```
@@ -266,30 +268,13 @@ p = (x-1)^2*(x-2)^3*(x-3)^4
 roots(p)
 ```
 
-Whereas,
+Whereas, `multroot` gets it right.
 
 ```
-multroot(p)
+factor(p)
 ```
 
-The difference gets dramatic when the multiplicities get quite large
-(which is more of a mathematical possibility perhaps than a practical
-concern):
-
-```
-p = (x-1)^20 * (x-2)^5
-r = roots(p)
-plot(x = real(r), y=imag(r))
-```
-
-But,
-
-```
-multroot(p)
-```
-
-
-
+The difference gets dramatic when the multiplicities get quite large.
 
 ## Classical methods
 
@@ -302,20 +287,16 @@ and its derivative:
 f(x) = x^3 - 2x - 5
 fp(x) = 3x^2 - 2
 x = newton(f, fp, 2)
-[x f(x) f(prevfloat(x)) * f(nextfloat(x))]
+x, f(x), f(prevfloat(x)) * f(nextfloat(x))
 ```
 
-To see the algorithm in progress, the argument `verbose=true` may be specified. In this case only 4 steps are needed:
-
-```
-newton(f, fp, 2, verbose=true)
-```
+To see the algorithm in progress, the argument `verbose=true` may be specified. 
 
 The secant method needs two starting points, here we start with 2 and 3:
 
 ```
-x = secant_method(f, 2,3, verbose=true)
-[x f(x) f(prevfloat(x)) * f(nextfloat(x))]
+x = secant_method(f, 2,3)
+x, f(x), f(prevfloat(x)) * f(nextfloat(x))
 ```
 
 Halley's method has cubic convergence, as compared to Newton's
@@ -323,8 +304,8 @@ quadratic convergence. It uses the second derivative as well:
 
 ```
 fpp(x) = 6x
-x = halley(f, fp, fpp, 2, verbose=true)
-[x f(x) f(prevfloat(x)) * f(nextfloat(x))]
+x = halley(f, fp, fpp, 2)
+x, f(x), f(prevfloat(x)) * f(nextfloat(x))
 ```
 
 

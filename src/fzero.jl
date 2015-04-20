@@ -50,7 +50,7 @@ Terminates with `x1` when the bracket length of `[x0,x2]` is `<= max(xtol, xtolr
 Initial bracket, `[a,b]`, must be bounded.
 
 """
-function find_zero(f::Function, a::Float64, b::Float64; xtol::Real=0.0, xtolrel::Real=0.0, verbose::Bool=false)
+function find_zero(f, a::Float64, b::Float64; xtol::Real=0.0, xtolrel::Real=0.0, verbose::Bool=false)
 
     if (xtol < 0.0) | (xtolrel < 0.0)
         error("Tolerances must be non-negative")
@@ -362,25 +362,46 @@ end
 """
 Searches for simple zeros in an interval [a, b].
 
-Split interval [a,b] in to `no_pts` subintervals. Return the roots for each bracketing interval.
+Split interval [a,b] in to `no_pts` subintervals. 
+
+For each bracketing interval find a bracketed zero.
+For other subintervals do quick search with derivative free method.
+
 """
-function find_zeros(f::Function, a::Real, b::Real, args...;no_pts::Int=200, kwargs...)
+function find_zeros(f::Function, a::Real, b::Real, args...;
+                    no_pts::Int=251,
+                    ftol::Real=10*eps(), reltol::Real=0.0,
+                    kwargs...)
+
     a, b = a < b ? (a,b) : (b,a)
-
     rts = eltype(promote(float(a),b))[]
-    xs = linspace(a, b, no_pts)    
+    xs = linspace(a,b,no_pts+1)
 
-    for i in 1:(length(xs)-1)
-        if f(xs[i]) * f(xs[i+1]) < 0
-            push!(rts, fzero(f, xs[i:(i+1)]))
-        end
-        if f(xs[i]) == 0.0
-            push!(rts, xs[i])
-        end
-    end
-    if f(b) == 0
+    if abs(f(b)) <= ftol + max(1, abs(b)) * reltol
         push!(rts, b)
     end
 
+    ## Look in [ai, bi)
+    for i in 1:no_pts
+        a,b=xs[i:i+1]
+        if abs(f(a)) <= ftol + max(1, abs(a)) * reltol
+            push!(rts, a)
+        else
+            Δ = 100 * sqrt(eps())
+            a,b = a + Δ, b - Δ
+            if f(a) * f(b) < 0
+                push!(rts, fzero(f, a, b))
+            else
+                try
+                    x = fzero(f, 0.5*(a+b), order=8, maxeval=10)
+                    if a < x < b
+                        push!(rts, x)
+                    end
+                catch e
+                end
+            end
+        end
+    end
     rts
+
 end
