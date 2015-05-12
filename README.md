@@ -21,7 +21,7 @@ algorithm based on its argument(s):
   specified. Possible values are 1, 2, 5, 8, and 16. The order 2
   Steffensen method can be the fastest, but is in need of a good
   initial guess. The order 8 method is more robust and often as
-  fast. The higher-order method may be faster when using `Big` values.
+  fast. The higher-order methods may be faster when using `Big` values.
 
 * `fzero(f::Function, x0::Real, bracket::Vector)` calls
   a derivative-free algorithm with initial guess `x0` with steps constrained

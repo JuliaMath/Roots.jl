@@ -53,7 +53,7 @@ Keyword arguments:
 * `maxeval`: maximum number of steps
 * `verbose`: Boolean. Set `true` to trace algorithm
 * `order`: Can specify order of algorithm. 0 is most robust, also 1, 2, 5, 8, 16.
-* `kwargs...` passed on to different algorithms
+* `kwargs...` passed on to different algorithms. There are `maxfneval` when `order` is 1,2,5,8, or 16 and `beta` for orders 2,5,8,16,
 
 This is a polyalgorithm redirecting different algorithms based on the value of `order`. 
 
@@ -145,9 +145,8 @@ An approximate root or an error.
 See `fzeros(p)` to return all real roots.
 
 """
-function fzero(p::Poly, x0::Real; kwargs...)
-    isinf(x0)  && throw(ConvergenceFailed("Initial value must be finite"))
-    derivative_free(convert(Function, p), float(x0); kwargs...)
+function fzero(p::Poly, x0::Real, args...; kwargs...)
+    fzero(convert(Function, p), float(x0), args...; kwargs...)
 end
 
 function fzero{T <: Real}(p::Poly, bracket::Vector{T}; kwargs...) 
@@ -169,7 +168,10 @@ args:
 
 `f`: a Polynomial function of R -> R. May also be of `Poly` type.
 
-For polynomials in Z[x] or Q[x], the `real_roots` method will use `Poly{Rational{BigInt}}` arithmetic, which allows it to handle much larger degree polynomials accurately. This can be called directly using `Polynomial` objects.
+For polynomials in Z[x] or Q[x], the `real_roots` method will use
+`Poly{Rational{BigInt}}` arithmetic, which allows it to handle much
+larger degree polynomials accurately. This can be called directly
+using `Polynomial` objects.
 
 """
 fzeros(p::Poly) = real_roots(p)
@@ -212,7 +214,7 @@ Finds factors numerically.
 
 For polynomial functions with integer and rational tries to factor exactly over the rationals first.
 
-Returns a dictionary with keys that are factors and values that are multiplicities
+Returns a dictionary with keys that are roots and values that are multiplicities
 
 Example:
 ```
@@ -225,7 +227,7 @@ function Base.factor(f::Function)
     try
         p = convert(Poly, f)
     catch e
-        error("`factor` only works with polynomial functions")
+        throw(DomainError()) # `factor` only works with polynomial functions"
     end
     factor(p)
 end

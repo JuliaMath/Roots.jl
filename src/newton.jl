@@ -79,8 +79,8 @@ function newton_update(F)
     x1 = x0 - F.fxn/F.fp(x0)
 
     F.fncalls += 2
-    push!(F.x, x1)
     F.fxn = F.f(x1)
+    push!(F.x, x1)
 end
  
 function newtonmeth(f, fp,  x0::Real; kwargs...)
@@ -92,7 +92,7 @@ function newtonmeth(f, fp,  x0::Real; kwargs...)
     ftol    = get(D, :ftol, 100*eps(eltype(x)))
     
     maxeval = get(D, :maxeval, 100)
-    maxfneval = get(D, :maxfneval, 200)
+    maxfneval = get(D, :maxfneval, 2000)
     
     F = ZeroFunction3(f, fp, f,
                       [x;],
@@ -144,9 +144,9 @@ function halley_update(F)
 
     xn1 = xn - 2fxn*fpxn / (2*fpxn*fpxn - fxn * fppxn)
 
+    F.fxn = F.f(xn1)
     F.fncalls += 3
     push!(F.x, xn1)
-    F.fxn = F.f(xn1)
 end
 
 function halleymeth(f, fp, fpp, x0::Real, args...;
@@ -159,7 +159,7 @@ function halleymeth(f, fp, fpp, x0::Real, args...;
     ftol    = get(D, :ftol, 100*eps(eltype(x)))
     
     maxeval = get(D, :maxeval, 100)
-    maxfneval = get(D, :maxfneval, 200)
+    maxfneval = get(D, :maxfneval, 2000)
     
     F = ZeroFunction3(f, fp, fpp,
                       [x;],

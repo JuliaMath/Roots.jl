@@ -51,7 +51,7 @@ end
 
 # show output
 function verbose_output(out::ZeroFunction)
-    println("Converged. steps = $(out.iterations), function calls = $(out.fncalls); steps:")
+    println("Steps = $(out.iterations), function calls = $(out.fncalls); steps:")
     xs = copy(out.x)
     x0 = shift!(xs)
     println(x0)
@@ -67,7 +67,7 @@ end
 ## Algorithm to find a zero
 function _findzero(f::ZeroFunction,
                    maxeval::Int= 100;
-                   maxfneval::Int=200,
+                   maxfneval::Int=2000,
                    kwargs...
                    )
 
@@ -96,7 +96,7 @@ function _findzero(f::ZeroFunction,
             xn_1  = f.x[end-1]
             if abs(xn - xn_1) <= xtol
                 ## possible convergence, but still expect fxn to be small
-                if abs(fxn) >= sqrt(ftol)
+                if abs(fxn) > sqrt(ftol)
                     f.state = :failed
                     f.how = :xtol_not_ftol
                 else
@@ -254,7 +254,6 @@ end
 ## http://www.hindawi.com/journals/ijmms/2012/493456/
 ## Rajinder Thukral
 ## very fast (8th order) derivative free iterative root finder.
-## seems faster than order 5 and 8 and more robust than order 2 method
 function thukral8_update(F)
 
     xn = F.x[end]
@@ -344,7 +343,6 @@ end
 
 ## Order 2 methods
 ## http://en.wikipedia.org/wiki/Steffensen's_method
-
 function steffensen_update(F)
     xn = F.x[end]
     fxn = F.fxn
@@ -364,8 +362,9 @@ end
 ## order 1
 function secmeth_update(F)
     a,b = F.x[end-1:end]
-    fb,fa = F.f(b), F.f(a)
-    F.fncalls += 2
+    fb,fa = F.fxn, F.f(a)
+    F.fncalls += 1
+    
     x = b - (b-a) * fb/(fb - fa)
 
     F.fxn = F.f(x)
@@ -386,9 +385,9 @@ secmeth(f, x0, x1; kwargs...) = _function_template_(secmeth_update,    f, [float
 """
 Main interface for derivative free methods
 
-* `f` a scalar function `f:R -> R`. Methods try to find a solution to `f(x) = 0`.
+* `f` a scalar function `f:R -> R` or callable object. Methods try to find a solution to `f(x) = 0`.
 
-* `x0` initial guess for root. Iterative methods need a reasonable
+* `x0` initial guess for zero. Iterative methods need a reasonable
 initial starting point.
 
 * `ftol`. Stop iterating when |f(xn)| <= max(1, |xn|) * ftol.
@@ -447,10 +446,12 @@ function derivative_free(f, x0::Real;
     elseif order == 5
         out = kss5(f, x0; ftol=ftol, xtol=xtol, xtolrel=xtolrel, maxeval=maxeval, kwargs...)                
     elseif order == 2
-        out = steffensen(f, x0; ftol=ftol, xtol=xtol, xtolrel=xtolrel, maxeval=maxeval, kwargs...)                           elseif order == 1
-        out = secmeth(f, x0 + 1e-4, x0; ftol=ftol, xtol=xtol, xtolrel=xtolrel, maxeval=maxeval, kwargs...)
+        out = steffensen(f, x0; ftol=ftol, xtol=xtol, xtolrel=xtolrel, maxeval=maxeval, kwargs...)
+    elseif order == 1
+        x1 = x0 + 1e-4
+        out = secmeth(f, x1, x0; ftol=ftol, xtol=xtol, xtolrel=xtolrel, maxeval=maxeval, kwargs...)
     else
-      throw(DomainError())
+      throw(ArgumentError())
     end
 
     if verbose

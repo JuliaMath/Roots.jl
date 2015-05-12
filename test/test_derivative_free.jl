@@ -20,7 +20,7 @@ for order in orders[2:end]
 end
 
 fn = x -> x^20 - 1
-x0, alpha = 0.8, 1.0
+x0, alpha = 0.5, 1.0
 for order in orders[2:end]
     @test_throws Roots.ConvergenceFailed fzero(fn, x0, order=order)
 end
