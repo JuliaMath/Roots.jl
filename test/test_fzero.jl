@@ -4,6 +4,7 @@ import Roots.fzero
 # test problems from Table 1 of paper referenced in fzero.jl
 # 1
 @test_approx_eq fzero(x -> sin(x) - x/2, pi/2, pi) 1.89549426703398094714
+@test_approx_eq Roots.a42a(x -> sin(x) - x/2, pi/2, pi) 1.89549426703398094714
 
 # 2
 function test2(x)

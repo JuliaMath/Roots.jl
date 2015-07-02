@@ -160,10 +160,11 @@ function a42a(f::Function, a, b, c=(0.5)*(a+b);
     try
         # re-bracket and check termination
         a, b, d = bracket(f, a, b, c, xtol)
+        ee = d
         for n = 2:maxeval
             # use either a cubic (if possible) or quadratic interpolation
-            if n > 2 && distinct(f, a, b, d, e)
-                c = ipzero(f, a, b, d, e)
+            if n > 2 && distinct(f, a, b, d, ee)
+                c = ipzero(f, a, b, d, ee)
             else
                 c = newton_quadratic(f, a, b, d, 2)
             end
@@ -189,9 +190,9 @@ function a42a(f::Function, a, b, c=(0.5)*(a+b);
                 a = ah
                 b = bh
                 d = dh
-                e = db
+                ee = db
             else
-                e = dh
+                ee = dh
                 a, b, d = bracket(f, ah, bh, ah + (bh - ah)/2,
                                   xtol)
             end

@@ -86,7 +86,7 @@ function have_bracket(f, a, b, c=(0.5)*(a+b);
         throw(ConvergenceFailed("Interval [$a, $b] is not a bracket"))
     end
     a,b = sort([a,b])
-    if !(a < c < b)
+    if !(a <= c <= b)
         throw(ConvergenceFailed("Value $c is not in interval ($a, $b)"))
     end
 
