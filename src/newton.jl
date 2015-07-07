@@ -132,7 +132,7 @@ Keyword arguments:
 * `verbose::Bool=false` Set to `true` to see trace.
 
 """
-newton(f::Function, fp::Function, x0::Real; kwargs...) = fn_template(newtonmeth, f, fp, x0; kwargs...)
+newton(f, fp, x0::Real; kwargs...) = fn_template(newtonmeth, f, fp, x0; kwargs...)
 newton(f::Function, x0::Real; kwargs...) =  newton(f, D(f), float(x0); kwargs...)
 newton(p::Poly, x0::Real; kwargs...) = newton(convert(Function, p), float(x0); kwargs...)
 
@@ -199,6 +199,6 @@ Keyword arguments:
 * `verbose::Bool=false` Set to `true` to see trace.
 
 """
-halley(f::Function, fp::Function, fpp::Function, x0::Real; kwargs...) = fn_template(halleymeth, f, fp, fpp, x0; kwargs...)
+halley(f, fp, fpp, x0::Real; kwargs...) = fn_template(halleymeth, f, fp, fpp, x0; kwargs...)
 halley(f::Function, x0::Real; kwargs...) = halley(f, D(f), D2(f), float(x0); kwargs...)
 halley(p::Poly, x0::Real; kwargs...) = halley(convert(Function, p), float(x0); kwargs...)

@@ -96,7 +96,7 @@ end
 find_zero using Algorithm 4.2  of Alefeld, Potra and Shi for Big numbers
 
 """
-function find_zero(f::Function, a::Union(BigFloat, BigInt), b::Union(BigFloat, BigInt);
+function find_zero(f, a::Union(BigFloat, BigInt), b::Union(BigFloat, BigInt);
                    xtol=zero(a), 
                    maxeval::Int=100,
                    verbose::Bool=false
@@ -125,7 +125,7 @@ output:
 By John Travers
 
 """
-function a42(f::Function, a, b;
+function a42(f, a, b;
                    xtol=zero(float(a)), 
                    maxeval::Int=15,
                    verbose::Bool=false
@@ -150,7 +150,7 @@ where `c` is passed in.
 Solve f(x) = 0 over bracketing interval [a,b] starting at c, with a < c < b
 
 """
-function a42a(f::Function, a, b, c=(0.5)*(a+b);
+function a42a(f, a, b, c=(0.5)*(a+b);
                    xtol=zero(float(a)), 
                    maxeval::Int=15,
                    verbose::Bool=false
@@ -245,7 +245,7 @@ end
 # root.
 #
 # based on algorithm on page 341 of [1]
-function bracket(f::Function, a, b, c, tol)
+function bracket(f, a, b, c, tol)
     if !(a <= c <= b)
         error("c must be in (a,b)")
     end
@@ -283,7 +283,7 @@ end
 
 # take a secant step, if the resulting guess is very close to a or b, then
 # use bisection instead
-function secant(f::Function, a, b)
+function secant(f, a, b)
     c = a - f(a)/(f(b) - f(a))*(b - a)
     tol = eps(1.0)*5
     if c <= a + abs(a)*tol || c >= b - abs(b)*tol
@@ -296,7 +296,7 @@ end
 # approximate zero of f using quadratic interpolation
 # if the new guess is outside [a, b] we use a secant step instead
 # based on algorithm on page 330 of [1]
-function newton_quadratic(f::Function, a, b, d, k::Int)
+function newton_quadratic(f, a, b, d, k::Int)
     fa = f(a)
     fb = f(b)
     fd = f(d)
@@ -319,7 +319,7 @@ end
 # approximate zero of f using inverse cubic interpolation
 # if the new guess is outside [a, b] we use a quadratic step instead 
 # based on algorithm on page 333 of [1]
-function ipzero(f::Function, a, b, c, d)
+function ipzero(f, a, b, c, d)
     fa = f(a)
     fb = f(b)
     fc = f(c)
@@ -349,7 +349,7 @@ end
 
 
 # check that all interpolation values are distinct
-function distinct(f::Function, a, b, d, e)
+function distinct(f, a, b, d, e)
     f1 = f(a)
     f2 = f(b)
     f3 = f(d)
@@ -369,7 +369,7 @@ For each bracketing interval find a bracketed zero.
 For other subintervals do quick search with derivative free method.
 
 """
-function find_zeros(f::Function, a::Real, b::Real, args...;
+function find_zeros(f, a::Real, b::Real, args...;
                     no_pts::Int=251,
                     ftol::Real=10*eps(), reltol::Real=0.0,
                     kwargs...)
