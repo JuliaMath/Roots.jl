@@ -1,3 +1,7 @@
+[![Roots](http://pkg.julialang.org/badges/Roots_release.svg)](http://pkg.julialang.org/?pkg=Roots&ver=release)
+[![Roots](http://pkg.julialang.org/badges/Roots_nightly.svg)](http://pkg.julialang.org/?pkg=Roots&ver=nightly)
+
+
 # Root finding functions for Julia
 
 This package contains simple routines for finding roots of continuous
