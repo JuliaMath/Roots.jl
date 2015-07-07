@@ -5,7 +5,7 @@ scalar functions of a single real variable. The basic interface is
 through the function `fzero` which dispatches to an appropriate
 algorithm based on its argument(s):
 
-* `fzero(f::Function, a::Real, b::Real)` and `fzero(f::Function,
+* `fzero(f, a::Real, b::Real)` and `fzero(f,
   bracket::Vector)` call the `find_zero` algorithm to find a root
   within the bracket `[a,b]`.  When a bracket is used with `Float64`
   arguments, the algorithm is guaranteed to converge to a value `x`
@@ -14,7 +14,7 @@ algorithm based on its argument(s):
   to apply the algorithm, as the last condition can still hold.)
 
 
-* `fzero(f::Function, x0::Real; order::Int=0)` calls a
+* `fzero(f, x0::Real; order::Int=0)` calls a
   derivative-free method. The default method is a bit plodding but
   more robust to the quality of the initial guess than some others.
   For faster convergence and fewer function calls, an order can be
@@ -23,11 +23,11 @@ algorithm based on its argument(s):
   initial guess. The order 8 method is more robust and often as
   fast. The higher-order methods may be faster when using `Big` values.
 
-* `fzero(f::Function, x0::Real, bracket::Vector)` calls
+* `fzero(f, x0::Real, bracket::Vector)` calls
   a derivative-free algorithm with initial guess `x0` with steps constrained
   to remain in the specified bracket.
 
-* `fzeros(f::Function, a::Real, b::Real; no_pts::Int=200)` will split
+* `fzeros(f, a::Real, b::Real; no_pts::Int=200)` will split
   the interval `[a,b]` into many subintervals and search for zeros in
   each using a bracketing method if possible. This naive algorithm
   will miss double zeros that lie within the same subinterval.
@@ -86,6 +86,20 @@ fzero(sin, 3, order=16)		# 3.141592653589793
 ## BigFloat values yield more precision
 fzero(sin, BigFloat(3.0))	# 3.1415926535897932384...with 256 bits of precision
 ```
+
+The `fzero` function, `newton` and `halley` functions can be used with `FastAnonyous` functions:
+
+```
+using FastAnonymous
+fa = @anon x -> cos(x) - 10x
+fap = @anon x -> -sin(x) - 10
+fzero(fa, 1)           # 0.09950534268738782
+fzero(fa, 1, order=8)  # 0.09950534268738784
+newton(fa, fap, 1)     # 0.09950534268738784
+```
+
+(The polynomials methods do not work with `FastAnonymous` functions.)
+
 
 
 All real roots of a polynomial can be found at once:
