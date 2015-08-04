@@ -1,5 +1,6 @@
 module Roots
 
+import Base: *
 import Base: factor
 
 using Polynomials
@@ -8,9 +9,10 @@ import Polynomials: roots
 import PowerSeries: series
 using Compat
 
-## * Docile is used for documentation
-using Docile
-@document
+if VERSION < v"0.4-" 
+    eval(parse("using Docile"))
+    eval(parse("Docile.@document"))
+end
 
 export roots
 
