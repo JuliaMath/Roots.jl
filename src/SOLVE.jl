@@ -52,7 +52,7 @@ function SOLVE(f, x0::Real;
             return ex.x0
         elseif isa(ex, PossibleExtremaReached)
             guess = ex.x0
-            if f(nextfloat(guess)) * f(prevfloat(guess)) <= 0
+            if sign(f(nextfloat(guess))) * sign(f(prevfloat(guess))) <= 0
                 return guess
             end
             # heuristic for case where it thinks it is at a minimum
@@ -80,11 +80,16 @@ function have_bracket(f, a, b, c=(0.5)*(a+b);
                       xtol::Real=zero(c), xtolrel::Real=zero(c), maxeval=10, verbose=false)
     ## try a42a unless it fails, then go to failsafe
     verbose && println("Have a bracket, switching to bracketing method")
-    f(a) == 0.0 && return(a)
-    f(b) == 0.0 && return(b)
-    if f(a) * f(b) > 0
+    fa, fb = f(a), f(b)
+    fa == 0.0 && return(a)
+    fb == 0.0 && return(b)
+    isinf(fa) && throw(ConvergenceFailed("f(a) must be finite"))
+    isinf(fb) && throw(ConvergenceFailed("f(b) must be finite"))    
+
+    if sign(fa) * sign(fb) > 0
         throw(ConvergenceFailed("Interval [$a, $b] is not a bracket"))
     end
+
     a,b = sort([a,b])
     if !(a <= c <= b)
         throw(ConvergenceFailed("Value $c is not in interval ($a, $b)"))
@@ -115,7 +120,7 @@ function secant_method_no_bracket(f, a, b;
     falpha, fbeta = f(alpha), f(beta)
 
     ## checks -- have a bracket
-    if falpha * fbeta < 0
+    if sign(falpha) * sign(fbeta) < 0
         a = a42(f, alpha, beta, xtol=xtol, maxeval=maxeval, verbose=verbose)
         throw(StateConverged(a))
     end

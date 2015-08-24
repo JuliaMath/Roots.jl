@@ -246,11 +246,16 @@ end
 #
 # based on algorithm on page 341 of [1]
 function bracket(f, a, b, c, tol)
+    fa = f(a)
+    fb = f(b)
+
+
+    isinf(fa) && error("f(a) must be finite")
+    isinf(fb) && error("f(b) must be finite")
+    
     if !(a <= c <= b)
         error("c must be in (a,b)")
     end
-    fa = f(a)
-    fb = f(b)
     delta = 0.7*tole(a, b, fa, fb, tol)
     if b - a <= 4delta
         c = (a + b)/2
