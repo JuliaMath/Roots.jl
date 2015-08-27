@@ -125,3 +125,12 @@ end
 @test_approx_eq fzero(x -> test15(x, 40), -1e4, 1e4) 0.000030245790670210097
 @test_approx_eq fzero(x -> test15(x, 100), -1e4, 1e4) 0.000012277994232461523
 @test_approx_eq fzero(x -> test15(x, 1000), -1e4, 1e4) 1.2388385788997142e-6
+
+
+## various tests
+## issue #29, basically f(a) or f(b) so big we get NaN for guess from bracket.
+f(x) = x + exp(x)
+@test_approx_eq fzero(f, 0, [-1e6, 1e6]) -0.5671432904097838
+
+## test infinite range
+@test_approx_eq fzero(x -> x, [-Inf, Inf]) 0.0

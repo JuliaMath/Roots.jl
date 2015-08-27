@@ -47,7 +47,7 @@ fewer iterations, but this seems to find the value with fewer function evaluatio
 
 Terminates with `x1` when the bracket length of `[x0,x2]` is `<= max(xtol, xtolrel*abs(x1))` where `x1` is the midpoint . The tolerances can be set to 0, in which case, the termination occurs when `nextfloat(x0) = x2`.
 
-Initial bracket, `[a,b]`, must be bounded.
+The bracket `[a,b]` must be bounded.
 
 """
 function find_zero(f, a::Float64, b::Float64; xtol::Real=0.0, xtolrel::Real=0.0, verbose::Bool=false)
@@ -246,13 +246,10 @@ end
 #
 # based on algorithm on page 341 of [1]
 function bracket(f, a, b, c, tol)
+
     fa = f(a)
     fb = f(b)
 
-
-    isinf(fa) && error("f(a) must be finite")
-    isinf(fb) && error("f(b) must be finite")
-    
     if !(a <= c <= b)
         error("c must be in (a,b)")
     end
@@ -314,7 +311,7 @@ function newton_quadratic(f, a, b, d, k::Int)
     for i = 1:k
         r -= (fa + (B + A*(r - b))*(r - a))/(B + A*(2*r - a - b))
     end
-    if r <= a || r >= b
+    if isnan(r) || (r <= a || r >= b)
         r = secant(f, a, b)
     end
     return r

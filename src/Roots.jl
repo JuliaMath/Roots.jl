@@ -84,10 +84,12 @@ For a bracket to be valid, it must be that `f(a)*f(b) < 0`.
 For `Float64` values, the answer is such that `f(prevfloat(x)) *
 f(nextfloat(x)) < 0` unless a non-zero value of `xtol` is specified in
 which case, it stops when the sub-bracketing produces an bracket with
-length less than `max(xtol, abs(x1)*xtolrel)`.
+length less than `max(xtol, abs(x1)*xtolrel)`. 
 
 For `Big` values, which defaults to the algorithm of Alefeld, Potra, and Shi, a
 default tolerance is used for the sub-bracket length that can be enlarged with `xtol`.
+
+If `a==-Inf` it is replaced with `nextfloat(a)`; if `b==Inf` it is replaced with `prevfloat(b)`.
 
 Example:
 
@@ -95,7 +97,10 @@ Example:
     `fzero(sin, [big(3), 4]) find pi with more digits
 """
 function fzero(f, a::Real, b::Real; kwargs...)
+    a,b = sort([a,b])
     a,b = promote(float(a), b)
+    (a == -Inf) && (a = nextfloat(a))
+    (b == Inf) && (b = prevfloat(b))
     (isinf(a) | isinf(b)) && throw(ConvergenceFailed("A bracketing interval must be bounded"))
     find_zero(f,a,b; kwargs...)
 end
@@ -112,6 +117,8 @@ Find a zero within a bracket with an initial guess to *possibly* speed things al
 """
 function fzero{T <: Real}(f, x0::Real, bracket::Vector{T}; kwargs...) 
     a,b = sort(map(float,bracket))
+    (a == -Inf) && (a = nextfloat(a))
+    (b == Inf) && (b = prevfloat(b))
     (isinf(a) | isinf(b)) && throw(ConvergenceFailed("A bracketing interval must be bounded"))    
     try
         ex = a42a(f, a, b, float(x0); kwargs...)
