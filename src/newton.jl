@@ -73,6 +73,24 @@ type ZeroFunction3{T<:FloatingPoint} <: ZeroFunction
     xtolrel::T
 end
 
+## Add derivatives for newton: Complex
+type ZeroFunctionComp{T<:FloatingPoint} <: ZeroFunction
+    f
+    fp
+    fpp
+    x::Vector{Complex{T}}
+    fxn::Complex{T}
+    update::Function
+    state::Symbol
+    how::Symbol
+    iterations::Int
+    fncalls::Int
+    ftol::T
+    xtol::T
+    xtolrel::T
+end
+
+
 # Newton-Raphson method (quadratic convergence)
 function newton_update(F)
     x0 = F.x[end]
@@ -105,6 +123,28 @@ function newtonmeth(f, fp,  x0::Real; kwargs...)
     _findzero(F, maxeval; maxfneval=maxfneval)
 end
 
+# this version uses ZeroFunctionComp for Complex numbers
+function newtonmeth(f, fp,  x0::Complex; kwargs...)
+
+    x = copy(x0)
+    D = [k => v for (k,v) in kwargs]
+    xtol    = get(D, :xtol, 100*eps(eltype(real(x))))
+    xtolrel = get(D, :xtolrel, eps(eltype(real(x))))
+    ftol    = get(D, :ftol, 100*eps(eltype(real(x))))
+
+    maxeval = get(D, :maxeval, 100)
+    maxfneval = get(D, :maxfneval, 2000)
+
+    F = ZeroFunctionComp(f, fp, f,
+                      [x;],
+                      f(x),
+                      newton_update,
+                      :initial, :na,
+                      0, 1,
+                      xtol, ftol, xtolrel)
+
+    _findzero(F, maxeval; maxfneval=maxfneval)
+end
 """
 
 Implementation of Newton's method: `x_n1 = x_n - f(x_n)/ f'(x_n)`
@@ -132,10 +172,10 @@ Keyword arguments:
 * `verbose::Bool=false` Set to `true` to see trace.
 
 """
-newton(f, fp, x0::Real; kwargs...) = fn_template(newtonmeth, f, fp, x0; kwargs...)
+# newton(f, fp, x0) now accepts a Complex guess
+newton(f, fp, x0::Number; kwargs...) = fn_template(newtonmeth, f, fp, x0; kwargs...)
 newton(f::Function, x0::Real; kwargs...) =  newton(f, D(f), float(x0); kwargs...)
 newton(p::Poly, x0::Real; kwargs...) = newton(convert(Function, p), float(x0); kwargs...)
-
 
 # Halley's method (cubic convergence)
 function halley_update(F)
