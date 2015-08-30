@@ -57,29 +57,12 @@ secant_method(f::Function, x0::Real, x1::Real;
 
 
 ## Add derivatives for newton, halley
-type ZeroFunction3{T<:FloatingPoint} <: ZeroFunction
+type ZeroFunction3{S<:Number, T<:FloatingPoint} <: ZeroFunction
     f
     fp
     fpp
-    x::Vector{T}
-    fxn::T
-    update::Function
-    state::Symbol
-    how::Symbol
-    iterations::Int
-    fncalls::Int
-    ftol::T
-    xtol::T
-    xtolrel::T
-end
-
-## Add derivatives for newton: Complex
-type ZeroFunctionComp{T<:FloatingPoint} <: ZeroFunction
-    f
-    fp
-    fpp
-    x::Vector{Complex{T}}
-    fxn::Complex{T}
+    x::Vector{S}
+    fxn::S
     update::Function
     state::Symbol
     how::Symbol
@@ -101,41 +84,21 @@ function newton_update(F)
     push!(F.x, x1)
 end
  
-function newtonmeth(f, fp,  x0::Real; kwargs...)
-    
-    x = float(x0)
-    D = [k => v for (k,v) in kwargs]    
-    xtol    = get(D, :xtol, 100*eps(eltype(x)))
-    xtolrel = get(D, :xtolrel, eps(eltype(x)))
-    ftol    = get(D, :ftol, 100*eps(eltype(x)))
-    
-    maxeval = get(D, :maxeval, 100)
-    maxfneval = get(D, :maxfneval, 2000)
-    
-    F = ZeroFunction3(f, fp, f,
-                      [x;],
-                      f(x),
-                      newton_update,
-                      :initial, :na,
-                      0, 1,
-                      xtol, ftol, xtolrel)
-
-    _findzero(F, maxeval; maxfneval=maxfneval)
-end
 
 # this version uses ZeroFunctionComp for Complex numbers
-function newtonmeth(f, fp,  x0::Complex; kwargs...)
+function newtonmeth(f, fp,  x0::Number; kwargs...)
 
-    x = copy(x0)
+    x   = copy(x0)
+    tol = eps( eltype(real(x)) )
     D = [k => v for (k,v) in kwargs]
-    xtol    = get(D, :xtol, 100*eps(eltype(real(x))))
-    xtolrel = get(D, :xtolrel, eps(eltype(real(x))))
-    ftol    = get(D, :ftol, 100*eps(eltype(real(x))))
+    xtol    = get(D, :xtol   , 100*tol)
+    xtolrel = get(D, :xtolrel, tol    )
+    ftol    = get(D, :ftol   , 100*tol)
 
-    maxeval = get(D, :maxeval, 100)
+    maxeval   = get(D, :maxeval  , 100)
     maxfneval = get(D, :maxfneval, 2000)
 
-    F = ZeroFunctionComp(f, fp, f,
+    F = ZeroFunction3(f, fp, f,
                       [x;],
                       f(x),
                       newton_update,
