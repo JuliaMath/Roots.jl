@@ -57,12 +57,12 @@ secant_method(f::Function, x0::Real, x1::Real;
 
 
 ## Add derivatives for newton, halley
-type ZeroFunction3{T<:FloatingPoint} <: ZeroFunction
+type ZeroFunction3{S<:Number, T<:FloatingPoint} <: ZeroFunction
     f
     fp
     fpp
-    x::Vector{T}
-    fxn::T
+    x::Vector{S}
+    fxn::S
     update::Function
     state::Symbol
     how::Symbol
@@ -72,6 +72,7 @@ type ZeroFunction3{T<:FloatingPoint} <: ZeroFunction
     xtol::T
     xtolrel::T
 end
+
 
 # Newton-Raphson method (quadratic convergence)
 function newton_update(F)
@@ -83,17 +84,20 @@ function newton_update(F)
     push!(F.x, x1)
 end
  
-function newtonmeth(f, fp,  x0::Real; kwargs...)
-    
-    x = float(x0)
-    D = [k => v for (k,v) in kwargs]    
-    xtol    = get(D, :xtol, 100*eps(eltype(x)))
-    xtolrel = get(D, :xtolrel, eps(eltype(x)))
-    ftol    = get(D, :ftol, 100*eps(eltype(x)))
-    
-    maxeval = get(D, :maxeval, 100)
+
+# this version uses ZeroFunctionComp for Complex numbers
+function newtonmeth(f, fp,  x0::Number; kwargs...)
+
+    x   = copy(x0)
+    tol = eps( eltype(real(x)) )
+    D = [k => v for (k,v) in kwargs]
+    xtol    = get(D, :xtol   , 100*tol)
+    xtolrel = get(D, :xtolrel, tol    )
+    ftol    = get(D, :ftol   , 100*tol)
+
+    maxeval   = get(D, :maxeval  , 100)
     maxfneval = get(D, :maxfneval, 2000)
-    
+
     F = ZeroFunction3(f, fp, f,
                       [x;],
                       f(x),
@@ -104,7 +108,6 @@ function newtonmeth(f, fp,  x0::Real; kwargs...)
 
     _findzero(F, maxeval; maxfneval=maxfneval)
 end
-
 """
 
 Implementation of Newton's method: `x_n1 = x_n - f(x_n)/ f'(x_n)`
@@ -132,10 +135,10 @@ Keyword arguments:
 * `verbose::Bool=false` Set to `true` to see trace.
 
 """
-newton(f, fp, x0::Real; kwargs...) = fn_template(newtonmeth, f, fp, x0; kwargs...)
+# newton(f, fp, x0) now accepts a Complex guess
+newton(f, fp, x0::Number; kwargs...) = fn_template(newtonmeth, f, fp, x0; kwargs...)
 newton(f::Function, x0::Real; kwargs...) =  newton(f, D(f), float(x0); kwargs...)
 newton(p::Poly, x0::Real; kwargs...) = newton(convert(Function, p), float(x0); kwargs...)
-
 
 # Halley's method (cubic convergence)
 function halley_update(F)
