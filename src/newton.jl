@@ -77,7 +77,7 @@ end
 # Newton-Raphson method (quadratic convergence)
 function newton_update(F)
     x0 = F.x[end]
-    x1 = x0 - F.fxn/F.fp(x0)
+    x1 = x0 - F.fxn / F.fp(x0)
 
     F.fncalls += 2
     F.fxn = F.f(x1)

@@ -21,8 +21,14 @@ function D(f::Function, k::Int=1)
     k == 0 && return(f)
     k < 0 && error("The order of the derivative must be non-negative")
 
+    if VERSION < v"0.4-"
+        tmp = ntuple(k-1, z->0.0)
+    else
+        tmp = ntuple(z -> 0.0, k-1)
+    end
+
     function(x)
-        y = series(tuple(x, 1.0, ntuple(k-1, z->0.0)...)...)
+        y = series(tuple(x, 1.0, tmp...)...)
         factorial(k) * f(y).(symbol(pop!(fieldnames(y))))
     end
 end
