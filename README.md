@@ -1,5 +1,5 @@
-[![Roots](http://pkg.julialang.org/badges/Roots_release.svg)](http://pkg.julialang.org/?pkg=Roots&ver=release)
-[![Roots](http://pkg.julialang.org/badges/Roots_nightly.svg)](http://pkg.julialang.org/?pkg=Roots&ver=nightly)
+[![Roots](http://pkg.julialang.org/badges/Roots_0.3.svg)](http://pkg.julialang.org/?pkg=Roots&ver=0.3)
+[![Roots](http://pkg.julialang.org/badges/Roots_0.4.svg)](http://pkg.julialang.org/?pkg=Roots&ver=0.4)
 
 
 # Root finding functions for Julia
