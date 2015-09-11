@@ -62,7 +62,7 @@ type ZeroFunction3{S<:Number, T<:FloatingPoint} <: ZeroFunction
     fp
     fpp
     x::Vector{S}
-    fxn::S
+    fxn::Vector{S}
     update::Function
     state::Symbol
     how::Symbol
@@ -77,10 +77,10 @@ end
 # Newton-Raphson method (quadratic convergence)
 function newton_update(F)
     x0 = F.x[end]
-    x1 = x0 - F.fxn / F.fp(x0)
+    x1 = x0 - F.fxn[end] / F.fp(x0)
 
     F.fncalls += 2
-    F.fxn = F.f(x1)
+    F.fxn[end] = F.f(x1)
     push!(F.x, x1)
 end
  
@@ -100,7 +100,7 @@ function newtonmeth(f, fp,  x0::Number; kwargs...)
 
     F = ZeroFunction3(f, fp, f,
                       [x;],
-                      f(x),
+                      [f(x)],
                       newton_update,
                       :initial, :na,
                       0, 1,
@@ -143,11 +143,11 @@ newton(p::Poly, x0::Real; kwargs...) = newton(convert(Function, p), float(x0); k
 # Halley's method (cubic convergence)
 function halley_update(F)
     xn = F.x[end]
-    fxn, fpxn, fppxn = F.fxn, F.fp(xn), F.fpp(xn)
+    fxn, fpxn, fppxn = F.fxn[end], F.fp(xn), F.fpp(xn)
 
     xn1 = xn - 2fxn*fpxn / (2*fpxn*fpxn - fxn * fppxn)
 
-    F.fxn = F.f(xn1)
+    F.fxn[end] = F.f(xn1)
     F.fncalls += 3
     push!(F.x, xn1)
 end
@@ -166,7 +166,7 @@ function halleymeth(f, fp, fpp, x0::Real, args...;
     
     F = ZeroFunction3(f, fp, fpp,
                       [x;],
-                      f(x),
+                      [f(x)],
                       halley_update,
                       :initial, :na,
                       0, 1,

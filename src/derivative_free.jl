@@ -14,7 +14,7 @@ abstract ZeroFunction
 type ZeroFunction1{T<:FloatingPoint} <: ZeroFunction
     f
     x::Vector{T}
-    fxn::T
+    fxn::Vector{T}
     update::Function
     state::Symbol
     how::Symbol
@@ -72,7 +72,7 @@ function _findzero(f::ZeroFunction,
                    )
 
     ## trivial check
-    if abs(f.fxn) <= max(1, abs(f.x[end])) * f.ftol
+    if abs(f.fxn[end]) <= max(1, abs(f.x[end])) * f.ftol
         f.state = :converged
         f.how = :ftol
         return(f)
@@ -87,7 +87,7 @@ function _findzero(f::ZeroFunction,
         f.state != :running && return(f)
 
         xn = f.x[end]
-        fxn = f.fxn
+        fxn = f.fxn[end]
 
         xtol = f.xtol +  max(1, abs(xn)) * f.xtolrel
         ftol = max(1, abs(xn)) * f.ftol
@@ -145,10 +145,10 @@ function _function_template_(updatefn, f, x0; kwargs...)
 
     F = ZeroFunction1(f,
                       x,
-                      f(x[end]),
+                      map(f,x),
                       updatefn,
                       :na, :na,
-                      0, 1,
+                      0, length(x),
                       ftol, xtol, xtolrel,
                       float(beta))
     
@@ -194,7 +194,7 @@ end
 ## from p 114 (17)
 function thukral16_update(F)
     xn = F.x[end]
-    fxn = F.fxn
+    fxn = F.fxn[end]
 
     check_ftol(fxn, xn, F) && return(F)
 
@@ -243,7 +243,7 @@ function thukral16_update(F)
     secznan_1 = (zn - an)/(fzn -fan)
     xn1 = zn  - sigma * secynzn * fan * secynan_1 * secznan_1 
 
-    F.fxn = F.f(xn1)
+    F.fxn[end] = F.f(xn1)
     F.fncalls += 1
     push!(F.x, xn1)
 end
@@ -257,7 +257,7 @@ end
 function thukral8_update(F)
 
     xn = F.x[end]
-    fxn = F.fxn
+    fxn = F.fxn[end]
     
     if abs(fxn) <= F.ftol
         push!(F.x, xn)
@@ -296,7 +296,7 @@ function thukral8_update(F)
     ξ = 1 - 2 * fyn * fyn * fyn / (fwn * fwn * fxn)
     xn1 = zn - ω * ξ * fzn / secxnynzn
 
-    F.fxn = F.f(xn1)
+    F.fxn[end] = F.f(xn1)
     F.fncalls += 1
     push!(F.x, xn1)
 end
@@ -308,7 +308,7 @@ end
 function kss5_update(F)
 
     xn = F.x[end]
-    fxn = F.fxn
+    fxn = F.fxn[end]
     check_ftol(fxn, xn, F)
     
     wn = xn + 1/F.β * fxn # steffensen step
@@ -336,7 +336,7 @@ function kss5_update(F)
     
     xn1 = zn - fzn * secwnxn / secxnyn / secwnyn
 
-    F.fxn = F.f(xn1)
+    F.fxn[end] = F.f(xn1)
     F.fncalls += 1
     push!(F.x, xn1)
 end
@@ -345,7 +345,7 @@ end
 ## http://en.wikipedia.org/wiki/Steffensen's_method
 function steffensen_update(F)
     xn = F.x[end]
-    fxn = F.fxn
+    fxn = F.fxn[end]
 
     Δf = F.f(xn+ 1/F.β * fxn) - fxn
     F.fncalls += 1
@@ -354,7 +354,7 @@ function steffensen_update(F)
     check_secant(secxn, xn, F) && return(F)
     xn1 = xn - fxn / secxn
 
-    F.fxn = F.f(xn1)
+    F.fxn[end] = F.f(xn1)
     F.fncalls += 1
     push!(F.x, xn1)
 end
@@ -362,12 +362,11 @@ end
 ## order 1
 function secmeth_update(F)
     a,b = F.x[end-1:end]
-    fb,fa = F.fxn, F.f(a)
-    F.fncalls += 1
+    fb,fa = F.fxn[end], F.fxn[end-1]
     
     x = b - (b-a) * fb/(fb - fa)
 
-    F.fxn = F.f(x)
+    F.fxn[(end-1):end] =  [fb, F.f(x)]
     F.fncalls += 1
     push!(F.x, x)
 end
