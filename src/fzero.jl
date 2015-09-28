@@ -9,7 +9,7 @@ end
 
 # type to throw on failure
 type ConvergenceFailed
-    reason::String
+    reason::AbstractString
 end
 
 
@@ -31,8 +31,8 @@ function _middle(x::Float64, y::Float64)
  
   negate = x < 0.0 || y < 0.0
  
-  xint = reinterpret(Uint64, abs(x))
-  yint = reinterpret(Uint64, abs(y))
+  xint = reinterpret(UInt64, abs(x))
+  yint = reinterpret(UInt64, abs(y))
   unsigned = reinterpret(Float64, (xint + yint) >> 1)
  
   return negate ? -unsigned : unsigned
@@ -96,7 +96,8 @@ end
 find_zero using Algorithm 4.2  of Alefeld, Potra and Shi for Big numbers
 
 """
-function find_zero(f, a::Union(BigFloat, BigInt), b::Union(BigFloat, BigInt);
+typealias BigSomething @compat  Union{BigFloat, BigInt}
+function find_zero(f, a::BigSomething, b::BigSomething;
                    xtol=zero(a), 
                    maxeval::Int=100,
                    verbose::Bool=false

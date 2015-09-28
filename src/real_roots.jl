@@ -13,8 +13,8 @@
 variable(p::Poly) = poly(zeros(eltype(p),1), p.var)
 
 ## make bounds work for floating point or rational.
-_iszero{T <: Union(Integer, Rational)}(b::T; kwargs...) = b == 0
-_iszero{T<:FloatingPoint}(b::T; xtol=1) = abs(b) <= 2*xtol*eps(T)
+_iszero{T <: (@compat Union{Integer, Rational})}(b::T; kwargs...) = b == 0
+_iszero{T<:AbstractFloat}(b::T; xtol=1) = abs(b) <= 2*xtol*eps(T)
 
 
 ## extend to evaluate with other polynomials
@@ -55,8 +55,8 @@ function multiplicity(p::Poly, c::Number)
 end
 
 ## Our Poly types for which we can find gcd
-QQ = Union(Int, BigInt, Rational{Int}, Rational{BigInt})
-BB = Union(BigInt, Rational{BigInt})
+typealias QQ  @compat Union{Int, BigInt, Rational{Int}, Rational{BigInt}}
+typealias BB  @compat Union{BigInt, Rational{BigInt}}
 
 ## Here computations are exact, as long as we return poly in Q[x]
 function Base.divrem{T<:QQ, S<:QQ}(a::Poly{T}, b::Poly{S})

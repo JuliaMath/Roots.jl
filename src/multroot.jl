@@ -40,7 +40,7 @@ end
 ## convert Poly <--> function
 Base.convert(::Type{Function}, p::Poly) = x -> Polynomials.polyval(p,x)
 ## convert a function to a polynomial with error if conversion is not possible
-QQR = Union(Int, BigInt, Rational{Int}, Rational{BigInt}, Float64)
+typealias QQR @compat Union{Int, BigInt, Rational{Int}, Rational{BigInt}, Float64}
 function Base.convert{T<:QQR}(::Type{Poly{T}}, f::Function)
     try
         x = poly(zeros(T,1))
@@ -118,14 +118,14 @@ end
 ## l is known multiplicity structure of polynomial p = (x-z1)^l1 * (x-z2)^l2 * ... * (x-zn)^ln
 ## Algorithm I, p17
 function pejroot(p::Poly, z0::Vector, l::Vector{Int};
-                 wts::Union(Vector, Nothing)=nothing, # weight vector
+                 wts::(@compat Union{Vector, Void})=nothing, # weight vector
                  tol = 1e-8,
                  maxsteps = 100
                       )
     
     a = p2a(p) #rcoeffs(monic(p))[2:end] # an_1, an_2, ..., a2, a1, a0
-    
-    if isa(wts, Nothing)
+
+    if wts == nothing
         wts = map(u -> min(1, 1/abs(u)), a)
     end
     W = diagm(wts)
@@ -578,10 +578,14 @@ multroot{T <: Real}(p::Vector{T}; kwargs...) = multroot(Poly(p); kwargs...)
 function multroot(f::Function; kwargs...)
     try
         p = convert(Poly{Float64}, f)
-        multroot(p; kwargs...)
-    catch e
+        multroot(p; kwargs...)        
+    catch err
         error("The function does not compute a univariate polynomial")
     end
+
+
+
+    
 end
 
 ## add funciton interface to Polynomials.roots

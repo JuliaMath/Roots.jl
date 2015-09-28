@@ -57,7 +57,7 @@ secant_method(f::Function, x0::Real, x1::Real;
 
 
 ## Add derivatives for newton, halley
-type ZeroFunction3{S<:Number, T<:FloatingPoint} <: ZeroFunction
+type ZeroFunction3{S<:Number, T<:AbstractFloat} <: ZeroFunction
     f
     fp
     fpp

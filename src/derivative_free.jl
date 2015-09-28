@@ -11,7 +11,7 @@
 
 ## A type to hold a function that we want to find the zero of.
 abstract ZeroFunction 
-type ZeroFunction1{T<:FloatingPoint} <: ZeroFunction
+type ZeroFunction1{T<:AbstractFloat} <: ZeroFunction
     f
     x::Vector{T}
     fxn::Vector{T}
