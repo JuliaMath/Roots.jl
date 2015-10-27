@@ -7,7 +7,7 @@ import Base: factor
 using Polynomials
 import Polynomials: roots
 
-import PowerSeries: series
+using ForwardDiff
 using Compat
 
 if VERSION < v"0.4-" 
