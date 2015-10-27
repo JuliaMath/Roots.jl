@@ -69,7 +69,7 @@ specializations:
 For historical purposes, there are implementations of Newton's method
 (`newton`), Halley's method (`halley`), and the secant method
 (`secant_method`). For the first two, if derivatives are not
-specified, they will be computed using the `PowerSeries` package.
+specified, they will be computed using the `ForwardDiff` package.
 
 
 ## Usage examples

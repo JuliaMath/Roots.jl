@@ -8,7 +8,8 @@ dispatch can handle many different cases.
 We will use these pacakges
 
 ```
-using Gadfly			# for plotting
+using Plots
+backend(:gadfly)
 using Roots
 ```
 
@@ -310,7 +311,7 @@ x, f(x), f(prevfloat(x)) * f(nextfloat(x))
 
 
 For many function, the derivatives can be computed automatically. The
-`PowerSeries` package provides a means. This package wraps the
+`ForwardDiff` package provides a means. This package wraps the
 process into an operator, `D` which returns the derivative of a
 function `f` (for simple-enough functions):
 
@@ -377,7 +378,7 @@ plot(x -> flight(x,  theta), 0, howfar(theta))
 
 To maximize the range we solve for the lone critical point of `howfar`
 within the range. The derivative can not be taken automatically with
-`D`, here we use a central-difference approximation and start the
+`D`. So,  here we use a central-difference approximation and start the
 search at 45 degrees, the angle which maximizes the trajectory on a
 non-windy day:
 

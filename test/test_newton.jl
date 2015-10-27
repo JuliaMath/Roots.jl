@@ -12,3 +12,12 @@ import Roots.newton, Roots.halley
 @test_approx_eq_eps halley(x -> exp(x) - cos(x),
                            x -> exp(x) + sin(x),
                            x -> exp(x) + cos(x), 3.0) 0.0 eps(1.0)
+
+
+## tests with auto derivatives
+@test_approx_eq newton(sin, 3) pi
+@test_approx_eq halley(sin, 3) pi
+
+## More tests with autoderivaitves
+f(x) = sin(x)
+@test_approx_eq newton(D(f), 1.5) pi/2

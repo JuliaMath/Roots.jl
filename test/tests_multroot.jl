@@ -33,6 +33,7 @@ fzeros(x -> x^5 - 1.5x + 1)
 @test fzeros(x -> x - 1)[1] == 1.0 # linear
 f(x) = (x-1)*(x-2)*(x-3)^3*(x^2+1)
 rts = fzeros(f)
+rts = Float64[r for r in rts]
 @test maximum(abs(sort(rts) - [1.0, 2.0, 3.0])) <= 1e-12
 x = poly([big(0)])
 p = prod([x - i for i in 1:20])

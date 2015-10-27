@@ -88,8 +88,8 @@ end
 # this version uses ZeroFunctionComp for Complex numbers
 function newtonmeth(f, fp,  x0::Number; kwargs...)
 
-    x   = copy(x0)
-    tol = eps( eltype(real(x)) )
+    x   = float(copy(x0))
+    tol = eps( eltype(x) )
     D = [k => v for (k,v) in kwargs]
     xtol    = get(D, :xtol   , 100*tol)
     xtolrel = get(D, :xtolrel, tol    )

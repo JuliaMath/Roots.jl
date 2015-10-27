@@ -369,7 +369,7 @@ Searches for simple zeros in an interval [a, b].
 Split interval [a,b] in to `no_pts` subintervals. 
 
 For each bracketing interval find a bracketed zero.
-For other subintervals do quick search with derivative free method.
+For other subintervals do quick search with a derivative free method.
 
 """
 function find_zeros(f, a::Real, b::Real, args...;
@@ -393,11 +393,11 @@ function find_zeros(f, a::Real, b::Real, args...;
         else
             Δ = 100 * sqrt(eps())
             a,b = a + Δ, b - Δ
-            if f(a) * f(b) < 0
+            if sign(f(a)) * sign(f(b)) < 0
                 push!(rts, fzero(f, a, b))
             else
                 try
-                    x = fzero(f, 0.5*(a+b), order=8, maxeval=10)
+                    x = fzero(f, 0.5*(a+b), order=8, maxeval=10, ftol=ftol, reltol=reltol)
                     if a < x < b
                         push!(rts, x)
                     end

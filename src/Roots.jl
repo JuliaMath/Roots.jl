@@ -195,14 +195,14 @@ function fzeros(f)
     catch e
         error("If f(x) is not a polynomial in x, then an interval to search over is needed")
     end
-    Float64[x for x in real_roots(p)]
+    fzeros(p)
 end
 
 """
 
 Attempt to find all simple zeroes of `f` within an interval `[a,b]`.
 
-Simple algorithm that splits `[a,b]` into `no_pts::Int=200` subintervals and checks each for a bracket.
+Simple algorithm that splits `[a,b]` into `no_pts::Int=200` subintervals and checks each for a bracket or a quick zero.
 
 """        
 function fzeros{T <: Real}(f, bracket::Vector{T}; kwargs...) 
@@ -213,7 +213,7 @@ function fzeros{T <: Real}(f, bracket::Vector{T}; kwargs...)
         find_zeros(f, float(bracket[1]), float(bracket[2]); kwargs...)
     end
 end
-fzeros(f::Function, a::Real, b::Real; kwargs...) = find_zeros(f, float(a), float(b); kwargs...)
+fzeros(f::Function, a::Real, b::Real; kwargs...) = fzeros(f, [a,b]; kwargs...)
 
 
 """
