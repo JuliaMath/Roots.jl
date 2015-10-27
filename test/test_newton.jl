@@ -15,9 +15,14 @@ import Roots.newton, Roots.halley
 
 
 ## tests with auto derivatives
-@test_approx_eq newton(sin, 3) pi
-@test_approx_eq halley(sin, 3) pi
+@test_approx_eq newton(sin, 3) float(pi)
+@test_approx_eq halley(sin, 3) float(pi)
 
-## More tests with autoderivaitves
-f(x) = sin(x)
-@test_approx_eq newton(D(f), 1.5) pi/2
+## More tests with autoderivaitves. Derivative of D operation:
+isdefined(ForwardDiff, :derivative) && @test_approx_eq newton(D(sin), 1.5) pi/2
+
+## test with Complex input
+
+f(x) = x^3 - 1; fp(x) = 3x^2
+@test_approx_eq real(newton(f, fp, 1+im)) 1
+@test_approx_eq real(newton(f, fp, 1+10im)) (-1/2)

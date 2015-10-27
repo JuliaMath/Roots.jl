@@ -89,7 +89,7 @@ end
 function newtonmeth(f, fp,  x0::Number; kwargs...)
 
     x   = float(copy(x0))
-    tol = eps( eltype(x) )
+    tol = eps( eltype(real(x)) )
     D = [k => v for (k,v) in kwargs]
     xtol    = get(D, :xtol   , 100*tol)
     xtolrel = get(D, :xtolrel, tol    )
@@ -137,8 +137,8 @@ Keyword arguments:
 """
 # newton(f, fp, x0) now accepts a Complex guess
 newton(f, fp, x0::Number; kwargs...) = fn_template(newtonmeth, f, fp, x0; kwargs...)
-newton(f::Function, x0::Real; kwargs...) =  newton(f, D(f), float(x0); kwargs...)
-newton(p::Poly, x0::Real; kwargs...) = newton(convert(Function, p), float(x0); kwargs...)
+newton(f::Function, x0::Number; kwargs...) =  newton(f, D(f), float(x0); kwargs...)
+newton(p::Poly, x0::Number; kwargs...) = newton(convert(Function, p), float(x0); kwargs...)
 
 # Halley's method (cubic convergence)
 function halley_update(F)
