@@ -14,9 +14,8 @@ algorithm based on its argument(s):
   within the bracket `[a,b]`.  When a bracket is used with `Float64`
   arguments, the algorithm is guaranteed to converge to a value `x`
   with either `f(x) == 0` or at least one of `f(prevfloat(x)*f(x) < 0`
-  or ``f(x)*f(nextfloat(x) < 0`. (The function need not be continuous
+  or `f(x)*f(nextfloat(x) < 0`. (The function need not be continuous
   to apply the algorithm, as the last condition can still hold.)
-
 
 * `fzero(f, x0::Real; order::Int=0)` calls a
   derivative-free method. The default method is a bit plodding but
@@ -146,7 +145,7 @@ factor(f)
 
 
 The well-known methods can be used with or without supplied
-derivatives. If not specified, the `PowerSeries` package is used for
+derivatives. If not specified, the `ForwardDiff` package is used for
 automatic differentiation.
 
 ```
