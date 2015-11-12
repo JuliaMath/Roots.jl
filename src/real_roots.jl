@@ -313,7 +313,21 @@ function real_roots{T <: QQ}(p::Poly{T})
     p = divrem(p, bgcd(p, Polynomials.polyder(p)))[1] # square free p/gcd(p, p')
     p = p*(1//p[degree(p)])
 
-    real_roots_sqfree(p)
+
+    ## factor first
+    d = factor(p)
+    d = filter((k,v) -> isa(k, Rational), d)
+    rts = collect(keys(d))
+    for rt in rts
+        (p,k) = multiplicity(p, rt)
+    end
+    
+    if degree(p) > 0
+        new_rts = real_roots_sqfree(p)
+        [rts; new_rts]
+    else
+        rts
+    end
 end
 
 function real_roots(p::Poly)
