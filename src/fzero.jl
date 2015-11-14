@@ -84,7 +84,7 @@ function find_zero(f, a::Float64, b::Float64; xtol::Real=0.0, xtolrel::Real=0.0,
         sign(y1) == 0 && return x1
         abs(x2 - x0) <= max(xtol, xtolrel*abs(x1)) && return(x1)
 
-        verbose && println("xi=$x1, f(xi) = $(f(x1))")
+        verbose && println(@sprintf("xi =%18.15f,\t f(xi) = %18.15f", x1, f(x1)))
     end
     
     return abs(y0) < abs(y2) ? x0 : x2

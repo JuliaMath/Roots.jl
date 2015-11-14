@@ -223,7 +223,7 @@ function secant_method_no_bracket(f, a, b;
         else
             throw(PossibleExtremaReached(beta))
         end
-        verbose && println("x_$ctr: $beta\tf(x_$ctr)=$(f(beta))")
+        verbose && println(@sprintf("x_%s:%18.15f\t f(x_%s):%18.15f", ctr, beta, ctr, f(beta)))
     end
     if abs(f(beta)) < ftol  
         throw(StateConverged(beta))
