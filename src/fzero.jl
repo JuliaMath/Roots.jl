@@ -198,7 +198,7 @@ function a42a(f, a, b, c=(0.5)*(a+b);
                                   xtol)
             end
 
-            verbose && println("a=$a, n=$n")
+            verbose && println(@sprintf("a=%18.15f, n=%s", a, n))
             
             if nextfloat(ch) * prevfloat(ch) <= 0
                 throw(StateConverged(ch))
