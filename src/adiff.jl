@@ -15,7 +15,7 @@ Wrapper around `derivative` function in `ForwardDiff`
 """
 function D(f::Function, k::Int=1)
     k < 0 && error("The order of the derivative must be non-negative")
-    k == 0 && return(f)
+    k == 0 && return(x -> f(float(x)))
 
      if isdefined(ForwardDiff, :derivative)
             D(derivative(f), k-1)

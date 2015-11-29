@@ -41,8 +41,8 @@ package) or from functions which are of polynomial type there are
 specializations:
 
 * The `roots` function will dispatch to the `roots` function of the
-  `Polynomials` package to return all roots (real and possible
-  complex) of the polynomial.
+  `Polynomials` package to return all roots (including 
+  complex ones) of the polynomial.
 
 
 * `fzeros(f::Function)` calls `real_roots` to find the real roots of

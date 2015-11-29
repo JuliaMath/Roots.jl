@@ -195,7 +195,18 @@ function fzeros(f)
     catch e
         error("If f(x) is not a polynomial in x, then an interval to search over is needed")
     end
-    fzeros(p)
+    zs = fzeros(p)
+    ## Output is mixed, integer, rational, big. We tidy up
+    etype = eltype(f(0.0))
+    out = Real[]
+    for z in zs
+        if isa(z, Rational)
+            push!(out, z.den == 1 ? z.num : z)
+        else
+            push!(out, convert(etype, z))
+        end
+    end
+    sort(out)
 end
 
 """
