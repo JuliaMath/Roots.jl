@@ -72,7 +72,7 @@ end
 func6 = let
     val(n, x) = 2x*exp(-n)-2exp(-n*x)+1.
     bracket(n) = [0., 1.]
-    params = vcat([1:5], [20:20:100])
+    params = vcat(1:5, 20:20:100)
     @Func :func6
 end
 
@@ -114,7 +114,7 @@ end
 func12 = let
     val(n, x) = x^(1/n)-n^(1/n)
     bracket(n) = [1., 100.]
-    params = vcat([2:6], 7:2:33)
+    params = vcat(2:6, 7:2:33)
     @Func :func12
 end
 
