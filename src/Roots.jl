@@ -198,10 +198,12 @@ function fzeros(f)
     zs = fzeros(p)
     ## Output is mixed, integer, rational, big. We tidy up
     etype = eltype(f(0.0))
+    ietype = eltype(f(0))
     out = Real[]
     for z in zs
         if isa(z, Rational)
-            push!(out, z.den == 1 ? z.num : z)
+            val = z.den == 1 ? z.num : z
+            push!(out, convert(ietype, val))
         else
             push!(out, convert(etype, z))
         end
