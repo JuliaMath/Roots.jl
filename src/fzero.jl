@@ -374,38 +374,38 @@ For other subintervals do quick search with a derivative free method.
 """
 function find_zeros(f, a::Real, b::Real, args...;
                     no_pts::Int=251,
-                    ftol::Real=10*eps(), reltol::Real=0.0,
+                    ftol::Real=10*eps(), reltol::Real=10*eps(),
                     kwargs...)
 
     a, b = a < b ? (a,b) : (b,a)
     rts = eltype(promote(float(a),b))[]
-    xs = linspace(a,b,no_pts+1)
+    xs = vcat(a, a + (b-a)*sort(rand(no_pts)), b)
 
-    if abs(f(b)) <= ftol + max(1, abs(b)) * reltol
-        push!(rts, b)
-    end
 
     ## Look in [ai, bi)
     for i in 1:no_pts
-        a,b=xs[i:i+1]
-        if abs(f(a)) <= ftol + max(1, abs(a)) * reltol
-            push!(rts, a)
+        ai,bi=xs[i:i+1]
+        if isapprox(f(ai), 0.0, rtol=reltol, atol=ftol)
+            push!(rts, ai)
+        elseif sign(f(ai)) * sign(f(bi)) < 0
+            push!(rts, fzero(f, ai, bi))
         else
-            Δ = 100 * sqrt(eps())
-            a,b = a + Δ, b - Δ
-            if sign(f(a)) * sign(f(b)) < 0
-                push!(rts, fzero(f, a, b))
-            else
-                try
-                    x = fzero(f, 0.5*(a+b), order=8, maxeval=10, ftol=ftol, reltol=reltol)
-                    if a < x < b
-                        push!(rts, x)
-                    end
-                catch e
+            try
+                x = fzero(f, ai + (0.5)* (bi-ai), order=8, maxeval=10, ftol=ftol, reltol=reltol)
+                if ai < x < bi
+                    push!(rts, x)
                 end
+            catch e
             end
         end
     end
-    rts
+    ## finally, b?
+    isapprox(f(b), 0.0, rtol=reltol, atol=ftol) && push!(rts, b)
 
+    ## redo if it appears function osciallates alot in this interval...
+    if length(rts) > (1/4) * no_pts
+        return(find_zeros(f, a, b, args...; no_pts = 10*no_pts, ftol=ftol, reltol=reltol, kwargs...))
+    else
+        return(sort(rts))
+    end
 end
