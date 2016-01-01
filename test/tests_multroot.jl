@@ -58,6 +58,17 @@ factor(x -> (x-1//1)^2 * (x-99//100)^2 * (x-101//100)^2) ## conversion is to Flo
 factor(convert(Poly{Rational{Int}}, x -> (x-1//1)^2 * (x-99//100)^2 * (x-101//100)^2))
 
 
+## Test conversion of polynomials
+f(x) = 3x^3 - 2x
+convert(Polynomials.Poly{Int64}, f)
+f(x) = (3x^3 - 2x)/3
+convert(Polynomials.Poly{Int64}, f)
+f(x) = x^2 / x # rational functions fails
+@test_throws MethodError convert(Polynomials.Poly{Int64}, f)
+f(x) = (x^2 + x)^2
+convert(Polynomials.Poly{Int64}, f)
+f(x) = (x^2 + x)^(1/2)
+@test_throws MethodError convert(Polynomials.Poly{Int64}, f)
 
 
 
