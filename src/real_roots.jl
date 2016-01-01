@@ -235,12 +235,20 @@ end
 ## get root from an Isol interval
 function getIsolatedRoot(p::Poly, a::Real, b::Real)
     pa, pb = [polyval(p,x) for x in (a,b)]
-    pab = sign(pa * pb)
+    pab = sign(pa) * sign(pb)
     if pa == 0 p,k = multiplicity(p,a) end
     if pb == 0 p,k = multiplicity(p,b) end
     pa, pb = [polyval(p,x) for x in (a,b)]
-    pa * pb >= 0 && println("DEBUG: $(sign(pa*pb)), $pab: Find root of $p in [$a, $b] will fail!!")
-    pa * pb < 0 ? Roots.fzero(p, [a,b]) : -999
+    pab = sign(pa) * sign(pb)
+
+    if pab < 0
+        Roots.fzero(p, [a,b])
+    else
+        ## these aren't quite right, as we might get a double root this way
+        abs(pa) <= 4eps() && return(a)
+        abs(pb) <= 4eps() && return(b)
+        error("Can't find root of $p in [$a, $b]")
+    end
 end
 
 function getIsolatedRoot(p::Poly, i::Intervalkc)
@@ -253,7 +261,6 @@ end
 ## return positive roots of a square-free polynomial
 function pos_roots(p::Poly)
 
-    
     rts = Any[]
 
     degree(p) == 0 && return(rts)

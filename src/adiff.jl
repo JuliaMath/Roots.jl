@@ -34,3 +34,6 @@ function D(f::Function, k::Int=1)
 end
 
 D2(f::Function) = D(f, 2)
+
+## This conflicts with a definition in Calculus, but is better. 
+## Base.ctranspose(f::Function) = D(f)
