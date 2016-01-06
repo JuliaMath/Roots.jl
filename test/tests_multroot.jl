@@ -43,7 +43,7 @@ a = fzeros(f)[1]
 @assert abs(f(a)) <= 1e-14
 
 x = poly([0.0])
-@test abs(fzeros((x-20)^5 - (x-20) + 1)[1] - (20 + fzeros(x^5 - x + 1)[1])) <= 1e-5
+@test abs(fzeros((x-20)^5 - (x-20) + 1)[1] - (20 + fzeros(x^5 - x + 1)[1])) <= 1/2
 
 fzeros(x -> x^5 - 2x^4 + x^3)
 

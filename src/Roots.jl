@@ -30,9 +30,13 @@ include("fzero.jl")
 include("adiff.jl")
 include("derivative_free.jl")
 include("newton.jl")
-include("multroot.jl")
 include("SOLVE.jl")
-include("real_roots.jl")
+include("Polys/polynomials.jl")
+include("Polys/agcd.jl")
+include("Polys/multroot.jl")
+include("Polys/real_roots.jl")
+
+
 
 
 ## Main functions are
@@ -213,9 +217,17 @@ end
 
 """
 
-Attempt to find all simple zeroes of `f` within an interval `[a,b]`.
+Attempt to find all zeros of `f` within an interval `[a,b]`.
 
-Simple algorithm that splits `[a,b]` into `no_pts::Int=200` subintervals and checks each for a bracket or a quick zero.
+Simple algorithm that splits `[a,b]` into subintervals and checks each
+for a root.  For bracketing subintervals, bisection is
+used. Otherwise, a derivative-free method is used. If there are a
+large number of roots found relative to the number of subintervals, the
+number of subintervals is increased and the process is re-run.
+
+There are possible issues with close-by zeros and zeros which do not
+cross the origin (non-simple zeros). Answers should be confirmed
+graphically, if possible.
 
 """        
 function fzeros{T <: Real}(f, bracket::Vector{T}; kwargs...) 
