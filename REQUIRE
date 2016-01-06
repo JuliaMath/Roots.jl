@@ -1,5 +1,5 @@
 julia 0.3
-Polynomials 0.0.3
+Polynomials 0.0.5
 ForwardDiff
 Docile 0.4
 Compat 0.4
