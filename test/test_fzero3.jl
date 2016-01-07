@@ -43,7 +43,7 @@ pathological = [
           x = fzero(f1, x0)
           @assert (f1(x) == 0.0 || f1(prevfloat(x)) * f1(nextfloat(x)) <= 0 || abs(f1(x)) <= eps(float(x0))^(1/2))
       catch err
-          if !isa(err, PossibleExtremaReached)
+          if !isa(err, Roots.PossibleExtremaReached)
               throw(err)
           end
       end
