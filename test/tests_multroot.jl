@@ -55,18 +55,19 @@ factor(x -> x*(x-1)*(x-2)*(x^2 + x + 1))
 factor(x -> (x-1)^2 * (x-.99)^2 * (x-1.01)^2) ## can have issue with nearby roots (or high powers)
 
 factor(x -> (x-1//1)^2 * (x-99//100)^2 * (x-101//100)^2) ## conversion is to Float, not Rational{Int}
-factor(convert(Poly{Rational{Int}}, x -> (x-1//1)^2 * (x-99//100)^2 * (x-101//100)^2))
+delta = 1//10
+factor(convert(Poly{Rational{Int}}, x -> (x-1//1)^2 * (x-1 - delta)^2 * (x-1 + delta)^2))
 
 
-## Test conversion of polynomials
+## Test conversion of polynomials to Int
 f(x) = 3x^3 - 2x
-convert(Polynomials.Poly{Int64}, f)
+convert(Polynomials.Poly{Int}, f)
 f(x) = (3x^3 - 2x)/3
-convert(Polynomials.Poly{Int64}, f)
+convert(Polynomials.Poly{Int}, f)
 f(x) = x^2 / x # rational functions fails
 @test_throws MethodError convert(Polynomials.Poly{Int64}, f)
 f(x) = (x^2 + x)^2
-convert(Polynomials.Poly{Int64}, f)
+convert(Polynomials.Poly{Int}, f)
 f(x) = (x^2 + x)^(1/2)
 @test_throws MethodError convert(Polynomials.Poly{Int64}, f)
 
