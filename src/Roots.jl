@@ -206,8 +206,8 @@ function fzeros(f)
     out = Real[]
     for z in zs
         if isa(z, Rational)
-            val = z.den == 1 ? z.num : z
-            push!(out, convert(ietype, val))
+            val = z.den == 1 ? convert(ietype, z.num) : convert(Rational{ietype}, z)
+            push!(out, val)
         else
             push!(out, convert(etype, z))
         end

@@ -26,10 +26,10 @@ end
 import Base: +,-,*,/,^                                                           
 +(a::PolyTest, b::PolyTest) = PolyTest(a.x + b.x)                                
 +{T<:Number}(a::T, b::PolyTest) = PolyTest(a + b.x)                              
-+{T<:Number}(b::PolyTest,a::T) = PolyTest(a + b.x)                              
++{T<:Number}(a::PolyTest,b::T) = PolyTest(a.x + b)                              
 -(a::PolyTest,b::PolyTest) = PolyTest(a.x - b.x)                                
--{T<:Number}(b::PolyTest,a::T) = PolyTest(a - b.x)                              
--{T<:Number}(b::PolyTest,a::T) = PolyTest(a - b.x)                              
+-{T<:Number}(a::T, b::PolyTest) = PolyTest(a - b.x)                              
+-{T<:Number}(a::PolyTest,b::T) = PolyTest(a.x - b)                              
 -(a::PolyTest) = PolyTest(-a.x)                                                 
 *(a::PolyTest, b::PolyTest) = PolyTest(a.x * b.x)                               
 *(a::Bool, b::PolyTest) = PolyTest(a * b.x)                                     

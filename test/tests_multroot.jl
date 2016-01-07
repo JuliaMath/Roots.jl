@@ -71,5 +71,6 @@ f(x) = (x^2 + x)^(1/2)
 @test_throws MethodError convert(Polynomials.Poly{Int64}, f)
 
 
-
-
+## polynomial conversions from functions in practice
+fzeros(x -> 265 - 0.65x)
+fzeros(x -> -16x^2 + 200x)
