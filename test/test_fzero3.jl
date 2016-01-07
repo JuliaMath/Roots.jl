@@ -38,9 +38,15 @@ pathological = [
                 (x -> cos(100*x)-4*erf(30*x-10), 4) 
                 ]
                 
-for (f1, x0) in pathological
-    x = fzero(f1, x0)
-    @assert (f1(x) == 0.0 || f1(prevfloat(x)) * f1(nextfloat(x)) <= 0 || abs(f1(x)) <= eps(float(x0))^(1/2))
+  for (f1, x0) in pathological
+      try
+          x = fzero(f1, x0)
+          @assert (f1(x) == 0.0 || f1(prevfloat(x)) * f1(nextfloat(x)) <= 0 || abs(f1(x)) <= eps(float(x0))^(1/2))
+      catch err
+          if !isa(err, PossibleExtremaReached)
+              throw(err)
+          end
+      end
 end
 
 ## make a graphic comparing values
