@@ -17,19 +17,6 @@ _iszero{T <: (@compat Union{Integer, Rational})}(b::T; kwargs...) = b == 0
 _iszero{T<:AbstractFloat}(b::T; xtol=1) = abs(b) <= 2*xtol*eps(T)
 
 
-## extend to evaluate with other polynomials
-## Allows for composition of polys
-import Polynomials: polyval
-function polyval{T<:Number, S<:Number}(p::Poly{T}, u::Poly{S})
-    ## mangle T, S???
-    p.var == u.var || DomainError() # "Symbols must match"
-    degree(p) == 0 && return(p)
-    y = p[degree(p)]
-    for i = (degree(p)-1):-1:0
-        y = p[i] + u*y
-    end
-    return y
-end
 
 ## return (q,r) with p(x) = (x-c)*q(x) + r using synthetic division
 function Base.divrem(p::Poly, c::Number)
@@ -331,9 +318,9 @@ function real_roots{T <: QQ}(p::Poly{T})
     
     if degree(p) > 0
         new_rts = real_roots_sqfree(p)
-        [rts; new_rts]
+        sort([rts; new_rts])
     else
-        rts
+        sort(rts)
     end
 end
 
@@ -381,7 +368,7 @@ end
 
 # find rational roots of p ∈ Q[x] by using lcm(p)*p ∈ Z[x]
 function rational_roots{T <: Integer}(p::Poly{Rational{T}})
-    q = lcm(map(r -> r.den, p.a)) * p
+    q = lcm(map(r -> r.den, coeffs(p))) * p
     q = convert(Poly{BigInt}, q)
     rational_roots(q)
 end

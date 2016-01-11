@@ -373,7 +373,7 @@ For other subintervals do quick search with a derivative free method.
 
 """
 function find_zeros(f, a::Real, b::Real, args...;
-                    no_pts::Int=251,
+                    no_pts::Int=100,
                     ftol::Real=10*eps(), reltol::Real=10*eps(),
                     kwargs...)
 
