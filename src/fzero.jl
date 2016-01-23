@@ -362,14 +362,18 @@ function distinct(f, a, b, d, e)
 end
 
 
-
 """
-Searches for simple zeros in an interval [a, b].
+Searches for zeros  of `f` in an interval [a, b].
 
-Split interval [a,b] in to `no_pts` subintervals. 
+Basic algorithm used:
 
-For each bracketing interval find a bracketed zero.
-For other subintervals do quick search with a derivative free method.
+* split interval [a,b] into `no_pts` subintervals. 
+* For each bracketing interval finds a bracketed zero.
+* For other subintervals does a quick search with a derivative-free method.
+
+If there are many zeros relative to the number of points, the process
+is repeated with more points, in hopes of finding more zeros for
+oscillating functions.
 
 """
 function find_zeros(f, a::Real, b::Real, args...;
@@ -383,7 +387,7 @@ function find_zeros(f, a::Real, b::Real, args...;
 
 
     ## Look in [ai, bi)
-    for i in 1:no_pts
+    for i in 1:(no_pts+1)
         ai,bi=xs[i:i+1]
         if isapprox(f(ai), 0.0, rtol=reltol, atol=ftol)
             push!(rts, ai)
@@ -402,7 +406,7 @@ function find_zeros(f, a::Real, b::Real, args...;
     ## finally, b?
     isapprox(f(b), 0.0, rtol=reltol, atol=ftol) && push!(rts, b)
 
-    ## redo if it appears function osciallates alot in this interval...
+    ## redo if it appears function oscillates alot in this interval...
     if length(rts) > (1/4) * no_pts
         return(find_zeros(f, a, b, args...; no_pts = 10*no_pts, ftol=ftol, reltol=reltol, kwargs...))
     else
