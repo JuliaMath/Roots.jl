@@ -29,7 +29,7 @@ export fzero,
 include("fzero.jl")
 include("adiff.jl")
 include("derivative_free.jl")
-include("newton.jl")
+#include("newton.jl")
 include("SOLVE.jl")
 include("Polys/polynomials.jl")
 include("Polys/agcd.jl")

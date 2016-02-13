@@ -9,30 +9,62 @@
 ## 16th order ones. The 5th and 8th seem more robust to
 ## initial condition and take fewer function calls than the 16th.
 
-## A type to hold a function that we want to find the zero of.
-abstract ZeroFunction 
-type ZeroFunction1{T<:AbstractFloat} <: ZeroFunction
+## Use iterator for solving
+
+type ZeroType{T <: AbstractFloat, S <: AbstractFloat}
     f
-    x::Vector{T}
-    fxn::Vector{T}
-    update::Function
-    state::Symbol
-    how::Symbol
-    iterations::Int
-    fncalls::Int
-    ftol::T
-    xtol::T
-    xtolrel::T
-    β::Float64
-end
+    fp
+    fpp
     
-function Base.writemime(io::IO, ::MIME"text/plain", F::ZeroFunction)
-    if F.state == :converged
-        print(io, "xn=$(F.x[end]), iterations=$(F.iterations), fncalls=$(F.fncalls)")
-    else
-        print(io, "convergence failed, iterations=$(F.iterations), fncalls=$(F.fncalls)")
-    end
+    update
+
+    xn::Vector{T}
+    fxn::Vector{S}
+
+    xtol
+    xtolrel
+    ftol
+    state::Symbol
+    
+    cnt
+    maxcnt
+    fevals
+    maxfevals
 end
+
+function Base.start(o::ZeroType)
+    (o.xn[end], o.fxn[end])
+end
+
+function Base.next(o::ZeroType, state)
+    o.update(o)
+    o.cnt = o.cnt + 1
+    o.xn[end], (o.xn[end], o.fxn[end])
+end
+
+
+function Base.done(o::ZeroType, state)
+    if o.state == :converged
+        ## check for near convergence
+        (norm(o.fxn[end]) <= sqrt(o.ftol)) && return true
+        throw(ConvergenceFailed("Algorithm stopped with xn=$(o.xn[end]), f(xn)=$(o.fxn[end])"))
+    end
+        
+    o.cnt > o.maxcnt && throw(ConvergenceFailed("Too many steps taken"))
+    o.fevals > o.maxfevals  && throw(ConvergenceFailed("Too many function calls taken"))
+    isnan(o.fxn[end]) && throw(ConvergenceFailed("NaN produced by algorithm"))
+    isinf(o.xn[end]) && throw(ConvergenceFailed("Algorithm escaped to oo"))
+                               
+    # return turn if f(xn) \approx 0 or xn+1 - xn \approx 0
+    lambda = max(1, abs(o.xn[end]))
+    xtol = o.xtol +  lambda * o.xtolrel
+    ftol = lambda * o.ftol
+
+    norm(o.fxn[end]) < ftol && return true
+    (length(o.xn)>1 && norm(o.xn[end] - o.xn[end-1]) <= xtol) && return true
+    false
+end
+
 
 ## printing utility, borrowed idea of showing change from previous from @stevengj. Only works at REPL
 function printdiff(x1, x0, color=:red)
@@ -50,9 +82,9 @@ function printdiff(x1, x0, color=:red)
 end
 
 # show output
-function verbose_output(out::ZeroFunction)
-    println("Steps = $(out.iterations), function calls = $(out.fncalls); steps:")
-    xs = copy(out.x)
+function verbose_output(out::ZeroType)
+    println("Steps = $(out.cnt), function calls = $(out.fevals); steps:")
+    xs = copy(out.xn)
     x0 = shift!(xs)
     println(x0)
     while length(xs) > 0
@@ -64,320 +96,338 @@ function verbose_output(out::ZeroFunction)
 end
 
 
-## Algorithm to find a zero
-function _findzero(f::ZeroFunction,
-                   maxeval::Int= 100;
-                   maxfneval::Int=2000,
-                   kwargs...
-                   )
+##################################################
+isissue(x) = isnan(x) || isinf(x)
 
-    ## trivial check
-    if abs(f.fxn[end]) <= max(1, abs(f.x[end])) * f.ftol
-        f.state = :converged
-        f.how = :ftol
-        return(f)
-    end
-    
-    f.state = :running
-    
-    while f.iterations < maxeval
 
-        f.iterations += 1
-        f.update(f)
-        f.state != :running && return(f)
-
-        xn = f.x[end]
-        fxn = f.fxn[end]
-
-        xtol = f.xtol +  max(1, abs(xn)) * f.xtolrel
-        ftol = max(1, abs(xn)) * f.ftol
+function secant_itr(f, x0::Real, x1::Real; xtol=4*eps(), xtolrel=4*eps(), ftol=4*eps(), maxsteps=100, maxfnevals=100)
+    update = (o) -> begin
+        xn_1, xn = o.xn[(end-1):end]
+        fxn_1, fxn = o.fxn[(end-1):end]
         
-        if length(f.x) >= 2
-            xn_1  = f.x[end-1]
-            if abs(xn - xn_1) <= xtol
-                ## possible convergence, but still expect fxn to be small
-                if abs(fxn) > sqrt(ftol)
-                    f.state = :failed
-                    f.how = :xtol_not_ftol
-                else
-                    f.state = :converged
-                    f.how = :xtol
-                end
-                break
-            end
+        xn1 = xn - fxn * (xn - xn_1) / (fxn - fxn_1)
+        fxn1 = o.f(xn1); o.fevals = o.fevals + 1
+        
+        push!(o.xn, xn1)
+        push!(o.fxn, fxn1)
+
+    end
+    out = ZeroType(f, nothing, nothing, update,
+                   [float(x0), float(x1)], [float(f(x0)), float(f(x1))],
+                   xtol, xtolrel, ftol, :not_converged,
+                   0, maxsteps, 2, maxfnevals)
+
+    out
+end
+
+function secant_method(f, x0::Real, x1::Real;
+                       xtol=4*eps(), xtolrel=4*eps(), ftol=4eps(),
+                       maxsteps::Int=100, maxfnevals=100,
+                       verbose::Bool=false)
+    
+    o = secant_itr(f, float(x0), float(x1);
+                   xtol=xtol, xtolrel=xtolrel, ftol=ftol,
+                   maxsteps=maxsteps, maxfnevals=maxfnevals)
+    try
+        collect(o)
+        verbose && verbose_output(o)        
+    catch e
+        verbose && verbose_output(o)        
+        rethrow(e)
+    end
+    o.xn[end]
+end
+
+
+
+function steffensen_itr(f, x0::Real;
+                   xtol=4*eps(), xtolrel=4*eps(), ftol=4*eps(),
+                   maxsteps=100, maxfnevals=100)
+    update = (o) -> begin
+        xn = o.xn[end]
+        h = fxn = o.fxn[end]
+        
+        xn1 = xn - fxn / (o.f(xn + fxn) - fxn) * fxn;    o.fevals = o.fevals + 1
+        fxn1 = o.f(xn1);  o.fevals = o.fevals + 1
+        
+        push!(o.xn, xn1)
+        push!(o.fxn, fxn1)
+
+    end
+        
+    out = ZeroType(f, nothing, nothing, update, [float(x0)], [float(f(x0))],
+                   xtol, xtolrel, ftol, :not_converged, 
+                   0, maxsteps, 1, maxfnevals)
+
+    out
+end
+function steffensen_method(f, x0::Real;
+                       xtol=4*eps(), xtolrel=4*eps(), ftol=4eps(),
+                       maxsteps::Int=100, maxfnevals=100,
+                       verbose::Bool=false)
+
+    o = steffensen_itr(f, float(x0); 
+                  xtol=xtol, xtolrel=xtolrel, ftol=ftol,
+                  maxsteps=maxsteps, maxfnevals=maxfnevals)
+    collect(o)
+    verbose && verbose_output(o)
+    o.xn[end]
+end
+steffensen(args...; kwargs...) = steffensen_method(args...; kwargs...)
+
+## Newton
+function newton_itr(f, fp, x0; 
+                    xtol=4*eps(), xtolrel=4*eps(), ftol=4*eps(),
+                    maxsteps=100, maxfnevals=100)
+    update =  (o) -> begin
+        xn = o.xn[end]
+        fxn = o.fxn[end]
+        fpxn = o.fp(xn);  o.fevals = o.fevals + 1
+
+        xn1 = xn - fxn / fpxn
+        fxn1 = o.f(xn1);  o.fevals = o.fevals + 1
+
+        push!(o.xn, xn1)
+        push!(o.fxn, fxn1)
+
+    end
+        
+    out = ZeroType(f, fp, nothing, update, [float(x0)], [float(f(x0))],
+                   xtol, xtolrel, ftol,:not_converged, 
+                   0, maxsteps, 1, maxfnevals)
+
+
+    out
+end
+function newton_method{T<:Number}(f, fp, x0::T;
+                       xtol=4*eps(), xtolrel=4*eps(), ftol=4eps(),
+                       maxsteps::Int=100, maxfnevals=100,
+                       verbose::Bool=false)
+
+    o = newton_itr(f, fp, float(x0);
+                  xtol=xtol, xtolrel=xtolrel, ftol=ftol,
+                  maxsteps=maxsteps, maxfnevals=maxfnevals)
+
+    collect(o)
+    verbose && verbose_output(o)
+    o.xn[end]
+end
+newton_method(f, x::Real; kwargs...) = newton_method(f, D(f), x; kwargs...)
+newton(args...; kwargs...) = newton_method(args...; kwargs...)
+
+## Halley
+function halley_itr(f, fp, fpp, x0::Real;
+                   xtol=4*eps(), xtolrel=4*eps(), ftol=4*eps(),
+                   maxsteps=100, maxfnevals=100)
+
+    update = (o) -> begin
+        xn = o.xn[end]
+        fxn = o.fxn[end]
+        fpxn = o.fp(xn)
+        fppxn = o.fpp(xn)
+
+        xn1 = xn - 2fxn*fpxn / (2*fpxn*fpxn - fxn * fppxn)
+        fxn1 = o.f(xn1)
+
+        o.fevals = o.fevals + 3
+        push!(o.xn, xn1)
+        push!(o.fxn, fxn1)
+
+    end
+        
+    out = ZeroType(f, fp, fpp, update, [float(x0)], [float(f(x0))],
+                   xtol, xtolrel, ftol,:not_converged, 
+                   0, maxsteps, 1, maxfnevals)
+
+    out
+end
+function halley_method(f, fp, fpp, x0::Real;
+                       xtol=4*eps(), xtolrel=4*eps(), ftol=4eps(),
+                       maxsteps::Int=100, maxfnevals=100,
+                       verbose::Bool=false)
+
+    o = halley_itr(f, fp, fpp, float(x0);
+                  xtol=xtol, xtolrel=xtolrel, ftol=ftol,
+                  maxsteps=maxsteps, maxfnevals=maxfnevals)
+
+    collect(o)
+    verbose && verbose_output(o)
+    o.xn[end]
+end
+halley_method(f::Function, fp::Function, x::Number; kwargs...) = halley_method(f, fp, fp', x; kwargs...)
+halley_method(f::Function, x::Number; kwargs...) = halley_method(f, D(f), D(f,2), x; kwargs...)
+halley(args...; kwargs...) = halley_method(args...; kwargs...)
+
+function kss5_itr(f, x0::Real;
+             xtol=4*eps(), xtolrel=4*eps(), ftol=4*eps(),
+             maxsteps=100, maxfnevals=100)
+
+    update = o -> begin
+        xn = o.xn[end]
+        fxn = o.fxn[end]
+
+        wn = xn + fxn
+        fwn = o.f(wn); o.fevals = o.fevals + 1
+
+        fwnxn_i = (wn - xn) / (fwn - fxn)
+        if isissue(fwnxn_i)
+            o.state = :converged
+            return
         end
         
-        if abs(fxn) <= ftol
-            f.state = :converged
-            f.how = :ftol
-            break
-        end
-        if f.fncalls >= maxfneval
-            f.state = :failed
-            f.how = :maxfneval
-            break
-        end
-    end
-    
-    if f.state == :running
-        if f.iterations >= maxeval
-            f.state = :failed
-            f.how = :maxeval
+        yn = xn - fxn * fwnxn_i
+        fyn = o.f(yn); o.fevals = o.fevals + 1
         
-        else
-            f.state = :huh
+        zn = xn - (fxn - fyn) * fwnxn_i
+        fzn = o.f(zn); o.fevals = o.fevals + 1
+        
+        fxnyn_i =  (xn - yn) / (fxn - fyn)
+        fwnyn_i = (wn - yn) / (fwn - fyn)
+        fwnxn = (fwn - fxn) / (wn - xn)
+        
+        if (isissue(fwnxn_i) | isissue(fwnyn_i))
+            push!(o.xn, yn)
+            push!(o.fxn, fyn)
+            o.state = :converged
+            return
         end
+        
+        xn1 = zn  - fzn  * fwnxn * fxnyn_i * fwnyn_i
+        fxn1 = o.f(xn1); o.fevals = o.fevals + 1
+        
+
+        push!(o.xn, xn1)
+        push!(o.fxn, fxn1)
     end
 
-    f
-end
+    out = ZeroType(f, nothing, nothing, update, [float(x0)], [float(f(x0))],
+                   xtol, xtolrel, ftol,:not_converged, 
+                   0, maxsteps, 1, maxfnevals)
 
-## Basic structure of the functions (orders 16, 8, 5, 2, 1)
-function _function_template_(updatefn, f, x0; kwargs...)
-    x = map(float,[x0;])
-    
-    D = [k => v for (k,v) in kwargs]
-    xtol    = get(D, :xtol,     100*eps(eltype(x)))
-    xtolrel = get(D, :xtolrel,  eps(eltype(x)))
-    ftol    = get(D, :ftol,     100*eps(eltype(x)))
-    maxeval = get(D, :maxeval,  100)
-    beta    = get(D, :beta,     1.0)
-
-    F = ZeroFunction1(f,
-                      x,
-                      map(f,x),
-                      updatefn,
-                      :na, :na,
-                      0, length(x),
-                      ftol, xtol, xtolrel,
-                      float(beta))
-    
-    
-    _findzero(F, maxeval; kwargs...)
+    out
 end
 
 
-## check if abs(fx) <= tol
-function check_ftol(fx, x, F)
-    ftol = max(1,abs(x)) * F.ftol
-    
-    if abs(fx) > ftol
-        false
-    else
-        push!(F.x, x)
-        F.state = :converged
-        F.how = :ftol
-        true
-    end
-end
+function thukral8_itr(f, x0::Real;
+             xtol=4*eps(), xtolrel=4*eps(), ftol=4*eps(),
+             maxsteps=100, maxfnevals=100)
 
-## check secant approximation
-function check_secant(s, x, F)
-    if abs(s) > max(1,abs(x)) * F.ftol
-        false
-    else
-        F.state = :failed
-        F.how = :zero_division
-        true
-    end
-end
+    update = o -> begin
+        xn = o.xn[end]
+        fxn = o.fxn[end]
 
-## 16th order, derivative free root finding algorithm
-## http://article.sapub.org/10.5923.j.ajcam.20120203.08.html
-## American Journal of Computational and Applied Mathematics
-## p-ISSN: 2165-8935    e-ISSN: 2165-8943
-## 2012;  2(3): 112-118
-## doi: 10.5923/j.ajcam.20120203.08
-## New Sixteenth-Order Derivative-Free Methods for Solving Nonlinear Equations
-## R. Thukral
-## Research Centre, 39 Deanswood Hill, Leeds, West Yorkshire, LS17 5JS, England
-## from p 114 (17)
-function thukral16_update(F)
-    xn = F.x[end]
-    fxn = F.fxn[end]
+        wn = xn + fxn
+        fwn = o.f(wn); o.fevals = o.fevals + 1
+        
+        yn = xn - fxn * fxn / (fwn - fxn)
+        fyn = o.f(yn); o.fevals = o.fevals + 1
+        
+        fynxn_1 = (yn - xn) / (fyn - fxn)
+        if isissue(fynxn_1)
+            push!(o.xn, yn); push!(o.fxn, fyn)
+            o.state = :converged
+            return
+         end
 
-    check_ftol(fxn, xn, F) && return(F)
+        phi = (1 + fyn / fwn)           # pick one of options
+        zn =  yn - phi * fynxn_1 * fyn
+        fzn = o.f(zn);  o.fevals = o.fevals + 1
+        
+        fznyn = (fzn - fyn) / (zn - yn)
+        fynxn = (fyn - fxn) / (yn - xn)
+        fznxn = (fzn - fxn) / (zn - xn)
+        fp_1  = 1 / (fznyn - fynxn + fznxn)
+         if isissue(fp_1)
+            push!(o.xn, zn); push!(o.fxn, fzn)
+            o.state = :converged
+            return
+         end
 
-    wn = xn + 1/F.β * fxn  ## steffensen step
-    fwn = F.f(wn)
-    F.fncalls += 1
-    check_ftol(fwn, wn, F) && return(F)
+        w = 1 / (1 - fzn/fwn)
+        xi = (1 - 2fyn*fyn*fyn / (fwn * fwn * fxn))
 
-    secxnwn = (fxn - fwn) / (xn - wn)
-    check_secant(secxnwn, xn, F) && return(F)
-    
-    yn = xn - fxn / secxnwn
-    fyn = F.f(yn)
-    F.fncalls += 1
-    check_ftol(fyn, yn, F) && return(F)
+        xn1 = zn - w * xi * fp_1 * fzn
+        fxn1 = o.f(xn1); o.fevals = o.fevals + 1
 
-    secxnyn = (fxn - fyn) / (xn - yn)
-    secwnyn = (fwn - fyn) / (wn - yn)
-    
-    
-    u3, u4 = fyn/fxn, fyn/fwn
-    phi1, phi2, phi3 = 1/(1 - u4), 1 + u4 + u4^2, secxnwn / secwnyn
-
-    check_secant(secxnyn, yn, F) && return(F)
-    zn = yn - phi3 * fyn / secxnyn
-    fzn = F.f(zn)
-    F.fncalls += 1
-    check_ftol(fzn, zn, F) && return(F)
-
-    u1, u2 = fzn/fxn, fzn/fwn
-    eta = 1/(1 + 2u3*u4^2)/(1 - u2)
-
-    secynzn = (fyn - fzn) / (yn - zn)
-    secxnzn = (fxn - fzn) / (xn - zn)
-    appsec = secynzn - secxnyn + secxnzn
-
-    check_secant(appsec, zn, F) && return(F)
-    an = zn - eta * fzn / appsec
-    fan = F.f(an)
-    F.fncalls += 1
-    check_ftol(fan, an, F) && return(F)
-
-    u5, u6 = fan/fxn, fan/fwn
-    sigma = 1 + u1*u2 - u1*u3*u4^2 + u5 + u6 + u1^2*u4 + u2^2*u3 + 3u1*u4^2*(u3^2 - u4^2) / secxnyn
-    secynan_1 = (yn - an)/(fyn - fan)
-    secznan_1 = (zn - an)/(fzn -fan)
-    xn1 = zn  - sigma * secynzn * fan * secynan_1 * secznan_1 
-
-    F.fxn[end] = F.f(xn1)
-    F.fncalls += 1
-    push!(F.x, xn1)
-end
-
-
-
-
-## http://www.hindawi.com/journals/ijmms/2012/493456/
-## Rajinder Thukral
-## very fast (8th order) derivative free iterative root finder.
-function thukral8_update(F)
-
-    xn = F.x[end]
-    fxn = F.fxn[end]
-    
-    if abs(fxn) <= F.ftol
-        push!(F.x, xn)
-        return(F)
+        push!(o.xn, xn1)
+        push!(o.fxn, fxn1)
     end
 
-    wn  = xn + 1/F.β * fxn  # steffensen step
-    fwn = F.f(wn)
-    F.fncalls += 1
-    check_ftol(fwn, wn, F) && return(F)
+    out = ZeroType(f, nothing, nothing, update, [float(x0)], [float(f(x0))],
+                   xtol, xtolrel, ftol,:not_converged, 
+                   0, maxsteps, 1, maxfnevals)
 
-    secwnxn = (fwn - fxn) / fxn
-    check_secant(secwnxn, xn, F) && return(F)
-    
-    yn = xn - fxn /secwnxn
-    fyn = F.f(yn)
-    F.fncalls += 1    
-    check_ftol(fyn, yn, F) && return(F)
-
-    
-    ϕ = 1/(1 - fyn/fwn)
-    secxnyn = (fxn - fyn) / (xn - yn)
-    check_secant(secxnyn, yn, F) && return(F)
-    
-    zn = yn - ϕ * fyn / secxnyn
-    fzn = F.f(zn)
-    F.fncalls += 1
-    check_ftol(fzn, zn, F) && return(F)
-
-    secynzn = (fzn - fyn) / (zn - yn)
-    secxnzn = (fzn - fxn) / (zn-xn)
-    secxnynzn = secynzn - secxnyn + secxnzn
-    check_secant(secxnynzn, zn, F) && return(F)
-    
-    ω = 1/(1 - fzn/fwn)
-    ξ = 1 - 2 * fyn * fyn * fyn / (fwn * fwn * fxn)
-    xn1 = zn - ω * ξ * fzn / secxnynzn
-
-    F.fxn[end] = F.f(xn1)
-    F.fncalls += 1
-    push!(F.x, xn1)
-end
-
-## http://www.naturalspublishing.com/files/published/ahb21733nf19a5.pdf
-## A New Fifth Order Derivative Free Newton-Type Method for Solving Nonlinear Equations
-## Manoj Kumar, Akhilesh Kumar Singh, and Akanksha Srivastava
-## Appl. Math. Inf. Sci. 9, No. 3, 1507-1513 (2015)
-function kss5_update(F)
-
-    xn = F.x[end]
-    fxn = F.fxn[end]
-    check_ftol(fxn, xn, F)
-    
-    wn = xn + 1/F.β * fxn # steffensen step
-    fwn = F.f(wn)
-    F.fncalls +=1
-    check_ftol(fwn, wn, F) && return(F)
-
-    secwnxn = (fwn - fxn) / fxn
-    check_secant(secwnxn, xn, F) && return(F)
-    
-    yn = xn - fxn / secwnxn
-    fyn = F.f(yn)
-    F.fncalls +=1
-    check_ftol(fyn, yn, F) && return(F)
-
-    zn = xn - (fxn + fyn) / secwnxn
-    fzn = F.f(zn)
-    F.fncalls +=1    
-    check_ftol(fzn, zn, F) && return(F)
-
-    secxnyn = (fxn - fyn) / (xn - yn)
-    secwnyn = (fwn - fyn) / (wn - yn)
-    check_secant(secxnyn, zn, F) && return(F)
-    check_secant(secwnyn, zn, F) && return(F)
-    
-    xn1 = zn - fzn * secwnxn / secxnyn / secwnyn
-
-    F.fxn[end] = F.f(xn1)
-    F.fncalls += 1
-    push!(F.x, xn1)
-end
-
-## Order 2 methods
-## http://en.wikipedia.org/wiki/Steffensen's_method
-function steffensen_update(F)
-    xn = F.x[end]
-    fxn = F.fxn[end]
-
-    Δf = F.f(xn+ 1/F.β * fxn) - fxn
-    F.fncalls += 1
-
-    secxn = Δf/fxn
-    check_secant(secxn, xn, F) && return(F)
-    xn1 = xn - fxn / secxn
-
-    F.fxn[end] = F.f(xn1)
-    F.fncalls += 1
-    push!(F.x, xn1)
-end
-
-## order 1
-function secmeth_update(F)
-    a,b = F.x[end-1:end]
-    fb,fa = F.fxn[end], F.fxn[end-1]
-    
-    x = b - (b-a) * fb/(fb - fa)
-
-    F.fxn[(end-1):end] =  [fb, F.f(x)]
-    F.fncalls += 1
-    push!(F.x, x)
+    out
 end
 
 
 
-thukral16(f,x0; kwargs...)    = _function_template_(thukral16_update,  f, x0; kwargs...)
-thukral8(f, x0; kwargs...)    = _function_template_(thukral8_update,   f, x0; kwargs...)
-kss5(f, x0; kwargs...)        = _function_template_(kss5_update,       f, x0; kwargs...)
-steffensen(f, x0; kwargs...)  = _function_template_(steffensen_update, f, x0; kwargs...)
-secmeth(f, x0, x1; kwargs...) = _function_template_(secmeth_update,    f, [float(x0), float(x1)]; kwargs...)
+function thukral16_itr(f, x0::Real;
+             xtol=4*eps(), xtolrel=4*eps(), ftol=4*eps(),
+             maxsteps=100, maxfnevals=100)
+
+    update = o -> begin
+        xn = o.xn[end]
+        fxn = o.fxn[end]
+
+        wn = xn + fxn
+        fwn = o.f(wn); o.fevals = o.fevals + 1
+
+        fwnxn_1 = (wn - xn) / (fwn - fxn)
+        if isissue(fwnxn_1) 
+            o.state = :converged
+            return
+         end
+        
+        yn = xn - fxn * fwnxn_1
+        fyn = o.f(yn); o.fevals = o.fevals + 1
+        
+
+        fxnyn_1 = (xn - yn) / (fxn - fyn)
+        if isissue(fwnxn_1)
+            push!(o.xn, yn); push!(o.fxn, fyn)
+            o.state = :converged
+            return
+         end
+
+        zn = yn - fyn * fxnyn_1
+        fzn = o.f(zn); o.fevals = o.fevals + 1
+
+        fznyn = (fzn - fyn) / (zn - yn)
+        fynxn = (fyn - fxn) / (yn - xn)
+        fznxn = (fzn - fxn) / (zn - xn)
+        fp_1 = 1 / (fznyn - fynxn + fznxn)
+        if isissue(fp_1)
+            push!(o.xn, zn); push!(o.fxn, fzn)
+            o.state = :converged
+            return
+        end        
+
+        an = zn - fzn * fp_1
+        fan = o.f(an); o.fevals = o.fevals + 1
+
+        fynxn = (fyn - fxn) / (yn - xn)
+        fynan_1 = (yn - an) / (fyn - fan)
+        fznan_1 = (zn - an) / (fzn - fan)
+        if isissue(fynan_1) | isissue(fznan_1)
+            push!(o.xn, an); push!(o.fxn, fan)
+            o.state = :converged
+            return
+        end  
+        
+        xn1 = an - fan * fynxn * fynan_1 * fznan_1
+        fxn1 = o.f(xn1); o.fevals = o.fevals + 1
+
+        push!(o.xn, xn1)
+        push!(o.fxn, fxn1)
+    end
+
+    out = ZeroType(f, nothing, nothing, update, [float(x0)], [float(f(x0))],
+                   xtol, xtolrel, ftol,:not_converged, 
+                   0, maxsteps, 1, maxfnevals)
+
+    out
+end
 
 
 
@@ -439,39 +489,23 @@ function derivative_free(f, x0::Real;
 
     
     if order == 16
-        out = thukral16(f, x0; ftol=ftol, xtol=xtol, xtolrel=xtolrel, maxeval=maxeval, kwargs...)
+        o = thukral16_itr(f, float(x0); ftol=ftol, xtol=xtol, xtolrel=xtolrel, maxsteps=maxeval, kwargs...)
     elseif order == 8
-        out = thukral8(f, x0; ftol=ftol, xtol=xtol, xtolrel=xtolrel, maxeval=maxeval, kwargs...)        
+        o = thukral8_itr(f, float(x0); ftol=ftol, xtol=xtol, xtolrel=xtolrel, maxsteps=maxeval, kwargs...)        
     elseif order == 5
-        out = kss5(f, x0; ftol=ftol, xtol=xtol, xtolrel=xtolrel, maxeval=maxeval, kwargs...)                
+        o = kss5_itr(f, float(x0); ftol=ftol, xtol=xtol, xtolrel=xtolrel, maxsteps=maxeval,  kwargs...)                
     elseif order == 2
-        out = steffensen(f, x0; ftol=ftol, xtol=xtol, xtolrel=xtolrel, maxeval=maxeval, kwargs...)
+        o = steffensen_itr(f, float(x0); ftol=ftol, xtol=xtol, xtolrel=xtolrel, maxsteps=maxeval,  kwargs...)
     elseif order == 1
         x1 = x0 + 1e-4
-        out = secmeth(f, x1, x0; ftol=ftol, xtol=xtol, xtolrel=xtolrel, maxeval=maxeval, kwargs...)
+        o = secant_itr(f, float(x1), float(x0); ftol=ftol, xtol=xtol, xtolrel=xtolrel, maxsteps=maxeval,  kwargs...)
     else
       throw(ArgumentError())
     end
 
-    if verbose
-        verbose_output(out)
-    end
-        
-    if out.state == :converged
-        out.x[end]
-    else
-        ## failed
-        steps = out.iterations > 1 ? "steps" : "step"
-        steps_msg = "$(out.iterations) $steps"
-        msg = ""
-        if out.how == :zero_division
-            msg = " Attempted division by 0."
-        elseif out.how == :xtol_not_ftol
-            msg = " Tolerance in Δx is small, but f(xn) is not within tolerance."
-        elseif out.how == :maxfneval
-            steps_msg = "$(out.fncalls) function calls"
-        end
-        throw(ConvergenceFailed("Failed to converge in $steps_msg.$msg Last value was $(out.x[end])."))
-    end
+    
+    collect(o)
+    verbose && verbose_output(o)
+    o.xn[end]
 end
 
