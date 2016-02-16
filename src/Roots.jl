@@ -233,7 +233,8 @@ graphically, if possible.
 function fzeros{T <: Real}(f, bracket::Vector{T}; kwargs...) 
     ## check if a poly
     try
-        filter(x -> bracket[1] <= x <= bracket[2], real_roots(convert(Poly, f)))
+        out = filter(x -> bracket[1] <= x <= bracket[2], real_roots(convert(Poly, f)))
+        map(x -> convert(eltype(f(0.0)), x), out)
     catch e
         find_zeros(f, float(bracket[1]), float(bracket[2]); kwargs...)
     end
