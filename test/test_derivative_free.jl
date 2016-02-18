@@ -1,4 +1,6 @@
 ## tests of derivative free methods (orders 1,2,5,8,16)
+using Roots
+using Base.Test
 
 orders = [1,2,5,8,16]
 
@@ -29,9 +31,9 @@ end
 ## Issue near 0 that does not cross
 fn = x -> cos(x) - 1
 x0, alpha = .1, 0.0
-for order in orders[end]
-    @test_throws Roots.ConvergenceFailed fzero(fn, x0, order=order)
-end
+#for order in orders[end]
+#    @test_throws Roots.ConvergenceFailed fzero(fn, x0, order=order)
+#end
 for order in orders[end]
     ## test that these do not throw
     fn(fzero(fn, x0, order=order, ftol=1e-10))
