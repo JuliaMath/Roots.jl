@@ -3,7 +3,7 @@ using Polynomials
 using Base.Test
 
 ## can use functions
-f(x) = (x-1)*(x-2)^2*(x-3)^3
+f = x -> (x-1)*(x-2)^2*(x-3)^3
 zs, mults = multroot(f)
 @test mults == [1,2,3]
 
@@ -31,14 +31,14 @@ fzeros(x -> x^5 - 1.5x + 1)
 ## for polynomials in Z[x], Q[x] can use algorithm to be accurate for higher degree
 
 @test fzeros(x -> x - 1)[1] == 1.0 # linear
-f(x) = (x-1)*(x-2)*(x-3)^3*(x^2+1)
+f = x -> (x-1)*(x-2)*(x-3)^3*(x^2+1)
 rts = fzeros(f)
 rts = Float64[r for r in rts]
 @test maximum(abs(sort(rts) - [1.0, 2.0, 3.0])) <= 1e-12
 x = poly([big(0)])
 p = prod([x - i for i in 1:20])
 Roots.real_roots(p) ## can find this
-f(x) = (x-20)^5 - (x-20) + 1
+f = x -> (x-20)^5 - (x-20) + 1
 a = fzeros(f)[1]
 @assert abs(f(a)) <= 1e-14
 
@@ -60,15 +60,15 @@ factor(convert(Poly{Rational{Int}}, x -> (x-1//1)^2 * (x-1 - delta)^2 * (x-1 + d
 
 
 ## Test conversion of polynomials to Int
-f(x) = 3x^3 - 2x
+f = x -> 3x^3 - 2x
 convert(Polynomials.Poly{Int}, f)
-f(x) = (3x^3 - 2x)/3
+f = x -> (3x^3 - 2x)/3
 convert(Polynomials.Poly{Int}, f)
-f(x) = x^2 / x # rational functions fails
+f = x ->  x^2 / x # rational functions fails
 @test_throws MethodError convert(Polynomials.Poly{Int64}, f)
-f(x) = (x^2 + x)^2
+f = x ->  (x^2 + x)^2
 convert(Polynomials.Poly{Int}, f)
-f(x) = (x^2 + x)^(1/2)
+f = x ->  (x^2 + x)^(1/2)
 @test_throws MethodError convert(Polynomials.Poly{Int64}, f)
 
 
