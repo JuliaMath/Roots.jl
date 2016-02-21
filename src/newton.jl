@@ -1,113 +1,53 @@
-## A collection of historical methods for pedagogical purposes.
-##
-## secant_method, newton, and halley
-##
-## These have an argument `verbose` that can be specified to get a trace of the algorithm
+## Classical derivative-based, iterative, root-finding algorithms: Newton and Halley
 
-function fn_template(meth, args...;
-                     verbose::Bool=false,kwargs...)
-    
-    out = meth(args...; verbose=verbose, kwargs...)
-    
-    if verbose
-        verbose_output(out)
+## Newton
+function newton_itr(f, fp, x0; 
+                    xtol=4*eps(), xtolrel=4*eps(), ftol=4*eps(),
+                    maxsteps=100, maxfnevals=100)
+    update =  (o) -> begin
+        xn = o.xn[end]
+        fxn = o.fxn[end]
+        fpxn = o.fp(xn)
+        incfn(o)
+
+        xn1 = xn - fxn / fpxn
+        fxn1 = o.f(xn1)
+        incfn(o)
+
+        push!(o.xn, xn1)
+        push!(o.fxn, fxn1)
+
     end
-    
-    if out.state == :converged
-        out.x[end]
-    else
-        steps = out.iterations > 1 ? "steps" : "step"
-        throw(ConvergenceFailed("Failed to converge in $(out.iterations) $steps."))
+
+    x, fx = promote(float(x0), f(float(x0)))
+    out = ZeroType(f, fp, nothing, update, [x], [fx],
+                   xtol, xtolrel, ftol,:not_converged, 
+                   0, maxsteps, 1, maxfnevals)
+
+
+    out
+end
+
+
+
+function newton_method{T}(f, fp, x0::T;
+                       xtol=4*eps(), xtolrel=4*eps(), ftol=4eps(),
+                       maxsteps::Int=100, maxfnevals=100,
+                       verbose::Bool=false)
+
+    o = newton_itr(f, fp, x0;
+                  xtol=xtol, xtolrel=xtolrel, ftol=ftol,
+                  maxsteps=maxsteps, maxfnevals=maxfnevals)
+
+
+    for x in o
+        nothing
     end
+    verbose && verbose_output(o)
+    o.xn[end]
 end
+newton_method{T<:AbstractFloat}(f, x::T; kwargs...) = newton_method(f, D(f), x; kwargs...)
 
-## order 1 secant method
-
-"""
-
-Implementation of secant method: `x_n1 = x_n - f(x_n) * f(x_n)/ (f(x_n) - f(x_{n-1}))`
-
-Arguments:
-
-* `f::Function` -- function to find zero of
-
-* `x0::Real` -- initial guess is [x0, x1]
-
-* `x1::Real` -- initial guess is [x0, x1]
-
-Keyword arguments:
-
-* `ftol`. Stop iterating when |f(xn)| <= max(1, |xn|) * ftol.
-
-* `xtol`. Stop iterating when |xn+1 - xn| <= xtol + max(1, |xn|) * xtolrel
-
-* `xtolrel`. Stop iterating when |xn+1 - xn| <= xtol + max(1, |xn|) * xtolrel
-
-* `maxeval`. Stop iterating if more than this many steps, throw error.
-
-* `maxfneval`. Stop iterating if more than this many function calls, throw error.
-
-* `verbose::Bool=false` Set to `true` to see trace.
-
-"""
-secant_method(f::Function, x0::Real, x1::Real;
-              kwargs...) = fn_template(secmeth, f, x0, x1; kwargs...)
-
-
-
-
-## Add derivatives for newton, halley
-type ZeroFunction3{S<:Number, T<:AbstractFloat} <: ZeroFunction
-    f
-    fp
-    fpp
-    x::Vector{S}
-    fxn::Vector{S}
-    update::Function
-    state::Symbol
-    how::Symbol
-    iterations::Int
-    fncalls::Int
-    ftol::T
-    xtol::T
-    xtolrel::T
-end
-
-
-# Newton-Raphson method (quadratic convergence)
-function newton_update(F)
-    x0 = F.x[end]
-    x1 = x0 - F.fxn[end] / F.fp(x0)
-
-    F.fncalls += 2
-    F.fxn[end] = F.f(x1)
-    push!(F.x, x1)
-end
- 
-
-# this version uses ZeroFunctionComp for Complex numbers
-function newtonmeth(f, fp,  x0::Number; kwargs...)
-
-    x   = float(copy(x0))
-    tol = eps( eltype(real(x)) )
-    D = [k => v for (k,v) in kwargs]
-    xtol    = get(D, :xtol   , 100*tol)
-    xtolrel = get(D, :xtolrel, tol    )
-    ftol    = get(D, :ftol   , 100*tol)
-
-    maxeval   = get(D, :maxeval  , 100)
-    maxfneval = get(D, :maxfneval, 2000)
-
-    F = ZeroFunction3(f, fp, f,
-                      [x;],
-                      [f(x)],
-                      newton_update,
-                      :initial, :na,
-                      0, 1,
-                      xtol, ftol, xtolrel)
-
-    _findzero(F, maxeval; maxfneval=maxfneval)
-end
 """
 
 Implementation of Newton's method: `x_n1 = x_n - f(x_n)/ f'(x_n)`
@@ -135,45 +75,55 @@ Keyword arguments:
 * `verbose::Bool=false` Set to `true` to see trace.
 
 """
-# newton(f, fp, x0) now accepts a Complex guess
-newton(f, fp, x0::Number; kwargs...) = fn_template(newtonmeth, f, fp, x0; kwargs...)
-newton(f::Function, x0::Number; kwargs...) =  newton(f, D(f), float(x0); kwargs...)
-newton(p::Poly, x0::Number; kwargs...) = newton(convert(Function, p), float(x0); kwargs...)
+newton{T<:Number}(f, fp, x0::T; kwargs...) = newton_method(f, fp, float(x0); kwargs...)
+newton{T<:Real}(f, x0::T; kwargs...) = newton(f, D(f), float(x0); kwargs...)
 
-# Halley's method (cubic convergence)
-function halley_update(F)
-    xn = F.x[end]
-    fxn, fpxn, fppxn = F.fxn[end], F.fp(xn), F.fpp(xn)
 
-    xn1 = xn - 2fxn*fpxn / (2*fpxn*fpxn - fxn * fppxn)
 
-    F.fxn[end] = F.f(xn1)
-    F.fncalls += 3
-    push!(F.x, xn1)
+## Halley's method (cubic convergence)
+function halley_itr(f, fp, fpp, x0::Real;
+                   xtol=4*eps(), xtolrel=4*eps(), ftol=4*eps(),
+                   maxsteps=100, maxfnevals=100)
+
+    update = (o) -> begin
+        xn = o.xn[end]
+        fxn = o.fxn[end]
+        fpxn = o.fp(xn)
+        fppxn = o.fpp(xn)
+
+        xn1 = xn - 2fxn*fpxn / (2*fpxn*fpxn - fxn * fppxn)
+        fxn1 = o.f(xn1)
+
+        incfn(o, 3)
+        push!(o.xn, xn1)
+        push!(o.fxn, fxn1)
+
+    end
+
+    x, fx = promote(float(x0), f(float(x0)))
+    out = ZeroType(f, fp, fpp, update, [x], [fx],
+                   xtol, xtolrel, ftol,:not_converged, 
+                   0, maxsteps, 1, maxfnevals)
+
+    out
 end
 
-function halleymeth(f, fp, fpp, x0::Real, args...;
-                 kwargs...)
+function halley_method{T<:AbstractFloat}(f, fp, fpp, x0::T;
+                       xtol=4*eps(), xtolrel=4*eps(), ftol=4eps(),
+                       maxsteps::Int=100, maxfnevals=100,
+                       verbose::Bool=false)
 
-    x = float(x0)
-    D = [k => v for (k,v) in kwargs]    
-    xtol    = get(D, :xtol, 100*eps(eltype(x)))
-    xtolrel = get(D, :xtolrel, eps(eltype(x)))
-    ftol    = get(D, :ftol, 100*eps(eltype(x)))
-    
-    maxeval = get(D, :maxeval, 100)
-    maxfneval = get(D, :maxfneval, 2000)
-    
-    F = ZeroFunction3(f, fp, fpp,
-                      [x;],
-                      [f(x)],
-                      halley_update,
-                      :initial, :na,
-                      0, 1,
-                      xtol, ftol, xtolrel)
+    o = halley_itr(f, fp, fpp, float(x0);
+                  xtol=xtol, xtolrel=xtolrel, ftol=ftol,
+                  maxsteps=maxsteps, maxfnevals=maxfnevals)
 
-    _findzero(F, maxeval; maxfneval=maxfneval)
+    for x in o
+        nothing
+    end
+    verbose && verbose_output(o)
+    o.xn[end]
 end
+
 
 """
 
@@ -202,6 +152,6 @@ Keyword arguments:
 * `verbose::Bool=false` Set to `true` to see trace.
 
 """
-halley(f, fp, fpp, x0::Real; kwargs...) = fn_template(halleymeth, f, fp, fpp, x0; kwargs...)
-halley(f::Function, x0::Real; kwargs...) = halley(f, D(f), D2(f), float(x0); kwargs...)
-halley(p::Poly, x0::Real; kwargs...) = halley(convert(Function, p), float(x0); kwargs...)
+halley(f,fp, fpp, x::Number; kwargs...) = halley_method(f, fp, fpp, float(x); kwargs...)
+halley(f, fp, x::Real; kwargs...) = halley(f, fp, D(fp), x; kwargs...)
+halley(f, x::Real; kwargs...) = halley(f, D(f), D(f,2), x; kwargs...)

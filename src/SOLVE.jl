@@ -27,14 +27,13 @@ While this is slower than fzero with order 2, 5, 8, or 16 it is
 more robust to the initial condition.
 
 """
-function SOLVE(f, x0::Real;
-               ftol::Real=10*eps(one(float(x0))),
+function SOLVE{T<:AbstractFloat}(f, x0::T;
+               ftol::Real=10*eps(one(x0)),
                xtol::Real=zero(x0),
                xtolrel::Real=zero(x0),
                maxeval::Int=30,
                verbose::Bool=false)
 
-    x0 =  float(x0)
     fx0 = f(x0)
     abs(fx0) <= ftol && return(x0)
     
@@ -49,9 +48,9 @@ function SOLVE(f, x0::Real;
         end
     catch ex
         if isa(ex, StateConverged)
-            return ex.x0
+            return convert(T,ex.x0)
         elseif isa(ex, PossibleExtremaReached)
-            guess = ex.x0
+            guess = convert(T, ex.x0)
             if sign(f(nextfloat(guess))) * sign(f(prevfloat(guess))) <= 0
                 return guess
             end
@@ -111,7 +110,7 @@ end
 ## assume f(b) > 0
 ## steffensen of secant line method, but we don't assume a bracket
 ## we "bend" large trajectories 
-function secant_method_no_bracket(f, a, b;
+function secant_method_no_bracket{T<:AbstractFloat}(f, a::T, b::T;
                                   ftol=10*eps(one(float(a))), xtol::Real=10*eps(one(float(a))),
                                   xtolrel::Real=10*eps(one(float(a))),
                                   maxeval::Int=100, verbose::Bool=false)
@@ -140,9 +139,12 @@ function secant_method_no_bracket(f, a, b;
                 throw(StateConverged(beta))
             else
                 ## try a higher order method? May get us there
-                out = kss5(f, beta, ftol=float(ftol), xtol=float(xtol), reltol=float(xtolrel))
-                xn = out.x[end]
-                if out.state == :converged && !isnan(xn) && !isinf(xn)
+                o = thukral8_itr(f, beta, xtol=float(xtol), xtolrel=float(xtolrel), ftol = float(ftol))
+                for (x,fx) in o
+                    nothing
+                end
+                xn = o.xn[end]
+                if o.state == :converged && !isnan(xn) && !isinf(xn)
                     throw(StateConverged(xn))
                 else
                     throw(Dithering(beta))

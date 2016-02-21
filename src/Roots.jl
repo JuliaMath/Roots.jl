@@ -20,7 +20,7 @@ export roots
 export fzero,
        fzeros,
        newton, halley,
-       secant_method, steffensen,
+       secant_method, steffensen, 
        multroot, 
        D, D2
 
@@ -28,9 +28,9 @@ export fzero,
 ## load in files
 include("fzero.jl")
 include("adiff.jl")
-include("derivative_free.jl")
-#include("newton.jl")
 include("SOLVE.jl")
+include("derivative_free.jl")
+include("newton.jl")
 include("Polys/polynomials.jl")
 include("Polys/agcd.jl")
 include("Polys/multroot.jl")
@@ -66,9 +66,9 @@ This is a polyalgorithm redirecting different algorithms based on the value of `
 
 """
 function fzero(f, x0::Real; kwargs...)
-    x0 = float(x0)
-    isinf(x0) && throw(ConvergenceFailed("An initial value must be finite"))
-    derivative_free(f, float(x0); kwargs...)
+    x = float(x0)
+    isinf(x) && throw(ConvergenceFailed("An initial value must be finite"))
+    derivative_free(f, x; kwargs...)
 end
 
 """
@@ -233,8 +233,8 @@ graphically, if possible.
 function fzeros{T <: Real}(f, bracket::Vector{T}; kwargs...) 
     ## check if a poly
     try
-        out = filter(x -> bracket[1] <= x <= bracket[2], real_roots(convert(Poly, f)))
-        map(x -> convert(eltype(f(0.0)), x), out)
+        rts = fzeros(f)
+        filter(x -> bracket[1] <= x <= bracket[2], rts)
     catch e
         find_zeros(f, float(bracket[1]), float(bracket[2]); kwargs...)
     end

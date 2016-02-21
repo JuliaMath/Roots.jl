@@ -139,3 +139,6 @@ f(x) = x + exp(x)
 ## issue with fzeros and roots near 'b'
 @test 0 <  maximum(fzeros(x -> sin(x) - 1/1000*x, 0, pi)) < pi
 
+## test secant_method_no_bracket
+@test_throws Roots.Dithering Roots.secant_method_no_bracket(x -> (cos(x) * cosh(x))^2, 4.5, 5.0)
+@test_throws Roots.StateConverged Roots.secant_method_no_bracket(x -> (cos(x) * cosh(x))^2, 4.5, 4.8, ftol=cbrt(eps()))

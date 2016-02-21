@@ -29,7 +29,7 @@ ord(x) = string(floor(Integer,log10(x)))
 orders = [0, 1, 2, 5, 8, 16]
 out = Any[]
 for (ctr, (f1, x0, xstar)) in enumerate(tests)
-    m = String[]
+    m = AbstractString[]
     for order in orders
         try 
             a = fzero(f1, x0, order=order, maxeval=100)
@@ -56,7 +56,7 @@ end
 ## values in pairs time/accuracy or ****** if failure
 ## sensitive to maxeval value
  for i in out
-     for k in 1:length(i)/2
+     for k in 1:div(length(i),2)
          @printf "%3s%3s " i[2*(k-1)+1] i[2*k]
      end
          @printf "\n"
