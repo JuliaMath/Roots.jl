@@ -129,7 +129,7 @@ end
 
 ## various tests
 ## issue #29, basically f(a) or f(b) so big we get NaN for guess from bracket.
-f(x) = x + exp(x)
+f = x ->  x + exp(x)
 @test_approx_eq fzero(f, 0, [-1e6, 1e6]) -0.5671432904097838
 
 ## test infinite range
