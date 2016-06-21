@@ -154,6 +154,14 @@ function multroot(p::Poly;
         return(roots(p), [1])
     end
 
+    ## if degree(p) == 2
+    ##     a,b,c = coeffs(p)
+    ##     discr = b^2 - 4a*c
+    ##     if discr < 0
+    ##         discr = Complex(discr, 0)
+    ##     end
+    ##     return  ( -2c / (-b - sqrt(discr)), -2c/(-b + sqrt(discr)))
+    ## end
     
     p = Poly(float(coeffs(p)))  # floats, not Int
 
