@@ -18,7 +18,7 @@ function D(f::Function, k::Int=1)
     k == 0 && return(x -> f(float(x)))
 
      if isdefined(ForwardDiff, :derivative)
-         D(x -> derivative(f, x), k-1)
+         D(x -> ForwardDiff.derivative(f, x), k-1)
      else
          if k == 1
              g = forwarddiff_gradient(v->f(v[1]), Float64)
