@@ -16,24 +16,10 @@ Wrapper around `derivative` function in `ForwardDiff`
 function D(f::Function, k::Int=1)
     k < 0 && error("The order of the derivative must be non-negative")
     k == 0 && return(x -> f(float(x)))
-
-     if isdefined(ForwardDiff, :derivative)
-         D(x -> ForwardDiff.derivative(f, x), k-1)
-     else
-         if k == 1
-             g = forwarddiff_gradient(v->f(v[1]), Float64)
-             x -> g([float(x)])[1]
-         elseif k==2
-             g1(x) = f(x[1])
-             g2 = forwarddiff_hessian(g1, Float64)
-             x -> g2([float(x), 0.0])[1,1]
-         else
-             error("Automatic derivatives for this version of ForwardDiff.jl can only handle k=0,1, or 2")
-         end
-     end
+    D(x -> ForwardDiff.derivative(f, x), k-1)
 end
 
 D2(f::Function) = D(f, 2)
 
 ## This conflicts with a definition in Calculus, but is better. 
-## Base.ctranspose(f::Function) = D(f)
+## Base.ctranspose(f::Function) = x -> ForwardDiff.derivative(f, x)

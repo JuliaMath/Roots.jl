@@ -1,6 +1,7 @@
 using Roots
 using Polynomials
 using Base.Test
+using Primes
 
 ## can use functions
 f = x -> (x-1)*(x-2)^2*(x-3)^3
@@ -56,7 +57,7 @@ factor(x -> (x-1)^2 * (x-.99)^2 * (x-1.01)^2) ## can have issue with nearby root
 
 factor(x -> (x-1//1)^2 * (x-99//100)^2 * (x-101//100)^2) ## conversion is to Float, not Rational{Int}
 delta = 1//10
-factor(convert(Poly{Rational{Int}}, x -> (x-1//1)^2 * (x-1 - delta)^2 * (x-1 + delta)^2))
+VERSION >= v"0.5.0-" && Primes.factor(convert(Poly{Rational{Int}}, x -> (x-1//1)^2 * (x-1 - delta)^2 * (x-1 + delta)^2))
 
 
 ## Test conversion of polynomials to Int

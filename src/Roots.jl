@@ -1,8 +1,7 @@
-VERSION >= v"0.4.0-dev+6521" && __precompile__()
+__precompile__(true)
 module Roots
 
 import Base: *
-import Base: factor
 
 using Polynomials
 import Polynomials: roots
@@ -248,7 +247,7 @@ Factor a polynomial function.
 
 Finds factors numerically.
 
-For polynomial functions with integer and rational tries to factor exactly over the rationals first.
+For polynomial functions over the integers or rational tries -- as naively as possible -- to factor exactly over the rationals first.
 
 Returns a dictionary with keys that are roots and values that are multiplicities
 

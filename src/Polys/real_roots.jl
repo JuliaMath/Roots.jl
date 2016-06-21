@@ -8,14 +8,21 @@
 ## Fabrice Rouillier; Paul Zimmermann
 ##
 
+if VERSION >= v"0.5.0-"
+    eval(Expr(:using, :Primes))
+    eval(Expr(:import, :Primes, :factor))
+else
+    eval(Expr(:import, :Base, :factor))
+end
+
+
 ###   Things for Polynomials   #####
 ## return "x"
-variable(p::Poly) = poly(zeros(eltype(p),1), p.var)
+## variable(p::Poly) = poly(zeros(eltype(p),1), p.var)
 
 ## make bounds work for floating point or rational.
 _iszero{T <: (@compat Union{Integer, Rational})}(b::T; kwargs...) = b == 0
 _iszero{T<:AbstractFloat}(b::T; xtol=1) = abs(b) <= 2*xtol*eps(T)
-
 
 
 ## return (q,r) with p(x) = (x-c)*q(x) + r using synthetic division
@@ -346,7 +353,8 @@ function divisors(n::Integer)
     sort(out)
 end
 
-# find rational roots of p ∈ Z[x] 
+# find rational roots of p ∈ Z[x]
+# XXX most simple-minded approach around XXX this should be improved!
 function rational_roots{T <: Integer}(p::Poly{T})
     rts = Rational{T}[]
     if p[0] == 0
@@ -378,7 +386,7 @@ end
 ## factor over the rationals, then call multroot on the remainder
 ## return d where d a dictionary of roots
 ## Okay, we should use keys which are `variable(p) - r` and not `r`...
-function Base.factor{T <: QQ}(p::Poly{T})
+function factor{T <: QQ}(p::Poly{T})
     rts = rational_roots(p)
     d = Dict{Number, Int}()
     for r in rts
@@ -396,7 +404,7 @@ function Base.factor{T <: QQ}(p::Poly{T})
 end
 
 ## Julian interface to multroot
-function Base.factor(p::Poly)
+function factor(p::Poly)
     degree(p) == 0 && DomainError() # degree 0
     d = Dict{Number, Int}()
     for (r,k) in zip(multroot(p)...)

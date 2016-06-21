@@ -1,5 +1,6 @@
-julia 0.3
+julia 0.4
 Polynomials 0.0.5
-ForwardDiff
+ForwardDiff 0.2.0
 Docile 0.4
+Primes
 Compat 0.4
