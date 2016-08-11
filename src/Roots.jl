@@ -9,11 +9,6 @@ import Polynomials: roots
 using ForwardDiff
 using Compat
 
-if VERSION < v"0.4-" 
-    eval(parse("using Docile"))
-    eval(parse("Docile.@document"))
-end
-
 export roots
 
 export fzero,
