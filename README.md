@@ -14,8 +14,8 @@ algorithm based on its argument(s):
   bracket::Vector)` call the `find_zero` algorithm to find a root
   within the bracket `[a,b]`.  When a bracket is used with `Float64`
   arguments, the algorithm is guaranteed to converge to a value `x`
-  with either `f(x) == 0` or at least one of `f(prevfloat(x)*f(x) < 0`
-  or `f(x)*f(nextfloat(x) < 0`. (The function need not be continuous
+  with either `f(x) == 0` or at least one of `f(prevfloat(x))*f(x) < 0`
+  or `f(x)*f(nextfloat(x)) < 0`. (The function need not be continuous
   to apply the algorithm, as the last condition can still hold.)
 
 * `fzero(f, x0::Real; order::Int=0)` calls a
