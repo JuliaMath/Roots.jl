@@ -1,7 +1,7 @@
 [![Roots](http://pkg.julialang.org/badges/Roots_0.4.svg)](http://pkg.julialang.org/?pkg=Roots&ver=0.4)
 [![Roots](http://pkg.julialang.org/badges/Roots_0.5.svg)](http://pkg.julialang.org/?pkg=Roots&ver=0.5)  
-Linux: [![Build Status](https://travis-ci.org/JuliaLang/Roots.jl.svg?branch=master)](https://travis-ci.org/JuliaLang/Roots.jl)
-Windows: [![Build Status](https://ci.appveyor.com/api/projects/status/github/JuliaLang/Roots.jl?branch=master&svg=true)](https://ci.appveyor.com/project/jverzani/roots-jl)
+Linux: [![Build Status](https://travis-ci.org/JuliaMath/Roots.jl.svg?branch=master)](https://travis-ci.org/JuliaMath/Roots.jl)
+Windows: [![Build status](https://ci.appveyor.com/api/projects/status/goteuptn5kypafyl?svg=true)](https://ci.appveyor.com/project/ChrisRackauckas/roots-jl)
 
 # Root finding functions for Julia
 
