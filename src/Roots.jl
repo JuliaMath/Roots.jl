@@ -5,9 +5,19 @@ import Base: *
 
 using Polynomials
 import Polynomials: roots
+using PolynomialFactors
 
 using ForwardDiff
 using Compat
+
+
+if VERSION < v"0.5.0"
+    import Base: factor
+else
+    using Primes
+    import Primes: factor
+end
+
 
 export roots
 
@@ -237,30 +247,25 @@ fzeros(f::Function, a::Real, b::Real; kwargs...) = fzeros(f, [a,b]; kwargs...)
 
 
 """
-
-Factor a polynomial function.
-
-Finds factors numerically.
-
-For polynomial functions over the integers or rational tries -- as naively as possible -- to factor exactly over the rationals first.
-
-Returns a dictionary with keys that are roots and values that are multiplicities
-
+Factor a polynomial function with rational or integer coefficients over the integers.
+Returns a dictionary with irreducible factors and their multiplicities.
+See `multroot` to do similar act over polynomials with real coefficients.
 Example:
 ```
 factor(x -> (x-1)^3*(x-2)) 
 ```
-
 """
-function Base.factor(f::Function)
-    p = poly([0.0])
+function factor(f::Function)
+    T = typeof(f(0))
+    p = Polynomials.variable(T)
     try
-        p = convert(Poly, f)
+        p = convert(Poly{T}, f)
     catch e
         throw(DomainError()) # `factor` only works with polynomial functions"
     end
-    factor(p)
+    PolynomialFactors.factor(p)
 end
+
 
 
 end

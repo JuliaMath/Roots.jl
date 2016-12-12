@@ -52,13 +52,14 @@ fzeros(x -> x^5 - 2x^4 + x^3)
 factor(x -> (x-2)^4*(x-3)^9)
 factor(x -> (x-1)^3 * (x-2)^3 * (x^5 - x + 1))
 factor(x -> x*(x-1)*(x-2)*(x^2 + x + 1))
-
-factor(x -> (x-1)^2 * (x-.99)^2 * (x-1.01)^2) ## can have issue with nearby roots (or high powers)
+factor(x -> x^2 - big(2)^256) # issue #40
 
 factor(x -> (x-1//1)^2 * (x-99//100)^2 * (x-101//100)^2) ## conversion is to Float, not Rational{Int}
 delta = 1//10
 VERSION >= v"0.5.0-" && Primes.factor(convert(Poly{Rational{Int}}, x -> (x-1//1)^2 * (x-1 - delta)^2 * (x-1 + delta)^2))
 
+## factor only works over Integers and rationals, for floats multroot can be used.
+multroot(x -> (x-1)^2 * (x-.99)^2 * (x-1.01)^2) ## can have issue with nearby roots (or high powers)
 
 ## Test conversion of polynomials to Int
 f = x -> 3x^3 - 2x

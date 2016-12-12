@@ -25,28 +25,29 @@ _iszero{T <: (@compat Union{Integer, Rational})}(b::T; kwargs...) = b == 0
 _iszero{T<:AbstractFloat}(b::T; xtol=1) = abs(b) <= 2*xtol*eps(T)
 
 
-## return (q,r) with p(x) = (x-c)*q(x) + r using synthetic division
-function Base.divrem(p::Poly, c::Number)
-    ps = copy(p.a)                    # [p0, p1, ..., pn]
-    qs = eltype(p)[pop!(ps)]           # take from right
-    while length(ps) > 0
-        unshift!(qs, c*qs[1] + pop!(ps))
-    end
-    r = shift!(qs)
-    Poly(qs, p.var), r
-end
+## ## return (q,r) with p(x) = (x-c)*q(x) + r using synthetic division
+## function Base.divrem(p::Poly, c::Number)
+##     ps = copy(p.a)                    # [p0, p1, ..., pn]
+##     qs = eltype(p)[pop!(ps)]           # take from right
+##     while length(ps) > 0
+##         unshift!(qs, c*qs[1] + pop!(ps))
+##     end
+##     r = shift!(qs)
+##     Poly(qs, p.var), r
+## end
 
 ## p(x) = q(x)*(x-c)^k for some q,k (possibly 0). Return maximal k and corresponding q
 function multiplicity(p::Poly, c::Number)
     k = 0
-    q, r = divrem(p,c)
+    q, r = PolynomialFactors.synthetic_division(p,c)
     while _iszero(r)
         p = q
-        q,r = divrem(p, c)
+        q,r = PolynomialFactors.synthetic_division(p, c)
         k = k + 1
     end
     p, k
 end
+
 
 ## Our Poly types for which we can find gcd
 typealias QQ  @compat Union{Int, BigInt, Rational{Int}, Rational{BigInt}}
@@ -309,26 +310,29 @@ function real_roots_sqfree(p::Poly)
 end
 
 
-function real_roots{T <: QQ}(p::Poly{T})
-    p = convert(Poly{Rational{BigInt}}, p)
-    p = divrem(p, bgcd(p, Polynomials.polyder(p)))[1] # square free p/gcd(p, p')
-    p = p*(1//p[degree(p)])
+function real_roots{T <: Union{Rational{Int}, Rational{BigInt}}}(p::Poly{T})
+    c, q = PolynomialFactors.Qx_to_Zx(p)
+    real_roots(q)
+end
 
 
-    ## factor first
-    d = factor(p)
-    d = filter((k,v) -> isa(k, Rational), d)
-    rts = collect(keys(d))
-    for rt in rts
-        (p,k) = multiplicity(p, rt)
+function real_roots{T <: Union{Int, BigInt}}(p::Poly{T})
+    f = PolynomialFactors.square_free(p)
+    rts = Real[]
+    rat_rts = rational_roots(p)
+    append!(rts, rat_rts)
+    
+    for rt in rat_rts
+        f, k = PolynomialFactors.synthetic_division(f, rt)
     end
     
-    if degree(p) > 0
-        new_rts = real_roots_sqfree(p)
-        sort([rts; new_rts])
-    else
-        sort(rts)
+    if degree(f) > 0
+        real_rts = real_roots_sqfree(f)
+        append!(rts, real_rts)
+        sort!(rts)
     end
+
+    return rts
 end
 
 function real_roots(p::Poly)
@@ -341,75 +345,5 @@ function real_roots(p::Poly)
     real_roots_sqfree(p)
 end
 
-### Some functions to find all rational roots of a poly in Z[x], Q[x]
-## return set of divisors of |n|, e.g. 12 -> [1,2,3,4,6,12]
-function divisors(n::Integer)
-    n == 0 && return([1])
-    d = factor(abs(n))
-    out = [1]
-    for (k,v) in d
-        out = unique(out * [k^i for i in 0:v]')
-    end
-    sort(out)
-end
-
-# find rational roots of p ∈ Z[x]
-# XXX most simple-minded approach around XXX this should be improved!
-function rational_roots{T <: Integer}(p::Poly{T})
-    rts = Rational{T}[]
-    if p[0] == 0
-        push!(rts, 0)
-        p, k = multiplicity(p, 0)
-    end
-
-    ds = divisors(p[0])
-    ns = divisors(p[degree(p)])
-    poss = unique([d//n for d in ds, n in ns])
-    for rt in poss
-        for s in [-1,1]
-            prt = s * rt
-            polyval(p, prt) == 0 && push!(rts, prt)
-        end
-    end
-    rts
-end
-
-# find rational roots of p ∈ Q[x] by using lcm(p)*p ∈ Z[x]
-function rational_roots{T <: Integer}(p::Poly{Rational{T}})
-    q = lcm(map(r -> r.den, coeffs(p))) * p
-    q = convert(Poly{BigInt}, q)
-    rational_roots(q)
-end
 
 
-
-## factor over the rationals, then call multroot on the remainder
-## return d where d a dictionary of roots
-## Okay, we should use keys which are `variable(p) - r` and not `r`...
-function factor{T <: QQ}(p::Poly{T})
-    rts = rational_roots(p)
-    d = Dict{Number, Int}()
-    for r in rts
-        p,k = multiplicity(p,r)
-        d[r] = k
-    end
-    ##
-    if degree(p) > 0
-        p = convert(Poly{Float64}, p)
-        for (r,k) in zip(multroot(p)...)
-            d[r] = k
-        end
-    end
-    d
-end
-
-## Julian interface to multroot
-function factor(p::Poly)
-    degree(p) == 0 && DomainError() # degree 0
-    d = Dict{Number, Int}()
-    for (r,k) in zip(multroot(p)...)
-        d[r] = k
-    end
-    d
-end
-    
