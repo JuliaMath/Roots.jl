@@ -47,22 +47,23 @@ specializations:
 
 
 * `fzeros(f::Function)` calls `real_roots` to find the real roots of
-  the polynomial. For polynomials with integer coefficients, this can
-  be more precise. (The computation requires finding a GCD, which is
-  subject to numeric issues if non-integer coefficients are involved.)
+  the polynomial. For polynomials with integer coefficients, the
+  rational roots are found first, and then numeric approximations to
+  the remaining real roots are returned.
 
-* The `factor` function will return a dictionary of roots and their
-  multiplicities. For polynomials with integer coefficients, all
-  potential rational roots will be checked and then the reduced
-  polynomial will be passed to `multroot`. Otherwise, `multroot` is
-  used directly.  The `roots` function from the `Polynomials` package
-  will find all the roots of a polynomial. Its performance degrades
-  when the polynomial has high multiplicities. The `multroot` function
-  is provided to handle this case a bit better.  The function follows
-  algorithms due to Zeng,
+* For polynomial functions over the integers or rational numbers, the
+`factor` function will return a dictionary of factors (as
+`Polynomials`) and their multiplicities.
+
+* For polynomials over the real numbers, the `multroot` function will
+  return the roots and their multiplicities through a dictionary. The
+  `roots` function from the `Polynomials` package will find all the
+  roots of a polynomial. Its performance degrades when the polynomial
+  has high multiplicities. The `multroot` function is provided to
+  handle this case a bit better.  The function follows algorithms due
+  to Zeng,
   ["Computing multiple roots of inexact polynomials", Math. Comp. 74 (2005), 869-903](http://www.ams.org/journals/mcom/2005-74-250/S0025-5718-04-01692-8/home.html).
-  This function can also be called directly via
-  `multroot(f::Function)` or `multroot(p::Poly)`.
+
 
 
 
@@ -128,7 +129,8 @@ Polynomial root finding is a bit better when multiple roots are present.
 ```
 x = poly([0.0])
 p = (x-1)^2 * (x-3)
-rts, mults = multroot(p)	# compare to roots(p)
+U = multroot(p)	
+collect(keys(U)) # compare to roots(p)
 ```
 
 Again, a polynomial function may be passed in
@@ -138,7 +140,7 @@ f(x) = (x-1)*(x-2)^2*(x-3)^3
 multroot(f)
 ```
 
-It may be more natural to use `factor` to get the roots:
+The `factor` function will factor polynomials with rational and integer coefficients over the integers:
 
 ```
 factor(f)
