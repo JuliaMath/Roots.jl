@@ -52,7 +52,7 @@ end
 func4 = let
     val(p, x) = x^p[2] - p[1]
     bracket(p) = p[3]
-    params = (Float64, Float64, Vector{Float64})[]
+    params = Tuple{Float64, Float64, Vector{Float64}}[]
     for a in [0.2, 1.], n in 4:2:12
         push!(params, (a, n, [0., 5.]))
     end
@@ -151,9 +151,9 @@ type MethodResults
     name
     evalcount :: Int
     maxresidual :: Float64
-    failures :: Vector{(Func, Int)}
+    failures :: Vector{Tuple{Func, Int}}
 end
-MethodResults() = MethodResults(nothing, 0, 0., (Func, Int)[])
+MethodResults() = MethodResults(nothing, 0, 0., Tuple{Func, Int}[])
 show(io::IO, results::MethodResults) =
     print(io, "MethodResults($(results.name), evalcount=$(results.evalcount), numfailures=$(length(results.failures)), maxresidual=$(results.maxresidual))")
 

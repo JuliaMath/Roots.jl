@@ -50,7 +50,7 @@ Terminates with `x1` when the bracket length of `[x0,x2]` is `<= max(xtol, xtolr
 The bracket `[a,b]` must be bounded.
 
 """
-function find_zero(f, a::Float64, b::Float64; xtol::Real=0.0, xtolrel::Real=0.0, verbose::Bool=false)
+function find_zero_bisection(f, a::Float64, b::Float64; xtol::Real=0.0, xtolrel::Real=0.0, verbose::Bool=false)
 
     if (xtol < 0.0) | (xtolrel < 0.0)
         error("Tolerances must be non-negative")
@@ -61,7 +61,7 @@ function find_zero(f, a::Float64, b::Float64; xtol::Real=0.0, xtolrel::Real=0.0,
 
     y0 == 0 && return a
     y2 == 0.0 && return b
-    if sign(y0) * sign(y2) > 0
+    if sign(y0) * sign(y2) >= 0
         error("[a,b] is not a bracket") 
     end
 
@@ -70,7 +70,7 @@ function find_zero(f, a::Float64, b::Float64; xtol::Real=0.0, xtolrel::Real=0.0,
 
     
     while x0 < x1 && x1 < x2
-        if sign(y0) == sign(y1)
+        if sign(y0) * sign(y1) > 0
             x0, x2 = x1, x2
             y0, y2 = y1, y2
         else
@@ -84,7 +84,7 @@ function find_zero(f, a::Float64, b::Float64; xtol::Real=0.0, xtolrel::Real=0.0,
         sign(y1) == 0 && return x1
         abs(x2 - x0) <= max(xtol, xtolrel*abs(x1)) && return(x1)
 
-        verbose && println(@sprintf("xi =%18.15f,\t f(xi) = %18.15f", x1, f(x1)))
+        verbose && println(@sprintf("xi =%18.15f,\t f(xi) = %18.15f", float(x1), float(f(x1))))
     end
     
     return abs(y0) < abs(y2) ? x0 : x2
@@ -97,7 +97,7 @@ find_zero using Algorithm 4.2  of Alefeld, Potra and Shi for Big numbers
 
 """
 typealias BigSomething @compat  Union{BigFloat, BigInt}
-function find_zero(f, a::BigSomething, b::BigSomething;
+function find_zero_bisection(f, a::BigSomething, b::BigSomething;
                    xtol=zero(a), 
                    maxeval::Int=100,
                    verbose::Bool=false
@@ -198,7 +198,7 @@ function a42a(f, a, b, c=(0.5)*(a+b);
                                   xtol)
             end
 
-            verbose && println(@sprintf("a=%18.15f, n=%s", a, n))
+            verbose && println(@sprintf("a=%18.15f, n=%s", float(a), n))
             
             if nextfloat(ch) * prevfloat(ch) <= 0
                 throw(StateConverged(ch))

@@ -28,11 +28,22 @@ more robust to the initial condition.
 
 """
 function SOLVE{T<:AbstractFloat}(f, x0::T;
-               ftol::Real=10*eps(one(x0)),
-               xtol::Real=zero(x0),
-               xtolrel::Real=zero(x0),
-               maxeval::Int=30,
-               verbose::Bool=false)
+                                 ftol::Real=10*eps(T),
+                                 xtol::Real=zero(T),
+                                 xtolrel::Real=zero(T),
+                                 maxeval::Int=30,
+                                 verbose::Bool=false,
+                                 kwargs...)
+
+    ## adjust for newer keyword arguments ##
+    kw = Dict([Pair(k,v) for (k,v) in kwargs]) # [] for v0.4
+    haskey(kw, :xabstol) && (xtol = kw[:xabstol])
+    haskey(kw, :xreltol) && (xtolrel = kw[:xreltol])
+    haskey(kw, :abstol) && (ftol = kw[:abstol])
+    haskey(kw, :reltol) && (ftol = kw[:reltol])
+    haskey(kw, :maxevals) && (maxeval = kw[:maxevals])
+    ## ---------------------------------- ##
+    
 
     fx0 = f(x0)
     abs(fx0) <= ftol && return(x0)
@@ -101,7 +112,7 @@ function have_bracket(f, a, b, c=(0.5)*(a+b);
             return e.x0
         else
             verbose && println("Dithering, switching to bisection method")
-            return find_zero(f, a, b, verbose=verbose)
+            return find_zero_bisection(f, a, b, verbose=verbose)
         end
     end
 end

@@ -28,11 +28,15 @@ export fzero,
        multroot, 
        D, D2
 
+export find_zero,
+       Order0, Order1, Order2, Order5, Order8, Order16
+export Bisection
+# export Bisection, Secant, Steffensen, Newton, Halley
 
 ## load in files
 include("fzero.jl")
 include("adiff.jl")
-include("SOLVE.jl")
+#include("SOLVE.jl")
 include("derivative_free.jl")
 include("newton.jl")
 include("Polys/polynomials.jl")
@@ -110,7 +114,7 @@ function fzero(f, a::Real, b::Real; kwargs...)
     (a == -Inf) && (a = nextfloat(a))
     (b == Inf) && (b = prevfloat(b))
     (isinf(a) | isinf(b)) && throw(ConvergenceFailed("A bracketing interval must be bounded"))
-    find_zero(f,a,b; kwargs...)
+    find_zero_bisection(f,a,b; kwargs...)
 end
 
 """
