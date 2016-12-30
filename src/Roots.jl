@@ -10,13 +10,8 @@ using PolynomialFactors
 using ForwardDiff
 using Compat
 
-
-if VERSION < v"0.5.0"
-    import Base: factor
-else
-    using Primes
-    import Primes: factor
-end
+using Primes
+import Primes: factor
 
 
 export roots

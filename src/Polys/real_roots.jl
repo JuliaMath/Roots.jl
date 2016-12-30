@@ -8,12 +8,7 @@
 ## Fabrice Rouillier; Paul Zimmermann
 ##
 
-if VERSION >= v"0.5.0-"
-    eval(Expr(:using, :Primes))
-    eval(Expr(:import, :Primes, :factor))
-else
-    eval(Expr(:import, :Base, :factor))
-end
+eval(Expr(:import, :Primes, :factor))
 
 
 ###   Things for Polynomials   #####
