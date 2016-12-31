@@ -78,7 +78,7 @@ specified, they will be computed using the `ForwardDiff` package.
 ```
 f(x) = exp(x) - x^4
 ## bracketing
-fzero(f, [8, 9])		# 8.613169456441398
+fzero(f, 8, 9)		# 8.613169456441398
 fzero(f, -10, 0)		# -0.8155534188089606
 fzeros(f, -10, 10)		# -0.815553, 1.42961  and 8.61317 
 
@@ -92,18 +92,19 @@ fzero(sin, 3, order=16)		# 3.141592653589793
 fzero(sin, BigFloat(3.0))	# 3.1415926535897932384...with 256 bits of precision
 ```
 
-The `fzero` function, `newton` and `halley` functions can be used with `FastAnonyous` functions:
+The `fzero` function can be used with callable objects:
 
 ```
-using FastAnonymous
-fa = @anon x -> cos(x) - 10x
-fap = @anon x -> -sin(x) - 10
-fzero(fa, 1)           # 0.09950534268738782
-fzero(fa, 1, order=8)  # 0.09950534268738784
-newton(fa, fap, 1)     # 0.09950534268738784
+using SymEngine; @vars x
+fzero(x^5 -x - 1, 1.0)
 ```
 
-(The polynomials methods do not work with `FastAnonymous` functions.)
+Or,
+
+```
+using Polynomials; x = variable(Int)
+fzero(x^5 -x - 1, 1.0)
+```
 
 
 
@@ -123,8 +124,15 @@ fzeros(x^5 -x - 1)
 fzeros(x*(x-1)*(x-2)*(x^2 + x + 1))
 ```
 
+The `factor` command will factor a polynomial or polynomial function with Integer or rational
+coefficients over the integers:
 
-Polynomial root finding is a bit better when multiple roots are present.
+```
+factor(x -> (2x-1)^2 * (4x-3)^5)  # Dict(Poly(1) => 1, Poly(-1 + 2x) =>2, Poly(-3 + 4x) => 5)
+```
+
+
+Polynomial root finding using `multroot` is a bit better when multiple roots are present.
 
 ```
 x = poly([0.0])

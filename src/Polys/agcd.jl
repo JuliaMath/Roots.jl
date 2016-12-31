@@ -47,15 +47,15 @@ end
 function geometric_mean(a::Vector, epsilon=Base.eps())
     a = filter(x -> abs(x) > epsilon, a)
     n = length(a)
-    prod(abs(a) .^ (1/n))
+    prod(map(abs,a) .^ (1/n))
 end
 
 function ratio(p,q, atol=Base.eps(), rtol=Base.eps())
     is_nonzero(x) = !isapprox(x, 0; rtol=rtol, atol=atol)
-    as = abs(filter(is_nonzero, p.a))
+    as = map(abs,filter(is_nonzero, p.a))
     length(as) == 0 && return Inf
 
-    bs = abs(filter(is_nonzero, q.a))
+    bs = map(abs, filter(is_nonzero, q.a))
     length(bs) == 0 && return Inf
 
     max(maximum(as), maximum(bs)) / min(minimum(as), minimum(bs))
@@ -100,7 +100,7 @@ function lemma24(A::Matrix; θ::Real=1e-8)
     Q,R = Base.qr(A)
     if rank(R) < size(R)[2]
         λs, vs = eig(R)
-        _, ind = findmin(abs(λs))
+        _, ind = findmin(map(abs,λs))
         return(λs[ind], vs[:,ind])
     end
 
@@ -223,7 +223,7 @@ The tolerances are:
 
 
 """
-function agcd{T,S}(p::Poly{T}, q::Poly{S}=p';
+function agcd{T,S}(p::Poly{T}, q::Poly{S}=polyder(p);
               theta = 1e-12,    # reveal_rank tolerance. (1e-8 in paper, this seems better?)
               ρ::Real = 1e-10   # residual tolerance
               )

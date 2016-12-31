@@ -11,13 +11,6 @@ using ForwardDiff
 using Compat
 
 
-if VERSION < v"0.5.0"
-    import Base: factor
-else
-    using Primes
-    import Primes: factor
-end
-
 
 export roots
 
@@ -25,7 +18,7 @@ export fzero,
        fzeros,
        newton, halley,
        secant_method, steffensen, 
-       multroot, 
+       multroot, polyfactor,
        D, D2
 
 export find_zero,
@@ -34,9 +27,9 @@ export Bisection
 # export Bisection, Secant, Steffensen, Newton, Halley
 
 ## load in files
-include("fzero.jl")
 include("adiff.jl")
-#include("SOLVE.jl")
+include("find_zero.jl")
+include("bracketing.jl")
 include("derivative_free.jl")
 include("newton.jl")
 include("Polys/polynomials.jl")
@@ -114,7 +107,7 @@ function fzero(f, a::Real, b::Real; kwargs...)
     (a == -Inf) && (a = nextfloat(a))
     (b == Inf) && (b = prevfloat(b))
     (isinf(a) | isinf(b)) && throw(ConvergenceFailed("A bracketing interval must be bounded"))
-    find_zero_bisection(f,a,b; kwargs...)
+    find_zero(f, [a,b], Bisection(); kwargs...)
 end
 
 """
@@ -256,10 +249,10 @@ Returns a dictionary with irreducible factors and their multiplicities.
 See `multroot` to do similar act over polynomials with real coefficients.
 Example:
 ```
-factor(x -> (x-1)^3*(x-2)) 
+polyfactor(x -> (x-1)^3*(x-2)) 
 ```
 """
-function factor(f::Function)
+function polyfactor(f::Function)
     T = typeof(f(0))
     p = Polynomials.variable(T)
     try

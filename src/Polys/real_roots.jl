@@ -8,14 +8,6 @@
 ## Fabrice Rouillier; Paul Zimmermann
 ##
 
-if VERSION >= v"0.5.0-"
-    eval(Expr(:using, :Primes))
-    eval(Expr(:import, :Primes, :factor))
-else
-    eval(Expr(:import, :Base, :factor))
-end
-
-
 ###   Things for Polynomials   #####
 ## return "x"
 ## variable(p::Poly) = poly(zeros(eltype(p),1), p.var)

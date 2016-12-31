@@ -1,6 +1,4 @@
-## Methods for root finding which use a bracket
-
-## Bisection_method for floats and int
+###
 
 # type to throw on succesful convergence
 type StateConverged
@@ -13,11 +11,16 @@ type ConvergenceFailed
 end
 
 
+## Methods for root finding which use a bracket
+
+## Bisection for FLoat64 values.
+##
 ## From Jason Merrill https://gist.github.com/jwmerrill/9012954
 ## cf. http://squishythinking.com/2014/02/22/bisecting-floats/
 # Alternative "mean" definition that operates on the binary representation
 # of a float. Using this definition, bisection will never take more than
 # 64 steps.
+
 function _middle(x::Float64, y::Float64)
   # Use the usual float rules for combining non-finite numbers
   if !isfinite(x) || !isfinite(y)
@@ -37,73 +40,112 @@ function _middle(x::Float64, y::Float64)
  
   return negate ? -unsigned : unsigned
 end
- 
-"""
 
-Find zero using modified bisection method for Float64 arguments.
+## fall back or non Floats
+function _middle(x::Real, y::Real)
+    x + (y-x)/2
+end
 
-This is guaranteed to take no more than 64 steps. The `a42` alternative usually has
-fewer iterations, but this seems to find the value with fewer function evaluations.
 
-Terminates with `x1` when the bracket length of `[x0,x2]` is `<= max(xtol, xtolrel*abs(x1))` where `x1` is the midpoint . The tolerances can be set to 0, in which case, the termination occurs when `nextfloat(x0) = x2`.
+####
+## find_zero interface. We need to specialize for T<:Float64, and BigSomething
+typealias BigSomething @compat  Union{BigFloat, BigInt}
 
-The bracket `[a,b]` must be bounded.
+abstract AbstractBisection <: UnivariateZeroMethod
+type Bisection <: AbstractBisection end
+type A42 <: AbstractBisection end 
 
-"""
-function find_zero_bisection(f, a::Float64, b::Float64; xtol::Real=0.0, xtolrel::Real=0.0, verbose::Bool=false)
-
-    if (xtol < 0.0) | (xtolrel < 0.0)
-        error("Tolerances must be non-negative")
+## This is a bit clunky, as we use `a42` for bisection when we don't have `Float64` values.
+## As we don't have the `A42` algorithm implemented through `find_zero`, we adjust here.
+function find_zero{M<:AbstractBisection, T<:Real}(f, x0::Vector{T}, method::M; maxevals::Int=50, verbose::Bool=false, kwargs...)
+    x = sort(map(float, x0))
+    if eltype(x) <: Float64
+        prob, options = derivative_free_setup(method, DerivativeFree(f), x; verbose=verbose, maxevals=maxevals, kwargs...)
+        find_zero(prob, method, options)
+    else
+        a42(f, x[1], x[2]; maxeval=maxevals, verbose=verbose)
     end
+end
+
+# call a42 in this case
+function find_zero{T<:BigSomething, S}(method::Bisection, fs::DerivativeFree, o::UnivariateZeroState{T, S}, options::UnivariateZeroOptions)
+    xn0, xn1 = sort([o.xn0, o.xn1])
+    o.xn1 = a42(fs.f, o.xn0, o.xn1; xtol=options.xreltol, maxeval=options.maxevals, verbose=options.verbose)
+    o.message = "Used Alefeld-Potra-Shi method, `Roots.a42`, to find the zero. Iterations and function evaluations are not counted properly."
+    o.x_converged = true
+
+    nothing
+end
+
+## This uses _middle bisection
+## Find zero using modified bisection method for Float64 arguments.
+## This is guaranteed to take no more than 64 steps. The `a42` alternative usually has
+## fewer iterations, but this seems to find the value with fewer function evaluations.
+##
+## Terminates with `x1` when the bracket length of `[x0,x2]` is `<= max(xtol, xtolrel*abs(x1))` where `x1` is the midpoint .
+## The tolerances can be set to 0, in which case, the termination occurs when `nextfloat(x0) = x2`.
+## The bracket `[a,b]` must be bounded.
+
+function init_state{T <: Float64}(method::Bisection, fs, x::Vector{T}, bracket)
+    x0, x2 = sort(x[1:2])
+    isinf(x0) && (x0 = nextfloat(x0))
+    isinf(x2) && (x2 = prevfloat(x2))
+    y0, y2 = map(fs.f, [x0, x2])
+
+    sign(y0) * sign(y2) > 0 && error("Not a bracket")
     
-    x0, y0 = a, f(a)
-    x2, y2 = b, f(b)
+    state = UnivariateZeroState(x2, x0,
+                                      y2, y0,
+                                      isa(bracket, Nullable) ? bracket : Nullable(convert(Vector{T}, sort(bracket))),
+                                      0, 2,
+                                      false, false, false, false,
+                                "")
+    state
+end
 
-    y0 == 0 && return a
-    y2 == 0.0 && return b
-    if sign(y0) * sign(y2) >= 0
-        error("[a,b] is not a bracket") 
-    end
+
+function update_state{T<:Float64,S}(method::Bisection, fs, o::Roots.UnivariateZeroState{T,S}, options::UnivariateZeroOptions)
+    f = fs.f
+    x0, x2 = o.xn0, o.xn1
+    y0, y2 = o.fxn0, o.fxn1
 
     x1 = _middle(x0, x2)
+
     y1 = f(x1)
+    incfn(o)
 
-    
-    while x0 < x1 && x1 < x2
-        if sign(y0) * sign(y1) > 0
-            x0, x2 = x1, x2
-            y0, y2 = y1, y2
-        else
-            x0, x2 = x0, x1
-            y0, y2 = y0, y1
-        end
-        
-        x1 = _middle(x0, x2)
-        y1 = f(x1)
+    if sign(y0) * sign(y1) > 0
+        x0, x2 = x1, x2
+        y0, y2 = y1, y2
+    else
+        x0, x2 = x0, x1
+        y0, y2 = y0, y1
+    end
 
-        sign(y1) == 0 && return x1
-        abs(x2 - x0) <= max(xtol, xtolrel*abs(x1)) && return(x1)
+    o.xn0, o.xn1 = x0, x2
+    o.fxn0, o.fxn1 = y0, y2
+    incsteps(o)
+    nothing
+end
 
-        verbose && println(@sprintf("xi =%18.15f,\t f(xi) = %18.15f", float(x1), float(f(x1))))
+## convergence is much differen there, as we bound between x0, nextfloat(x0) is not measured by eps(), but eps(x0)
+function assess_convergence(method::Bisection, fs, state, options)
+    x0, x2 = state.xn0, state.xn1
+    if x0 > x2
+        x0, x2 = x2, x0
     end
     
-    return abs(y0) < abs(y2) ? x0 : x2
+    x1 = _middle(x0, x2)
+    
+    x0 < x1 && x1 < x2 && return false
+
+    state.message = ""
+    state.x_converged=true
+    true
 end
 
 
-"""
-
-find_zero using Algorithm 4.2  of Alefeld, Potra and Shi for Big numbers
-
-"""
-typealias BigSomething @compat  Union{BigFloat, BigInt}
-function find_zero_bisection(f, a::BigSomething, b::BigSomething;
-                   xtol=zero(a), 
-                   maxeval::Int=100,
-                   verbose::Bool=false
-                   )
-    a42(f, a, b; xtol=xtol, maxeval=maxeval, verbose=verbose)
-end
+##################################################
 
 """    
 
@@ -130,7 +172,11 @@ function a42(f, a, b;
                    xtol=zero(float(a)), 
                    maxeval::Int=15,
                    verbose::Bool=false
-                   )
+             )
+    if a > b
+        a,b = b,a
+    end
+    
     if a >= b || sign(f(a))*sign(f(b)) >= 0
         error("on input a < b and f(a)f(b) < 0 must both hold")
     end
@@ -222,9 +268,10 @@ end
 
 # calculate a scaled tolerance
 # based on algorithm on page 340 of [1]
-function tole(a, b, fa, fb, tol)
+function tole{S,R}(a::S, b::R, fa, fb, tol)
+    T = promote_type(S,R)
     u = abs(fa) < abs(fb) ? abs(a) : abs(b)
-    2u*eps(1.0) + tol
+    2u*eps(T) + tol
 end
 
 
@@ -286,9 +333,9 @@ end
 
 # take a secant step, if the resulting guess is very close to a or b, then
 # use bisection instead
-function secant(f, a, b)
+function secant{T}(f, a::T, b)
     c = a - f(a)/(f(b) - f(a))*(b - a)
-    tol = eps(1.0)*5
+    tol = eps(T)*5
     if c <= a + abs(a)*tol || c >= b - abs(b)*tol
         return a + (b - a)/2
     end
@@ -392,10 +439,10 @@ function find_zeros(f, a::Real, b::Real, args...;
         if isapprox(f(ai), 0.0, rtol=reltol, atol=ftol)
             push!(rts, ai)
         elseif sign(f(ai)) * sign(f(bi)) < 0
-            push!(rts, fzero(f, ai, bi))
+            push!(rts, find_zero(f, [ai, bi], Bisection()))
         else
             try
-                x = fzero(f, ai + (0.5)* (bi-ai), order=8, maxeval=10, ftol=ftol, reltol=reltol)
+                x = find_zero(f, ai + (0.5)* (bi-ai), Order8(); maxevals=10, reltol=ftol, xreltol=reltol)
                 if ai < x < bi
                     push!(rts, x)
                 end

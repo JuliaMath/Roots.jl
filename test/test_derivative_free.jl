@@ -30,7 +30,7 @@ end
 
 ## Issue near 0 that does not cross
 fn = x -> cos(x) - 1
-x0, alpha = .1, 0.0
+x0, alpha = 0.1, 0.0
 for order in orders[end]
     ## test that these do not throw
     fn(fzero(fn, x0, order=order, ftol=1e-10))

@@ -70,7 +70,7 @@ function pejroot(p::Poly, z0::Vector, l::Vector{Int};
     a = p2a(p) #rcoeffs(monic(p))[2:end] # an_1, an_2, ..., a2, a1, a0
 
     if wts == nothing
-        wts = map(u -> min(1, 1/abs(u)), a)
+        wts = map(u -> min(1, 1/map(abs,u)), a)
     end
     W = diagm(wts)
 
@@ -165,7 +165,7 @@ function multroot(p::Poly;
     
     p = Poly(float(coeffs(p)))  # floats, not Int
 
-    u_j, v_j, w_j, residual= agcd(p, p',  ρ = ρ) 
+    u_j, v_j, w_j, residual= agcd(p, polyder(p),  ρ = ρ) 
     ρ = max(ρ, ϕ * residual)
 
     ## bookkeeping
@@ -177,12 +177,12 @@ function multroot(p::Poly;
     while degree(p0) > 0
         if degree(p0) == 1
             z = roots(p0)[1]
-            _, ind = findmin(abs(zs .- z))
+            _, ind = findmin(map(abs, zs .- z))
             ls[ind] = ls[ind] + 1
             break
         end
 
-        u_j, v_j, w_j, residual= agcd(p0, p0', ρ=ρ)
+        u_j, v_j, w_j, residual= agcd(p0, polyder(p0), ρ=ρ)
 
         ## need to worry about residual between
         ## u0 * v0 - monic(p0) and u0 * w0 - monic(Polynomials.polyder(p0))
@@ -192,7 +192,7 @@ function multroot(p::Poly;
 
         ## update multiplicities
         for z in roots(v_j)
-            _, ind = findmin(abs(zs .- z))
+            _, ind = findmin(map(abs, zs .- z))
             ls[ind] = ls[ind] + 1
         end
 

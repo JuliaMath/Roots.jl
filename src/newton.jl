@@ -7,9 +7,11 @@
 type Newton <: UnivariateZeroMethod
 end
 
+callable_function(method::Newton, f) = FirstDerivative(f, D(f))
+
 function init_state{T}(method::Newton, fs, x0::T)
     state = UnivariateZeroState(x0,
-                                convert(T, typemax(real(x0))), # newton allows complex values, so a bit fussy
+                                x0 + typemax(Int),
                                 fs.f(x0),
                                 fs.f(x0),
                                 Nullable{Vector{T}}(),
@@ -23,7 +25,7 @@ function init_state{T}(method::Newton, fs, x0::T)
     state
 end
 
-function update_state{T}(method::Newton, fs, o::UnivariateZeroState{T})
+function update_state{T}(method::Newton, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions)
     xn = o.xn1
     fxn = o.fxn1
     fpxn = fs.fp(xn)
@@ -45,20 +47,26 @@ function update_state{T}(method::Newton, fs, o::UnivariateZeroState{T})
     
 end
 
-function newton_setup{T}(f, fp, x0::T; 
-                         xabstol=eps(), xreltol=eps(),
-                         abstol=eps(), reltol=eps(),
-                         maxevals=100, maxfnevals=100,
-                         verbose::Bool=false,
-                         kwargs...)
+## extra work to allow for complex values
+function derivative_free_setup{T<:AbstractFloat}(method::Newton, fs::CallableFunction, x0::Union{T, Complex{T}};
+                                  bracket=Nullable{Vector{T}}(),
+                                  xabstol=zero(T), xreltol=zero(T),
+                                  abstol=4*eps(T), reltol=4*eps(T),
+                                  maxevals=40, maxfnevals=typemax(Int),
+                                  verbose::Bool=false)
+    x = map(float, x0)
 
-    prob = UnivariateZeroProblem(Newton(), f, fp, x0,  Nullable{Vector{T}}())
-    options = UnivariateZeroOptions(xabstol, xreltol, abstol, reltol, maxevals, maxfnevals, verbose) 
-
+    if isa(x, Complex)
+        bracket = Nullable{Vector{Complex{T}}}()     # bracket makes no sense for complex input, but one is expected
+    elseif !isa(bracket, Nullable)
+        bracket = Nullable(convert(Vector{T}, bracket))
+    end
+        
+    prob = UnivariateZeroProblem(fs, x, bracket)
+    options = UnivariateZeroOptions(xabstol, xreltol, abstol, reltol,  maxevals, maxfnevals, verbose)
     prob, options
 end
 
-find_zero(f, x0, method::Newton; kwargs...) = newton(f, x0; kwargs...)
 
 """
 
@@ -87,28 +95,21 @@ Keyword arguments:
 * `verbose::Bool=false` Set to `true` to see trace.
 
 """
-function newton(f, fp, x0; kwargs...)
-    prob, options = newton_setup(f, fp, float(x0); kwargs...)
-    find_zero(prob,  Newton(), options)
-end
-
-newton(f, x0; kwargs...) = newton(f, D(f), x0; kwargs...)
+newton(f, x0; kwargs...) = find_zero(f, x0, Newton(); kwargs...)
+newton(f, fp, x0; kwargs...) = find_zero(f, fp, x0, Newton(); kwargs...)
 
 
 ## Halley
 
 
-immutable SecondDerivative
-    f
-    fp
-    fpp
-end
-
 
 type Halley <: UnivariateZeroMethod
 end
 
-function update_state{T}(method::Halley, fs, o::UnivariateZeroState{T})
+callable_function(method::Halley, f) = SecondDerivative(f, D(f), D(f, 2))
+callable_function(method::Halley, f, fp) = SecondDerivative(f, fp, D(fp))
+
+function update_state{T}(method::Halley, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions)
     xn = o.xn1
     fxn = o.fxn1
     fpxn = fs.fp(xn); incfn(o)
@@ -121,22 +122,6 @@ function update_state{T}(method::Halley, fs, o::UnivariateZeroState{T})
     o.fxn0, o.fxn1 = fxn, fxn1
     incsteps(o)
 end
-
-function halley_setup{T <: AbstractFloat}(f, fp, fpp, x0::T;
-                                          xabstol=eps(T), xreltol=eps(T),
-                                          abstol=eps(T), reltol=eps(T),
-                                          maxevals=100, maxfnevals=100, verbose::Bool=false)
-
-
-    prob = UnivariateZeroProblem(Newton(), f, fp, fpp, x0,  Nullable{Vector{T}}())
-    options = UnivariateZeroOptions(xabstol, xreltol, abstol, reltol, maxevals, maxfnevals, verbose) 
-
-    prob, options
-    
-end
-
-find_zero(f, x0, method::Halley; kwargs...) = halley(f, x0; kwargs...)
-
 
 """
 
@@ -165,11 +150,6 @@ Keyword arguments:
 * `verbose::Bool=false` Set to `true` to see trace.
 
 """
-function halley(f, fp, fpp, x0; kwargs...)
-    prob, options = halley_setup(f, fp, fpp, float(x0); kwargs...)
-    find_zero(prob, Halley(), options)
-end
-
-
-halley(f, x0; kwargs...) = halley(f, D(f), D(f,2), float(x0); kwargs...)
-
+halley(f,  x0; kwargs...) = find_zero(f, x0, Halley(); kwargs...)
+halley(f, fp, x0; kwargs...) = find_zero(f, fp, x0, Halley(); kwargs...)
+halley(f, fp, fpp, x0; kwargs...) = find_zero(f, fp, fpp, x0, Halley(); kwargs...)
