@@ -33,7 +33,7 @@ end
 ## use f[a,b] to approximate f'(x)
 function _fbracket(a, b, fa, fb)
     num, den = fb-fa, b - a
-    num==0 && den == 0 && return Inf, true
+    num == 0 && den == 0 && return Inf, true
     out = num / den
     out, isissue(out)    
 end
@@ -98,7 +98,7 @@ end
 ## order 0
 # goal: more robust to initial guess than higher order methods
 # follows roughly algorithm described http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1979-12.pdf, the SOLVE button from the HP-34C
-# though some modifications were made. (Much faster as older `SOLVE`, but not quite as robust.)
+# though some modifications were made. 
 # * use secant step
 # * if along the way a bracket is found, switch to bisection. (We use float64 bisection not a42 if available)
 # * if secant step fails to decrease, we use quadratic step up to 3 times
@@ -118,8 +118,9 @@ function update_state{T}(method::Order0, fs, o::UnivariateZeroState{T}, options:
 
     if sign(falpha) * sign(fbeta) < 0.0
         # use bisection
-        opts = deepcopy(options); opts.verbose=false
-        find_zero(Bisection(), fs, o, opts)
+        verbose = options.verbose; options.verbose=false # turn off verbose
+        find_zero(Bisection(), fs, o, options)
+        options.verbose = verbose
         o.message = "Used bisection for last step: [a,b] = [$alpha, $beta]"
         return nothing
     end
@@ -135,8 +136,9 @@ function update_state{T}(method::Order0, fs, o::UnivariateZeroState{T}, options:
     if sign(fgamma)*sign(fbeta) < 0.0
         o.xn0, o.xn1 = gamma, beta
         o.fxn0, o.fxn1 = fgamma, fbeta
-        opts = deepcopy(options); opts.verbose=false
-        find_zero(Bisection(), fs, o, opts)
+        verbose = options.verbose; options.verbose=false # turn off verbose
+        find_zero(Bisection(), fs, o, options)
+        options.verbose=verbose
         o.message = "Used bisection for last step"
         return nothing
     end

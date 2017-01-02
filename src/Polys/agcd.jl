@@ -47,15 +47,15 @@ end
 function geometric_mean(a::Vector, epsilon=Base.eps())
     a = filter(x -> abs(x) > epsilon, a)
     n = length(a)
-    prod(map(abs,a) .^ (1/n))
+    @compat prod(abs.(a) .^ (1/n))
 end
 
 function ratio(p,q, atol=Base.eps(), rtol=Base.eps())
     is_nonzero(x) = !isapprox(x, 0; rtol=rtol, atol=atol)
-    as = map(abs,filter(is_nonzero, p.a))
+    @compat as = abs.(filter(is_nonzero, p.a))
     length(as) == 0 && return Inf
 
-    bs = map(abs, filter(is_nonzero, q.a))
+    @compat bs = abs.(filter(is_nonzero, q.a))
     length(bs) == 0 && return Inf
 
     max(maximum(as), maximum(bs)) / min(minimum(as), minimum(bs))
@@ -100,7 +100,7 @@ function lemma24(A::Matrix; θ::Real=1e-8)
     Q,R = Base.qr(A)
     if rank(R) < size(R)[2]
         λs, vs = eig(R)
-        _, ind = findmin(map(abs,λs))
+        @compat _, ind = findmin(abs.(λs))
         return(λs[ind], vs[:,ind])
     end
 
@@ -228,7 +228,7 @@ function agcd{T,S}(p::Poly{T}, q::Poly{S}=polyder(p);
               ρ::Real = 1e-10   # residual tolerance
               )
 
-    n, m = map(degree,(p,q))
+    n, m = map(degree, (p,q))
     if m > n
         p,q=q,p
     end

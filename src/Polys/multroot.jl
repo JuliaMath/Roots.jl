@@ -70,7 +70,7 @@ function pejroot(p::Poly, z0::Vector, l::Vector{Int};
     a = p2a(p) #rcoeffs(monic(p))[2:end] # an_1, an_2, ..., a2, a1, a0
 
     if wts == nothing
-        wts = map(u -> min(1, 1/map(abs,u)), a)
+        @compat wts = map(u -> min(1, 1/abs.(u)), a)
     end
     W = diagm(wts)
 
@@ -177,7 +177,7 @@ function multroot(p::Poly;
     while degree(p0) > 0
         if degree(p0) == 1
             z = roots(p0)[1]
-            _, ind = findmin(map(abs, zs .- z))
+            @compat _, ind = findmin(abs.(zs .- z))
             ls[ind] = ls[ind] + 1
             break
         end
@@ -192,7 +192,7 @@ function multroot(p::Poly;
 
         ## update multiplicities
         for z in roots(v_j)
-            _, ind = findmin(map(abs, zs .- z))
+            @compat _, ind = findmin(abs.(zs .- z))
             ls[ind] = ls[ind] + 1
         end
 

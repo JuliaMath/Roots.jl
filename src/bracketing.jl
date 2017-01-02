@@ -58,7 +58,7 @@ type A42 <: AbstractBisection end
 ## This is a bit clunky, as we use `a42` for bisection when we don't have `Float64` values.
 ## As we don't have the `A42` algorithm implemented through `find_zero`, we adjust here.
 function find_zero{M<:AbstractBisection, T<:Real}(f, x0::Vector{T}, method::M; maxevals::Int=50, verbose::Bool=false, kwargs...)
-    x = sort(map(float, x0))
+    x = sort(float(x0))
     if eltype(x) <: Float64
         prob, options = derivative_free_setup(method, DerivativeFree(f), x; verbose=verbose, maxevals=maxevals, kwargs...)
         find_zero(prob, method, options)
@@ -90,15 +90,15 @@ function init_state{T <: Float64}(method::Bisection, fs, x::Vector{T}, bracket)
     x0, x2 = sort(x[1:2])
     isinf(x0) && (x0 = nextfloat(x0))
     isinf(x2) && (x2 = prevfloat(x2))
-    y0, y2 = map(fs.f, [x0, x2])
+    @compat y0, y2 = fs.f.([x0, x2])
 
     sign(y0) * sign(y2) > 0 && error("Not a bracket")
     
     state = UnivariateZeroState(x2, x0,
-                                      y2, y0,
-                                      isa(bracket, Nullable) ? bracket : Nullable(convert(Vector{T}, sort(bracket))),
-                                      0, 2,
-                                      false, false, false, false,
+                                y2, y0,
+                                isa(bracket, Nullable) ? bracket : Nullable(convert(Vector{T}, sort(bracket))),
+                                0, 2,
+                                false, false, false, false,
                                 "")
     state
 end

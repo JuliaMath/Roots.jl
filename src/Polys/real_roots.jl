@@ -119,7 +119,7 @@ function descartes_bound(p::Poly)
     
     ## count terms
     ctr = 0
-    bs = map(sign,bs)
+    @compat bs = sign.(bs)
     last = bs[1]
     for i in 2:length(bs)
         bs[i] == 0 && continue

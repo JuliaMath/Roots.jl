@@ -128,7 +128,7 @@ function derivative_free_setup{T<:AbstractFloat}(method::Any, fs::CallableFuncti
                                                  verbose::Bool=false,
                                                  kwargs...
     )
-    x = map(float, x0)
+    x = float(x0)
     prob = UnivariateZeroProblem(fs, x, isa(bracket, Nullable) ? bracket : Nullable(convert(Vector{T}, bracket)))
     options = univariate_zero_options(;xabstol=xabstol,
                                       xreltol=xreltol,
@@ -387,7 +387,7 @@ find_zero{T<:Number}(f, fp, fpp, x0::Union{T,Vector{T}}, method::UnivariateZeroM
     find_zero(method, callable_function(method, f, fp, fpp), x0; kwargs...)
 
 function find_zero(method::UnivariateZeroMethod, fs::CallableFunction, x0; kwargs...)
-    x = map(float, x0)
+    x = float(x0)
     prob, options = derivative_free_setup(method, fs, x; kwargs...)
     find_zero(prob, method, options)
 end

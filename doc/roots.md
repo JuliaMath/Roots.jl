@@ -17,7 +17,7 @@ using Plots
 
 For a function $f: R \rightarrow R$ a *bracket* is a pair $ a < b $ for
 which $f(a) \cdot f(b) < 0$. That is they have different signs. If $f$
-is a continuous function this forces there to be a zero (a $c$ with
+is a continuous function this ensures there to be a zero (a $c$ with
 $f(c) = 0$) in the interval $[a,b]$,
 otherwise, if $f$ is only piecewise continuous, there must be a point
 $c$ in $[a,b]$ with the left limit and right limit at $c$ having
@@ -177,12 +177,12 @@ near the zero.
 
 ----
 
-For a classic example where basically the large second derivative is
+For a classic example where a large second derivative is
 the issue, we have $f(x) = x^{1/3}$:
 
 ```
 f(x) = cbrt(x)
-x = fzero(f, 1, order=2)	# all of 2, 5, 8, and 16 fail or head off to Infinity
+x = fzero(f, 1, order=2)	# all of 2, 5, 8, and 16 fail or diverge towards infinity
 ```
 
 However, the default finds the root here, as a bracket is identified:
@@ -274,8 +274,8 @@ always work.
 The bracketing methods suggest a simple algorithm to recover multiple
 zeros: partition an interval into many small sub-intervals. For those
 that bracket a root find the root. This is essentially implemented with `fzeros(f,
-a, b)`. The algorithm has problems with zeros that don't cross the
-$x$-axis and zeros which bunch together. Simple usage is often succesful
+a, b)`. The algorithm has problems with non-simple zeros (in particular ones
+that don't change sign at the zero) and zeros which bunch together. Simple usage is often succesful
 enough, but a graph should be used to assess if all the zeros are found:
 
 ```

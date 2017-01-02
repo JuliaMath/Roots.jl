@@ -61,7 +61,7 @@ function derivative_free_setup{T<:AbstractFloat}(method::Newton, fs::CallableFun
     elseif !isa(bracket, Nullable)
         bracket = Nullable(convert(Vector{T}, bracket))
     end
-        
+
     prob = UnivariateZeroProblem(fs, x, bracket)
     options = UnivariateZeroOptions(xabstol, xreltol, abstol, reltol,  maxevals, maxfnevals, verbose)
     prob, options
