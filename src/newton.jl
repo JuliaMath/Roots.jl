@@ -54,7 +54,7 @@ function derivative_free_setup{T<:AbstractFloat}(method::Newton, fs::CallableFun
                                   abstol=4*eps(T), reltol=4*eps(T),
                                   maxevals=40, maxfnevals=typemax(Int),
                                   verbose::Bool=false)
-    x = map(float, x0)
+    x = float(x0)
 
     if isa(x, Complex)
         bracket = Nullable{Vector{Complex{T}}}()     # bracket makes no sense for complex input, but one is expected
