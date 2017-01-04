@@ -21,5 +21,5 @@ end
 
 D2(f::Function) = D(f, 2)
 
-## This conflicts with a definition in Calculus, but is better. 
+## This conflicts with a definition in Calculus, but is more convenient.
 ## Base.ctranspose(f::Function) = x -> ForwardDiff.derivative(f, x)

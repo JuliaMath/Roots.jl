@@ -6,17 +6,17 @@ using Primes
 ## can use functions
 f = x -> (x-1)*(x-2)^2*(x-3)^3
 zs, mults = multroot(f)
-@test mults == [1,2,3]
+@test sort(mults) == [1,2,3]
 
 x = poly([0.0])
 
 p = (x-1)*(x-2)^2*(x-3)^3
 zs, mults = multroot(p)
-@test mults == [1,2,3]
+@test sort(mults) == [1,2,3]
 
 p = (x-1)^2*(x-2)^2*(x-3)^4
 zs, mults = multroot(p)
-@test mults == [2,2,4]
+@test sort(mults) == [2,2,4]
 
 p = (x-1)^2
 zs, mults = multroot(p^14)
@@ -35,7 +35,7 @@ fzeros(x -> x^5 - 1.5x + 1)
 f = x -> (x-1)*(x-2)*(x-3)^3*(x^2+1)
 rts = fzeros(f)
 rts = Float64[r for r in rts]
-@test maximum(abs(sort(rts) - [1.0, 2.0, 3.0])) <= 1e-12
+@test maximum(map(abs, sort(rts) - [1.0, 2.0, 3.0])) <= 1e-12
 x = poly([big(0)])
 p = prod([x - i for i in 1:20])
 Roots.real_roots(p) ## can find this
@@ -44,19 +44,17 @@ a = fzeros(f)[1]
 @assert abs(f(a)) <= 1e-14
 
 x = poly([0.0])
-@test abs(fzeros((x-20)^5 - (x-20) + 1)[1] - (20 + fzeros(x^5 - x + 1)[1])) <= 1/2
+@test map(abs, fzeros((x-20)^5 - (x-20) + 1)[1] - (20 + fzeros(x^5 - x + 1)[1])) <= 1/2
 
 fzeros(x -> x^5 - 2x^4 + x^3)
 
 ## factor
-factor(x -> (x-2)^4*(x-3)^9)
-factor(x -> (x-1)^3 * (x-2)^3 * (x^5 - x + 1))
-factor(x -> x*(x-1)*(x-2)*(x^2 + x + 1))
-factor(x -> x^2 - big(2)^256) # issue #40
+polyfactor(x -> (x-2)^4*(x-3)^9)
+polyfactor(x -> (x-1)^3 * (x-2)^3 * (x^5 - x + 1))
+polyfactor(x -> x*(x-1)*(x-2)*(x^2 + x + 1))
+polyfactor(x -> x^2 - big(2)^256) # issue #40
 
-factor(x -> (x-1//1)^2 * (x-99//100)^2 * (x-101//100)^2) ## conversion is to Float, not Rational{Int}
-delta = 1//10
-VERSION >= v"0.5.0-" && Primes.factor(convert(Poly{Rational{Int}}, x -> (x-1//1)^2 * (x-1 - delta)^2 * (x-1 + delta)^2))
+polyfactor(x -> (x-1//1)^2 * (x-99//100)^2 * (x-101//100)^2) ## conversion is to Float, not Rational{Int}
 
 ## factor only works over Integers and rationals, for floats multroot can be used.
 multroot(x -> (x-1)^2 * (x-.99)^2 * (x-1.01)^2) ## can have issue with nearby roots (or high powers)

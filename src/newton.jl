@@ -1,52 +1,72 @@
+##################################################
 ## Classical derivative-based, iterative, root-finding algorithms: Newton and Halley
+## Historic, we have derivative free versions of similar order
+
 
 ## Newton
-function newton_itr(f, fp, x0; 
-                    xtol=4*eps(), xtolrel=4*eps(), ftol=4*eps(),
-                    maxsteps=100, maxfnevals=100)
-    update =  (o) -> begin
-        xn = o.xn[end]
-        fxn = o.fxn[end]
-        fpxn = o.fp(xn)
-        incfn(o)
-
-        xn1 = xn - fxn / fpxn
-        fxn1 = o.f(xn1)
-        incfn(o)
-
-        push!(o.xn, xn1)
-        push!(o.fxn, fxn1)
-
-    end
-
-    x, fx = promote(float(x0), f(float(x0)))
-    out = ZeroType(f, fp, nothing, update, [x], [fx],
-                   xtol, xtolrel, ftol,:not_converged, 
-                   0, maxsteps, 1, maxfnevals)
-
-
-    out
+type Newton <: UnivariateZeroMethod
 end
 
+callable_function(method::Newton, f) = FirstDerivative(f, D(f))
 
-
-function newton_method{T}(f, fp, x0::T;
-                       xtol=4*eps(), xtolrel=4*eps(), ftol=4eps(),
-                       maxsteps::Int=100, maxfnevals=100,
-                       verbose::Bool=false)
-
-    o = newton_itr(f, fp, x0;
-                  xtol=xtol, xtolrel=xtolrel, ftol=ftol,
-                  maxsteps=maxsteps, maxfnevals=maxfnevals)
-
-
-    for x in o
-        nothing
-    end
-    verbose && verbose_output(o)
-    o.xn[end]
+function init_state{T}(method::Newton, fs, x0::T)
+    state = UnivariateZeroState(x0,
+                                x0 + typemax(Int),
+                                fs.f(x0),
+                                fs.f(x0),
+                                Nullable{Vector{T}}(),
+                                0,
+                                1,
+                                false,
+                                false,
+                                false,
+                                false,
+                                "")
+    state
 end
-newton_method{T<:AbstractFloat}(f, x::T; kwargs...) = newton_method(f, D(f), x; kwargs...)
+
+function update_state{T}(method::Newton, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions)
+    xn = o.xn1
+    fxn = o.fxn1
+    fpxn = fs.fp(xn)
+
+    if isissue(fpxn)
+        o.stopped=true
+        return
+    end
+    
+    xn1 = xn - fxn / fpxn
+    fxn1 = fs.f(xn1)
+    incfn(o)
+    
+    o.xn0, o.xn1 = xn, xn1
+    o.fxn0, o.fxn1 = fxn, fxn1
+
+
+    incsteps(o)
+    
+end
+
+## extra work to allow for complex values
+function derivative_free_setup{T<:AbstractFloat}(method::Newton, fs::CallableFunction, x0::Union{T, Complex{T}};
+                                  bracket=Nullable{Vector{T}}(),
+                                  xabstol=zero(T), xreltol=zero(T),
+                                  abstol=4*eps(T), reltol=4*eps(T),
+                                  maxevals=40, maxfnevals=typemax(Int),
+                                  verbose::Bool=false)
+    x = float(x0)
+
+    if isa(x, Complex)
+        bracket = Nullable{Vector{Complex{T}}}()     # bracket makes no sense for complex input, but one is expected
+    elseif !isa(bracket, Nullable)
+        bracket = Nullable(convert(Vector{T}, bracket))
+    end
+
+    prob = UnivariateZeroProblem(fs, x, bracket)
+    options = UnivariateZeroOptions(xabstol, xreltol, abstol, reltol,  maxevals, maxfnevals, verbose)
+    prob, options
+end
+
 
 """
 
@@ -75,55 +95,33 @@ Keyword arguments:
 * `verbose::Bool=false` Set to `true` to see trace.
 
 """
-newton{T<:Number}(f, fp, x0::T; kwargs...) = newton_method(f, fp, float(x0); kwargs...)
-newton{T<:Real}(f, x0::T; kwargs...) = newton(f, D(f), float(x0); kwargs...)
+newton(f, x0; kwargs...) = find_zero(f, x0, Newton(); kwargs...)
+newton(f, fp, x0; kwargs...) = find_zero(f, fp, x0, Newton(); kwargs...)
+
+
+## Halley
 
 
 
-## Halley's method (cubic convergence)
-function halley_itr(f, fp, fpp, x0::Real;
-                   xtol=4*eps(), xtolrel=4*eps(), ftol=4*eps(),
-                   maxsteps=100, maxfnevals=100)
-
-    update = (o) -> begin
-        xn = o.xn[end]
-        fxn = o.fxn[end]
-        fpxn = o.fp(xn)
-        fppxn = o.fpp(xn)
-
-        xn1 = xn - 2fxn*fpxn / (2*fpxn*fpxn - fxn * fppxn)
-        fxn1 = o.f(xn1)
-
-        incfn(o, 3)
-        push!(o.xn, xn1)
-        push!(o.fxn, fxn1)
-
-    end
-
-    x, fx = promote(float(x0), f(float(x0)))
-    out = ZeroType(f, fp, fpp, update, [x], [fx],
-                   xtol, xtolrel, ftol,:not_converged, 
-                   0, maxsteps, 1, maxfnevals)
-
-    out
+type Halley <: UnivariateZeroMethod
 end
 
-function halley_method{T<:AbstractFloat}(f, fp, fpp, x0::T;
-                       xtol=4*eps(), xtolrel=4*eps(), ftol=4eps(),
-                       maxsteps::Int=100, maxfnevals=100,
-                       verbose::Bool=false)
+callable_function(method::Halley, f) = SecondDerivative(f, D(f), D(f, 2))
+callable_function(method::Halley, f, fp) = SecondDerivative(f, fp, D(fp))
 
-    o = halley_itr(f, fp, fpp, float(x0);
-                  xtol=xtol, xtolrel=xtolrel, ftol=ftol,
-                  maxsteps=maxsteps, maxfnevals=maxfnevals)
+function update_state{T}(method::Halley, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions)
+    xn = o.xn1
+    fxn = o.fxn1
+    fpxn = fs.fp(xn); incfn(o)
+    fppxn = fs.fpp(xn); incfn(o)
+    
+    xn1 = xn - 2fxn*fpxn / (2*fpxn*fpxn - fxn * fppxn)
+    fxn1 = fs.f(xn1); incfn(o)
 
-    for x in o
-        nothing
-    end
-    verbose && verbose_output(o)
-    o.xn[end]
+    o.xn0, o.xn1 = xn, xn1
+    o.fxn0, o.fxn1 = fxn, fxn1
+    incsteps(o)
 end
-
 
 """
 
@@ -152,6 +150,6 @@ Keyword arguments:
 * `verbose::Bool=false` Set to `true` to see trace.
 
 """
-halley(f,fp, fpp, x::Number; kwargs...) = halley_method(f, fp, fpp, float(x); kwargs...)
-halley(f, fp, x::Real; kwargs...) = halley(f, fp, D(fp), x; kwargs...)
-halley(f, x::Real; kwargs...) = halley(f, D(f), D(f,2), x; kwargs...)
+halley(f,  x0; kwargs...) = find_zero(f, x0, Halley(); kwargs...)
+halley(f, fp, x0; kwargs...) = find_zero(f, fp, x0, Halley(); kwargs...)
+halley(f, fp, fpp, x0; kwargs...) = find_zero(f, fp, fpp, x0, Halley(); kwargs...)

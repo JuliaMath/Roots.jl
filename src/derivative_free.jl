@@ -1,106 +1,7 @@
-## Various derivative-free iterative algorithms to find a zero
-
-## Use iterator for solving.
-## allow for solving along the lines of:
-## ```
-## for xn in itr
-##    println(xn)
-## end
-## ```
-type ZeroType{T, S}
-    f
-    fp
-    fpp
-    
-    update
-
-    xn::Vector{T}
-    fxn::Vector{S}
-
-    xtol
-    xtolrel
-    ftol
-    state
-    
-    cnt
-    maxcnt
-    fevals
-    maxfevals
-end
-incfn(o::ZeroType,i::Int=1) = (o.fevals = o.fevals + i)
-inccnt(o::ZeroType, i::Int=1) = (o.cnt = o.cnt + i)
-
-
-function Base.start{T}(o::ZeroType{T})
-    (o.xn[end], o.fxn[end])
-end
-
-function Base.next{T,S}(o::ZeroType{T,S}, state)
-    o.update(o)
-    o.cnt = o.cnt + 1
-    (o.xn[end], o.fxn[end]), (o.xn[end], o.fxn[end])
-end
-
-## done function centralizes the stopping rules
-function Base.done(o::ZeroType, state)
-    if o.state == :converged
-        ## check for near convergence
-        (norm(o.fxn[end]) <= sqrt(o.ftol)) && return true
-        throw(ConvergenceFailed("Algorithm stopped with xn=$(o.xn[end]), f(xn)=$(o.fxn[end])"))
-    end
-        
-    o.cnt > o.maxcnt && throw(ConvergenceFailed("Too many steps taken"))
-    o.fevals > o.maxfevals  && throw(ConvergenceFailed("Too many function calls taken"))
-    isnan(o.fxn[end]) && throw(ConvergenceFailed("NaN produced by algorithm"))
-    isinf(o.xn[end]) && throw(ConvergenceFailed("Algorithm escaped to oo"))
-                               
-    # return turn if f(xn) \approx 0 or xn+1 - xn \approx 0
-    lambda = max(1, abs(o.xn[end]))
-    ftol = lambda * o.ftol
-    xtol = o.xtol +  lambda * o.xtolrel
-
-    norm(o.fxn[end]) < ftol && return true
-    if length(o.xn) > 1
-        if (norm(o.xn[end] - o.xn[end-1])) <= xtol && (norm(o.fxn[end]) < sqrt(ftol))
-            return true
-        end
-    end
-    false
-end
-
-
-## printing utility, borrowed idea of showing change from previous from @stevengj. Only works at REPL
-function printdiff(x1, x0, color=:red)
-    s0, s1 = string(x0), string(x1)
-    flag = true
-    for i in 1:length(s1)
-        if i <= length(s0) && s0[i:i] == s1[i:i]
-            print_with_color(:red, s1[i:i])
-        else
-            print(s1[i:end])
-            break
-        end
-    end
-    print("\n")
-end
-
-# show output
-function verbose_output(out::ZeroType)
-    println("Steps = $(out.cnt), function calls = $(out.fevals); steps:")
-    xs = copy(out.xn)
-    x0 = shift!(xs)
-    println(x0)
-    while length(xs) > 0
-        x1 = shift!(xs)
-        printdiff(x1, x0)
-        x0 = x1
-    end
-    println("")
-end
-
+# Many derivative free methods of different orders
 
 ##################################################
-
+## Helpers for the various methods
 ## issue with approx derivative
 isissue(x) = (x == 0.0) || isnan(x) || isinf(x)
 
@@ -108,9 +9,21 @@ isissue(x) = (x == 0.0) || isnan(x) || isinf(x)
 """
 heuristic to get a decent first step with Steffensen steps
 """
-function steff_step(x, fx)
-    thresh =  max(1, sqrt(abs(x/fx))) * 1e-6
-    abs(fx) <= thresh ? fx : sign(fx) * thresh
+function steff_step{T}(x::T, fx)
+    thresh =  max(1, norm(x)) * sqrt(eps(T)) # max(1, sqrt(abs(x/fx))) * 1e-6
+    norm(fx) <= thresh ? fx : sign(fx) * thresh
+end
+
+function guarded_secant_step(alpha, beta, falpha, fbeta)
+    fp = (fbeta - falpha) /  (beta - alpha) 
+    Δ = fbeta / fp
+
+    if norm(Δ) >= 100 * norm(alpha - beta) # guard runaway
+        Δ = sign(Δ) * 100 * norm(alpha - beta)
+    end
+    
+    beta - Δ, isissue(Δ)
+    
 end
 
 
@@ -119,471 +32,536 @@ end
 
 ## use f[a,b] to approximate f'(x)
 function _fbracket(a, b, fa, fb)
-    out = (fb - fa) / (b - a)
+    num, den = fb-fa, b - a
+    num == 0 && den == 0 && return Inf, true
+    out = num / den
     out, isissue(out)    
 end
 
 ## use f[y,z] - f[x,y] + f[x,z] to approximate
 function _fbracket_diff(a,b,c, fa, fb, fc)
-    x1, state = _fbracket(b, c, fb,  fc)
-    x2, state = _fbracket(a, b, fa,  fb)
-    x3, state = _fbracket(a, c, fa,  fc)
+    x1, _ = _fbracket(b, c, fb,  fc)
+    x2, _ = _fbracket(a, b, fa,  fb)
+    x3, _ = _fbracket(a, c, fa,  fc)
     out = x1 - x2 + x3
     out, isissue(out)
 end
 
+
 ## use f[a,b] * f[a,c] / f[b,c]
 function _fbracket_ratio(a, b, c, fa, fb, fc)
-    x1,_ = _fbracket(b, c, fb, fc)
-    x2,_ = _fbracket(a, b, fa, fb)
-    x3,_ = _fbracket(a, c, fa, fc)
-    out = (x2 * x3) / x1
+    x1, _ = _fbracket(a, b, fa, fb)
+    x2, _ = _fbracket(a, c, fa, fc)
+    x3, _ = _fbracket(b, c, fb, fc)
+    out = (x2 * x3) / x3
     out, isissue(out)    
 end
 
 
+##################################################
+
+## Order0 and Secant are related
+abstract AbstractSecant <: UnivariateZeroMethod
+type Order0 <: AbstractSecant end
+type Secant <: AbstractSecant end
+typealias Order1 Secant
+
+function init_state{T <: AbstractFloat}(method::AbstractSecant, fs, x::Union{T, Vector{T}}, bracket)
+
+    if isa(x, Vector)
+        x0, x1 = x[1:2]
+        fx0, fx1 = fs.f(x0), fs.f(x1)
+    else
+        x0 = float(x)
+        fx0 = fs.f(x0)
+        stepsize = max(1/100, min(abs(fx0), abs(x0/100)))
+        x1 = x0 + stepsize
+        x0, x1, fx0, fx1  = x1, x0, fs.f(x1), fx0 # switch
+    end
+    
+    state = UnivariateZeroState(
+                                x1, x0,
+                                fx1, fx0,
+                                isa(bracket, Nullable) ? bracket : Nullable(convert(Vector{T}, sort(bracket))),
+                                0,
+                                2,
+                                false,
+                                false,
+                                false,
+                                false,
+                                "")
+    state
+end
 
 ##################################################
-## Iterators
 
-# iterator for secant function
-function secant_itr(f, x0::Real, x1::Real; xtol=4*eps(), xtolrel=4*eps(), ftol=4*eps(), maxsteps=100, maxfnevals=100)
-    update = (o) -> begin
-        xn_1, xn = o.xn[(end-1):end]
-        fxn_1, fxn = o.fxn[(end-1):end]
+## order 0
+# goal: more robust to initial guess than higher order methods
+# follows roughly algorithm described http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1979-12.pdf, the SOLVE button from the HP-34C
+# though some modifications were made. 
+# * use secant step
+# * if along the way a bracket is found, switch to bisection. (We use float64 bisection not a42 if available)
+# * if secant step fails to decrease, we use quadratic step up to 3 times
+# 
+# Goal is to return a value `x` with either:
+# * `f(x) == 0.0` or 
+# * `f(prevfloat(x)) * f(nextfloat(x)) < 0`.
+# if a bracket is found that can be done, otherwise secant step is used
+function update_state{T}(method::Order0, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions)
 
-        fp, issue = _fbracket(xn, xn_1, fxn, fxn_1)
+    f = fs.f
+    alpha, beta = o.xn0, o.xn1
+    falpha, fbeta = o.fxn0, o.fxn1
+    S = eltype(falpha)
+    
+    incsteps(o)
 
-        
-        xn1 = xn - fxn  / fp
-        fxn1 = o.f(xn1)
-        incfn(o)
-        
-        push!(o.xn, xn1)
-        push!(o.fxn, fxn1)
-
+    if sign(falpha) * sign(fbeta) < 0.0
+        # use bisection
+        verbose = options.verbose; options.verbose=false # turn off verbose
+        find_zero(Bisection(), fs, o, options)
+        options.verbose = verbose
+        o.message = "Used bisection for last step: [a,b] = [$alpha, $beta]"
+        return nothing
     end
-    x, fx = promote(float(x1), f(float(x1)))
-    out = ZeroType(f, nothing, nothing, update,
-                   [float(x0), x], [f(float(x0)), fx],
-                   xtol, xtolrel, ftol, :not_converged,
-                   0, maxsteps, 2, maxfnevals)
 
-    out
-end
+    gamma, issue = guarded_secant_step(alpha, beta, falpha, fbeta)
+    if issue
+        o.message = "error with guarded secant step"
+        o.stopped = true
+        return nothing
+    end
 
+    fgamma = f(gamma); incfn(o)
+    if sign(fgamma)*sign(fbeta) < 0.0
+        o.xn0, o.xn1 = gamma, beta
+        o.fxn0, o.fxn1 = fgamma, fbeta
+        verbose = options.verbose; options.verbose=false # turn off verbose
+        find_zero(Bisection(), fs, o, options)
+        options.verbose=verbose
+        o.message = "Used bisection for last step"
+        return nothing
+    end
 
-function steffensen_itr{T<:AbstractFloat}(f, x0::T;
-                   xtol=4*eps(), xtolrel=4*eps(), ftol=4*eps(),
-                   maxsteps=100, maxfnevals=100)
-    update = (o) -> begin
-        xn = o.xn[end]
-        fxn = o.fxn[end]
-        
-        wn = xn + steff_step(xn, fxn)
-        fwn = f(wn)
-        incfn(o)
-        
-        fp, issue = _fbracket(xn, wn, fxn, fwn)
-        
-        if issue
-            o.state = :converged
-            return
+    if norm(fgamma) <= norm(fbeta)
+        o.xn0, o.xn1 = beta, gamma
+        o.fxn0, o.fxn1 = fbeta, fgamma
+        return nothing
+    end
+    
+    ctr = 0
+    while true
+        ## quadratic step
+        ctr += 1
+        if ctr >= 3
+            o.stopped = true
+            o.message = "dithering, algorithm failed to improve using quadratic steps"
+            return nothing
         end
-        
-        xn1 = xn - fxn / fp
-        
-        
-        fxn1 = o.f(xn1)
-        incfn(o)
-        
-        push!(o.xn, xn1)
-        push!(o.fxn, fxn1)
 
+        # quadratic_step. Put new gamma at vertex of parabola through alpha, beta, (old) gamma
+        denom = (beta - alpha) * (fbeta - fgamma)  - (beta - fgamma) * (fbeta - falpha)
+        if isissue(denom)
+            o.stopped
+            o.message = "dithering, algorithm failed to improve using quadratic steps"
+            return nothing
+        end
+        gamma = beta -  ((beta - alpha)^2 * (fbeta - fgamma) - (beta - gamma)^2 * (fbeta - falpha))/denom/2
+
+        
+        fgamma = f(gamma); incfn(o)
+        incfn(o)
+
+        if norm(fgamma) < norm(fbeta)
+            o.xn0, o.xn1 = beta, gamma
+            o.fxn0, o.fxn1 = fbeta, fgamma
+            return nothing
+        end
+
+        theta, issue = guarded_secant_step(beta, gamma, fbeta, fgamma)
+        ftheta = f(theta); incfn(o)
+        
+        if sign(ftheta) * sign(fbeta) < 0
+            o.xn0, o.xn1 = beta, theta
+            o.fxn0, o.fxn1 = fbeta, ftheta
+
+            opts = deepcopy(options); #opts.verbose=false
+            o.message = "used bisection for last step"
+            find_zero(Bisection(), fs, o, opts)        
+            return nothing
+        end
     end
 
-    x = float(x0)
-    x, fx = promote(x, f(x))
-    out = ZeroType(f, nothing, nothing, update, [x], [fx],
-                   xtol, xtolrel, ftol, :not_converged, 
-                   0, maxsteps, 1, maxfnevals)
-
-    out
+    # failed to improve
+    o.stopped = true
+    o.message = "failure to improve"
+    return nothing
 end
 
 
-## http://www.naturalspublishing.com/files/published/ahb21733nf19a5.pdf
+##################################################
+    
+## Secant
+## https://en.wikipedia.org/wiki/Secant_method
+function update_state{T}(method::Secant, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions)
+
+    xn0, xn1 = o.xn0, o.xn1
+    fxn0, fxn1 = o.fxn0, o.fxn1
+    S = eltype(fxn0)
+
+    incsteps(o)
+
+    fp, issue = _fbracket(xn0, xn1, fxn0, fxn1)
+    if issue
+        o.stopped = true
+        o.message = "Derivative approximation had issues"
+        return
+    end
+    
+    xn2::T = xn1 -  fxn1 / fp
+    fxn2::S = fs.f(xn2)
+    incfn(o)
+
+    o.xn0, o.xn1 = xn1, xn2
+    o.fxn0, o.fxn1 = fxn1, fxn2
+
+
+    nothing
+end
+
+"""
+secant_method: solve for zero of `f(x) = 0` using the secant method
+"""
+secant_method(f, x0::Real, x1::Real; kwargs...) = find_zero(f, map(float, [x0,x1]), Order1(); kwargs...)
+
+
+##################################################
+
+### Steffensen
+## https://en.wikipedia.org/wiki/Steffensen's_method#Simple_description
+type Steffensen <: UnivariateZeroMethod
+end
+typealias Order2 Steffensen
+
+function update_state{T}(method::Steffensen, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions)
+
+    xn = o.xn1
+    fxn = o.fxn1
+    S = eltype(fxn)
+
+    incsteps(o)
+
+    wn::T = xn + steff_step(xn, fxn)
+    fwn::S = fs.f(wn) 
+    incfn(o)
+        
+    fp, issue = _fbracket(xn, wn, fxn, fwn)
+        
+    if issue
+        o.stopped = true
+        o.message = "Derivative approximation had issues"
+        return
+    end
+        
+    xn1::T = xn - fxn / fp
+        
+        
+    fxn1::S = fs.f(xn1)
+    incfn(o)
+        
+    o.xn0, o.xn1 = xn, xn1
+    o.fxn0, o.fxn1 = fxn, fxn1
+
+
+    nothing
+end
+
+steffenson(f, x0; kwargs...) = find_zero(f, x0, Steffensen(); kwargs...)
+
+##################################################
+       
 ## A New Fifth Order Derivative Free Newton-Type Method for Solving Nonlinear Equations
 ## Manoj Kumar, Akhilesh Kumar Singh, and Akanksha Srivastava
 ## Appl. Math. Inf. Sci. 9, No. 3, 1507-1513 (2015)
-function kss5_itr(f, x0::Real;
-             xtol=4*eps(), xtolrel=4*eps(), ftol=4*eps(),
-             maxsteps=100, maxfnevals=100)
+## http://www.naturalspublishing.com/files/published/ahb21733nf19a5.pdf
+type Order5 <: UnivariateZeroMethod
+end
 
-    update = o -> begin
-        xn = o.xn[end]
-        fxn = o.fxn[end]
+function update_state{T}(method::Order5, fs::DerivativeFree, o::UnivariateZeroState{T}, options::UnivariateZeroOptions)
+    xn = o.xn1
+    fxn = o.fxn1
+    S = eltype(fxn)
 
-        wn = xn + steff_step(xn, fxn)
-        fwn = o.f(wn)
-        incfn(o)
+    incsteps(o)
+    
+    wn::T = xn + steff_step(xn, fxn)
+    fwn::S = fs.f(wn)
+    incfn(o)
+    
+    fp, issue = _fbracket(xn, wn, fxn, fwn)
+    if issue
+        o.xn0, o.xn1 = xn, wn
+        o.fxn0, o.fxn1 = fxn, fwn
+        o.message = "Issue with divided difference f[xn, wn]"
+        o.stopped  = true
+        return
+    end
+    
+    yn::T = xn - fxn / fp
+    fyn::S = fs.f(yn)
+    incfn(o)
+    
 
-        fp, issue = _fbracket(xn, wn, fxn, fwn)
-        if issue
-            o.state = :converged
-            return
-        end
+    zn::T = xn - (fxn + fyn) / fp
+    fzn::S = fs.f(zn)
+    incfn(o)
+
+    fp, issue = _fbracket_ratio(yn, xn, wn, fyn, fxn, fwn)
+    if issue
+        o.xn0, o.xn1 = xn, yn
+        o.fxn0, o.fxn1 = fxn, fyn
+        o.message = "Issue with f[xn,yn]*f[yn,wn] / f[xn, wn]"
+        o.stopped = true
+        return
+    end
+            
+    xn1::T = zn  - fzn  / fp
+    fxn1::S = fs.f(xn1)
+    incfn(o)
         
-        yn = xn - fxn / fp
-        fyn = o.f(yn)
-        incfn(o)
-        
-        zn = xn - (fxn + fyn) / fp ## not a step in thukral algorithms
-        fzn = o.f(zn)
-        incfn(o)
-        fp, issue = _fbracket_ratio(yn, xn, wn, fyn, fxn, fwn)
+    o.xn0, o.xn1 = xn, xn1
+    o.fxn0, o.fxn1 = fxn, fxn1
 
-        if issue || isinf(fzn)
-            push!(o.xn, yn)
-            push!(o.fxn, fyn)
-            o.state = :converged
-            return
-        end
-        
-        xn1 = zn  - fzn  / fp
-        fxn1 = o.f(xn1); incfn(o)
-        
+    nothing
+end
 
-        push!(o.xn, xn1)
-        push!(o.fxn, fxn1)
+## If we have a derivative
+function update_state{T}(method::Order5, fs::FirstDerivative, o::UnivariateZeroState{T}, options::UnivariateZeroOptions)
+
+
+    xn, fxn = o.xn1, o.fxn1
+    S = eltype(fxn)
+
+    incsteps(o)
+    
+    fpxn = fs.fp(xn)
+    incfn(o)
+
+    if isissue(fpxn)
+        o.stopped  = true
+        return
+    end
+    
+    yn = xn - fxn / fpxn
+    fyn, fpyn = fs.f(yn), fs.fp(yn)
+    incfn(o, 2)
+
+    if isissue(fpyn)
+        o.xn0, o.xn1 = xn, yn
+        o.fxn0, o.fxn1 = fxn, fyn
+        o.stopped  = true
+        return
     end
 
-    x, fx = promote(float(x0), f(float(x0)))
-    out = ZeroType(f, nothing, nothing, update, [x], [fx],
-                   xtol, xtolrel, ftol,:not_converged, 
-                   0, maxsteps, 1, maxfnevals)
+    
+    zn = xn  - (fxn + fyn) / fpxn
+    fzn = fs.f(zn)
+    incfn(o, 1)
 
-    out
+    xn1 = zn - fzn / fpyn
+    fxn1 = fs.f(xn1)
+    incfn(o, 1)
+    
+    o.xn0, o.xn1 = xn, xn1
+    o.fxn0, o.fxn1 = fxn, fxn1
+
+    nothing
 end
 
 
-## http://www.hindawi.com/journals/ijmms/2012/493456/
+# kss5(f, x0; kwargs...) = kss5(f, D(f), x0; kwargs...)
+# function kss5(f, fp, x0; kwargs...)
+#     fs = FirstDerivative(f, fp)
+#     T = typeof(float(x0))
+#     state = init_state(Order5(), fs, x0, Nullable{Vector{T}}())
+#     options = UnivariateZeroOptions(eps(T), eps(T), eps(T), eps(T), 40, 200, true)
+#     zp = UnivariateZeroProblem(fs, state, options)
+
+#     find_zero(zp, Order5())
+# end
+
+
+##################################################
+
+## New Eighth-Order Derivative-Free Methods for Solving Nonlinear Equations
 ## Rajinder Thukral
-## very fast (8th order) derivative free iterative root finder.
-function thukral8_itr(f, x0::Real;
-             xtol=4*eps(), xtolrel=4*eps(), ftol=4*eps(),
-             maxsteps=100, maxfnevals=100)
+## International Journal of Mathematics and Mathematical Sciences
+## Volume 2012 (2012), Article ID 493456, 12 pages
+## http://dx.doi.org/10.1155/2012/493456
 
-    update = o -> begin
-        xn = o.xn[end]
-        fxn = o.fxn[end]
-
-        wn = xn + steff_step(xn, fxn)
-        fwn = o.f(wn)
-        incfn(o)
-
-        fp, issue = _fbracket(xn, wn, fxn, fwn)
-        issue && return (xn, true)
-
-        if issue
-            o.state = :converged
-            return
-        end
-
-        yn = xn - fxn / fp
-        fyn = o.f(yn)
-        incfn(o)
-
-        fp, issue = _fbracket(yn, xn, fyn, fxn)
-        if issue
-            push!(o.xn, yn); push!(o.fxn, fyn)
-            o.state = :converged
-            return
-         end
-
-        phi = (1 + fyn / fwn)           # pick one of options
-        zn =  yn - phi * fyn / fp
-        fzn = o.f(zn)
-        incfn(o)
-        
-        fp, issue =  _fbracket_diff(xn, yn, zn, fxn, fyn, fzn) 
-        if issue
-            push!(o.xn, zn)
-            push!(o.fxn, fzn)
-            o.state = :converged
-            return
-         end
-
-        w = 1 / (1 - fzn/fwn)
-        xi = (1 - 2fyn*fyn*fyn / (fwn * fwn * fxn))
-
-        xn1 = zn - w * xi * fzn / fp
-        fxn1 = o.f(xn1)
-        incfn(o)
-
-        push!(o.xn, xn1)
-        push!(o.fxn, fxn1)
-    end
-
-    x, fx = promote(float(x0), f(float(x0)))    
-    out = ZeroType(f, nothing, nothing, update, [x], [fx],
-                   xtol, xtolrel, ftol,:not_converged, 
-                   0, maxsteps, 1, maxfnevals)
-
-    out
+type Order8 <: UnivariateZeroMethod
 end
 
+function update_state{T}(method::Order8, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions)
+    xn = o.xn1
+    fxn = o.fxn1
+    S = eltype(fxn)
 
-## 16th order, derivative free root finding algorithm
-## http://article.sapub.org/10.5923.j.ajcam.20120203.08.html
+    incsteps(o)
+    
+    wn::T = xn + steff_step(xn, fxn)
+    fwn::S = fs.f(wn)
+    incfn(o)
+
+    if isissue(fwn)
+        o.xn0,o.xn1 = xn, wn
+        o.fxn0,o.fxn1 = fxn, fwn
+        o.stopped = true
+        o.message = "issue with Steffensen step fwn"
+        return
+    end
+
+    
+
+    fp, issue = _fbracket(xn, wn, fxn, fwn)
+    issue && return (xn, true)
+
+    if issue
+        o.stopped = true
+        o.message = "issue with divided difference f[xn, wn]"
+        return
+    end
+    
+    yn::T = xn - fxn / fp
+    fyn::S = fs.f(yn)
+    incfn(o)
+
+    fp, issue = _fbracket(yn, xn, fyn, fxn)
+    if issue #fp
+        o.xn0,o.xn1 = xn, yn
+        o.fxn0,o.fxn1 = fxn, fyn
+        o.stopped = true
+        o.message = "issue with divided difference f[xn, yn]"
+        return
+    end
+
+
+    phi = (1 + fyn / fwn)           # pick one of options
+    zn =  yn - phi * fyn / fp
+    fzn::S = fs.f(zn)
+    incfn(o)
+        
+    fp, issue =  _fbracket_diff(xn, yn, zn, fxn, fyn, fzn) 
+    if issue
+        o.xn0,o.xn1 = xn, zn
+        o.fxn0,o.fxn1 = fxn, fzn
+        o.message = "issue with divided difference  f[y,z] - f[x,y] + f[x,z]"
+        o.stopped = true
+        return
+    end
+
+    w::T = 1 / (1 - fzn/fwn)
+
+    xi::T = (1 - 2fyn*fyn*fyn / (fwn * fwn * fxn))
+    
+    xn1::T = zn - w * xi * fzn / fp
+    fxn1::S = fs.f(xn1)
+    incfn(o)
+
+    o.xn0,o.xn1 = xn, xn1
+    o.fxn0,o.fxn1 = fxn, fxn1
+            
+    nothing
+end
+
+##################################################
+
+## New Sixteenth-Order Derivative-Free Methods for Solving Nonlinear Equations
+## R. Thukral
 ## American Journal of Computational and Applied Mathematics
 ## p-ISSN: 2165-8935    e-ISSN: 2165-8943
 ## 2012;  2(3): 112-118
 ## doi: 10.5923/j.ajcam.20120203.08
-## New Sixteenth-Order Derivative-Free Methods for Solving Nonlinear Equations
-## R. Thukral
-## Research Centre, 39 Deanswood Hill, Leeds, West Yorkshire, LS17 5JS, England
-## from p 114 (17)
-function thukral16_itr(f, x0::Real;
-             xtol=4*eps(), xtolrel=4*eps(), ftol=4*eps(),
-             maxsteps=100, maxfnevals=100)
 
-    update = o -> begin
-        xn = o.xn[end]
-        fxn = o.fxn[end]
-
-        wn = xn + steff_step(xn, fxn)
-        fwn = o.f(wn)
-        incfn(o)
-
-        fp, issue = _fbracket(xn, wn, fxn, fwn)
-        if issue 
-            o.state = :converged
-            return
-         end
-        
-        yn = xn - fxn / fp
-        fyn = o.f(yn)
-        incfn(o)
-        
-
-        fp, issue = _fbracket(xn, yn, fxn, fyn)
-        phi = _fbracket(xn, wn, fxn, fwn)[1] / _fbracket(yn, wn, fyn, fwn)[1]
-        if issue
-            push!(o.xn, yn); push!(o.fxn, fyn)
-            o.state = :converged
-            return
-         end
-
-        
-        zn = yn - phi * fyn / fp
-        fzn = o.f(zn)
-        incfn(o)
-
-        fp, issue = _fbracket_diff(xn, yn, zn, fxn, fyn, fzn)
-        u2, u3, u4 = fzn/fwn, fyn/fxn, fyn/fwn
-        eta = 1 / (1 + 2*u3*u4^2) / (1 - u2)
-        if issue
-            push!(o.xn, zn); push!(o.fxn, fzn)
-            o.state = :converged
-            return
-        end        
-
-        an = zn - eta * fzn / fp
-        fan = o.f(an)
-        incfn(o)
-
-        fp, issue = _fbracket_ratio(an, yn, zn, fan, fyn, fzn)
-        u1, u5, u6 = fzn/fxn, fan/fxn, fan/fwn
-        sigma =  1 + u1*u2 - u1*u3*u4^2 + u5 + u6 + u1^2*u4 +
-                 u2^2*u3 + 3*u1*u4^2*(u3^2 - u4^2)/_fbracket(xn,yn, fxn, fyn)[1]
-        
-        if issue
-            push!(o.xn, an); push!(o.fxn, fan)
-            o.state = :converged
-            return
-        end  
-        
-        xn1 = an - sigma * fan / fp
-        fxn1 = o.f(xn1)
-        incfn(o)
-
-        push!(o.xn, xn1)
-        push!(o.fxn, fxn1)
-    end
-
-    x, fx = promote(float(x0), f(float(x0)))    
-    out = ZeroType(f, nothing, nothing, update, [x], [fx],
-                   xtol, xtolrel, ftol,:not_converged, 
-                   0, maxsteps, 1, maxfnevals)
-
-    out
+type Order16 <: UnivariateZeroMethod
 end
 
-
-
-"""
-Main interface for derivative free methods
-
-* `f` a scalar function `f:R -> R` or callable object. Methods try to find a solution to `f(x) = 0`.
-
-* `x0` initial guess for zero. Iterative methods need a reasonable
-initial starting point.
-
-* `ftol`. Stop iterating when |f(xn)| <= max(1, |xn|) * ftol.
-
-* `xtol`. Stop iterating when |xn+1 - xn| <= xtol + abs(1, |xn|) * xtolrel. Checks that f(xn) is reasonably close.
-
-* `xtolrel`. Stop iterating when |xn+1 - xn| <= xtol + abs(1, |xn|) * xtolrel. Checks that f(xn) is reasonably close.
-
-* `maxeval`. Stop iterating if more than this many steps, throw error.
-
-* `maxfneval`. Stop iterating if more than this many function calls, throw error.
-
-* `order`. One of 0, 1, 2, 5, 8, or 16. Specifies which algorithm to
-use.
-
-- Default is 0 for the slower, more robust, SOLVE function. 
-- order 1 is a secant method
-- order 2 is a Steffensen method
-- order 5 uses a method of Kumar, Kumar Singh, and Srivastava
-- order 8 From Thukral. Seems a bit more robust than the secant method and Steffensen method
-- order 16 A higher-order method due to Thurkal. It may be faster when used with `Big` values.
-
-* `verbose`. If true, will print number of iterations, function calls, and each step taken
-
-* `kwargs...` passed on.
-
-The `SOLVE` method has different stopping criteria.
-
-The file test/test_fzero2 generates some timed comparisons
-
-Because these are derivative free, they can be used with functions
-defined by automatic differentiation
-e.g., find critical point of f(x) = x^2
-```
-fzero(D(x -> x^2), 1)
-```
-"""
-
-function derivative_free{T <: AbstractFloat}(f, x0::T;
-                         ftol::Real = 10.0 * eps(x0),
-                         xtol::Real =  4.0 * eps(x0),
-                         xtolrel::Real = eps(x0),
-                         maxeval::Int = 30,
-                         verbose::Bool=false,
-                         order::Int=0,  # 0, 1, 2, 5, 8 or 16
-                         kwargs...      # maxfnevals,
-                         )
+function update_state{T}(method::Order16, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions)
+    xn = o.xn1
+    fxn = o.fxn1
+    S = eltype(fxn)
     
-    order == 0 && return(SOLVE(f, x0; ftol=ftol, maxeval=maxeval, verbose=verbose, kwargs...))
-    _derivative_free(f, x0; order=order, ftol=ftol, xtol=xtol, xtolrel=xtolrel, maxeval=maxeval,
-                     verbose=verbose, kwargs...)
+    incsteps(o)
 
-end
-function _derivative_free{T <: AbstractFloat}(f, x0::T;
-                         ftol::Real = 10.0 * eps(x0),
-                         xtol::Real =  4.0 * eps(x0),
-                         xtolrel::Real = eps(x0),
-                         maxeval::Int = 30,
-                         verbose::Bool=false,
-                         order::Int=0,  # 0, 1, 2, 5, 8 or 16
-                         kwargs...      # maxfnevals, possible beta to control steffensen step
-                         )
-    if order == 16
-        o = thukral16_itr(f, x0; ftol=ftol, xtol=xtol, xtolrel=xtolrel, maxsteps=maxeval, kwargs...)
-    elseif order == 8
-        o = thukral8_itr(f, x0; ftol=ftol, xtol=xtol, xtolrel=xtolrel, maxsteps=maxeval, kwargs...)        
-    elseif order == 5
-        o = kss5_itr(f, x0; ftol=ftol, xtol=xtol, xtolrel=xtolrel, maxsteps=maxeval,  kwargs...)                
-    elseif order == 2
-        o = steffensen_itr(f, x0; ftol=ftol, xtol=xtol, xtolrel=xtolrel, maxsteps=maxeval,  kwargs...)
-    elseif order == 1
-        x1 = x0 + steff_step(x0, f(x0))
-        o = secant_itr(f, float(x1), x0; ftol=ftol, xtol=xtol, xtolrel=xtolrel, maxsteps=maxeval,  kwargs...)
-    else
-        throw(ArgumentError())
+    wn::T = xn + steff_step(xn, fxn)
+    fwn::S = fs.f(wn)
+    incfn(o)
+
+    fp, issue = _fbracket(xn, wn, fxn, fwn)
+
+    if issue
+        o.xn0, o.xn1 = xn, wn
+        o.fxn0, o.fxn1 = fxn, fwn
+        o.message = "issue with f[xn,wn]"
+        o.stopped = true
+        return
     end
-
-    if done(o, start(o))
-        verbose && println("Done before we started...")
-        return(x0)::T
-    end
-
-    val = x0
-    try
-        for (x,fx) in o
-            nothing
-        end
-        verbose && verbose_output(o)        
-        o.xn[end]
-    catch err
-        verbose && verbose_output(o)                
-        rethrow(err)
+        
+    yn::T = xn - fxn / fp
+    fyn::S = fs.f(yn)
+    incfn(o)
+    
+    fp, issue = _fbracket_ratio(yn, xn, wn, fyn, fxn, fwn)
+    if issue 
+        o.xn0, o.xn1 = xn, yn
+        o.fxn0, o.fxn1 = fxn, fyn
+        o.message = "issue with f[xn,yn]*f[yn,wn]/f[xn,wn]"
+        o.stopped = true
+        return
     end
 
 
-end
+    
+    zn::T = yn - fyn / fp
+    fzn::S = fs.f(zn)
+    incfn(o)
 
+    fp, issue = _fbracket_diff(xn, yn, zn, fxn, fyn, fzn)
+    u2, u3, u4 = fzn/fwn, fyn/fxn, fyn/fwn
+    eta = 1 / (1 + 2*u3*u4^2) / (1 - u2)
+    if issue
+        o.xn0, o.xn1 = xn, zn
+        o.fxn0, o.fxn1 = fxn, fzn
+        o.stopped = true
+        o.message = "Approximate derivative failed"
+        return
+    end        
 
-"""
+    an = zn - eta * fzn / fp
+    fan = fs.f(an)
+    incfn(o)
 
-Implementation of secant method: `x_n1 = x_n - f(x_n) * f(x_n)/ (f(x_n) - f(x_{n-1}))`
+    fp, issue = _fbracket_ratio(an, yn, zn, fan, fyn, fzn)
+    u1, u5, u6 = fzn/fxn, fan/fxn, fan/fwn
+    sigma =  1 + u1*u2 - u1*u3*u4^2 + u5 + u6 + u1^2*u4 +
+        u2^2*u3 + 3*u1*u4^2*(u3^2 - u4^2)/_fbracket(xn,yn, fxn, fyn)[1]
+    
+    if issue
+        o.xn0, o.xn1 = xn, an
+        o.fxn0, o.fxn1 = fxn, fan
+        o.stopped = true
+        o.message = "Approximate derivative failed"
+        return
+    end  
+        
+    xn1 = an - sigma * fan / fp
+    fxn1 = fs.f(xn1)
+    incfn(o)
 
-Arguments:
+    o.xn0, o.xn1 = xn, xn1
+    o.fxn0, o.fxn1 = fxn, fxn1
 
-* `f::Function` -- function to find zero of
-
-* `x0::Real` -- initial guess is [x0, x1]
-
-* `x1::Real` -- initial guess is [x0, x1]
-
-Keyword arguments:
-
-* `ftol`. Stop iterating when |f(xn)| <= max(1, |xn|) * ftol.
-
-* `xtol`. Stop iterating when |xn+1 - xn| <= xtol + max(1, |xn|) * xtolrel
-
-* `xtolrel`. Stop iterating when |xn+1 - xn| <= xtol + max(1, |xn|) * xtolrel
-
-* `maxeval`. Stop iterating if more than this many steps, throw error.
-
-* `maxfneval`. Stop iterating if more than this many function calls, throw error.
-
-* `verbose::Bool=false` Set to `true` to see trace.
-
-"""
-function secant_method(f, x0::Real, x1::Real;
-                       xtol=4*eps(), xtolrel=4*eps(), ftol=4eps(),
-                       maxsteps::Int=100, maxfnevals=100,
-                       verbose::Bool=false)
-
-    x_0, x_1 = float(x0), float(x1)
-    o = secant_itr(f, x_0, x_1;
-                   xtol=xtol, xtolrel=xtolrel, ftol=ftol,
-                   maxsteps=maxsteps, maxfnevals=maxfnevals)
-
-    for x in o
-        nothing
-    end
-
-    verbose && verbose_output(o)        
-    o.xn[end]
+    nothing
 end
 
-function steffensen_method{T<:AbstractFloat}(f, x0::T;
-                       xtol=4*eps(), xtolrel=4*eps(), ftol=4eps(),
-                       maxsteps::Int=100, maxfnevals=100,
-                       verbose::Bool=false)
-    o = steffensen_itr(f, x0; 
-                  xtol=xtol, xtolrel=xtolrel, ftol=ftol,
-                  maxsteps=maxsteps, maxfnevals=maxfnevals)
-
-    for x in o
-        nothing
-    end
-    verbose && verbose_output(o)
-    o.xn[end]
-end
-steffensen(f, x0::Number, args...; kwargs...) = steffensen_method(f, float(x0), args...; kwargs...)
 
