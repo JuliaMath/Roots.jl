@@ -59,7 +59,20 @@ incsteps(o::UnivariateZeroState, k=1) = o.steps += k
 ## we use x0 + typemax(Int) as a sentinel. This could be a Nullable, but that
 ## is a bit more hassle
 function init_state{T}(method::Any, fs, x0::T, bracket)
-    fx0 = fs.f(x0)
+    fx0 = fs.f(x0); fnevals = 1
+
+    if isa(bracket, Nullable)
+        if !isnull(bracket)
+            a,b = get(bracket)
+            sign(fs.f(a)) * sign(fs.f(b)) > 0 && (warn(bracketing_error); throw(ArgumentError))
+            fnevals += 2
+        end
+    else
+        a,b = bracket[1,2]
+        sign(fs.f(a)) * sign(fs.f(b)) > 0 &&  (warn(bracketing_error); throw(ArgumentError))
+        fnevals += 2
+    end
+    
     S = eltype(fx0)
     state = UnivariateZeroState(x0,
                                 x0 + typemax(Int),
@@ -67,7 +80,7 @@ function init_state{T}(method::Any, fs, x0::T, bracket)
                                 fx0,
                                 isa(bracket, Nullable) ? bracket : Nullable(convert(Vector{T}, bracket)),
                                 0,
-                                1,
+                                fnevals,
                                 false,
                                 false,
                                 false,
