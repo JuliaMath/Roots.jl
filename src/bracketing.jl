@@ -10,6 +10,11 @@ type ConvergenceFailed
     reason::AbstractString
 end
 
+bracketing_error = """The interval [a,b] is not a bracketing interval.
+You need f(a) and f(b) to have different signs (f(a) * f(b) < 0).
+Consider a different bracket or try fzero(f, c) with an initial guess c.
+
+"""
 
 ## Methods for root finding which use a bracket
 
@@ -92,7 +97,7 @@ function init_state{T <: Float64}(method::Bisection, fs, x::Vector{T}, bracket)
     isinf(x2) && (x2 = prevfloat(x2))
     @compat y0, y2 = fs.f.([x0, x2])
 
-    sign(y0) * sign(y2) > 0 && error("Not a bracket")
+    sign(y0) * sign(y2) > 0 && (warn(bracketing_error); throw(ArgumentError))
     
     state = UnivariateZeroState(x2, x0,
                                 y2, y0,
