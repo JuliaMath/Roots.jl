@@ -6,8 +6,8 @@ orders = [1,2,5,8,16]
 
 fn, x0, alpha = x -> cos(x) - x , 1.0, 0.7390851332151607
 for order in orders
-    @test_approx_eq fzero(fn, x0, order=order) alpha
-    @test_approx_eq fzero(fn, big(x0), order=order) alpha
+    @test fzero(fn, x0, order=order)  ≈ alpha
+    @test fzero(fn, big(x0), order=order)  ≈ alpha
 end
 
 
@@ -17,7 +17,7 @@ x0 = -1.0
 alpha = -1.1673039782614187
 
 for order in orders
-    @test_approx_eq fzero(fn, x0, order=order) alpha
+    @test fzero(fn, x0, order=order)  ≈ alpha
 end
 
 ## failures
@@ -37,11 +37,11 @@ for order in orders[end]
 end
 
 #@test_throws Roots.ConvergenceFailed fzero(fn, x0, order=1)
-@test_approx_eq fn(fzero(fn, x0, order=1, maxsteps = 300))+1 1.0
+@test fn(fzero(fn, x0, order=1, maxsteps = 300))+1  ≈ 1.0
 
 ## trivial
 for order in orders
-    @test_approx_eq fzero(x -> 0.0, 1, order=order)  1.0
-    @test_approx_eq fzero(x -> x, 0.0, order=order)  0.0
+    @test fzero(x -> 0.0, 1, order=order)   ≈ 1.0
+    @test fzero(x -> x, 0.0, order=order)   ≈ 0.0
 end
 
