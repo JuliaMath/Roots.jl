@@ -8,16 +8,16 @@ orders = [0,1,2,5,8,16]
 
 ### derivative free
 fn, xstar, x0, br = x -> sin(x) - x/2, 1.89549426703398094714, 2.0, [pi/2, pi]
-@test_approx_eq fzero(fn, x0) xstar
+@test fzero(fn, x0)  ≈ xstar
 for o in orders
-    @test_approx_eq fzero(fn, x0, order=o) xstar
+    @test fzero(fn, x0, order=o)  ≈ xstar
 end
 ### bisection
-@test_approx_eq fzero(fn, br) xstar
+@test fzero(fn, br)  ≈ xstar
 
 ### test tolerances
 fn, xstar, x0, br = x -> x^5 - x - 1, 1.1673039782614187, 1.0, [1.0, 2.0]
-@test_approx_eq fzero(fn, x0, order=1) xstar
+@test fzero(fn, x0, order=1)  ≈ xstar
 
 @test_throws Roots.ConvergenceFailed fzero(fn, x0, order=1, maxeval=2)
 #@test norm(fzero(fn, x0, order=1, ftol=1e-2) - xstar) > 1e-5
@@ -29,10 +29,10 @@ fn, xstar, x0, br = x -> x^5 - x - 1, 1.1673039782614187, 1.0, [1.0, 2.0]
 ## various tests
 ## issue #29, basically f(a) or f(b) so big we get NaN for guess from bracket.
 f =  x -> x + exp(x)
-@test_approx_eq fzero(f, 0, [-1e6, 1e6]) -0.5671432904097838
+@test fzero(f, 0, [-1e6, 1e6])  ≈ -0.5671432904097838
 
 ## test infinite range
-@test_approx_eq fzero(x -> x, [-Inf, Inf]) 0.0
+@test fzero(x -> x, [-Inf, Inf])  ≈ 0.0
 
 ##################################################
 ## fzeros function
