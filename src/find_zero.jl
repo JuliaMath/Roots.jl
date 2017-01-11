@@ -31,9 +31,12 @@ immutable SecondDerivative <: CallableFunction
 end
 
 ## allows override for automatic derivatives, see Newton
-callable_function(m::UnivariateZeroMethod, f) = DerivativeFree(f)
-callable_function(m::UnivariateZeroMethod, f, fp) = FirstDerivative(f, fp)
-callable_function(m::UnivariateZeroMethod, f, fp, fpp) = SecondDerivative(f, fp, fpp)                                                      
+function callable_function(m::UnivariateZeroMethod, f)
+    !isa(f, Tuple) && return DerivativeFree(f)
+    length(f) == 1 && return DerivativeFree(f[1])
+    length(f) == 2 && return FirstDerivative(f[1], f[2])
+    SecondDerivative(f[1], f[2], f[3])
+end
 
 
 ## object to hold state
@@ -391,19 +394,20 @@ find_zero(f, 1.0, Order5())
 find_zero(f, 1.0, Steffensen()) # also Order2()
 ```
 """
-
 find_zero{T<:Number}(f, x0::Union{T,Vector{T}}, method::UnivariateZeroMethod; kwargs...) =
     find_zero(method, callable_function(method, f), x0; kwargs...)
-find_zero{T<:Number}(f, fp, x0::Union{T,Vector{T}}, method::UnivariateZeroMethod; kwargs...) =
-    find_zero(method, callable_function(method, f, fp), x0; kwargs...)
-find_zero{T<:Number}(f, fp, fpp, x0::Union{T,Vector{T}}, method::UnivariateZeroMethod; kwargs...) =
-    find_zero(method, callable_function(method, f, fp, fpp), x0; kwargs...)
+
+## some defaults for methods
+find_zero{T <: Number}(f, x0::T; kwargs...) = find_zero(f, x0, Order0(); kwargs...)
+find_zero{T <: Number}(f, x0::Vector{T}; kwargs...) = find_zero(f, x0, Bisection(); kwargs...)
+
 
 function find_zero(method::UnivariateZeroMethod, fs::CallableFunction, x0; kwargs...)
     x = float(x0)
     prob, options = derivative_free_setup(method, fs, x; kwargs...)
     find_zero(prob, method, options)
 end
+
 
 
 
