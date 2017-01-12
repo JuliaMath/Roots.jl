@@ -333,9 +333,13 @@ Find a zero of a univariate function using one of several different methods.
 
 Positional arugments:
 
-* `f` a function or callable object. Most methods are derivative free. Some (`Newton`, `Halley`) may have derivative(s) computed using the `ForwardDiff` pacakge.
+* `f` a function, callable object, or tuple of same. A tuple is used
+  to pass in derivatives, as desired. Most methods are derivative
+  free. Some (`Newton`, `Halley`) may have derivative(s) computed
+  using the `ForwardDiff` pacakge.
 
-* `x0` an initial starting value. Typically a scalar, but may be an array for bisection methods. The value `float(x0)` is passed on.
+* `x0` an initial starting value. Typically a scalar, but may be an
+  array for bisection methods. The value `float(x0)` is passed on.
 
 * `method` one of several methods, see below.
 
