@@ -1,7 +1,6 @@
 using Roots
 using Polynomials
 using Base.Test
-using Primes
 
 ## can use functions
 f = x -> (x-1)*(x-2)^2*(x-3)^3
