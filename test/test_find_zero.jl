@@ -76,7 +76,7 @@ for m in [Order0(), Order1()]
     @test_throws Roots.ConvergenceFailed find_zero(fn, -1.0, m)
 end
 for m in [Order2(), Order5(), Order8(), Order16()]
-    @test find_zero(fn, -1.0, m)  ≈ xstar
+    @test find_zero(fn, -1.0, m) ≈ xstar
 end
 
 ## non-simple root
@@ -95,10 +95,10 @@ end
 
 ## different types of initial values
 for m in meths
-    @test find_zero(sin, 3, m)  ≈ pi
-    @test find_zero(sin, 3.0, m)  ≈ pi
-    @test find_zero(sin, big(3), m)  ≈ pi
-    @test find_zero(sin, big(3.0), m)  ≈ pi
+    @test find_zero(sin, 3, m) ≈ pi
+    @test find_zero(sin, 3.0, m) ≈ pi
+    @test find_zero(sin, big(3), m) ≈ pi
+    @test find_zero(sin, big(3.0), m) ≈ pi
 end
 
 
@@ -106,26 +106,30 @@ end
 fn, xstar, x0 = (x -> sin(x) - x - 1,  -1.9345632107520243, 2)
 @test_throws Roots.ConvergenceFailed find_zero(fn, x0, Order2())
 for m in meths
-    @test find_zero(fn, x0, m, bracket=[-2,3])  ≈ xstar
+    @test find_zero(fn, x0, m, bracket=[-2,3]) ≈ xstar
 end
 
 
 fn, xstar, x0 = (x -> x * exp( - x ), 0, 1.0)
-@test find_zero(fn, x0, Order0(), bracket=[-1,2])  ≈ xstar
-@test find_zero(fn, 7.0, Order0(), bracket=[-1,2])  ≈ xstar  # out of bracket
+@test find_zero(fn, x0, Order0(), bracket=[-1,2]) ≈ xstar
+@test find_zero(fn, 7.0, Order0(), bracket=[-1,2]) ≈ xstar  # out of bracket
 
 ## bisection methods
-@test find_zero(x -> cos(x) - x, [0, pi], Bisection())  ≈ 0.7390851332151607
+@test find_zero(x -> cos(x) - x, [0, pi], Bisection()) ≈ 0.7390851332151607
 @test (find_zero(x -> sin(x), [big(3), 4], Bisection()) |> sin) < 1e-70
-@test find_zero(x -> sin(x), [4,3], Bisection())  ≈ pi
-@test find_zero(x -> sin(x), [big(4),3], Bisection())  ≈ pi
+@test find_zero(x -> sin(x), [4,3], Bisection()) ≈ pi
+@test find_zero(x -> sin(x), [big(4),3], Bisection()) ≈ pi
+
+## defaults for method argument
+@test find_zero(x -> cbrt(x), 1) ≈ 0.0 # order0()
+@test find_zero(sin, [3,4]) ≈ π   # Bisection() 
 
 
 ## Callable objects
 using Polynomials
 x = variable(Float64)
 for m in meths
-    @test find_zero(x^5 - x - 1, 1.0, m)  ≈ 1.1673039782614187
+    @test find_zero(x^5 - x - 1, 1.0, m) ≈ 1.1673039782614187
 end
 
 ### a wrapper to count function calls, say
@@ -138,7 +142,7 @@ end
 
 g = Cnt(x -> x^5 - x - 1)
 for m in meths
-    @test find_zero(g, 1.0, m)  ≈ 1.1673039782614187
+    @test find_zero(g, 1.0, m) ≈ 1.1673039782614187
 end
 
 

@@ -37,11 +37,11 @@ for order in orders[end]
 end
 
 #@test_throws Roots.ConvergenceFailed fzero(fn, x0, order=1)
-@test fn(fzero(fn, x0, order=1, maxsteps = 300))+1  ≈ 1.0
+@test fn(fzero(fn, x0, order=1, maxsteps = 300))+1 ≈ 1.0
 
 ## trivial
 for order in orders
-    @test fzero(x -> 0.0, 1, order=order)   ≈ 1.0
-    @test fzero(x -> x, 0.0, order=order)   ≈ 0.0
+    @test fzero(x -> 0.0, 1, order=order) ≈ 1.0
+    @test fzero(x -> x, 0.0, order=order) ≈ 0.0
 end
 
