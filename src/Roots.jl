@@ -5,8 +5,6 @@ import Base: *
 
 
 using ForwardDiff
-using Compat
-
 
 
 export fzero,
