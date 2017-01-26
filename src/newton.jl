@@ -52,8 +52,6 @@ function update_state{T}(method::Newton, fs, o::UnivariateZeroState{T}, options:
 end
 
 ## extra work to allow for complex values
-
-## extra work to allow for complex values
 function derivative_free_setup{T<:AbstractFloat}(method::Newton, fs::CallableFunction, x0::T;
                                   bracket=Nullable{Vector{T}}(),
                                   xabstol=zero(T), xreltol=zero(T),
@@ -84,26 +82,6 @@ function derivative_free_setup{T<:AbstractFloat}(method::Newton, fs::CallableFun
     options = UnivariateZeroOptions(xabstol, xreltol, abstol, reltol,  maxevals, maxfnevals, verbose)
     prob, options
 end
-
-# function derivative_free_setup{T<:AbstractFloat}(method::Newton, fs::CallableFunction, x0::Union{T, Complex{T}};
-#                                   bracket=Nullable{Vector{T}}(),
-#                                   xabstol=zero(T), xreltol=zero(T),
-#                                   abstol=4*eps(T), reltol=4*eps(T),
-#                                   maxevals=40, maxfnevals=typemax(Int),
-#                                   verbose::Bool=false)
-#     x = float(x0)
-
-#     if isa(x, Complex)
-#         bracket = Nullable{Vector{Complex{T}}}()     # bracket makes no sense for complex input, but one is expected
-#     elseif !isa(bracket, Nullable)
-#         bracket = Nullable(convert(Vector{T}, bracket))
-#     end
-
-#     prob = UnivariateZeroProblem(fs, x, bracket)
-#     options = UnivariateZeroOptions(xabstol, xreltol, abstol, reltol,  maxevals, maxfnevals, verbose)
-#     prob, options
-# end
-
 
 """
 
