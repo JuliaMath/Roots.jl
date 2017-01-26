@@ -120,4 +120,4 @@ Some additional documentation can be read [here](http://nbviewer.ipython.org/url
 ## Polynomials
 
 Special methods for finding roots of polynomials have been moved to
-the `PolynomialZeros` package.
+the `PolynomialZeros` package and its `poly_roots(f, domain)` function.
