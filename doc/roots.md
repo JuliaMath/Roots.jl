@@ -273,8 +273,8 @@ always work.
 
 The bracketing methods suggest a simple algorithm to recover multiple
 zeros: partition an interval into many small sub-intervals. For those
-that bracket a root find the root. This is essentially implemented with `fzeros(f,
-a, b)`. The algorithm has problems with non-simple zeros (in particular ones
+that bracket a root find the root. This is essentially implemented
+with `fzeros(f, a, b)`. The algorithm has problems with non-simple zeros (in particular ones
 that don't change sign at the zero) and zeros which bunch together. Simple usage is often succesful
 enough, but a graph should be used to assess if all the zeros are found:
 
@@ -401,76 +401,3 @@ plot(x -> flight(x, tstar), 0, howfar(tstar))
 plot!(x -> flight(x, 45), 0, howfar(45))
 ```
 
-## Polynomials
-
-The `Polynomials` package provides a type for working with polynomial
-expressions. In that package, the `roots` function is used to find the
-roots of a polynomial expression.
-
-
-For example, 
-
-```
-using Polynomials
-x = poly([0.0])			# (x - 0.0)
-roots((x-1)*(x-2)*(x-3))
-```
-
-The `Roots` package provides a few interfaces for finding roots of
-polynomial functions.
-
-As a convenience, this package adds a function interface to `roots`:
-
-```
-f(x) = (x-1)*(x-2)*(x-3)
-roots(f)
-```
-
-
-The `fzeros` function will find the real roots of a univariate polynomial:
-
-```
-fzeros(x -> (x-1)*(x-2)*(x^2 + x + 1))
-```
-
-(For polynomial functions, no search interval is needed, as it is
-for other functions.)
-
-The algorithm can have numeric issues when the polynomial degree gets
-too large, or the roots are too close together.
-
-
-The `polyfactor` function provides a related task for
-polynomials with integer or rational coefficients:
-
-```
-polyfactor(x -> (x-1)^2*(x-2)^3*(x-3)^4)
-```
-
-The linear factors correspond to the *rational* roots. (For such
-polynomial functions, `fzeros` will first look for rational roots and
-return them as rational numbers before searching for approximate
-values for the non-rational roots.)
-
-The `multroot` function will also find the roots. The algorithm can do a
-better job when there are multiple roots, as it first identifies the multiplicity structure of the
-roots, and then tries to improve these values.
-
-
-```
-multroot((x-1)*(x-2)*(x-3))	# roots, multiplicity
-```
-The `roots` function degrades as there are multiplicities:
-
-```
-p = (x-1)^2*(x-2)^3*(x-3)^4
-roots(p)
-```
-
-Whereas, `multroot` gets it right.
-
-```
-multroot(p)
-```
-
-The difference grows as the multiplicities get large.

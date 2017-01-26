@@ -13,7 +13,8 @@ export fzero,
        fzeros,
        newton, halley,
        secant_method, steffensen, 
-       D, D2
+       D
+export multroot, polyfactor, D2  # deprecated
 
 export find_zero,
        Order0, Order1, Order2, Order5, Order8, Order16
@@ -150,17 +151,21 @@ cross the origin (non-simple zeros). Answers should be confirmed
 graphically, if possible.
 
 """        
-function fzeros(f::Function, a::Real, b::Real; kwargs...)  
+function fzeros(f, a::Real, b::Real; kwargs...)  
     find_zeros(f, float(a), float(b); kwargs...)
 end
 fzeros{T <: Real}(f, bracket::Vector{T}; kwargs...)  = fzeros(f, a, b; kwargs...)
 
 
 ## deprecate Polynomial calls
-@deprecate roots(p) fzeros(p, a, b)
-@deprecate fzeros(p) fzeros(p, a, b)
-@deprecate multroot(p) fzeros(p, a, b)
-@deprecate polyfactor(p) fzeros(p, a, b)
+
+## Don't want to load `Polynomials` to do this...
+#@deprecate roots(p) fzeros(p, a, b) 
+
+@deprecate D2(f) D(f,2)
+fzeros(p) = Base.depwarn("Calling fzeros with just a polynomial is deprecated. Specify an inteval to search over: fzeros(p, a, b)",:fzeros)
+multroot(p) = Base.depwarn("The multroot function has moved to the PolynomialZeros package.",:multroot)
+polyfactor(p) = Base.depwarn("The polyfactor function has moved to the PolynomialFactors package.",:polyfactor)
 
 end
 
