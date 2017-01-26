@@ -136,7 +136,10 @@ type UnivariateZeroProblem{T<:AbstractFloat}
 end
 
 ## frame the problem and the options
-function derivative_free_setup{T<:AbstractFloat}(method::Any, fs::CallableFunction, x0::Union{T, Vector{T}};
+function derivative_free_setup(method::Any, fs::CallableFunction, x0; kwargs...)
+    _derivative_free_setup(method, fs, x0; kwargs...)
+end
+function _derivative_free_setup{T<:AbstractFloat}(method::Any, fs::CallableFunction, x0::Union{T, Vector{T}};
                                                  bracket=Nullable{Vector{T}}(),
                                                  xabstol=zero(T), xreltol=zero(T),
                                                  abstol=4*eps(T), reltol=4*eps(T),
@@ -144,7 +147,7 @@ function derivative_free_setup{T<:AbstractFloat}(method::Any, fs::CallableFuncti
                                                  verbose::Bool=false,
                                                  kwargs...
     )
-    x = float(x0)
+    x = map(float,x0)
     prob = UnivariateZeroProblem(fs, x, isa(bracket, Nullable) ? bracket : Nullable(convert(Vector{T}, bracket)))
     options = univariate_zero_options(;xabstol=xabstol,
                                       xreltol=xreltol,
@@ -157,7 +160,6 @@ function derivative_free_setup{T<:AbstractFloat}(method::Any, fs::CallableFuncti
     prob, options
 end
 
-    
 
 ## has UnivariateZeroProblem converged?
 function assess_convergence(method::Any, fs, state, options)
