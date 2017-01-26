@@ -3,22 +3,16 @@ module Roots
 
 import Base: *
 
-using Polynomials
-import Polynomials: roots
-using PolynomialFactors
 
 using ForwardDiff
 using Compat
 
 
 
-export roots
-
 export fzero,
        fzeros,
        newton, halley,
        secant_method, steffensen, 
-       multroot, polyfactor,
        D, D2
 
 export find_zero,
@@ -32,12 +26,6 @@ include("find_zero.jl")
 include("bracketing.jl")
 include("derivative_free.jl")
 include("newton.jl")
-include("Polys/polynomials.jl")
-include("Polys/agcd.jl")
-include("Polys/multroot.jl")
-include("Polys/real_roots.jl")
-
-
 
 
 ## Main functions are
@@ -144,80 +132,11 @@ fzero(f::Function, fp::Function, x0::Real; kwargs...) = newton(f, fp, float(x0);
 
 
 
-"""
-
-Find zero of a polynomial with derivative free algorithm.
-
-Arguments:
-
-* `p` a `Poly` object
-* `x0` an initial guess
-
-Returns:
-
-An approximate root or an error.
-
-See `fzeros(p)` to return all real roots.
-
-"""
-function fzero(p::Poly, x0::Real, args...; kwargs...)
-    fzero(convert(Function, p), float(x0), args...; kwargs...)
-end
-
-function fzero{T <: Real}(p::Poly, bracket::Vector{T}; kwargs...) 
-    a, b = float(bracket[1]), float(bracket[2])
-    fzero(convert(Function, p), a, b; kwargs...)
-end
-function fzero{T <: Real}(p::Poly, x0::Real, bracket::Vector{T}; kwargs...) 
-    fzero(convert(Function,p), float(x0), map(float,bracket); kwargs...)
-end
-
-
 ## fzeros
-
 """
 
-Find real zeros of a polynomial
-
-args:
-
-`f`: a Polynomial function of R -> R. May also be of `Poly` type.
-
-For polynomials in Z[x] or Q[x], the `real_roots` method will use
-`Poly{Rational{BigInt}}` arithmetic, which allows it to handle much
-larger degree polynomials accurately. This can be called directly
-using `Polynomial` objects.
-
-"""
-fzeros(p::Poly) = real_roots(p)
-
-
-
-function fzeros(f)
-    p = poly([0.0])
-    try
-        p = convert(Poly, f)
-    catch e
-        error("If f(x) is not a polynomial in x, then an interval to search over is needed")
-    end
-    zs = fzeros(p)
-    ## Output is mixed, integer, rational, big. We tidy up
-    etype = eltype(f(0.0))
-    ietype = eltype(f(0))
-    out = Real[]
-    for z in zs
-        if isa(z, Rational)
-            val = z.den == 1 ? convert(ietype, z.num) : convert(Rational{ietype}, z)
-            push!(out, val)
-        else
-            push!(out, convert(etype, z))
-        end
-    end
-    sort(out)
-end
-
-"""
-
+`fzeros(f, a, b)`
+    
 Attempt to find all zeros of `f` within an interval `[a,b]`.
 
 Simple algorithm that splits `[a,b]` into subintervals and checks each
@@ -231,39 +150,17 @@ cross the origin (non-simple zeros). Answers should be confirmed
 graphically, if possible.
 
 """        
-function fzeros{T <: Real}(f, bracket::Vector{T}; kwargs...) 
-    ## check if a poly
-    try
-        rts = fzeros(f)
-        filter(x -> bracket[1] <= x <= bracket[2], rts)
-    catch e
-        find_zeros(f, float(bracket[1]), float(bracket[2]); kwargs...)
-    end
+function fzeros(f::Function, a::Real, b::Real; kwargs...)  
+    find_zeros(f, float(a), float(b); kwargs...)
 end
-fzeros(f::Function, a::Real, b::Real; kwargs...) = fzeros(f, [a,b]; kwargs...)
+fzeros{T <: Real}(f, bracket::Vector{T}; kwargs...)  = fzeros(f, a, b; kwargs...)
 
 
-"""
-Factor a polynomial function with rational or integer coefficients over the integers.
-Returns a dictionary with irreducible factors and their multiplicities.
-See `multroot` to do similar act over polynomials with real coefficients.
-Example:
-```
-polyfactor(x -> (x-1)^3*(x-2)) 
-```
-"""
-function polyfactor(f::Function)
-    T = typeof(f(0))
-    p = Polynomials.variable(T)
-    try
-        p = convert(Poly{T}, f)
-    catch e
-        throw(DomainError()) # `factor` only works with polynomial functions"
-    end
-    PolynomialFactors.factor(p)
-end
-
-
+## deprecate Polynomial calls
+@deprecate roots(p) fzeros(p, -Inf, Inf)
+@deprecate fzeros(p) fzeros(p, -Inf, Inf)
+@deprecate multroot(p) fzeros(p, -Inf, Inf)
+@deprecate polyfactor(p) fzeros(p, -Inf, Inf)
 
 end
 
