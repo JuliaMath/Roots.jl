@@ -126,12 +126,6 @@ fn, xstar, x0 = (x -> x * exp( - x ), 0, 1.0)
 
 
 ## Callable objects
-using Polynomials
-x = variable(Float64)
-for m in meths
-    @test find_zero(x^5 - x - 1, 1.0, m) ≈ 1.1673039782614187
-end
-
 ### a wrapper to count function calls, say
 type Cnt
     cnt::Int

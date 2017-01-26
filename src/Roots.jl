@@ -142,7 +142,7 @@ Attempt to find all zeros of `f` within an interval `[a,b]`.
 Simple algorithm that splits `[a,b]` into subintervals and checks each
 for a root.  For bracketing subintervals, bisection is
 used. Otherwise, a derivative-free method is used. If there are a
-large number of roots found relative to the number of subintervals, the
+large number of zeros found relative to the number of subintervals, the
 number of subintervals is increased and the process is re-run.
 
 There are possible issues with close-by zeros and zeros which do not
@@ -157,10 +157,10 @@ fzeros{T <: Real}(f, bracket::Vector{T}; kwargs...)  = fzeros(f, a, b; kwargs...
 
 
 ## deprecate Polynomial calls
-@deprecate roots(p) fzeros(p, -Inf, Inf)
-@deprecate fzeros(p) fzeros(p, -Inf, Inf)
-@deprecate multroot(p) fzeros(p, -Inf, Inf)
-@deprecate polyfactor(p) fzeros(p, -Inf, Inf)
+@deprecate roots(p) fzeros(p, a, b)
+@deprecate fzeros(p) fzeros(p, a, b)
+@deprecate multroot(p) fzeros(p, a, b)
+@deprecate polyfactor(p) fzeros(p, a, b)
 
 end
 

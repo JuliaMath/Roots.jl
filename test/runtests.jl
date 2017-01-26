@@ -6,7 +6,6 @@ include("./test_find_zero.jl")
 #run_benchmark_tests()
 
 include("./test_fzero.jl")
-include("./tests_multroot.jl")
 
 #include("./test_fzero3.jl")
 #run_robustness_test()
