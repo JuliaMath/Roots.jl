@@ -61,10 +61,10 @@ end
 ##################################################
 
 ## Order0 and Secant are related
-abstract AbstractSecant <: UnivariateZeroMethod
+@compat abstract type AbstractSecant <: UnivariateZeroMethod end
 type Order0 <: AbstractSecant end
 type Secant <: AbstractSecant end
-typealias Order1 Secant
+const Order1 = Secant
 
 function init_state{T <: AbstractFloat}(method::AbstractSecant, fs, x::Union{T, Vector{T}}, bracket)
 
@@ -241,7 +241,7 @@ secant_method(f, x0::Real, x1::Real; kwargs...) = find_zero(f, map(float, [x0,x1
 ## https://en.wikipedia.org/wiki/Steffensen's_method#Simple_description
 type Steffensen <: UnivariateZeroMethod
 end
-typealias Order2 Steffensen
+const Order2 = Steffensen
 
 function update_state{T}(method::Steffensen, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions)
 

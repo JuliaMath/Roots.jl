@@ -1,11 +1,12 @@
 __precompile__(true)
 module Roots
 
+
 import Base: *
 
 
 using ForwardDiff
-
+using Compat
 
 export fzero,
        fzeros,
@@ -158,12 +159,37 @@ fzeros{T <: Real}(f, bracket::Vector{T}; kwargs...)  = fzeros(f, a, b; kwargs...
 ## deprecate Polynomial calls
 
 ## Don't want to load `Polynomials` to do this...
-#@deprecate roots(p) fzeros(p, a, b) 
+# @deprecate roots(p) fzeros(p, a, b) 
 
 @deprecate D2(f) D(f,2)
-fzeros(p) = Base.depwarn("Calling fzeros with just a polynomial is deprecated. Specify an inteval to search over: fzeros(p, a, b)",:fzeros)
+fzeros(p) = Base.depwarn("""
+Calling fzeros with just a polynomial is deprecated.
+Either:
+   * Specify an inteval to search over: fzeros(p, a, b).
+   * Use `Polynomials`:
+```
+using Polynomials
+x=variable()
+filter(isreal, roots(f(x)))
+```
+                         
+""",:fzeros)
+
 multroot(p) = Base.depwarn("The multroot function has moved to the PolynomialZeros package.",:multroot)
-polyfactor(p) = Base.depwarn("The polyfactor function has moved to the PolynomialFactors package.",:polyfactor)
+
+polyfactor(p) = Base.depwarn("""
+The polyfactor function is in the PolynomialFactors package:
+
+* if `p` is of type `Poly`: `PolynomialFactors.factor(p)`.
+                             
+* if `p` is a function, try:
+```
+using PolynomialFactors, Polynomials
+x = variable(Int)
+PolynomialFactors.factor(p(x))
+```
+                             
+""",:polyfactor)
 
 end
 

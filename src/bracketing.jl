@@ -54,9 +54,9 @@ end
 
 ####
 ## find_zero interface. We need to specialize for T<:Float64, and BigSomething
-typealias BigSomething  Union{BigFloat, BigInt}
+const BigSomething = Union{BigFloat, BigInt}
 
-abstract AbstractBisection <: UnivariateZeroMethod
+@compat abstract type AbstractBisection <: UnivariateZeroMethod end
 type Bisection <: AbstractBisection end
 type A42 <: AbstractBisection end 
 
