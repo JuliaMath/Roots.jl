@@ -12,6 +12,7 @@
 ## method names are subtypes
 @compat abstract type UnivariateZeroMethod end
 
+
 # container for callable objects; not really necessary, but has some value.
 @compat abstract type CallableFunction end
 immutable DerivativeFree <: CallableFunction
