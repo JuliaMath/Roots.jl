@@ -15,15 +15,15 @@ function steff_step{T}(x::T, fx)
 end
 
 function guarded_secant_step(alpha, beta, falpha, fbeta)
-    fp = (fbeta - falpha) /  (beta - alpha) 
+    fp = (fbeta - falpha) /  (beta - alpha)
     Δ = fbeta / fp
 
     if norm(Δ) >= 100 * norm(alpha - beta) # guard runaway
         Δ = sign(Δ) * 100 * norm(alpha - beta)
     end
-    
+
     beta - Δ, isissue(Δ)
-    
+
 end
 
 
@@ -35,7 +35,7 @@ function _fbracket(a, b, fa, fb)
     num, den = fb-fa, b - a
     num == 0 && den == 0 && return Inf, true
     out = num / den
-    out, isissue(out)    
+    out, isissue(out)
 end
 
 ## use f[y,z] - f[x,y] + f[x,z] to approximate
@@ -54,17 +54,17 @@ function _fbracket_ratio(a, b, c, fa, fb, fc)
     x2, _ = _fbracket(a, c, fa, fc)
     x3, _ = _fbracket(b, c, fb, fc)
     out = (x2 * x3) / x3
-    out, isissue(out)    
+    out, isissue(out)
 end
 
 
 ##################################################
 
 ## Order0 and Secant are related
-abstract AbstractSecant <: UnivariateZeroMethod
+@compat abstract type AbstractSecant <: UnivariateZeroMethod end
 type Order0 <: AbstractSecant end
 type Secant <: AbstractSecant end
-typealias Order1 Secant
+const Order1 = Secant
 
 function init_state{T <: AbstractFloat}(method::AbstractSecant, fs, x::Union{T, Vector{T}}, bracket)
 
@@ -78,7 +78,7 @@ function init_state{T <: AbstractFloat}(method::AbstractSecant, fs, x::Union{T, 
         x1 = x0 + stepsize
         x0, x1, fx0, fx1  = x1, x0, fs.f(x1), fx0 # switch
     end
-    
+
     state = UnivariateZeroState(
                                 x1, x0,
                                 fx1, fx0,
@@ -98,13 +98,13 @@ end
 ## order 0
 # goal: more robust to initial guess than higher order methods
 # follows roughly algorithm described http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1979-12.pdf, the SOLVE button from the HP-34C
-# though some modifications were made. 
+# though some modifications were made.
 # * use secant step
 # * if along the way a bracket is found, switch to bisection. (We use float64 bisection not a42 if available)
 # * if secant step fails to decrease, we use quadratic step up to 3 times
-# 
+#
 # Goal is to return a value `x` with either:
-# * `f(x) == 0.0` or 
+# * `f(x) == 0.0` or
 # * `f(prevfloat(x)) * f(nextfloat(x)) < 0`.
 # if a bracket is found that can be done, otherwise secant step is used
 function update_state{T}(method::Order0, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions)
@@ -113,7 +113,7 @@ function update_state{T}(method::Order0, fs, o::UnivariateZeroState{T}, options:
     alpha, beta = o.xn0, o.xn1
     falpha, fbeta = o.fxn0, o.fxn1
     S = eltype(falpha)
-    
+
     incsteps(o)
 
     if sign(falpha) * sign(fbeta) < 0.0
@@ -148,7 +148,7 @@ function update_state{T}(method::Order0, fs, o::UnivariateZeroState{T}, options:
         o.fxn0, o.fxn1 = fbeta, fgamma
         return nothing
     end
-    
+
     ctr = 0
     while true
         ## quadratic step
@@ -168,7 +168,7 @@ function update_state{T}(method::Order0, fs, o::UnivariateZeroState{T}, options:
         end
         gamma = beta -  ((beta - alpha)^2 * (fbeta - fgamma) - (beta - gamma)^2 * (fbeta - falpha))/denom/2
 
-        
+
         fgamma = f(gamma); incfn(o)
         incfn(o)
 
@@ -180,14 +180,14 @@ function update_state{T}(method::Order0, fs, o::UnivariateZeroState{T}, options:
 
         theta, issue = guarded_secant_step(beta, gamma, fbeta, fgamma)
         ftheta = f(theta); incfn(o)
-        
+
         if sign(ftheta) * sign(fbeta) < 0
             o.xn0, o.xn1 = beta, theta
             o.fxn0, o.fxn1 = fbeta, ftheta
 
             opts = deepcopy(options); #opts.verbose=false
             o.message = "used bisection for last step"
-            find_zero(Bisection(), fs, o, opts)        
+            find_zero(Bisection(), fs, o, opts)
             return nothing
         end
     end
@@ -200,7 +200,7 @@ end
 
 
 ##################################################
-    
+
 ## Secant
 ## https://en.wikipedia.org/wiki/Secant_method
 function update_state{T}(method::Secant, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions)
@@ -217,7 +217,7 @@ function update_state{T}(method::Secant, fs, o::UnivariateZeroState{T}, options:
         o.message = "Derivative approximation had issues"
         return
     end
-    
+
     xn2::T = xn1 -  fxn1 / fp
     fxn2::S = fs.f(xn2)
     incfn(o)
@@ -241,7 +241,7 @@ secant_method(f, x0::Real, x1::Real; kwargs...) = find_zero(f, map(float, [x0,x1
 ## https://en.wikipedia.org/wiki/Steffensen's_method#Simple_description
 type Steffensen <: UnivariateZeroMethod
 end
-typealias Order2 Steffensen
+const Order2 = Steffensen
 
 function update_state{T}(method::Steffensen, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions)
 
@@ -252,23 +252,23 @@ function update_state{T}(method::Steffensen, fs, o::UnivariateZeroState{T}, opti
     incsteps(o)
 
     wn::T = xn + steff_step(xn, fxn)
-    fwn::S = fs.f(wn) 
+    fwn::S = fs.f(wn)
     incfn(o)
-        
+
     fp, issue = _fbracket(xn, wn, fxn, fwn)
-        
+
     if issue
         o.stopped = true
         o.message = "Derivative approximation had issues"
         return
     end
-        
+
     xn1::T = xn - fxn / fp
-        
-        
+
+
     fxn1::S = fs.f(xn1)
     incfn(o)
-        
+
     o.xn0, o.xn1 = xn, xn1
     o.fxn0, o.fxn1 = fxn, fxn1
 
@@ -279,7 +279,7 @@ end
 steffenson(f, x0; kwargs...) = find_zero(f, x0, Steffensen(); kwargs...)
 
 ##################################################
-       
+
 ## A New Fifth Order Derivative Free Newton-Type Method for Solving Nonlinear Equations
 ## Manoj Kumar, Akhilesh Kumar Singh, and Akanksha Srivastava
 ## Appl. Math. Inf. Sci. 9, No. 3, 1507-1513 (2015)
@@ -293,11 +293,11 @@ function update_state{T}(method::Order5, fs::DerivativeFree, o::UnivariateZeroSt
     S = eltype(fxn)
 
     incsteps(o)
-    
+
     wn::T = xn + steff_step(xn, fxn)
     fwn::S = fs.f(wn)
     incfn(o)
-    
+
     fp, issue = _fbracket(xn, wn, fxn, fwn)
     if issue
         o.xn0, o.xn1 = xn, wn
@@ -306,11 +306,11 @@ function update_state{T}(method::Order5, fs::DerivativeFree, o::UnivariateZeroSt
         o.stopped  = true
         return
     end
-    
+
     yn::T = xn - fxn / fp
     fyn::S = fs.f(yn)
     incfn(o)
-    
+
 
     zn::T = xn - (fxn + fyn) / fp
     fzn::S = fs.f(zn)
@@ -324,11 +324,11 @@ function update_state{T}(method::Order5, fs::DerivativeFree, o::UnivariateZeroSt
         o.stopped = true
         return
     end
-            
+
     xn1::T = zn  - fzn  / fp
     fxn1::S = fs.f(xn1)
     incfn(o)
-        
+
     o.xn0, o.xn1 = xn, xn1
     o.fxn0, o.fxn1 = fxn, fxn1
 
@@ -343,7 +343,7 @@ function update_state{T}(method::Order5, fs::FirstDerivative, o::UnivariateZeroS
     S = eltype(fxn)
 
     incsteps(o)
-    
+
     fpxn = fs.fp(xn)
     incfn(o)
 
@@ -351,7 +351,7 @@ function update_state{T}(method::Order5, fs::FirstDerivative, o::UnivariateZeroS
         o.stopped  = true
         return
     end
-    
+
     yn = xn - fxn / fpxn
     fyn, fpyn = fs.f(yn), fs.fp(yn)
     incfn(o, 2)
@@ -363,7 +363,7 @@ function update_state{T}(method::Order5, fs::FirstDerivative, o::UnivariateZeroS
         return
     end
 
-    
+
     zn = xn  - (fxn + fyn) / fpxn
     fzn = fs.f(zn)
     incfn(o, 1)
@@ -371,7 +371,7 @@ function update_state{T}(method::Order5, fs::FirstDerivative, o::UnivariateZeroS
     xn1 = zn - fzn / fpyn
     fxn1 = fs.f(xn1)
     incfn(o, 1)
-    
+
     o.xn0, o.xn1 = xn, xn1
     o.fxn0, o.fxn1 = fxn, fxn1
 
@@ -408,7 +408,7 @@ function update_state{T}(method::Order8, fs, o::UnivariateZeroState{T}, options:
     S = eltype(fxn)
 
     incsteps(o)
-    
+
     wn::T = xn + steff_step(xn, fxn)
     fwn::S = fs.f(wn)
     incfn(o)
@@ -421,7 +421,7 @@ function update_state{T}(method::Order8, fs, o::UnivariateZeroState{T}, options:
         return
     end
 
-    
+
 
     fp, issue = _fbracket(xn, wn, fxn, fwn)
     issue && return (xn, true)
@@ -431,7 +431,7 @@ function update_state{T}(method::Order8, fs, o::UnivariateZeroState{T}, options:
         o.message = "issue with divided difference f[xn, wn]"
         return
     end
-    
+
     yn::T = xn - fxn / fp
     fyn::S = fs.f(yn)
     incfn(o)
@@ -450,8 +450,8 @@ function update_state{T}(method::Order8, fs, o::UnivariateZeroState{T}, options:
     zn =  yn - phi * fyn / fp
     fzn::S = fs.f(zn)
     incfn(o)
-        
-    fp, issue =  _fbracket_diff(xn, yn, zn, fxn, fyn, fzn) 
+
+    fp, issue =  _fbracket_diff(xn, yn, zn, fxn, fyn, fzn)
     if issue
         o.xn0,o.xn1 = xn, zn
         o.fxn0,o.fxn1 = fxn, fzn
@@ -463,14 +463,14 @@ function update_state{T}(method::Order8, fs, o::UnivariateZeroState{T}, options:
     w::T = 1 / (1 - fzn/fwn)
 
     xi::T = (1 - 2fyn*fyn*fyn / (fwn * fwn * fxn))
-    
+
     xn1::T = zn - w * xi * fzn / fp
     fxn1::S = fs.f(xn1)
     incfn(o)
 
     o.xn0,o.xn1 = xn, xn1
     o.fxn0,o.fxn1 = fxn, fxn1
-            
+
     nothing
 end
 
@@ -490,7 +490,7 @@ function update_state{T}(method::Order16, fs, o::UnivariateZeroState{T}, options
     xn = o.xn1
     fxn = o.fxn1
     S = eltype(fxn)
-    
+
     incsteps(o)
 
     wn::T = xn + steff_step(xn, fxn)
@@ -506,13 +506,13 @@ function update_state{T}(method::Order16, fs, o::UnivariateZeroState{T}, options
         o.stopped = true
         return
     end
-        
+
     yn::T = xn - fxn / fp
     fyn::S = fs.f(yn)
     incfn(o)
-    
+
     fp, issue = _fbracket_ratio(yn, xn, wn, fyn, fxn, fwn)
-    if issue 
+    if issue
         o.xn0, o.xn1 = xn, yn
         o.fxn0, o.fxn1 = fxn, fyn
         o.message = "issue with f[xn,yn]*f[yn,wn]/f[xn,wn]"
@@ -521,7 +521,7 @@ function update_state{T}(method::Order16, fs, o::UnivariateZeroState{T}, options
     end
 
 
-    
+
     zn::T = yn - fyn / fp
     fzn::S = fs.f(zn)
     incfn(o)
@@ -535,7 +535,7 @@ function update_state{T}(method::Order16, fs, o::UnivariateZeroState{T}, options
         o.stopped = true
         o.message = "Approximate derivative failed"
         return
-    end        
+    end
 
     an = zn - eta * fzn / fp
     fan = fs.f(an)
@@ -545,15 +545,15 @@ function update_state{T}(method::Order16, fs, o::UnivariateZeroState{T}, options
     u1, u5, u6 = fzn/fxn, fan/fxn, fan/fwn
     sigma =  1 + u1*u2 - u1*u3*u4^2 + u5 + u6 + u1^2*u4 +
         u2^2*u3 + 3*u1*u4^2*(u3^2 - u4^2)/_fbracket(xn,yn, fxn, fyn)[1]
-    
+
     if issue
         o.xn0, o.xn1 = xn, an
         o.fxn0, o.fxn1 = fxn, fan
         o.stopped = true
         o.message = "Approximate derivative failed"
         return
-    end  
-        
+    end
+
     xn1 = an - sigma * fan / fp
     fxn1 = fs.f(xn1)
     incfn(o)

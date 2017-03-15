@@ -20,25 +20,25 @@ end
 Base.convert(::Type{Function}, p::Poly) = x -> Polynomials.polyval(p,x)
 ## convert a function to a polynomial with error if conversion is not possible
 ## This needs a hack, as Polynomials.jl defines `/` to return a `div` and not an error for p(x)/q(x)
-immutable PolyTest                                                               
-   x                                                                             
-end                                                                              
-import Base: +,-,*,/,^                                                           
-+(a::PolyTest, b::PolyTest) = PolyTest(a.x + b.x)                                
-+{T<:Number}(a::T, b::PolyTest) = PolyTest(a + b.x)                              
-+{T<:Number}(a::PolyTest,b::T) = PolyTest(a.x + b)                              
--(a::PolyTest,b::PolyTest) = PolyTest(a.x - b.x)                                
--{T<:Number}(a::T, b::PolyTest) = PolyTest(a - b.x)                              
--{T<:Number}(a::PolyTest,b::T) = PolyTest(a.x - b)                              
--(a::PolyTest) = PolyTest(-a.x)                                                 
-*(a::PolyTest, b::PolyTest) = PolyTest(a.x * b.x)                               
-*(a::Bool, b::PolyTest) = PolyTest(a * b.x)                                     
-*{T<:Number}(a::T, b::PolyTest) = PolyTest(a * b.x)                             
-*{T<:Number}(b::PolyTest, a::T) = PolyTest(a * b.x)                             
-/{T<:Number}(b::PolyTest, a::T) = PolyTest(b.x / a)                             
-^{T<:Integer}(b::PolyTest, a::T) = PolyTest(b.x ^ a)                            
+immutable PolyTest
+   x
+end
+import Base: +,-,*,/,^
++(a::PolyTest, b::PolyTest) = PolyTest(a.x + b.x)
++{T<:Number}(a::T, b::PolyTest) = PolyTest(a + b.x)
++{T<:Number}(a::PolyTest,b::T) = PolyTest(a.x + b)
+-(a::PolyTest,b::PolyTest) = PolyTest(a.x - b.x)
+-{T<:Number}(a::T, b::PolyTest) = PolyTest(a - b.x)
+-{T<:Number}(a::PolyTest,b::T) = PolyTest(a.x - b)
+-(a::PolyTest) = PolyTest(-a.x)
+*(a::PolyTest, b::PolyTest) = PolyTest(a.x * b.x)
+*(a::Bool, b::PolyTest) = PolyTest(a * b.x)
+*{T<:Number}(a::T, b::PolyTest) = PolyTest(a * b.x)
+*{T<:Number}(b::PolyTest, a::T) = PolyTest(a * b.x)
+/{T<:Number}(b::PolyTest, a::T) = PolyTest(b.x / a)
+^{T<:Integer}(b::PolyTest, a::T) = PolyTest(b.x ^ a)
 
-typealias QQR @compat Union{Int, BigInt, Rational{Int}, Rational{BigInt}, Float64}
+const QQR = Union{Int, BigInt, Rational{Int}, Rational{BigInt}, Float64}
 function Base.convert{T<:QQR}(::Type{Poly{T}}, f::Function)
     try
         f(PolyTest(0))                  # error if not a poly

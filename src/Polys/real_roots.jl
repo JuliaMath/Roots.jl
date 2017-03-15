@@ -13,7 +13,7 @@
 ## variable(p::Poly) = poly(zeros(eltype(p),1), p.var)
 
 ## make bounds work for floating point or rational.
-_iszero{T <: (@compat Union{Integer, Rational})}(b::T; kwargs...) = b == 0
+_iszero{T <: Union{Integer, Rational}}(b::T; kwargs...) = b == 0
 _iszero{T<:AbstractFloat}(b::T; xtol=1) = abs(b) <= 2*xtol*eps(T)
 
 
@@ -42,13 +42,13 @@ end
 
 
 ## Our Poly types for which we can find gcd
-typealias QQ  @compat Union{Int, BigInt, Rational{Int}, Rational{BigInt}}
-typealias BB  @compat Union{BigInt, Rational{BigInt}}
+const QQ = Union{Int, BigInt, Rational{Int}, Rational{BigInt}}
+const BB = Union{BigInt, Rational{BigInt}}
 
 ## Here computations are exact, as long as we return poly in Q[x]
 function Base.divrem{T<:QQ, S<:QQ}(a::Poly{T}, b::Poly{S})
     degree(b) == 0 && (b[0] == 0 ? error("b is 0") : return (a/b[0], 0*b))
-    
+
     lc(p::Poly) = p[degree(p)]
 
     a.var == b.var || DomainError() # "symbols must match"
@@ -94,7 +94,7 @@ end
 ## titan.princeton.edu/papers/claire/hertz-etal-99.ps
 function upperbound(p::Poly)
     q, d = monic(p), degree(p)
-    
+
     d == 0 && error("degree 0 is a constant")
     d == 1 && abs(q[0])
 
@@ -116,7 +116,7 @@ Use Descarte's rule of signs to compute number of *postive* roots of p
 ¬(f::Function) = x -> !f(x)
 function descartes_bound(p::Poly)
     bs = filter(¬_iszero, p.a)
-    
+
     ## count terms
     ctr = 0
     @compat bs = sign.(bs)
@@ -145,7 +145,7 @@ immutable Intervalkc
 end
 
 ## convenience for two useful functions
-DesBound(p,node::Intervalkc) = DesBound(Pkc(p,node)) 
+DesBound(p,node::Intervalkc) = DesBound(Pkc(p,node))
 function Pkc(p::Poly, node::Intervalkc)
     k,c = node.k, node.c
     Pkc(p, k, c)
@@ -205,7 +205,7 @@ end
 ## strategy, the push!(st.Internal, i) would be changed in `addSucc`.
 function find_in_01(p::Poly)
     st = State(p)
-    
+
     initTree(st)
     for x in [0,1]
         p,k = multiplicity(p,x)
@@ -255,7 +255,7 @@ function pos_roots(p::Poly)
         c = -p[0]/p[1]
         if c > 0  return([c]) else return(rts) end
     end
-    
+
     ## in case 0 is a root, we remove from p. Should be unnecessary, but ...
     p,k = multiplicity(p, 0)
 
@@ -292,9 +292,9 @@ function real_roots_sqfree(p::Poly)
     ## Handle simple cases
     degree(p) == 0 && error("Roots for degree 0 polynomials are either empty or all of R.")
     degree(p) == 1 && return([ -p[0]/p[1] ])
-    
+
     rts = Any[]
-    
+
     p,k = multiplicity(p, 0); k > 0 && push!(rts, 0) # 0
     append!(rts, pos_roots(p))                       # positive roots
     append!(rts, map(-,neg_roots(p)))                # negative roots
@@ -313,11 +313,11 @@ function real_roots{T <: Union{Int, BigInt}}(p::Poly{T})
     rts = Real[]
     rat_rts = rational_roots(p)
     append!(rts, rat_rts)
-    
+
     for rt in rat_rts
         f, k = PolynomialFactors.synthetic_division(f, rt)
     end
-    
+
     if degree(f) > 0
         real_rts = real_roots_sqfree(f)
         append!(rts, real_rts)
@@ -333,7 +333,7 @@ function real_roots(p::Poly)
     if degree(p) > 1
         u, p, w, residual= agcd(p)
     end
-    
+
     real_roots_sqfree(p)
 end
 

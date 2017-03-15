@@ -2,4 +2,4 @@ julia 0.4
 ForwardDiff 0.2.0
 Polynomials 0.0.5
 PolynomialFactors 0.0.3
-Compat 0.8.0
+Compat 0.17.0

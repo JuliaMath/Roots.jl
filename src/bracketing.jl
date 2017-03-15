@@ -31,18 +31,18 @@ function _middle(x::Float64, y::Float64)
   if !isfinite(x) || !isfinite(y)
     return x + y
   end
- 
+
   # Always return 0.0 when inputs have opposite sign
   if sign(x) != sign(y) && x != 0.0 && y != 0.0
     return 0.0
   end
- 
+
   negate = x < 0.0 || y < 0.0
- 
+
   xint = reinterpret(UInt64, abs(x))
   yint = reinterpret(UInt64, abs(y))
   unsigned = reinterpret(Float64, (xint + yint) >> 1)
- 
+
   return negate ? -unsigned : unsigned
 end
 
@@ -54,11 +54,11 @@ end
 
 ####
 ## find_zero interface. We need to specialize for T<:Float64, and BigSomething
-typealias BigSomething @compat  Union{BigFloat, BigInt}
+const BigSomething = Union{BigFloat, BigInt}
 
-abstract AbstractBisection <: UnivariateZeroMethod
+@compat abstract type AbstractBisection <: UnivariateZeroMethod end
 type Bisection <: AbstractBisection end
-type A42 <: AbstractBisection end 
+type A42 <: AbstractBisection end
 
 ## This is a bit clunky, as we use `a42` for bisection when we don't have `Float64` values.
 ## As we don't have the `A42` algorithm implemented through `find_zero`, we adjust here.
@@ -98,7 +98,7 @@ function init_state{T <: Float64}(method::Bisection, fs, x::Vector{T}, bracket)
     @compat y0, y2 = fs.f.([x0, x2])
 
     sign(y0) * sign(y2) > 0 && (warn(bracketing_error); throw(ArgumentError))
-    
+
     state = UnivariateZeroState(x2, x0,
                                 y2, y0,
                                 isa(bracket, Nullable) ? bracket : Nullable(convert(Vector{T}, sort(bracket))),
@@ -139,9 +139,9 @@ function assess_convergence(method::Bisection, fs, state, options)
     if x0 > x2
         x0, x2 = x2, x0
     end
-    
+
     x1 = _middle(x0, x2)
-    
+
     x0 < x1 && x1 < x2 && return false
 
     state.message = ""
@@ -152,7 +152,7 @@ end
 
 ##################################################
 
-"""    
+"""
 
 Finds the root of a continuous function within a provided
 interval [a, b], without requiring derivatives. It is based on algorithm 4.2
@@ -174,14 +174,14 @@ By John Travers
 
 """
 function a42(f, a, b;
-                   xtol=zero(float(a)), 
+                   xtol=zero(float(a)),
                    maxeval::Int=15,
                    verbose::Bool=false
              )
     if a > b
         a,b = b,a
     end
-    
+
     if a >= b || sign(f(a))*sign(f(b)) >= 0
         error("on input a < b and f(a)f(b) < 0 must both hold")
     end
@@ -203,12 +203,12 @@ Solve f(x) = 0 over bracketing interval [a,b] starting at c, with a < c < b
 
 """
 function a42a(f, a, b, c=(0.5)*(a+b);
-                   xtol=zero(float(a)), 
+                   xtol=zero(float(a)),
                    maxeval::Int=15,
                    verbose::Bool=false
               )
 
-    
+
     try
         # re-bracket and check termination
         a, b, d = bracket(f, a, b, c, xtol)
@@ -250,7 +250,7 @@ function a42a(f, a, b, c=(0.5)*(a+b);
             end
 
             verbose && println(@sprintf("a=%18.15f, n=%s", float(a), n))
-            
+
             if nextfloat(ch) * prevfloat(ch) <= 0
                 throw(StateConverged(ch))
             end
@@ -329,7 +329,7 @@ function bracket(f, a, b, c, tol)
     faa = f(aa)
     fbb = f(bb)
     if bb - aa < 2*tole(aa, bb, faa, fbb, tol)
-        x0 = abs(faa) < abs(fbb) ? aa : bb 
+        x0 = abs(faa) < abs(fbb) ? aa : bb
         throw(StateConverged(x0))
     end
     aa, bb, db
@@ -372,7 +372,7 @@ end
 
 
 # approximate zero of f using inverse cubic interpolation
-# if the new guess is outside [a, b] we use a quadratic step instead 
+# if the new guess is outside [a, b] we use a quadratic step instead
 # based on algorithm on page 333 of [1]
 function ipzero(f, a, b, c, d)
     fa = f(a)
@@ -419,7 +419,7 @@ Searches for zeros  of `f` in an interval [a, b].
 
 Basic algorithm used:
 
-* split interval [a,b] into `no_pts` subintervals. 
+* split interval [a,b] into `no_pts` subintervals.
 * For each bracketing interval finds a bracketed zero.
 * For other subintervals does a quick search with a derivative-free method.
 
