@@ -31,6 +31,9 @@ fn, xstar, x0, br = x -> x^5 - x - 1, 1.1673039782614187, 1.0, [1.0, 2.0]
 f =  x -> x + exp(x)
 @test fzero(f, 0, [-1e6, 1e6])  ≈ -0.5671432904097838
 
+f =  x -> 1/x - 1
+@test fzero(f, [BigFloat(0), 2])  ≈ 1.0
+
 ## test infinite range
 @test fzero(x -> x, [-Inf, Inf])  ≈ 0.0
 

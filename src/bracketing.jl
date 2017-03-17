@@ -341,7 +341,7 @@ end
 function secant{T}(f, a::T, b)
     c = a - f(a)/(f(b) - f(a))*(b - a)
     tol = eps(T)*5
-    if c <= a + abs(a)*tol || c >= b - abs(b)*tol
+    if isnan(c) || c <= a + abs(a)*tol || c >= b - abs(b)*tol
         return a + (b - a)/2
     end
     return c
