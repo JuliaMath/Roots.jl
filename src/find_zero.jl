@@ -10,10 +10,10 @@
 ## * a graphic of trace when verbose=true?
 
 ## method names are subtypes
-abstract UnivariateZeroMethod
+@compat abstract type UnivariateZeroMethod end
 
 # container for callable objects; not really necessary, but has some value.
-abstract CallableFunction
+@compat abstract type CallableFunction end
 immutable DerivativeFree <: CallableFunction
     f
 end
