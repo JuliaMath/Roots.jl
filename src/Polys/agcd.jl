@@ -68,9 +68,6 @@ function precondition(p::Poly,q::Poly)
     phis = [2.0^i for i in -5:5]
     out = (1,1)
     m = ratio(p,q)
-    println("Precondition")
-    println(p)
-    println(q)
     for α in alphas
         for ϕ in phis
             r = ratio(polyval(p, ϕ * variable(p)), α * polyval(q, ϕ * variable(q)))

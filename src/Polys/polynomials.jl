@@ -1,8 +1,5 @@
 ## Extensions to Polynomials.jl
 
-" Return the variable `x` of a polynomial as a polynomial."
-variable(p::Poly) = poly(zeros(eltype(p),1), p.var)
-
 "Create a monic polynomial from `p`"
 monic(p::Poly) = Poly(p.a/p[degree(p)], p.var)
 
