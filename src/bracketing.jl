@@ -97,7 +97,7 @@ function init_state{T <: Float64}(method::Bisection, fs, x::Vector{T}, bracket)
     isinf(x2) && (x2 = prevfloat(x2))
     @compat y0, y2 = fs.f.([x0, x2])
 
-    sign(y0) * sign(y2) > 0 && (warn(bracketing_error); throw(ArgumentError))
+    sign(y0) * sign(y2) > 0 && throw(ArgumentError(bracketing_error))
 
     state = UnivariateZeroState(x2, x0,
                                 y2, y0,
