@@ -126,12 +126,6 @@ fn, xstar, x0 = (x -> x * exp( - x ), 0, 1.0)
 
 
 ## Callable objects
-using Polynomials
-x = variable(Float64)
-for m in meths
-    @test find_zero(x^5 - x - 1, 1.0, m) ≈ 1.1673039782614187
-end
-
 ### a wrapper to count function calls, say
 type Cnt
     cnt::Int
@@ -187,8 +181,8 @@ pathological = [
                 
                 (x -> ( pi * ( x - 5.0 ) / 180.0 ) - 0.8 * sin( pi * x / 180.0 ), 1),
                 (x -> x^3 - 2*x - 5, 2),
-                (x -> 1e6 * (x^7 -7x^6 +21x^5 -35x^4 +35x^3-21x^2+7x-1),  0.990),
-                (x -> cos(100*x)-4*erf(30*x-10), 0.0) 
+                (x -> 1e6 * (x^7 -7x^6 +21x^5 -35x^4 +35x^3-21x^2+7x-1),  0.990) #,
+#                (x -> cos(100*x)-4*erf(30*x-10), 0.0) 
                 ]
 
 
