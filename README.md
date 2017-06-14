@@ -34,7 +34,8 @@ algorithm based on its argument(s):
 * `fzeros(f, a::Real, b::Real; no_pts::Int=200)` will split
   the interval `[a,b]` into many subintervals and search for zeros in
   each using a bracketing method if possible. This naive algorithm
-  will miss double zeros that lie within the same subinterval.
+  may miss  double zeros that lie within the same subinterval and zeros
+  where there is no crossing of the x-axis.
 
 
 
@@ -120,4 +121,4 @@ Some additional documentation can be read [here](http://nbviewer.ipython.org/url
 ## Polynomials
 
 Special methods for finding roots of polynomials have been moved to
-the `PolynomialZeros` package and its `poly_roots(f, domain)` function.
+the `PolynomialZeros` package and its `polyroots(f, domain)` function.

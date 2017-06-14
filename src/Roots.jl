@@ -165,8 +165,9 @@ fzeros{T <: Real}(f, bracket::Vector{T}; kwargs...)  = fzeros(f, a, b; kwargs...
 fzeros(p) = Base.depwarn("""
 Calling fzeros with just a polynomial is deprecated.
 Either:
-   * Specify an inteval to search over: fzeros(p, a, b).
-   * Use `Polynomials`:
+   * Specify an interval to search over: fzeros(p, a, b).
+   * Use the `realroots` function from `PolynomialZeros`                         
+   * Use `Polynomials` or `PolynomialRoots` and filter. For example, 
 ```
 using Polynomials
 x=variable()
