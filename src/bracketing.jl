@@ -99,6 +99,7 @@ function init_state{T <: Float64}(method::Bisection, fs, x::Vector{T}, bracket)
 
     sign(y0) * sign(y2) > 0 && throw(ArgumentError(bracketing_error))
 
+
     state = UnivariateZeroState(x2, x0,
                                 y2, y0,
                                 isa(bracket, Nullable) ? bracket : Nullable(convert(Vector{T}, sort(bracket))),
