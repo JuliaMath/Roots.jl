@@ -13,7 +13,7 @@ export fzero,
        newton, halley,
        secant_method, steffensen, 
        D
-export multroot, polyfactor, D2  # deprecated
+export multroot, D2  # deprecated
 
 export find_zero,
        Order0, Order1, Order2, Order5, Order8, Order16
