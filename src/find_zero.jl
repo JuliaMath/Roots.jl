@@ -14,20 +14,20 @@
 
 # container for callable objects; not really necessary, but has some value.
 @compat abstract type CallableFunction end
-immutable DerivativeFree <: CallableFunction
-    f
+immutable DerivativeFree{T} <: CallableFunction
+    f::T
 end
 
-immutable FirstDerivative <: CallableFunction
-    f
-    fp
+immutable FirstDerivative{S,T} <: CallableFunction
+    f::S
+    fp::T
 end
 
 
-immutable SecondDerivative <: CallableFunction
-    f
-    fp
-    fpp
+immutable SecondDerivative{S,T,U} <: CallableFunction
+    f::S
+    fp::T
+    fpp::U
 end
 
 ## allows override for automatic derivatives, see Newton
