@@ -52,6 +52,34 @@ function _middle(x::Real, y::Real)
 end
 
 
+## Unexported but much speedier version of bisection method for float64
+## guaranteed to terminate
+function bisection64(f, a::Real, b::Real)
+    if a > b
+        b,a = a, b
+    end
+    a,b = Float64(a), Float64(b)
+    m = _middle(a,b)
+    fa, fb = sign(f(a)), sign(f(b))
+    iszero(fa) && return a
+    iszero(fb) && return b
+    
+    while a < m < b
+        fm = sign(f(m))
+
+        if iszero(fm)
+            return m
+        elseif fa * fm < 0
+            b,fb=m,fm
+        else
+            a,fa=m,fm
+        end
+        m = _middle(a,b)
+    end
+    return m
+end
+
+
 ####
 ## find_zero interface. We need to specialize for T<:Float64, and BigSomething
 const BigSomething = Union{BigFloat, BigInt}
@@ -65,7 +93,7 @@ type A42 <: AbstractBisection end
 function find_zero{M<:AbstractBisection, T<:Real}(f, x0::Vector{T}, method::M; maxevals::Int=50, verbose::Bool=false, kwargs...)
     x = sort(float(x0))
     if eltype(x) <: Float64
-        prob, options = derivative_free_setup(method, DerivativeFree(f), x; verbose=verbose, maxevals=maxevals, kwargs...)
+        prob, options = derivative_free_setup(method, DerivativeFree(f, f(x0[1])), x; verbose=verbose, maxevals=maxevals, kwargs...)
         find_zero(prob, method, options)
     else
         a42(f, x[1], x[2]; maxeval=maxevals, verbose=verbose)
@@ -91,11 +119,12 @@ end
 ## The tolerances can be set to 0, in which case, the termination occurs when `nextfloat(x0) = x2`.
 ## The bracket `[a,b]` must be bounded.
 
-function init_state{T <: Float64}(method::Bisection, fs, x::Vector{T}, bracket)
+function init_state{T <: Float64,R}(method::Bisection, fs::DerivativeFree{R}, x::Vector{T}, bracket)
     x0, x2 = sort(x[1:2])
     isinf(x0) && (x0 = nextfloat(x0))
     isinf(x2) && (x2 = prevfloat(x2))
-    @compat y0, y2 = fs.f.([x0, x2])
+    y0::R = fs.f(x0)
+    y2::R = fs.f(x2)
 
     sign(y0) * sign(y2) > 0 && throw(ArgumentError(bracketing_error))
 

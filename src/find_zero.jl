@@ -13,29 +13,32 @@
 @compat abstract type UnivariateZeroMethod end
 
 # container for callable objects; not really necessary, but has some value.
-@compat abstract type CallableFunction end
-immutable DerivativeFree{T} <: CallableFunction
-    f::T
+@compat abstract type CallableFunction{R} end
+immutable DerivativeFree{R} <: CallableFunction{R}
+    f
+    fx0::R
 end
 
-immutable FirstDerivative{S,T} <: CallableFunction
-    f::S
-    fp::T
+immutable FirstDerivative{R} <: CallableFunction{R}
+    f
+    fp
+    fx0::R
 end
 
 
-immutable SecondDerivative{S,T,U} <: CallableFunction
-    f::S
-    fp::T
-    fpp::U
+immutable SecondDerivative{R} <: CallableFunction{R}
+    f
+    fp
+    fpp
+    fx0::R
 end
 
 ## allows override for automatic derivatives, see Newton
-function callable_function(m::UnivariateZeroMethod, f)
-    !isa(f, Tuple) && return DerivativeFree(f)
-    length(f) == 1 && return DerivativeFree(f[1])
-    length(f) == 2 && return FirstDerivative(f[1], f[2])
-    SecondDerivative(f[1], f[2], f[3])
+function callable_function(m::UnivariateZeroMethod, f, x0)
+    !isa(f, Tuple) && return DerivativeFree(f, f(x0))
+    length(f) == 1 && return DerivativeFree(f[1], f(x0))
+    length(f) == 2 && return FirstDerivative(f[1], f[2], f(x0))
+    SecondDerivative(f[1], f[2], f[3], f(x0))
 end
 
 
@@ -146,14 +149,15 @@ function derivative_free_setup{T<:AbstractFloat}(method::Any, fs::CallableFuncti
     )
     x = float(x0)
     prob = UnivariateZeroProblem(fs, x, isa(bracket, Nullable) ? bracket : Nullable(convert(Vector{T}, bracket)))
-    options = univariate_zero_options(;xabstol=xabstol,
-                                      xreltol=xreltol,
-                                      abstol=abstol,
-                                      reltol=reltol,
-                                      maxevals=maxevals,
-                                      maxfnevals=maxfnevals,
-                                      verbose=verbose,
-                                      kwargs...)
+    # options = univariate_zero_options(;xabstol=xabstol,
+    #                                   xreltol=xreltol,
+    #                                   abstol=abstol,
+    #                                   reltol=reltol,
+    #                                   maxevals=maxevals,
+    #                                   maxfnevals=maxfnevals,
+    #                                   verbose=verbose,
+    #                                   kwargs...)
+    options = UnivariateZeroOptions(xabstol, xreltol, abstol, reltol, maxevals, maxfnevals, verbose)
     prob, options
 end
 
@@ -399,7 +403,7 @@ find_zero(f, 1.0, Steffensen()) # also Order2()
 ```
 """
 find_zero{T<:Number}(f, x0::Union{T,Vector{T}}, method::UnivariateZeroMethod; kwargs...) =
-    find_zero(method, callable_function(method, f), x0; kwargs...)
+    find_zero(method, callable_function(method, f, float(x0)), x0; kwargs...)
 
 ## some defaults for methods
 find_zero{T <: Number}(f, x0::T; kwargs...) = find_zero(f, x0, Order0(); kwargs...)
@@ -418,7 +422,7 @@ end
 
 ## old interface for fzero
 ## old keyword arguments (see ?fzero) handled in univariate_zero_options
-function derivative_free{T <: AbstractFloat}(f, x0::T; order::Int=0,
+@noinline function derivative_free{T <: AbstractFloat}(f, x0::T; order::Int=0,
                                              kwargs...)
     
     if order == 0

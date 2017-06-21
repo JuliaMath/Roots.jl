@@ -7,11 +7,11 @@
 type Newton <: UnivariateZeroMethod
 end
 
-function callable_function(method::Newton, f::Tuple)
+function callable_function(method::Newton, f::Tuple, x0)
     length(f) == 1 && return FirstDerivative(f[1], D(f[1]))
-    FirstDerivative(f[1], f[2])
+    FirstDerivative(f[1], f[2], f[1](x0))
 end
-callable_function(method::Newton, f::Any) = FirstDerivative(f, D(f))
+callable_function(method::Newton, f::Any, x0) = FirstDerivative(f, D(f), x0)
 
 function init_state{T}(method::Newton, fs, x0::T)
     state = UnivariateZeroState(x0,
@@ -143,12 +143,12 @@ newton(f, fp, x0; kwargs...) = find_zero((f, fp), x0, Newton(); kwargs...)
 type Halley <: UnivariateZeroMethod
 end
 
-function callable_function(method::Halley, f::Tuple)
-    length(f) == 1 && return SecondDerivative(f[1], D(f[1]), D(f[1],2))
-    length(f) == 2 && return SecondDerivative(f[1], f[2], D(f[2],1))
-    SecondDerivative(f[1], f[2], f[3])
+function callable_function(method::Halley, f::Tuple, x0)
+    length(f) == 1 && return SecondDerivative(f[1], D(f[1]), D(f[1],2), f[1](x0))
+    length(f) == 2 && return SecondDerivative(f[1], f[2], D(f[2],1), f[1](x0))
+    SecondDerivative(f[1], f[2], f[3], f[1](x0))
 end
-callable_function(method::Halley, f) = SecondDerivative(f, D(f), D(f, 2))
+callable_function(method::Halley, f, x0) = SecondDerivative(f, D(f), D(f, 2), f(x0))
 
 
 function update_state{T}(method::Halley, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions)

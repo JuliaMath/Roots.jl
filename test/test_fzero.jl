@@ -19,7 +19,7 @@ end
 fn, xstar, x0, br = x -> x^5 - x - 1, 1.1673039782614187, 1.0, [1.0, 2.0]
 @test fzero(fn, x0, order=1)  ≈ xstar
 
-@test_throws Roots.ConvergenceFailed fzero(fn, x0, order=1, maxeval=2)
+@test_throws Roots.ConvergenceFailed fzero(fn, x0, order=1, maxevals=2)
 #@test norm(fzero(fn, x0, order=1, ftol=1e-2) - xstar) > 1e-5
 #@test norm(fzero(fn, x0, order=1, xtol=1e-2) - xstar) > 1e-10
 
