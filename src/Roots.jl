@@ -166,7 +166,7 @@ fzeros(p) = Base.depwarn("""
 Calling fzeros with just a polynomial is deprecated.
 Either:
    * Specify an interval to search over: fzeros(p, a, b).
-   * Use the `realroots` function from `PolynomialZeros`                         
+   * Use the `poly_roots(p, Over.R)` call from `PolynomialZeros`                         
    * Use `Polynomials` or `PolynomialRoots` and filter. For example, 
 
 ```
