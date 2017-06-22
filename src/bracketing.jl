@@ -52,6 +52,64 @@ function _middle(x::Real, y::Real)
 end
 
 
+"""
+
+    `Roots.bisection64(f, a, b)` (unexported)
+
+* `f`: a callable object, like a function
+
+* `a`, `b`: Real values specifying a *bracketing* interval (one with
+`f(a) * f(b) < 0`). These will be converted to `Float64` values.
+
+Runs the bisection method using midpoints determined by a trick
+leveraging 64-bit floating point numbers. After ensuring the
+intermediate bracketing interval does not straddle 0, the "midpoint"
+is half way between the two values onces converted to unsigned 64-bit
+integers. This means no more than 64 steps will be taken, fewer if `a`
+and `b` already share some bits.
+
+The process is guaranteed to return a value `c` with `f(c)` one of
+`0`, `Inf`, or `NaN`; *or* one of `f(prevfloat(c))*f(c) < 0` or
+`f(c)*f(nextfloat(c)) > 0` holding. 
+
+This function is a bit faster than the slightly more general 
+`find_zero(f, [a,b], Bisection())` call.
+
+Due to Jason Merrill.
+
+"""
+function bisection64(f, a::Number, b::Number)
+
+    a,b = Float64(a), Float64(b)
+
+    if a > b
+        b,a = a, b
+    end
+    
+    
+    m = _middle(a,b)
+    fa, fb = sign(f(a)), sign(f(b))
+
+    fa * fb > 0 && throw(ArgumentError(bracketing_error)) 
+    iszero(fa) || isnan(fa) || isinf(fa) && return a
+    iszero(fb) || isnan(fb) || isinf(fb) && return b
+    
+    while a < m < b
+        fm = sign(f(m))
+
+        if iszero(fm) || isnan(fm) || isinf(fm)
+            return m
+        elseif fa * fm < 0
+            b,fb=m,fm
+        else
+            a,fa=m,fm
+        end
+        m = _middle(a,b)
+    end
+    return m
+end
+
+
 ####
 ## find_zero interface. We need to specialize for T<:Float64, and BigSomething
 const BigSomething = Union{BigFloat, BigInt}
@@ -64,9 +122,21 @@ type A42 <: AbstractBisection end
 ## As we don't have the `A42` algorithm implemented through `find_zero`, we adjust here.
 function find_zero{M<:AbstractBisection, T<:Real}(f, x0::Vector{T}, method::M; maxevals::Int=50, verbose::Bool=false, kwargs...)
     x = sort(float(x0))
+
+    if isinf(x[1])
+        x[1] = nextfloat(x[1])
+    end
+    if isinf(x[2])
+        x[2] = prevfloat(x[2])
+    end
+    
     if eltype(x) <: Float64
-        prob, options = derivative_free_setup(method, DerivativeFree(f), x; verbose=verbose, maxevals=maxevals, kwargs...)
-        find_zero(prob, method, options)
+        if verbose
+            prob, options = derivative_free_setup(method, DerivativeFree(f, f(x0[1])), x; verbose=verbose, maxevals=maxevals, kwargs...)
+            find_zero(prob, method, options)
+        else # avoid overhead of generic calling method
+            bisection64(f, x0[1], x0[2])::eltype(x)  
+        end
     else
         a42(f, x[1], x[2]; maxeval=maxevals, verbose=verbose)
     end
@@ -91,11 +161,12 @@ end
 ## The tolerances can be set to 0, in which case, the termination occurs when `nextfloat(x0) = x2`.
 ## The bracket `[a,b]` must be bounded.
 
-function init_state{T <: Float64}(method::Bisection, fs, x::Vector{T}, bracket)
+function init_state{T <: Float64,R}(method::Bisection, fs::DerivativeFree{R}, x::Vector{T}, bracket)
     x0, x2 = sort(x[1:2])
     isinf(x0) && (x0 = nextfloat(x0))
     isinf(x2) && (x2 = prevfloat(x2))
-    @compat y0, y2 = fs.f.([x0, x2])
+    y0::R = fs.f(x0)
+    y2::R = fs.f(x2)
 
     sign(y0) * sign(y2) > 0 && throw(ArgumentError(bracketing_error))
 
@@ -153,6 +224,8 @@ end
 ##################################################
 
 """
+
+    `Roots.a42(f, a, b; kwargs...)` (not exported)
 
 Finds the root of a continuous function within a provided
 interval [a, b], without requiring derivatives. It is based on algorithm 4.2
@@ -415,6 +488,7 @@ end
 
 
 """
+
 Searches for zeros  of `f` in an interval [a, b].
 
 Basic algorithm used:
@@ -427,10 +501,12 @@ If there are many zeros relative to the number of points, the process
 is repeated with more points, in hopes of finding more zeros for
 oscillating functions.
 
+Called by `fzeros` or `Roots.find_zeros`.
+
 """
 function find_zeros(f, a::Real, b::Real, args...;
                     no_pts::Int=100,
-                    ftol::Real=10*eps(), reltol::Real=10*eps(),
+                    abstol::Real=10*eps(), reltol::Real=10*eps(), ## should be abstol, reltol as used. 
                     kwargs...)
 
     a, b = a < b ? (a,b) : (b,a)
@@ -441,13 +517,13 @@ function find_zeros(f, a::Real, b::Real, args...;
     ## Look in [ai, bi)
     for i in 1:(no_pts+1)
         ai,bi=xs[i:i+1]
-        if isapprox(f(ai), 0.0, rtol=reltol, atol=ftol)
+        if isapprox(f(ai), 0.0, rtol=reltol, atol=abstol)
             push!(rts, ai)
         elseif sign(f(ai)) * sign(f(bi)) < 0
             push!(rts, find_zero(f, [ai, bi], Bisection()))
         else
             try
-                x = find_zero(f, ai + (0.5)* (bi-ai), Order8(); maxevals=10, reltol=ftol, xreltol=reltol)
+                x = find_zero(f, ai + (0.5)* (bi-ai), Order8(); maxevals=10, abstol=abstol, reltol=reltol)
                 if ai < x < bi
                     push!(rts, x)
                 end
@@ -456,11 +532,11 @@ function find_zeros(f, a::Real, b::Real, args...;
         end
     end
     ## finally, b?
-    isapprox(f(b), 0.0, rtol=reltol, atol=ftol) && push!(rts, b)
+    isapprox(f(b), 0.0, rtol=reltol, atol=abstol) && push!(rts, b)
 
     ## redo if it appears function oscillates alot in this interval...
     if length(rts) > (1/4) * no_pts
-        return(find_zeros(f, a, b, args...; no_pts = 10*no_pts, ftol=ftol, reltol=reltol, kwargs...))
+        return(find_zeros(f, a, b, args...; no_pts = 10*no_pts, abstol=abstol, reltol=reltol, kwargs...))
     else
         return(sort(rts))
     end
