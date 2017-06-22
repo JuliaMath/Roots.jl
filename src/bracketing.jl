@@ -55,19 +55,23 @@ end
 ## Unexported but much speedier version of bisection method for float64
 ## guaranteed to terminate
 function bisection64(f, a::Real, b::Real)
+
+    a,b = Float64(a), Float64(b)
+
     if a > b
         b,a = a, b
     end
-    a,b = Float64(a), Float64(b)
+    
+    
     m = _middle(a,b)
     fa, fb = sign(f(a)), sign(f(b))
-    iszero(fa) && return a
-    iszero(fb) && return b
+    iszero(fa) || isnan(fa) || isinf(fa) && return a
+    iszero(fb) || isnan(fb) || isinf(fb) && return b
     
     while a < m < b
         fm = sign(f(m))
 
-        if iszero(fm)
+        if iszero(fm) || isnan(fm) || isinf(fm)
             return m
         elseif fa * fm < 0
             b,fb=m,fm
@@ -92,6 +96,14 @@ type A42 <: AbstractBisection end
 ## As we don't have the `A42` algorithm implemented through `find_zero`, we adjust here.
 function find_zero{M<:AbstractBisection, T<:Real}(f, x0::Vector{T}, method::M; maxevals::Int=50, verbose::Bool=false, kwargs...)
     x = sort(float(x0))
+
+    if isinf(x[1])
+        x[1] = nextfloat(x[1])
+    end
+    if isinf(x[2])
+        x[2] = prevfloat(x[2])
+    end
+    
     if eltype(x) <: Float64
         if verbose
             prob, options = derivative_free_setup(method, DerivativeFree(f, f(x0[1])), x; verbose=verbose, maxevals=maxevals, kwargs...)
