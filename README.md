@@ -1,7 +1,7 @@
-[![Roots](http://pkg.julialang.org/badges/Roots_0.4.svg)](http://pkg.julialang.org/?pkg=Roots&ver=0.4)
-[![Roots](http://pkg.julialang.org/badges/Roots_0.5.svg)](http://pkg.julialang.org/?pkg=Roots&ver=0.5)  
+[![Roots](http://pkg.julialang.org/badges/Roots_0.5.svg)](http://pkg.julialang.org/?pkg=Roots&ver=0.5)
+[![Roots](http://pkg.julialang.org/badges/Roots_0.6.svg)](http://pkg.julialang.org/?pkg=Roots&ver=0.6)  
 Linux: [![Build Status](https://travis-ci.org/JuliaMath/Roots.jl.svg?branch=master)](https://travis-ci.org/JuliaMath/Roots.jl)
-Windows: [![Build status](https://ci.appveyor.com/api/projects/status/goteuptn5kypafyl?svg=true)](https://ci.appveyor.com/project/ChrisRackauckas/roots-jl)
+Windows: [![Build status](https://ci.appveyor.com/api/projects/status/goteuptn5kypafyl?svg=true)](https://ci.appveyor.com/project/jverzani/roots-jl)
 
 # Root finding functions for Julia
 
@@ -34,35 +34,9 @@ algorithm based on its argument(s):
 * `fzeros(f, a::Real, b::Real; no_pts::Int=200)` will split
   the interval `[a,b]` into many subintervals and search for zeros in
   each using a bracketing method if possible. This naive algorithm
-  will miss double zeros that lie within the same subinterval.
+  may miss  double zeros that lie within the same subinterval and zeros
+  where there is no crossing of the x-axis.
 
-
-For polynomials either of class `Poly` (from the `Polynomials`
-package) or from functions which are of polynomial type there are
-specializations:
-
-* The `roots` function will dispatch to the `roots` function of the
-  `Polynomials` package to return all roots (including 
-  complex ones) of the polynomial.
-
-
-* `fzeros(f::Function)` calls `real_roots` to find the real roots of
-  the polynomial. For polynomials with integer coefficients, the
-  rational roots are found first, and then numeric approximations to
-  the remaining real roots are returned.
-
-* For polynomial functions over the integers or rational numbers, the
-`factor` function will return a dictionary of factors (as
-`Polynomials`) and their multiplicities.
-
-* For polynomials over the real numbers, the `multroot` function will
-  return the roots and their multiplicities through a dictionary. The
-  `roots` function from the `Polynomials` package will find all the
-  roots of a polynomial. Its performance degrades when the polynomial
-  has high multiplicities. The `multroot` function is provided to
-  handle this case a bit better.  The function follows algorithms due
-  to Zeng,
-  ["Computing multiple roots of inexact polynomials", Math. Comp. 74 (2005), 869-903](http://www.ams.org/journals/mcom/2005-74-250/S0025-5718-04-01692-8/home.html).
 
 
 
@@ -108,53 +82,6 @@ fzero(x^5 - x - 1, 1.0)
 
 
 
-All real roots of a polynomial can be found at once:
-
-```
-f(x) = x^5 - x - 1
-fzeros(f)
-```
-
-Or using an explicit polynomial:
-
-```
-using Polynomials
-x = poly([0])
-fzeros(x^5 -x - 1)
-fzeros(x*(x-1)*(x-2)*(x^2 + x + 1))
-```
-
-The `factor` command will factor a polynomial or polynomial function with integer or rational
-coefficients over the integers:
-
-```
-factor(x -> (2x-1)^2 * (4x-3)^5)   # Dict(Poly(1) => 1, Poly(-1 + 2x) =>2, Poly(-3 + 4x) => 5)
-```
-
-
-Polynomial root finding using `multroot` is a bit better when multiple roots are present.
-
-```
-x = poly([0.0])
-p = (x-1)^2 * (x-3)
-U = multroot(p)	
-collect(keys(U))              # compare to roots(p)
-```
-
-Again, a polynomial function may be passed in
-
-```
-f(x) = (x-1)*(x-2)^2*(x-3)^3
-multroot(f)
-```
-
-The `factor` function will factor polynomials with rational and integer coefficients over the integers:
-
-```
-factor(f)
-```
-
-
 The well-known methods can be used with or without supplied
 derivatives. If not specified, the `ForwardDiff` package is used for
 automatic differentiation.
@@ -189,3 +116,9 @@ fzero(D(m), 0, 1)  - median(as)	# 0.0
 ```
 
 Some additional documentation can be read [here](http://nbviewer.ipython.org/url/github.com/JuliaLang/Roots.jl/blob/master/doc/roots.ipynb?create=1).
+
+
+## Polynomials
+
+Special methods for finding roots of polynomials have been moved to
+the `PolynomialZeros` package and its `polyroots(f, domain)` function.

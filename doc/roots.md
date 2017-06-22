@@ -32,7 +32,7 @@ To illustrate, consider the function $f(x) = \cos(x) - x$. From the
 graph we see readily that $[0,1]$ is a bracket (which we emphasize
 with an overlay):
 
-```
+```figure
 f(x) = cos(x) - x
 plot(f, -2, 2)
 plot!([0,1], [0,0], linewidth=2)
@@ -78,6 +78,12 @@ The basic algorithm used for bracketing when the values are simple
 floating point values is the bisection method. For big float values, an
 algorithm due to Alefeld, Potra, and Shi is used.
 
+The endpoints can even be infinite:
+
+```
+fzero(x -> Inf*sign(x), -Inf, Inf)  # Float64 only
+```
+
 ## Using an initial guess
 
 Bracketing methods have guaranteed convergence, but in general require
@@ -87,9 +93,10 @@ interface to some different iterative algorithms that are more
 efficient. Unlike bracketing methods, these algorithms may not
 converge to the desired root if the initial guess is not well chosen.
 
-The basic algorithm is modeled after an algorithm used for
+The default algorithm is modeled after an algorithm used for
 [HP-34 calculators](http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1979-12.pdf). This
-algorithm is more forgiving of the quality of the initial guess. In
+algorithm is designed to be more forgiving of the quality of the
+initial guess at the cost of possible performing many more steps. In
 many cases it satisfies the criteria for a bracketing solution, as it
 will use bracketing if within the algorithm a bracket is identified.
 
@@ -114,7 +121,7 @@ For even more precision, `BigFloat` numbers can be used
 
 ```
 x = fzero(sin, big(3))
-x, f(x), x - pi
+x, sin(x), x - pi
 ```
 
 ### Higher order methods
@@ -122,7 +129,7 @@ x, f(x), x - pi
 The default call to `fzero` uses a first order method and
 then possibly bracketing, which involves potentially many more function
 calls. Though specifying a initial value is more convenient than a
-bracket, there may be times where a more efficient algorithm is sough.
+bracket, there may be times where a more efficient algorithm is sought.
 For such, a higher-order method might be better
 suited. There are algorithms of order 1 (secant method), 2
 ([Steffensen](http://en.wikipedia.org/wiki/Steffensen's_method)), 5,
@@ -211,7 +218,7 @@ defined below comes from a [test
 suite](http://people.sc.fsu.edu/~jburkardt/cpp_src/test_zero/test_zero.html)
 of difficult functions. The default method finds the zero starting at 0:
 
-```
+```figure
 f(x) = cos(100*x)-4*erf(30*x-10)
 plot(f, -2, 2)
 ```
@@ -252,7 +259,7 @@ fzero(f, x0, order=2)
 A graph shows the issue. We have overlayed a 15 steps of Newton's
 method, the other algorithms being somewhat similar:
 
-```nocode
+```figure,nocode
 xs = [x0]
 n = 15
 for i in 1:(n-1) push!(xs, xs[end] - f(xs[end])/D(f)(xs[end])) end
@@ -376,7 +383,7 @@ end
 To see the trajectory if shot at 45 degrees, we have:
 
 
-```
+```figure
 theta = 45
 plot(x -> flight(x,  theta), 0, howfar(theta))
 ```
@@ -396,81 +403,8 @@ tstar = fzero(howfarp, 45)
 
 This shows the differences in the trajectories:
 
-```
+```figure
 plot(x -> flight(x, tstar), 0, howfar(tstar))
 plot!(x -> flight(x, 45), 0, howfar(45))
 ```
 
-## Polynomials
-
-The `Polynomials` package provides a type for working with polynomial
-expressions. In that package, the `roots` function is used to find the
-roots of a polynomial expression.
-
-
-For example, 
-
-```
-using Polynomials
-x = poly([0.0])			# (x - 0.0)
-roots((x-1)*(x-2)*(x-3))
-```
-
-The `Roots` package provides a few interfaces for finding roots of
-polynomial functions.
-
-As a convenience, this package adds a function interface to `roots`:
-
-```
-f(x) = (x-1)*(x-2)*(x-3)
-roots(f)
-```
-
-
-The `fzeros` function will find the real roots of a univariate polynomial:
-
-```
-fzeros(x -> (x-1)*(x-2)*(x^2 + x + 1))
-```
-
-(For polynomial functions, no search interval is needed, as it is
-for other functions.)
-
-The algorithm can have numeric issues when the polynomial degree gets
-too large, or the roots are too close together.
-
-
-The `polyfactor` function provides a related task for
-polynomials with integer or rational coefficients:
-
-```
-polyfactor(x -> (x-1)^2*(x-2)^3*(x-3)^4)
-```
-
-The linear factors correspond to the *rational* roots. (For such
-polynomial functions, `fzeros` will first look for rational roots and
-return them as rational numbers before searching for approximate
-values for the non-rational roots.)
-
-The `multroot` function will also find the roots. The algorithm can do a
-better job when there are multiple roots, as it first identifies the multiplicity structure of the
-roots, and then tries to improve these values.
-
-
-```
-multroot((x-1)*(x-2)*(x-3))	# roots, multiplicity
-```
-The `roots` function degrades as there are multiplicities:
-
-```
-p = (x-1)^2*(x-2)^3*(x-3)^4
-roots(p)
-```
-
-Whereas, `multroot` gets it right.
-
-```
-multroot(p)
-```
-
-The difference grows as the multiplicities get large.
