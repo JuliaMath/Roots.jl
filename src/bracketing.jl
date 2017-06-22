@@ -93,8 +93,12 @@ type A42 <: AbstractBisection end
 function find_zero{M<:AbstractBisection, T<:Real}(f, x0::Vector{T}, method::M; maxevals::Int=50, verbose::Bool=false, kwargs...)
     x = sort(float(x0))
     if eltype(x) <: Float64
-        prob, options = derivative_free_setup(method, DerivativeFree(f, f(x0[1])), x; verbose=verbose, maxevals=maxevals, kwargs...)
-        find_zero(prob, method, options)
+        if verbose
+            prob, options = derivative_free_setup(method, DerivativeFree(f, f(x0[1])), x; verbose=verbose, maxevals=maxevals, kwargs...)
+            find_zero(prob, method, options)
+        else # avoid overhead of generic calling method
+            bisection64(f, x0[1], x0[2])::eltype(x)  
+        end
     else
         a42(f, x[1], x[2]; maxeval=maxevals, verbose=verbose)
     end
