@@ -11,6 +11,8 @@
 
 ## method names are subtypes
 @compat abstract type UnivariateZeroMethod end
+@compat abstract type AbstractBisection <: UnivariateZeroMethod end
+@compat abstract type AbstractSecant <: UnivariateZeroMethod end
 
 # container for callable objects; not really necessary, but has some value.
 @compat abstract type CallableFunction{R} end
@@ -402,8 +404,24 @@ find_zero(f, 1.0, Order5())
 find_zero(f, 1.0, Steffensen()) # also Order2()
 ```
 """
-find_zero{T<:Number}(f, x0::Union{T,Vector{T}}, method::UnivariateZeroMethod; kwargs...) =
+function find_zero{M <: AbstractBisection, T<:Number}(f, x0::T, method::M; kwargs...)
+    throw(ArgumentError("For bisection methods, x0 must be a vector"))
+end
+
+function find_zero{T<:Number, M<:AbstractBisection}(f, x0::Vector{T}, method::M; kwargs...)
+    find_zero(method, callable_function(method, f, float(x0[1])), x0; kwargs...)
+end
+
+function find_zero{T<:Number}(f, x0::T, method::UnivariateZeroMethod; kwargs...)
     find_zero(method, callable_function(method, f, float(x0)), x0; kwargs...)
+end
+
+function find_zero{T<:Number}(f, x0::T, method::AbstractSecant; kwargs...)
+    find_zero(method, callable_function(method, f, float(x0)), x0; kwargs...)
+end
+function find_zero{T<:Number}(f, x0::Vector{T}, method::AbstractSecant; kwargs...)
+    find_zero(method, callable_function(method, f, float(x0[1])), x0; kwargs...)
+end
 
 ## some defaults for methods
 find_zero{T <: Number}(f, x0::T; kwargs...) = find_zero(f, x0, Order0(); kwargs...)

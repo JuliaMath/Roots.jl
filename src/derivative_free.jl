@@ -61,7 +61,6 @@ end
 ##################################################
 
 ## Order0 and Secant are related
-@compat abstract type AbstractSecant <: UnivariateZeroMethod end
 type Order0 <: AbstractSecant end
 type Secant <: AbstractSecant end
 const Order1 = Secant
