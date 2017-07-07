@@ -114,7 +114,6 @@ end
 ## find_zero interface. We need to specialize for T<:Float64, and BigSomething
 const BigSomething = Union{BigFloat, BigInt}
 
-@compat abstract type AbstractBisection <: UnivariateZeroMethod end
 type Bisection <: AbstractBisection end
 type A42 <: AbstractBisection end
 

@@ -119,7 +119,7 @@ fn, xstar, x0 = (x -> x * exp( - x ), 0, 1.0)
 @test (find_zero(x -> sin(x), [big(3), 4], Bisection()) |> sin) < 1e-70
 @test find_zero(x -> sin(x), [4,3], Bisection()) ≈ pi
 @test find_zero(x -> sin(x), [big(4),3], Bisection()) ≈ pi
-
+@test_throws ArgumentError  find_zero(x -> sin(x), 3.0, Bisection())
 ## defaults for method argument
 @test find_zero(x -> cbrt(x), 1) ≈ 0.0 # order0()
 @test find_zero(sin, [3,4]) ≈ π   # Bisection() 
