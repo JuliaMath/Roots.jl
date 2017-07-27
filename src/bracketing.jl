@@ -91,8 +91,8 @@ function bisection64(f, a::Number, b::Number)
     fa, fb = sign(f(a)), sign(f(b))
 
     fa * fb > 0 && throw(ArgumentError(bracketing_error)) 
-    iszero(fa) || isnan(fa) || isinf(fa) && return a
-    iszero(fb) || isnan(fb) || isinf(fb) && return b
+    (iszero(fa) || isnan(fa) || isinf(fa)) && return a
+    (iszero(fb) || isnan(fb) || isinf(fb)) && return b
     
     while a < m < b
         fm = sign(f(m))

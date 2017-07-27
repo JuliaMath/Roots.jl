@@ -14,6 +14,7 @@ for o in orders
 end
 ### bisection
 @test fzero(fn, br)  ≈ xstar
+@test fzero(x->5-x,5,10)==5
 
 ### test tolerances
 fn, xstar, x0, br = x -> x^5 - x - 1, 1.1673039782614187, 1.0, [1.0, 2.0]
