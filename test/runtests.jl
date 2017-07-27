@@ -1,5 +1,6 @@
 using Roots
 using Base.Test
+import SpecialFunctions.erf
 
 include("./test_find_zero.jl")
 #include("./RootTesting.jl")
