@@ -17,7 +17,7 @@ export multroot, D2  # deprecated
 
 export find_zero,
        Order0, Order1, Order2, Order5, Order8, Order16
-export Bisection
+export Bisection, FalsePosition
 # export Bisection, Secant, Steffensen, Newton, Halley
 
 ## load in files

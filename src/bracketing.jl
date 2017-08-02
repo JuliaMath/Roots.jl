@@ -117,9 +117,7 @@ const BigSomething = Union{BigFloat, BigInt}
 type Bisection <: AbstractBisection end
 type A42 <: AbstractBisection end
 
-## This is a bit clunky, as we use `a42` for bisection when we don't have `Float64` values.
-## As we don't have the `A42` algorithm implemented through `find_zero`, we adjust here.
-function find_zero{M<:AbstractBisection, T<:Real}(f, x0::Vector{T}, method::M; maxevals::Int=50, verbose::Bool=false, kwargs...)
+function adjust_bracket(x0)
     x = sort(float(x0))
 
     if isinf(x[1])
@@ -128,19 +126,45 @@ function find_zero{M<:AbstractBisection, T<:Real}(f, x0::Vector{T}, method::M; m
     if isinf(x[2])
         x[2] = prevfloat(x[2])
     end
-    
-    if eltype(x) <: Float64
-        if verbose
-            prob, options = derivative_free_setup(method, DerivativeFree(f, f(x0[1])), x; verbose=verbose, maxevals=maxevals, kwargs...)
-            find_zero(prob, method, options)
-        else # avoid overhead of generic calling method
-            bisection64(f, x0[1], x0[2])::eltype(x)  
-        end
+    x
+end
+
+## For speed, bypass find_zero setup for bisection+Float64
+function find_zero{T <: Float64}(f, x0::Vector{T}, method::Bisection; verbose=false, kwargs...)
+    x = adjust_bracket(x0)
+    if verbose
+        prob, options = derivative_free_setup(method, DerivativeFree(f, f(x0[1])), x; verbose=verbose, kwargs...)
+        find_zero(prob, method, options)
     else
-        a42(f, x[1], x[2]; maxeval=maxevals, verbose=verbose)
+        bisection64(f, x0[1], x0[2])::eltype(x)
     end
 end
 
+## This is a bit clunky, as we use `a42` for bisection when we don't have `Float64` values.
+## As we don't have the `A42` algorithm implemented through `find_zero`, we adjust here.
+function find_zero{M <: Union{Bisection, A42}, T <: Real}(f, x0::Vector{T}, method::M;  kwargs...)
+    x = adjust_bracket(x0)
+    ## round about way to get options and state
+    prob, options = derivative_free_setup(method, DerivativeFree(f, f(x[1])), x[1];  kwargs...)
+    o = init_state(method, prob.fs, prob.x0, prob.bracket)
+
+    o.xn1 = a42(f, x[1], x[2]; xtol=options.xreltol, maxeval=options.maxevals, verbose=options.verbose)
+    o.message = "Used Alefeld-Potra-Shi method, `Roots.a42`, to find the zero. Iterations and function evaluations are not counted properly."
+    o.x_converged = true
+
+    options.verbose && show_trace(prob.fs, o, [o.xn1], [o.fxn1], method)
+    o.xn1
+end
+
+
+function find_zero{M<:AbstractBisection, T<:Real}(f, x0::Vector{T}, method::M; kwargs...)
+    x = adjust_bracket(x0)
+    prob, options = derivative_free_setup(method, DerivativeFree(f, f(x[1])), x; kwargs...)
+    find_zero(prob, method, options)
+end
+
+# this is hacky.
+# we reach here from calling Bisection midway through the Order0() routine with "big" values.
 # call a42 in this case
 function find_zero{T<:BigSomething, S}(method::Bisection, fs::DerivativeFree, o::UnivariateZeroState{T, S}, options::UnivariateZeroOptions)
     xn0, xn1 = sort([o.xn0, o.xn1])
@@ -151,6 +175,25 @@ function find_zero{T<:BigSomething, S}(method::Bisection, fs::DerivativeFree, o:
     nothing
 end
 
+
+function init_state{T <: Real, R}(method::AbstractBisection, fs::DerivativeFree{R}, x::Vector{T}, bracket)
+    x0, x2 = adjust_bracket(x)
+    y0::R = fs.f(x0)
+    y2::R = fs.f(x2)
+
+    sign(y0) * sign(y2) > 0 && throw(ArgumentError(bracketing_error))
+
+    state = UnivariateZeroStateBracketing(x0, x2,
+                                          y0, y2,
+                                          isa(bracket, Nullable) ? bracket : Nullable(convert(Vector{T}, sort(bracket))),
+                                          :nothing, # flag
+                                          0, 2,
+                                          false, false, false, false,
+                                          "")
+    state
+end
+
+
 ## This uses _middle bisection
 ## Find zero using modified bisection method for Float64 arguments.
 ## This is guaranteed to take no more than 64 steps. The `a42` alternative usually has
@@ -159,25 +202,6 @@ end
 ## Terminates with `x1` when the bracket length of `[x0,x2]` is `<= max(xtol, xtolrel*abs(x1))` where `x1` is the midpoint .
 ## The tolerances can be set to 0, in which case, the termination occurs when `nextfloat(x0) = x2`.
 ## The bracket `[a,b]` must be bounded.
-
-function init_state{T <: Float64,R}(method::Bisection, fs::DerivativeFree{R}, x::Vector{T}, bracket)
-    x0, x2 = sort(x[1:2])
-    isinf(x0) && (x0 = nextfloat(x0))
-    isinf(x2) && (x2 = prevfloat(x2))
-    y0::R = fs.f(x0)
-    y2::R = fs.f(x2)
-
-    sign(y0) * sign(y2) > 0 && throw(ArgumentError(bracketing_error))
-
-    state = UnivariateZeroState(x2, x0,
-                                y2, y0,
-                                isa(bracket, Nullable) ? bracket : Nullable(convert(Vector{T}, sort(bracket))),
-                                0, 2,
-                                false, false, false, false,
-                                "")
-    state
-end
-
 
 function update_state{T<:Float64,S}(method::Bisection, fs, o::Roots.UnivariateZeroState{T,S}, options::UnivariateZeroOptions)
     f = fs.f
@@ -483,6 +507,85 @@ function distinct(f, a, b, d, e)
     f4 = f(e)
     !(almost_equal(f1, f2) || almost_equal(f1, f3) || almost_equal(f1, f4) ||
       almost_equal(f2, f3) || almost_equal(f2, f4) || almost_equal(f3, f4))
+end
+
+
+
+## ----------------------------
+
+"""
+
+    `FalsePosition`
+
+Use the [false position](https://en.wikipedia.org/wiki/False_position_method) method to find a zero for the function `f`
+within the bracketing interval `[a,b]`.
+
+The false position method is a modified bisection method, where the midpoint between `[a_k, b_k]` is chosen to be the intersection point
+of the secant line with the x axis, and not the average between the two values.
+
+This implementation uses the Anderson & Björk's algorithm, which should give improve performance.
+
+Examples
+```
+find_zero(x -> x^5 - x - 1, [-2, 2], FalsePosition())
+```
+"""    
+type FalsePosition <: AbstractBisection end
+
+#function update_state{T<:AbstractFloat,S}(method::FalsePosition, fs, o::UnivariateZeroStateBracketing{T,S}, options::UnivariateZeroOptions)
+function update_state(method::FalsePosition, fs, o, options)
+
+    f = fs.f
+    a, b =  o.xn0, o.xn1
+    fa, fb = o.fxn0, o.fxn1
+
+    c = b - fb * (b - a) / (fb - fa)
+    fc = f(c)
+    incfn(o)
+
+    if iszero(fc)
+        o.xn1 = c
+        o.fxn1 = fc
+        return
+    end
+
+    if sign(fa) * sign(fc) < 0
+       if o.flag == :left
+           a, b, fa, fb, c = modified_false_position_step(f, a, b, fa, fb, 1-fc/fb, :left)
+           o.flag = :nothing
+       else
+           o.flag = :left
+            a, b, fa, fb = a, c, fa, fc
+       end
+    else
+       if o.flag == :right
+           a, b, fa, fb, c = modified_false_position_step(f, a, b, fa, fb, 1-fc/fa, :left)
+           o.flag = :nothing
+       else
+           o.flag = :right
+            a, b, fa, fc = c, b, fc, fb
+       end
+    end
+
+    o.xn0, o.xn1 = a, b 
+    o.fxn0, o.fxn1 = fa, fb 
+    
+    incsteps(o)
+    nothing
+end
+
+
+function modified_false_position_step(f, a, b, fa, fb, m, dir=:left)
+
+    lambda = m > 0 ? m : 0.5
+
+    if dir == :right
+        c = (lambda * fb * a - fa * b) / (lambda*fb - fa)
+        return (c, b, f(c), fb, c)
+    else
+        c = (fb * a - lambda* fa * b) / (fb - lambda * fa)
+        return (a, c, fa, f(c), c)
+    end
 end
 
 

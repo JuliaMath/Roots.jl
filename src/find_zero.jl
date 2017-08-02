@@ -45,12 +45,29 @@ end
 
 
 ## object to hold state
-type UnivariateZeroState{T,S} 
+@compat abstract type  UnivariateZeroState{T, S} end
+type UnivariateZeroStateBase{T,S} <: UnivariateZeroState{T,S}
     xn1::T
     xn0::T
     fxn1::S
     fxn0::S
     bracket::Nullable{Vector{T}}
+    steps::Int
+    fnevals::Int
+    stopped::Bool             # stopped, butmay not have converged
+    x_converged::Bool         # converged via |x_n - x_{n-1}| < ϵ
+    f_converged::Bool         # converged via |f(x_n)| < ϵ
+    convergence_failed::Bool
+    message::AbstractString
+end
+
+type UnivariateZeroStateBracketing{T,S} <: UnivariateZeroState{T,S}
+    xn1::T
+    xn0::T
+    fxn1::S
+    fxn0::S
+    bracket::Nullable{Vector{T}}
+    flag::Symbol
     steps::Int
     fnevals::Int
     stopped::Bool             # stopped, butmay not have converged
@@ -82,18 +99,12 @@ function init_state{T}(method::Any, fs, x0::T, bracket)
     end
     
     S = eltype(fx0)
-    state = UnivariateZeroState(x0,
-                                x0 + typemax(Int),
-                                fx0,
-                                fx0,
-                                isa(bracket, Nullable) ? bracket : Nullable(convert(Vector{T}, bracket)),
-                                0,
-                                fnevals,
-                                false,
-                                false,
-                                false,
-                                false,
-                                "")
+    state = UnivariateZeroStateBase(x0, x0 + typemax(Int),
+                                    fx0, fx0,
+                                    isa(bracket, Nullable) ? bracket : Nullable(convert(Vector{T}, bracket)),
+                                    0, fnevals,
+                                    false, false, false, false,
+                                    "")
     state
 end
 
@@ -324,7 +335,6 @@ function find_zero(method::UnivariateZeroMethod, fs, state::UnivariateZeroState,
         end
 
         update_state(method, fs, state, options)
-
         if options.verbose
             push!(xns, state.xn1)
             push!(fxns, state.fxn1)

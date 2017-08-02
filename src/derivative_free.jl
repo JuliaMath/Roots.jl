@@ -78,17 +78,13 @@ function init_state{T <: AbstractFloat}(method::AbstractSecant, fs, x::Union{T, 
         x0, x1, fx0, fx1  = x1, x0, fs.f(x1), fx0 # switch
     end
 
-    state = UnivariateZeroState(
-                                promote(float(x1), float(x0))...,
-                                promote(fx1, fx0)...,
-                                isa(bracket, Nullable) ? bracket : Nullable(convert(Vector{T}, sort(bracket))),
-                                0,
-                                2,
-                                false,
-                                false,
-                                false,
-                                false,
-                                "")
+    state = UnivariateZeroStateBase(
+                                    promote(float(x1), float(x0))...,
+                                    promote(fx1, fx0)...,
+                                    isa(bracket, Nullable) ? bracket : Nullable(convert(Vector{T}, sort(bracket))),
+                                    0, 2,
+                                    false, false, false, false,
+                                    "")
     state
 end
 
