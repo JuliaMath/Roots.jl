@@ -111,9 +111,7 @@ end
 
 
 ####
-## find_zero interface. We need to specialize for T<:Float64, and BigSomething
-const BigSomething = Union{BigFloat, BigInt}
-
+## find_zero interface.
 type Bisection <: AbstractBisection end
 type A42 <: AbstractBisection end
 
@@ -140,6 +138,14 @@ function find_zero{T <: Float64}(f, x0::Vector{T}, method::Bisection; verbose=fa
     end
 end
 
+
+function find_zero{M<:AbstractBisection, T<:Real}(f, x0::Vector{T}, method::M; kwargs...)
+    x = adjust_bracket(x0)
+    prob, options = derivative_free_setup(method, DerivativeFree(f, f(x[1])), x; kwargs...)
+    find_zero(prob, method, options)
+end
+
+
 ## This is a bit clunky, as we use `a42` for bisection when we don't have `Float64` values.
 ## As we don't have the `A42` algorithm implemented through `find_zero`, we adjust here.
 function find_zero{M <: Union{Bisection, A42}, T <: Real}(f, x0::Vector{T}, method::M;  kwargs...)
@@ -157,15 +163,10 @@ function find_zero{M <: Union{Bisection, A42}, T <: Real}(f, x0::Vector{T}, meth
 end
 
 
-function find_zero{M<:AbstractBisection, T<:Real}(f, x0::Vector{T}, method::M; kwargs...)
-    x = adjust_bracket(x0)
-    prob, options = derivative_free_setup(method, DerivativeFree(f, f(x[1])), x; kwargs...)
-    find_zero(prob, method, options)
-end
-
 # this is hacky.
 # we reach here from calling Bisection midway through the Order0() routine with "big" values.
 # call a42 in this case
+const BigSomething = Union{BigFloat, BigInt}
 function find_zero{T<:BigSomething, S}(method::Bisection, fs::DerivativeFree, o::UnivariateZeroState{T, S}, options::UnivariateZeroOptions)
     xn0, xn1 = sort([o.xn0, o.xn1])
     o.xn1 = a42(fs.f, o.xn0, o.xn1; xtol=options.xreltol, maxeval=options.maxevals, verbose=options.verbose)
@@ -183,13 +184,12 @@ function init_state{T <: Real, R}(method::AbstractBisection, fs::DerivativeFree{
 
     sign(y0) * sign(y2) > 0 && throw(ArgumentError(bracketing_error))
 
-    state = UnivariateZeroStateBracketing(x0, x2,
-                                          y0, y2,
-                                          isa(bracket, Nullable) ? bracket : Nullable(convert(Vector{T}, sort(bracket))),
-                                          :nothing, # flag
-                                          0, 2,
-                                          false, false, false, false,
-                                          "")
+    state = UnivariateZeroStateBase(x0, x2,
+                                    y0, y2,
+                                    isa(bracket, Nullable) ? bracket : Nullable(convert(Vector{T}, sort(bracket))),
+                                    0, 2,
+                                    false, false, false, false,
+                                    "")
     state
 end
 
@@ -517,77 +517,95 @@ end
 
     `FalsePosition`
 
-Use the [false position](https://en.wikipedia.org/wiki/False_position_method) method to find a zero for the function `f`
-within the bracketing interval `[a,b]`.
+Use the [false
+position](https://en.wikipedia.org/wiki/False_position_method) method
+to find a zero for the function `f` within the bracketing interval
+`[a,b]`.
 
-The false position method is a modified bisection method, where the midpoint between `[a_k, b_k]` is chosen to be the intersection point
-of the secant line with the x axis, and not the average between the two values.
+The false position method is a modified bisection method, where the
+midpoint between `[a_k, b_k]` is chosen to be the intersection point
+of the secant line with the x axis, and not the average between the
+two values.
 
-This implementation uses the Anderson & Björk's algorithm, which should give improve performance.
+To speed up convergence for concave functions, this algorithm
+implements the 12 reduction factors of Galdino (*A family of regula
+falsi root-finding methods*). These are specified by number, as in
+`FalsePosition(2)` or by one of three names `FalsePosition(:pegasus)`,
+`FalsePosition(:illinois)`, or `FalsePosition(:anderson_bjork)` (the
+default). The default choice has generally better performance than the
+others, though there are exceptions.
+
+For some problems, the number of function calls can be greater than
+for the `bisection64` method, but generally this algorithm will make
+fewer function calls.
 
 Examples
 ```
 find_zero(x -> x^5 - x - 1, [-2, 2], FalsePosition())
 ```
 """    
-type FalsePosition <: AbstractBisection end
+type FalsePosition <: AbstractBisection
+    reduction_factor::Union{Int, Symbol}
+    FalsePosition(x=:anderson_bjork) = new(x)
+end
 
-#function update_state{T<:AbstractFloat,S}(method::FalsePosition, fs, o::UnivariateZeroStateBracketing{T,S}, options::UnivariateZeroOptions)
 function update_state(method::FalsePosition, fs, o, options)
 
     f = fs.f
     a, b =  o.xn0, o.xn1
+
     fa, fb = o.fxn0, o.fxn1
 
-    c = b - fb * (b - a) / (fb - fa)
-    fc = f(c)
+    lambda = fb / (fb - fa)
+    tau = 1e-10                   # some engineering to avoid short moves
+    if !(tau < norm(lambda) < 1-tau)
+        lambda = 1/2
+    end
+    x = b - lambda * (b-a)        
+    fx = f(x)
     incfn(o)
+    incsteps(o)
 
-    if iszero(fc)
-        o.xn1 = c
-        o.fxn1 = fc
+    if iszero(fx)
+        o.xn1 = x
+        o.fxn1 = fx
         return
     end
 
-    if sign(fa) * sign(fc) < 0
-       if o.flag == :left
-           a, b, fa, fb, c = modified_false_position_step(f, a, b, fa, fb, 1-fc/fb, :left)
-           o.flag = :nothing
-       else
-           o.flag = :left
-            a, b, fa, fb = a, c, fa, fc
-       end
+    if sign(fx)*sign(fb) < 0
+        a, fa = b, fb
     else
-       if o.flag == :right
-           a, b, fa, fb, c = modified_false_position_step(f, a, b, fa, fb, 1-fc/fa, :left)
-           o.flag = :nothing
-       else
-           o.flag = :right
-            a, b, fa, fc = c, b, fc, fb
-       end
+        fa = galdino[method.reduction_factor](fa, fb, fx)
     end
+    b, fb = x, fx
 
-    o.xn0, o.xn1 = a, b 
-    o.fxn0, o.fxn1 = fa, fb 
     
-    incsteps(o)
+    o.xn0, o.xn1 = a, b 
+    o.fxn0, o.fxn1 = fa, fb
+    
     nothing
 end
 
-
-function modified_false_position_step(f, a, b, fa, fb, m, dir=:left)
-
-    lambda = m > 0 ? m : 0.5
-
-    if dir == :right
-        c = (lambda * fb * a - fa * b) / (lambda*fb - fa)
-        return (c, b, f(c), fb, c)
-    else
-        c = (fb * a - lambda* fa * b) / (fb - lambda * fa)
-        return (a, c, fa, f(c), c)
-    end
+# the 12 reduction factors offered by Galadino
+galdino = Dict{Union{Int,Symbol},Function}(:1 => (fa, fb, fx) -> fa*fb/(fb+fx),
+                                           :2 => (fa, fb, fx) -> (fa - fb)/2,
+                                           :3 => (fa, fb, fx) -> (fa - fx)/(2 + fx/fb),
+                                           :4 => (fa, fb, fx) -> (fa - fx)/(1 + fx/fb)^2,
+                                           :5 => (fa, fb, fx) -> (fa -fx)/(1.5 + fx/fb)^2,
+                                           :6 => (fa, fb, fx) -> (fa - fx)/(2 + fx/fb)^2,
+                                           :7 => (fa, fb, fx) -> (fa + fx)/(2 + fx/fb)^2,
+                                           :8 => (fa, fb, fx) -> fa/2,
+                                           :9 => (fa, fb, fx) -> fa/(1 + fx/fb)^2,
+                                           :10 => (fa, fb, fx) -> (fa-fx)/4,
+                                           :11 => (fa, fb, fx) -> fx*fa/(fb+fx),
+                                           :12 => (fa, fb, fx) -> (fa * (1-fx/fb > 0 ? 1-fx/fb : 1/2))
+)
+# give common names
+for (nm, i) in [(:pegasus, 1), (:illinois, 8), (:anderson_bjork, 12)]
+    galdino[nm] = galdino[i]
 end
 
+## --------------------------------------
 
 """
 

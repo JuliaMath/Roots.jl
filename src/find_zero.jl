@@ -44,7 +44,7 @@ function callable_function(m::UnivariateZeroMethod, f, x0)
 end
 
 
-## object to hold state
+## object to hold state; allow for subtypes with additional fields
 @compat abstract type  UnivariateZeroState{T, S} end
 type UnivariateZeroStateBase{T,S} <: UnivariateZeroState{T,S}
     xn1::T
@@ -52,22 +52,6 @@ type UnivariateZeroStateBase{T,S} <: UnivariateZeroState{T,S}
     fxn1::S
     fxn0::S
     bracket::Nullable{Vector{T}}
-    steps::Int
-    fnevals::Int
-    stopped::Bool             # stopped, butmay not have converged
-    x_converged::Bool         # converged via |x_n - x_{n-1}| < ϵ
-    f_converged::Bool         # converged via |f(x_n)| < ϵ
-    convergence_failed::Bool
-    message::AbstractString
-end
-
-type UnivariateZeroStateBracketing{T,S} <: UnivariateZeroState{T,S}
-    xn1::T
-    xn0::T
-    fxn1::S
-    fxn0::S
-    bracket::Nullable{Vector{T}}
-    flag::Symbol
     steps::Int
     fnevals::Int
     stopped::Bool             # stopped, butmay not have converged
