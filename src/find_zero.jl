@@ -44,8 +44,9 @@ function callable_function(m::UnivariateZeroMethod, f, x0)
 end
 
 
-## object to hold state
-type UnivariateZeroState{T,S} 
+## object to hold state; allow for subtypes with additional fields
+@compat abstract type  UnivariateZeroState{T, S} end
+type UnivariateZeroStateBase{T,S} <: UnivariateZeroState{T,S}
     xn1::T
     xn0::T
     fxn1::S
@@ -82,18 +83,12 @@ function init_state{T}(method::Any, fs, x0::T, bracket)
     end
     
     S = eltype(fx0)
-    state = UnivariateZeroState(x0,
-                                x0 + typemax(Int),
-                                fx0,
-                                fx0,
-                                isa(bracket, Nullable) ? bracket : Nullable(convert(Vector{T}, bracket)),
-                                0,
-                                fnevals,
-                                false,
-                                false,
-                                false,
-                                false,
-                                "")
+    state = UnivariateZeroStateBase(x0, x0 + typemax(Int),
+                                    fx0, fx0,
+                                    isa(bracket, Nullable) ? bracket : Nullable(convert(Vector{T}, bracket)),
+                                    0, fnevals,
+                                    false, false, false, false,
+                                    "")
     state
 end
 
@@ -324,7 +319,6 @@ function find_zero(method::UnivariateZeroMethod, fs, state::UnivariateZeroState,
         end
 
         update_state(method, fs, state, options)
-
         if options.verbose
             push!(xns, state.xn1)
             push!(fxns, state.fxn1)

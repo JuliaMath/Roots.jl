@@ -111,15 +111,11 @@ end
 
 
 ####
-## find_zero interface. We need to specialize for T<:Float64, and BigSomething
-const BigSomething = Union{BigFloat, BigInt}
-
+## find_zero interface.
 type Bisection <: AbstractBisection end
 type A42 <: AbstractBisection end
 
-## This is a bit clunky, as we use `a42` for bisection when we don't have `Float64` values.
-## As we don't have the `A42` algorithm implemented through `find_zero`, we adjust here.
-function find_zero{M<:AbstractBisection, T<:Real}(f, x0::Vector{T}, method::M; maxevals::Int=50, verbose::Bool=false, kwargs...)
+function adjust_bracket(x0)
     x = sort(float(x0))
 
     if isinf(x[1])
@@ -128,20 +124,49 @@ function find_zero{M<:AbstractBisection, T<:Real}(f, x0::Vector{T}, method::M; m
     if isinf(x[2])
         x[2] = prevfloat(x[2])
     end
-    
-    if eltype(x) <: Float64
-        if verbose
-            prob, options = derivative_free_setup(method, DerivativeFree(f, f(x0[1])), x; verbose=verbose, maxevals=maxevals, kwargs...)
-            find_zero(prob, method, options)
-        else # avoid overhead of generic calling method
-            bisection64(f, x0[1], x0[2])::eltype(x)  
-        end
+    x
+end
+
+## For speed, bypass find_zero setup for bisection+Float64
+function find_zero{T <: Float64}(f, x0::Vector{T}, method::Bisection; verbose=false, kwargs...)
+    x = adjust_bracket(x0)
+    if verbose
+        prob, options = derivative_free_setup(method, DerivativeFree(f, f(x0[1])), x; verbose=verbose, kwargs...)
+        find_zero(prob, method, options)
     else
-        a42(f, x[1], x[2]; maxeval=maxevals, verbose=verbose)
+        bisection64(f, x0[1], x0[2])::eltype(x)
     end
 end
 
+
+function find_zero{M<:AbstractBisection, T<:Real}(f, x0::Vector{T}, method::M; kwargs...)
+    x = adjust_bracket(x0)
+    prob, options = derivative_free_setup(method, DerivativeFree(f, f(x[1])), x; kwargs...)
+    find_zero(prob, method, options)
+end
+
+
+## This is a bit clunky, as we use `a42` for bisection when we don't have `Float64` values.
+## As we don't have the `A42` algorithm implemented through `find_zero`, we adjust here.
+function find_zero{M <: Union{Bisection, A42}, T <: Real}(f, x0::Vector{T}, method::M;  kwargs...)
+    x = adjust_bracket(x0)
+    ## round about way to get options and state
+    prob, options = derivative_free_setup(method, DerivativeFree(f, f(x[1])), x[1];  kwargs...)
+    o = init_state(method, prob.fs, prob.x0, prob.bracket)
+
+    o.xn1 = a42(f, x[1], x[2]; xtol=options.xreltol, maxeval=options.maxevals, verbose=options.verbose)
+    o.message = "Used Alefeld-Potra-Shi method, `Roots.a42`, to find the zero. Iterations and function evaluations are not counted properly."
+    o.x_converged = true
+
+    options.verbose && show_trace(prob.fs, o, [o.xn1], [o.fxn1], method)
+    o.xn1
+end
+
+
+# this is hacky.
+# we reach here from calling Bisection midway through the Order0() routine with "big" values.
 # call a42 in this case
+const BigSomething = Union{BigFloat, BigInt}
 function find_zero{T<:BigSomething, S}(method::Bisection, fs::DerivativeFree, o::UnivariateZeroState{T, S}, options::UnivariateZeroOptions)
     xn0, xn1 = sort([o.xn0, o.xn1])
     o.xn1 = a42(fs.f, o.xn0, o.xn1; xtol=options.xreltol, maxeval=options.maxevals, verbose=options.verbose)
@@ -151,6 +176,24 @@ function find_zero{T<:BigSomething, S}(method::Bisection, fs::DerivativeFree, o:
     nothing
 end
 
+
+function init_state{T <: Real, R}(method::AbstractBisection, fs::DerivativeFree{R}, x::Vector{T}, bracket)
+    x0, x2 = adjust_bracket(x)
+    y0::R = fs.f(x0)
+    y2::R = fs.f(x2)
+
+    sign(y0) * sign(y2) > 0 && throw(ArgumentError(bracketing_error))
+
+    state = UnivariateZeroStateBase(x0, x2,
+                                    y0, y2,
+                                    isa(bracket, Nullable) ? bracket : Nullable(convert(Vector{T}, sort(bracket))),
+                                    0, 2,
+                                    false, false, false, false,
+                                    "")
+    state
+end
+
+
 ## This uses _middle bisection
 ## Find zero using modified bisection method for Float64 arguments.
 ## This is guaranteed to take no more than 64 steps. The `a42` alternative usually has
@@ -159,25 +202,6 @@ end
 ## Terminates with `x1` when the bracket length of `[x0,x2]` is `<= max(xtol, xtolrel*abs(x1))` where `x1` is the midpoint .
 ## The tolerances can be set to 0, in which case, the termination occurs when `nextfloat(x0) = x2`.
 ## The bracket `[a,b]` must be bounded.
-
-function init_state{T <: Float64,R}(method::Bisection, fs::DerivativeFree{R}, x::Vector{T}, bracket)
-    x0, x2 = sort(x[1:2])
-    isinf(x0) && (x0 = nextfloat(x0))
-    isinf(x2) && (x2 = prevfloat(x2))
-    y0::R = fs.f(x0)
-    y2::R = fs.f(x2)
-
-    sign(y0) * sign(y2) > 0 && throw(ArgumentError(bracketing_error))
-
-    state = UnivariateZeroState(x2, x0,
-                                y2, y0,
-                                isa(bracket, Nullable) ? bracket : Nullable(convert(Vector{T}, sort(bracket))),
-                                0, 2,
-                                false, false, false, false,
-                                "")
-    state
-end
-
 
 function update_state{T<:Float64,S}(method::Bisection, fs, o::Roots.UnivariateZeroState{T,S}, options::UnivariateZeroOptions)
     f = fs.f
@@ -485,6 +509,103 @@ function distinct(f, a, b, d, e)
       almost_equal(f2, f3) || almost_equal(f2, f4) || almost_equal(f3, f4))
 end
 
+
+
+## ----------------------------
+
+"""
+
+    `FalsePosition`
+
+Use the [false
+position](https://en.wikipedia.org/wiki/False_position_method) method
+to find a zero for the function `f` within the bracketing interval
+`[a,b]`.
+
+The false position method is a modified bisection method, where the
+midpoint between `[a_k, b_k]` is chosen to be the intersection point
+of the secant line with the x axis, and not the average between the
+two values.
+
+To speed up convergence for concave functions, this algorithm
+implements the 12 reduction factors of Galdino (*A family of regula
+falsi root-finding methods*). These are specified by number, as in
+`FalsePosition(2)` or by one of three names `FalsePosition(:pegasus)`,
+`FalsePosition(:illinois)`, or `FalsePosition(:anderson_bjork)` (the
+default). The default choice has generally better performance than the
+others, though there are exceptions.
+
+For some problems, the number of function calls can be greater than
+for the `bisection64` method, but generally this algorithm will make
+fewer function calls.
+
+Examples
+```
+find_zero(x -> x^5 - x - 1, [-2, 2], FalsePosition())
+```
+"""    
+type FalsePosition <: AbstractBisection
+    reduction_factor::Union{Int, Symbol}
+    FalsePosition(x=:anderson_bjork) = new(x)
+end
+
+function update_state(method::FalsePosition, fs, o, options)
+
+    f = fs.f
+    a, b =  o.xn0, o.xn1
+
+    fa, fb = o.fxn0, o.fxn1
+
+    lambda = fb / (fb - fa)
+    tau = 1e-10                   # some engineering to avoid short moves
+    if !(tau < norm(lambda) < 1-tau)
+        lambda = 1/2
+    end
+    x = b - lambda * (b-a)        
+    fx = f(x)
+    incfn(o)
+    incsteps(o)
+
+    if iszero(fx)
+        o.xn1 = x
+        o.fxn1 = fx
+        return
+    end
+
+    if sign(fx)*sign(fb) < 0
+        a, fa = b, fb
+    else
+        fa = galdino[method.reduction_factor](fa, fb, fx)
+    end
+    b, fb = x, fx
+
+    
+    o.xn0, o.xn1 = a, b 
+    o.fxn0, o.fxn1 = fa, fb
+    
+    nothing
+end
+
+# the 12 reduction factors offered by Galadino
+galdino = Dict{Union{Int,Symbol},Function}(:1 => (fa, fb, fx) -> fa*fb/(fb+fx),
+                                           :2 => (fa, fb, fx) -> (fa - fb)/2,
+                                           :3 => (fa, fb, fx) -> (fa - fx)/(2 + fx/fb),
+                                           :4 => (fa, fb, fx) -> (fa - fx)/(1 + fx/fb)^2,
+                                           :5 => (fa, fb, fx) -> (fa -fx)/(1.5 + fx/fb)^2,
+                                           :6 => (fa, fb, fx) -> (fa - fx)/(2 + fx/fb)^2,
+                                           :7 => (fa, fb, fx) -> (fa + fx)/(2 + fx/fb)^2,
+                                           :8 => (fa, fb, fx) -> fa/2,
+                                           :9 => (fa, fb, fx) -> fa/(1 + fx/fb)^2,
+                                           :10 => (fa, fb, fx) -> (fa-fx)/4,
+                                           :11 => (fa, fb, fx) -> fx*fa/(fb+fx),
+                                           :12 => (fa, fb, fx) -> (fa * (1-fx/fb > 0 ? 1-fx/fb : 1/2))
+)
+# give common names
+for (nm, i) in [(:pegasus, 1), (:illinois, 8), (:anderson_bjork, 12)]
+    galdino[nm] = galdino[i]
+end
+
+## --------------------------------------
 
 """
 

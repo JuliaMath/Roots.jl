@@ -120,6 +120,53 @@ fn, xstar, x0 = (x -> x * exp( - x ), 0, 1.0)
 @test find_zero(x -> sin(x), [4,3], Bisection()) ≈ pi
 @test find_zero(x -> sin(x), [big(4),3], Bisection()) ≈ pi
 @test_throws ArgumentError  find_zero(x -> sin(x), 3.0, Bisection())
+
+@test find_zero(x -> cos(x) - x, [0, pi], FalsePosition()) ≈ 0.7390851332151607
+@test (find_zero(x -> sin(x), [big(3), 4], FalsePosition(), maxevals=100) |> sin) < 1e-70
+@test find_zero(x -> sin(x), [4,3], FalsePosition()) ≈ pi
+
+galadino_probs = [(x -> x^3 - 1, [.5, 1.5]),
+                  (x -> x^2 * (x^2/3 + sqrt(2) * sin(x)) - sqrt(3)/18, [.1, 1]),
+                  (x -> 11x^11 - 1, [0.1, 1]),
+                  (x ->  x^3 + 1, [-1.8, 0]),
+                  (x ->  x^3 - 2x - 5, [2.0, 3]),
+                  
+                  ((x,n=5)  -> 2x * exp(-n) + 1 - 2exp(-n*x) , [0,1]),
+                  ((x,n=10) -> 2x * exp(-n) + 1 - 2exp(-n*x) , [0,1]),
+                  ((x,n=20) -> 2x * exp(-n) + 1 - 2exp(-n*x) , [0,1]),
+
+                  ((x,n=5)  -> (1 + (1-n)^2) * x^2 - (1 - n*x)^2 , [0,1]),
+                  ((x,n=10) -> (1 + (1-n)^2) * x^2 - (1 - n*x)^2 , [0,1]),
+                  ((x,n=20) -> (1 + (1-n)^2) * x^2 - (1 - n*x)^2 , [0,1]),
+
+                  ((x,n=5)  -> x^2 - (1-x)^n , [0,1]),
+                  ((x,n=10) -> x^2 - (1-x)^n , [0,1]),
+                  ((x,n=20) -> x^2 - (1-x)^n , [0,1]),
+
+                  ((x,n=5)  -> (1 + (1-n)^4)*x - (1 - n*x)^4 , [0,1]),
+                  ((x,n=10) -> (1 + (1-n)^4)*x - (1 - n*x)^4 , [0,1]),
+                  ((x,n=20) -> (1 + (1-n)^4)*x - (1 - n*x)^4 , [0,1]),
+
+                  ((x,n=5)  -> exp(-n*x)*(x-1) + x^n , [0,1]),
+                  ((x,n=10) -> exp(-n*x)*(x-1) + x^n , [0,1]),
+                  ((x,n=20) -> exp(-n*x)*(x-1) + x^n , [0,1]),
+
+                  ((x,n=5)  -> x^2 + sin(x/n) - 1/4 , [0,1]),
+                  ((x,n=10) -> x^2 + sin(x/n) - 1/4 , [0,1]),
+                  ((x,n=10) -> x^2 + sin(x/n) - 1/4 , [0,1])
+                  ]
+        
+
+for (fn, ab) in galadino_probs
+    for m in [Roots.A42(), Bisection(), (FalsePosition(i) for i in 1:12)...]
+        x0 = find_zero(fn, ab, m, maxevals=120)
+        @test norm(fn(x0)) <= 1e-14
+    end
+end
+
+
+
+
 ## defaults for method argument
 @test find_zero(x -> cbrt(x), 1) ≈ 0.0 # order0()
 @test find_zero(sin, [3,4]) ≈ π   # Bisection() 

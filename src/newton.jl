@@ -13,21 +13,15 @@ function callable_function(method::Newton, f::Tuple, x0)
 end
 callable_function(method::Newton, f::Any, x0) = FirstDerivative(f, D(f), x0)
 
-function init_state{T}(method::Newton, fs, x0::T)
-    state = UnivariateZeroState(x0,
-                                x0 + typemax(Int),
-                                fs.f(x0),
-                                fs.f(x0),
-                                Nullable{Vector{T}}(),
-                                0,
-                                1,
-                                false,
-                                false,
-                                false,
-                                false,
-                                "")
-    state
-end
+# function init_state{T}(method::Newton, fs, x0::T)
+#     state = UnivariateZeroStateBase(x0, x0 + typemax(Int),
+#                                     fs.f(x0), fs.f(x0),
+#                                     Nullable{Vector{T}}(),
+#                                     0, 1,
+#                                     false, false, false, false,
+#                                     "")
+#     state
+# end
 
 function update_state{T}(method::Newton, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions)
     xn = o.xn1
