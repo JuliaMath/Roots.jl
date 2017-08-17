@@ -185,7 +185,7 @@ type Cnt
     f
     Cnt(f) = new(0, f)
 end
-@compat (f::Cnt)(x) = (f.cnt += 1; f.f(x))
+(f::Cnt)(x) = (f.cnt += 1; f.f(x))
 
 g = Cnt(x -> x^5 - x - 1)
 for m in meths
