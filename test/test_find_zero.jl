@@ -164,7 +164,12 @@ for (fn, ab) in galadino_probs
     end
 end
 
-
+## Can use (a,b) or [a,b] for bisection
+fn = x -> x^5 - x - 1
+for m in [Roots.A42(), Bisection(), (FalsePosition(i) for i in 1:12)...]
+    x0 = find_zero(fn, (1,2.0), m)
+    @test norm(fn(x0)) <= 1e-14
+end
 
 
 ## defaults for method argument

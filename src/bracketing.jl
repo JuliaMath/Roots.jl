@@ -116,7 +116,11 @@ type Bisection <: AbstractBisection end
 type A42 <: AbstractBisection end
 
 function adjust_bracket(x0)
-    x = sort(float(x0))
+    a,b = x0
+    if a > b
+        a,b=b,a
+    end
+    x = promote(float(a), float(b))
 
     if isinf(x[1])
         x[1] = nextfloat(x[1])
@@ -127,8 +131,12 @@ function adjust_bracket(x0)
     x
 end
 
+function find_zero{T <: Real}(f, x0::Vector{T}, method::AbstractBisection; kwargs...)
+    find_zero(f, (x0[1], x0[2]), method; kwargs...)
+end
+
 ## For speed, bypass find_zero setup for bisection+Float64
-function find_zero{T <: Float64}(f, x0::Vector{T}, method::Bisection; verbose=false, kwargs...)
+function find_zero{T <: Float64, S <: Float64}(f, x0::Tuple{T,S}, method::Bisection; verbose=false, kwargs...)
     x = adjust_bracket(x0)
     if verbose
         prob, options = derivative_free_setup(method, DerivativeFree(f, f(x0[1])), x; verbose=verbose, kwargs...)
@@ -139,16 +147,16 @@ function find_zero{T <: Float64}(f, x0::Vector{T}, method::Bisection; verbose=fa
 end
 
 
-function find_zero{M<:AbstractBisection, T<:Real}(f, x0::Vector{T}, method::M; kwargs...)
-    x = adjust_bracket(x0)
-    prob, options = derivative_free_setup(method, DerivativeFree(f, f(x[1])), x; kwargs...)
-    find_zero(prob, method, options)
-end
+# function find_zero{M<:AbstractBisection, T<:Real}(f, x0::Vector{T}, method::M; kwargs...)
+#     x = adjust_bracket(x0)
+#     prob, options = derivative_free_setup(method, DerivativeFree(f, f(x[1])), x; kwargs...)
+#     find_zero(prob, method, options)
+# end
 
 
 ## This is a bit clunky, as we use `a42` for bisection when we don't have `Float64` values.
 ## As we don't have the `A42` algorithm implemented through `find_zero`, we adjust here.
-function find_zero{M <: Union{Bisection, A42}, T <: Real}(f, x0::Vector{T}, method::M;  kwargs...)
+function find_zero{M <: Union{Bisection, A42}, T <: Real, S <: Real}(f, x0::Tuple{T,S}, method::M;  kwargs...)
     x = adjust_bracket(x0)
     ## round about way to get options and state
     prob, options = derivative_free_setup(method, DerivativeFree(f, f(x[1])), x[1];  kwargs...)
@@ -177,7 +185,7 @@ function find_zero{T<:BigSomething, S}(method::Bisection, fs::DerivativeFree, o:
 end
 
 
-function init_state{T <: Real, R}(method::AbstractBisection, fs::DerivativeFree{R}, x::Vector{T}, bracket)
+function init_state{T <: Real, R}(method::AbstractBisection, fs::DerivativeFree{R}, x::Union{Tuple{T,T}, Vector{T}}, bracket)
     x0, x2 = adjust_bracket(x)
     y0::R = fs.f(x0)
     y2::R = fs.f(x2)
@@ -605,6 +613,11 @@ for (nm, i) in [(:pegasus, 1), (:illinois, 8), (:anderson_bjork, 12)]
     galdino[nm] = galdino[i]
 end
 
+function find_zero{T<:Real,S<:Real}(f, x0::Tuple{T,S}, method::FalsePosition; kwargs...)
+    x = adjust_bracket(x0)
+    prob, options = derivative_free_setup(method, DerivativeFree(f, f(x[1])), x; kwargs...)
+    find_zero(prob, method, options)
+end
 ## --------------------------------------
 
 """

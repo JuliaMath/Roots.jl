@@ -131,12 +131,12 @@ end
 ## basic container
 type UnivariateZeroProblem{T<:AbstractFloat}
     fs::CallableFunction
-    x0::Union{T, Vector{T}, Complex{T}}
+    x0::Union{T, Tuple{T,T}, Vector{T}, Complex{T}}
     bracket::Nullable
 end
 
 ## frame the problem and the options
-function derivative_free_setup{T<:AbstractFloat}(method::Any, fs::CallableFunction, x0::Union{T, Vector{T}};
+function derivative_free_setup{T<:AbstractFloat}(method::Any, fs::CallableFunction, x0::Union{T, Tuple{T,T}, Vector{T}};
                                                  bracket=Nullable{Vector{T}}(),
                                                  xabstol=zero(T), xreltol=zero(T),
                                                  abstol=4*eps(T), reltol=4*eps(T),
@@ -144,7 +144,7 @@ function derivative_free_setup{T<:AbstractFloat}(method::Any, fs::CallableFuncti
                                                  verbose::Bool=false,
                                                  kwargs...
     )
-    x = float(x0)
+    x = float.(x0)
     prob = UnivariateZeroProblem(fs, x, isa(bracket, Nullable) ? bracket : Nullable(convert(Vector{T}, bracket)))
     # options = univariate_zero_options(;xabstol=xabstol,
     #                                   xreltol=xreltol,
@@ -338,8 +338,8 @@ Positional arugments:
   free. Some (`Newton`, `Halley`) may have derivative(s) computed
   using the `ForwardDiff` pacakge.
 
-* `x0` an initial starting value. Typically a scalar, but may be an
-  array for bisection methods. The value `float(x0)` is passed on.
+* `x0` an initial starting value. Typically a scalar, but may be a two-element
+  tuple or array for bisection methods. The value `float.(x0)` is passed on.
 
 * `method` one of several methods, see below.
 
@@ -355,7 +355,8 @@ Keyword arguments:
 
 * `bracket`: Optional. A bracketing interval for the sought after
   root. If given, a hybrid algorithm may be used where bisection is
-  utilized for steps that would go out of bounds.
+  utilized for steps that would go out of bounds. (Using a `FalsePosition` method
+  instead would be suggested.)    
 
 * `maxevals::Int=40`: stop trying after `maxevals` steps
 
@@ -377,6 +378,7 @@ Exported methods:
 `Order5()` (KSS);
 `Order8()` (Thukral);
 `Order16()` (Thukral);
+`FalsePosition(i)` (false position, i in 1..12);    
 
 Not exported:
 
@@ -396,6 +398,7 @@ Examples:
 f(x) = x^5 - x - 1
 find_zero(f, 1.0, Order5())
 find_zero(f, 1.0, Steffensen()) # also Order2()
+find_zero(f, (1.0, 2.0), FalsePosition())    
 ```
 """
 function find_zero{M <: AbstractBisection, T<:Number}(f, x0::T, method::M; kwargs...)
@@ -403,6 +406,10 @@ function find_zero{M <: AbstractBisection, T<:Number}(f, x0::T, method::M; kwarg
 end
 
 function find_zero{T<:Number, M<:AbstractBisection}(f, x0::Vector{T}, method::M; kwargs...)
+    find_zero(method, callable_function(method, f, float(x0[1])), x0; kwargs...)
+end
+
+function find_zero{T<:Number, M<:AbstractBisection}(f, x0::Tuple{T}, method::M; kwargs...)
     find_zero(method, callable_function(method, f, float(x0[1])), x0; kwargs...)
 end
 
@@ -420,10 +427,11 @@ end
 ## some defaults for methods
 find_zero{T <: Number}(f, x0::T; kwargs...) = find_zero(f, x0, Order0(); kwargs...)
 find_zero{T <: Number}(f, x0::Vector{T}; kwargs...) = find_zero(f, x0, Bisection(); kwargs...)
+find_zero{T<:Number, S<:Number}(f, x0::Tuple{T,S};kwargs...) = find_zero(f, x0, Bisection(); kwargs...)
 
 
 function find_zero(method::UnivariateZeroMethod, fs::CallableFunction, x0; kwargs...)
-    x = float(x0)
+    x = float.(x0)
     prob, options = derivative_free_setup(method, fs, x; kwargs...)
     find_zero(prob, method, options)
 end
