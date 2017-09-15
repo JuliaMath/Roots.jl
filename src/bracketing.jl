@@ -27,10 +27,7 @@ Consider a different bracket or try fzero(f, c) with an initial guess c.
 # 64 steps.
 
 function _middle(x::Float64, y::Float64)
-  # Use the usual float rules for combining non-finite numbers
-  if !isfinite(x) || !isfinite(y)
-    return x + y
-  end
+ 
 
   # Always return 0.0 when inputs have opposite sign
   if sign(x) != sign(y) && x != 0.0 && y != 0.0
@@ -112,7 +109,28 @@ end
 
 ####
 ## find_zero interface.
+"""
+    `Bisection()`
+
+Use the bisection method over `Float64` values. The bisection method starts with a bracketing interval
+`[a,b]` and splits it into two intervals `[a,c]` and `[c,b]`, If `c` is not a zero, then one of these
+two will be a bracketing interval and the process continues. The computation of `c` is done by
+`_middle`, which reinterprets floating point values as unsigned 64-bit integers and splits there. This
+method avoids floating point issues and guarantees a "best" solution (one where a zero is found
+or the bracketing interval is of the type `[a, nextfloat(a)]`).
+"""    
 type Bisection <: AbstractBisection end
+
+"""
+    `Roots.A42()`
+
+
+Bracketing method which finds the root of a continuous function within a provided
+interval [a, b], without requiring derivatives. It is based on algorithm 4.2
+described in: 1. G. E. Alefeld, F. A. Potra, and Y. Shi, "Algorithm 748:
+enclosing zeros of continuous functions," ACM Trans. Math. Softw. 21,
+327–344 (1995).
+"""
 type A42 <: AbstractBisection end
 
 function adjust_bracket(x0)

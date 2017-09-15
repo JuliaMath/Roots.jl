@@ -4,6 +4,16 @@
 
 
 ## Newton
+"""
+    `Roots.Newton()`
+
+Implements Newton's [method](http://tinyurl.com/b4d7vls): `x_n1 = xn -
+f(xn)/f'(xn)`.  This is a quadratically converging method requiring
+one derivative. If a derivative is not specified, the `ForwardDiff` package
+will be used, as applicable.
+
+Unlike other methods, this method accepts complex inputs.
+"""
 type Newton <: UnivariateZeroMethod
 end
 
@@ -133,7 +143,14 @@ newton(f, fp, x0; kwargs...) = find_zero((f, fp), x0, Newton(); kwargs...)
 ## Halley
 
 
+"""
+    `Roots.Halley()`
 
+Implements Halley's [method](http://tinyurl.com/yd83eytb),
+`x_n1 = xn - (2 f(xn)*f'(xn)) / (2 f'(xn)^2 - f(xn) * f''(xn))`.
+This method is cubically converging, but requires more function calls per step than
+other methods.
+"""    
 type Halley <: UnivariateZeroMethod
 end
 

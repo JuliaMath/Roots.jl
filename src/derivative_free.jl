@@ -61,7 +61,34 @@ end
 ##################################################
 
 ## Order0 and Secant are related
+"""
+    `Order0()`
+
+
+The `Order0` method is engineered to be more robust, though possibly
+slower, alternative to to the other derivative-free root-finding
+methods. The implementation roughly follows the algorithm described in
+*Personal Calculator Has Key to Solve Any Equation f(x) = 0*, the
+SOLVE button from the
+[HP-34C](http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1979-12.pdf).
+The basic idea is to use a secant step. If along the way a bracket is
+found, switch to bisection, using `Bisection` if possible, else
+`A42`.  If the secant step fails to decrease the function value, a
+quadratic step is used up to 3 times.
+    
+"""
 type Order0 <: AbstractSecant end
+
+"""
+    `Order1()`
+
+The `Order1()` method is an alias for `Secant` and performs a secant
+step. This method keeps two values in its state, `x_n` and `x_n1`. The
+updated point is the intersection point of x axis with the secant line
+formed from the two points. The secant method uses 1 function
+evaluation and has order `(1+sqrt(5))/2`.
+
+"""
 type Secant <: AbstractSecant end
 const Order1 = Secant
 
@@ -236,6 +263,19 @@ secant_method(f, x0::Real, x1::Real; kwargs...) = find_zero(f, map(float, [x0,x1
 ## https://en.wikipedia.org/wiki/Steffensen's_method#Simple_description
 type Steffensen <: UnivariateZeroMethod
 end
+
+"""
+    `Order2()`
+
+The quadratically converging
+[Steffensen](https://en.wikipedia.org/wiki/Steffensen's_method#Simple_description)
+method is used for the derivative free `Order2()` algorithm. Unlike
+the quadratically converging Newton's method, no derivative is
+necessary, though like Newton's method, two function calls per step
+are. This algorithm is more sensitive than Newton's method to poor
+initial guesses.
+
+"""    
 const Order2 = Steffensen
 
 function update_state{T}(method::Steffensen, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions)
@@ -275,12 +315,17 @@ steffenson(f, x0; kwargs...) = find_zero(f, x0, Steffensen(); kwargs...)
 
 ##################################################
 
-## A New Fifth Order Derivative Free Newton-Type Method for Solving Nonlinear Equations
-## Manoj Kumar, Akhilesh Kumar Singh, and Akanksha Srivastava
-## Appl. Math. Inf. Sci. 9, No. 3, 1507-1513 (2015)
-## http://www.naturalspublishing.com/files/published/ahb21733nf19a5.pdf
-type Order5 <: UnivariateZeroMethod
-end
+
+"""
+    `Order5()`
+
+Implements the (algorithm)[ https://en.wikipedia.org/wiki/Steffensen's_method#Simple_description]
+from *A New Fifth Order Derivative Free Newton-Type Method for Solving Nonlinear Equations*
+by Manoj Kumar, Akhilesh Kumar Singh, and Akanksha,
+Appl. Math. Inf. Sci. 9, No. 3, 1507-1513 (2015). Four function calls per step are needed.
+
+"""    
+type Order5 <: UnivariateZeroMethod end
 
 function update_state{T}(method::Order5, fs::DerivativeFree, o::UnivariateZeroState{T}, options::UnivariateZeroOptions)
     xn = o.xn1
@@ -388,12 +433,17 @@ end
 
 ##################################################
 
-## New Eighth-Order Derivative-Free Methods for Solving Nonlinear Equations
-## Rajinder Thukral
-## International Journal of Mathematics and Mathematical Sciences
-## Volume 2012 (2012), Article ID 493456, 12 pages
-## http://dx.doi.org/10.1155/2012/493456
 
+
+"""
+    `Order8()`
+
+Implements an [algorithm](https://en.wikipedia.org/wiki/Steffensen's_method#Simple_description) from 
+*New Eighth-Order Derivative-Free Methods for Solving Nonlinear Equations*
+by Rajinder Thukral,
+International Journal of Mathematics and Mathematical Sciences
+Volume 2012 (2012), Article ID 493456, 12 pages. Four function calls per step are required.
+"""
 type Order8 <: UnivariateZeroMethod
 end
 
@@ -471,13 +521,20 @@ end
 
 ##################################################
 
-## New Sixteenth-Order Derivative-Free Methods for Solving Nonlinear Equations
-## R. Thukral
-## American Journal of Computational and Applied Mathematics
-## p-ISSN: 2165-8935    e-ISSN: 2165-8943
-## 2012;  2(3): 112-118
-## doi: 10.5923/j.ajcam.20120203.08
+"""
+    `Order16()`
 
+Implement the algorithm from
+*New Sixteenth-Order Derivative-Free Methods for Solving Nonlinear Equations*
+by R. Thukral, 
+American Journal of Computational and Applied Mathematics
+p-ISSN: 2165-8935;    e-ISSN: 2165-8943; 2012;  2(3): 112-118
+doi: 10.5923/j.ajcam.20120203.08.
+
+Five function calls per step are required. Though rapidly converging, this method generally isn't faster (fewer
+function calls/steps) over other methods when using `Float64` values,
+but may be useful for solving over `BigFloat`.
+"""
 type Order16 <: UnivariateZeroMethod
 end
 
