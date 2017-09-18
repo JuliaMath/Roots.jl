@@ -5,7 +5,8 @@
 
 ## Newton
 """
-    `Roots.Newton()`
+
+    Roots.Newton()
 
 Implements Newton's [method](http://tinyurl.com/b4d7vls): `x_n1 = xn -
 f(xn)/f'(xn)`.  This is a quadratically converging method requiring
@@ -144,7 +145,8 @@ newton(f, fp, x0; kwargs...) = find_zero((f, fp), x0, Newton(); kwargs...)
 
 
 """
-    `Roots.Halley()`
+    
+    Roots.Halley()
 
 Implements Halley's [method](http://tinyurl.com/yd83eytb),
 `x_n1 = xn - (2 f(xn)*f'(xn)) / (2 f'(xn)^2 - f(xn) * f''(xn))`.

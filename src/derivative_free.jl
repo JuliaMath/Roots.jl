@@ -62,7 +62,7 @@ end
 
 ## Order0 and Secant are related
 """
-    `Order0()`
+    Order0()
 
 
 The `Order0` method is engineered to be more robust, though possibly
@@ -80,7 +80,7 @@ quadratic step is used up to 3 times.
 type Order0 <: AbstractSecant end
 
 """
-    `Order1()`
+    Order1()
 
 The `Order1()` method is an alias for `Secant` and performs a secant
 step. This method keeps two values in its state, `x_n` and `x_n1`. The
@@ -265,7 +265,7 @@ type Steffensen <: UnivariateZeroMethod
 end
 
 """
-    `Order2()`
+    Order2()
 
 The quadratically converging
 [Steffensen](https://en.wikipedia.org/wiki/Steffensen's_method#Simple_description)
@@ -317,7 +317,7 @@ steffenson(f, x0; kwargs...) = find_zero(f, x0, Steffensen(); kwargs...)
 
 
 """
-    `Order5()`
+    Order5()
 
 Implements the (algorithm)[ https://en.wikipedia.org/wiki/Steffensen's_method#Simple_description]
 from *A New Fifth Order Derivative Free Newton-Type Method for Solving Nonlinear Equations*
@@ -436,7 +436,7 @@ end
 
 
 """
-    `Order8()`
+    Order8()
 
 Implements an [algorithm](https://en.wikipedia.org/wiki/Steffensen's_method#Simple_description) from 
 *New Eighth-Order Derivative-Free Methods for Solving Nonlinear Equations*
@@ -522,7 +522,7 @@ end
 ##################################################
 
 """
-    `Order16()`
+    Order16()
 
 Implement the algorithm from
 *New Sixteenth-Order Derivative-Free Methods for Solving Nonlinear Equations*

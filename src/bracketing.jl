@@ -28,7 +28,7 @@ Consider a different bracket or try fzero(f, c) with an initial guess c.
 const FloatNN = Union{Float64, Float32, Float16}
 _float_int_pairs = Dict(Float64 => UInt64, Float32 => UInt32, Float16 => UInt16)
 
-function _middle(x::T, y::T) where {T <: FloatNN}
+function _middle{T <: FloatNN}(x::T, y::T) # where {T <: FloatNN}
     # Use the usual float rules for combining non-finite numbers
     if !isfinite(x) || !isfinite(y)
         return x + y
@@ -59,7 +59,9 @@ end
 
 """
 
-    `Roots.bisection64(f, a, b)` (unexported)
+    Roots.bisection64(f, a, b)
+
+(unexported)
 
 * `f`: a callable object, like a function
 
@@ -120,7 +122,8 @@ end
 ####
 ## find_zero interface.
 """
-    `Bisection()`
+
+    Bisection()
 
 Use the bisection method over `Float64` values. The bisection method starts with a bracketing interval
 `[a,b]` and splits it into two intervals `[a,c]` and `[c,b]`, If `c` is not a zero, then one of these
@@ -132,7 +135,7 @@ or the bracketing interval is of the type `[a, nextfloat(a)]`).
 type Bisection <: AbstractBisection end
 
 """
-    `Roots.A42()`
+    Roots.A42()
 
 
 Bracketing method which finds the root of a continuous function within a provided
@@ -288,7 +291,9 @@ end
 
 """
 
-    `Roots.a42(f, a, b; kwargs...)` (not exported)
+    Roots.a42(f, a, b; kwargs...)
+
+(not exported)
 
 Finds the root of a continuous function within a provided
 interval [a, b], without requiring derivatives. It is based on algorithm 4.2
@@ -555,7 +560,7 @@ end
 
 """
 
-    `FalsePosition`
+    FalsePosition()
 
 Use the [false
 position](https://en.wikipedia.org/wiki/False_position_method) method
