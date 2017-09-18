@@ -25,22 +25,30 @@ Consider a different bracket or try fzero(f, c) with an initial guess c.
 # Alternative "mean" definition that operates on the binary representation
 # of a float. Using this definition, bisection will never take more than
 # 64 steps.
+const FloatNN = Union{Float64, Float32, Float16}
+_float_int_pairs = Dict(Float64 => UInt64, Float32 => UInt32, Float16 => UInt16)
 
-function _middle(x::Float64, y::Float64)
- 
+function _middle(x::T, y::T) where {T <: FloatNN}
+    # Use the usual float rules for combining non-finite numbers
+    if !isfinite(x) || !isfinite(y)
+        return x + y
+    end
+    # Always return 0.0 when inputs have opposite sign
+    if sign(x) != sign(y) && !iszero(x) && ! iszero(y)
+        return zero(T)
+    end
+    
+    negate = sign(x) < 0 || sign(y) < 0 
 
-  # Always return 0.0 when inputs have opposite sign
-  if sign(x) != sign(y) && x != 0.0 && y != 0.0
-    return 0.0
-  end
+    # do division over unsigned integers with bit shift
+    xint = reinterpret(_float_int_pairs[T], abs(x))
+    yint = reinterpret(_float_int_pairs[T], abs(y))
+    mid = (xint + yint) >> 1
 
-  negate = x < 0.0 || y < 0.0
+    # reinterpret in original floating point
+    unsigned = reinterpret(T, mid)
 
-  xint = reinterpret(UInt64, abs(x))
-  yint = reinterpret(UInt64, abs(y))
-  unsigned = reinterpret(Float64, (xint + yint) >> 1)
-
-  return negate ? -unsigned : unsigned
+    negate ? -unsigned : unsigned
 end
 
 ## fall back or non Floats
@@ -75,9 +83,10 @@ This function is a bit faster than the slightly more general
 Due to Jason Merrill.
 
 """
-function bisection64(f, a::Number, b::Number)
+function bisection64(f, a0::FloatNN, b0::FloatNN)
 
-    a,b = Float64(a), Float64(b)
+    a,b = promote(a0, b0)
+
 
     if a > b
         b,a = a, b
@@ -92,6 +101,7 @@ function bisection64(f, a::Number, b::Number)
     (iszero(fb) || isnan(fb) || isinf(fb)) && return b
     
     while a < m < b
+
         fm = sign(f(m))
 
         if iszero(fm) || isnan(fm) || isinf(fm)
@@ -154,7 +164,7 @@ function find_zero{T <: Real}(f, x0::Vector{T}, method::AbstractBisection; kwarg
 end
 
 ## For speed, bypass find_zero setup for bisection+Float64
-function find_zero{T <: Float64, S <: Float64}(f, x0::Tuple{T,S}, method::Bisection; verbose=false, kwargs...)
+function find_zero{T <: FloatNN, S <: FloatNN}(f, x0::Tuple{T,S}, method::Bisection; verbose=false, kwargs...)
     x = adjust_bracket(x0)
     if verbose
         prob, options = derivative_free_setup(method, DerivativeFree(f, f(x0[1])), x; verbose=verbose, kwargs...)
@@ -229,7 +239,7 @@ end
 ## The tolerances can be set to 0, in which case, the termination occurs when `nextfloat(x0) = x2`.
 ## The bracket `[a,b]` must be bounded.
 
-function update_state{T<:Float64,S}(method::Bisection, fs, o::Roots.UnivariateZeroState{T,S}, options::UnivariateZeroOptions)
+function update_state{T<:FloatNN,S}(method::Bisection, fs, o::Roots.UnivariateZeroState{T,S}, options::UnivariateZeroOptions)
     f = fs.f
     x0, x2 = o.xn0, o.xn1
     y0, y2 = o.fxn0, o.fxn1
@@ -261,7 +271,11 @@ function assess_convergence(method::Bisection, fs, state, options)
     end
 
     x1 = _middle(x0, x2)
-
+    if iszero(state.fxn1)
+        state.message = ""
+        state.x_converged = true
+        return true
+    end
     x0 < x1 && x1 < x2 && return false
 
     state.message = ""
