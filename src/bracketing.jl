@@ -96,8 +96,10 @@ function bisection64(f, a0::FloatNN, b0::FloatNN)
     
     
     m = _middle(a,b)
+
     fa, fb = sign(f(a)), sign(f(b))
 
+    
     fa * fb > 0 && throw(ArgumentError(bracketing_error)) 
     (iszero(fa) || isnan(fa) || isinf(fa)) && return a
     (iszero(fb) || isnan(fb) || isinf(fb)) && return b
@@ -147,19 +149,19 @@ enclosing zeros of continuous functions," ACM Trans. Math. Softw. 21,
 type A42 <: AbstractBisection end
 
 function adjust_bracket(x0)
-    a,b = x0
+    a,b = float.(x0)
     if a > b
         a,b=b,a
     end
-    x = promote(float(a), float(b))
+    u, v = promote(float(a), float(b))
 
-    if isinf(x[1])
-        x[1] = nextfloat(x[1])
+    if isinf(u)
+        u = nextfloat(u)
     end
-    if isinf(x[2])
-        x[2] = prevfloat(x[2])
+    if isinf(v)
+        v = prevfloat(v)
     end
-    x
+    u, v
 end
 
 function find_zero{T <: Real}(f, x0::Vector{T}, method::AbstractBisection; kwargs...)
@@ -170,10 +172,10 @@ end
 function find_zero{T <: FloatNN, S <: FloatNN}(f, x0::Tuple{T,S}, method::Bisection; verbose=false, kwargs...)
     x = adjust_bracket(x0)
     if verbose
-        prob, options = derivative_free_setup(method, DerivativeFree(f, f(x0[1])), x; verbose=verbose, kwargs...)
+        prob, options = derivative_free_setup(method, DerivativeFree(f, f(x[1])), x; verbose=verbose, kwargs...)
         find_zero(prob, method, options)
     else
-        bisection64(f, x0[1], x0[2])::eltype(x)
+        bisection64(f, x[1], x[2])::eltype(x)
     end
 end
 
