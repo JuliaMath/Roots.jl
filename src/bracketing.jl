@@ -25,25 +25,30 @@ Consider a different bracket or try fzero(f, c) with an initial guess c.
 # Alternative "mean" definition that operates on the binary representation
 # of a float. Using this definition, bisection will never take more than
 # 64 steps.
+const FloatNN = Union{Float64, Float32, Float16}
+_float_int_pairs = Dict(Float64 => UInt64, Float32 => UInt32, Float16 => UInt16)
 
-function _middle(x::Float64, y::Float64)
-  # Use the usual float rules for combining non-finite numbers
-  if !isfinite(x) || !isfinite(y)
-    return x + y
-  end
+function _middle{T <: FloatNN}(x::T, y::T) # where {T <: FloatNN}
+    # Use the usual float rules for combining non-finite numbers
+    if !isfinite(x) || !isfinite(y)
+        return x + y
+    end
+    # Always return 0.0 when inputs have opposite sign
+    if sign(x) != sign(y) && !iszero(x) && ! iszero(y)
+        return zero(T)
+    end
+    
+    negate = sign(x) < 0 || sign(y) < 0 
 
-  # Always return 0.0 when inputs have opposite sign
-  if sign(x) != sign(y) && x != 0.0 && y != 0.0
-    return 0.0
-  end
+    # do division over unsigned integers with bit shift
+    xint = reinterpret(_float_int_pairs[T], abs(x))
+    yint = reinterpret(_float_int_pairs[T], abs(y))
+    mid = (xint + yint) >> 1
 
-  negate = x < 0.0 || y < 0.0
+    # reinterpret in original floating point
+    unsigned = reinterpret(T, mid)
 
-  xint = reinterpret(UInt64, abs(x))
-  yint = reinterpret(UInt64, abs(y))
-  unsigned = reinterpret(Float64, (xint + yint) >> 1)
-
-  return negate ? -unsigned : unsigned
+    negate ? -unsigned : unsigned
 end
 
 ## fall back or non Floats
@@ -54,7 +59,9 @@ end
 
 """
 
-    `Roots.bisection64(f, a, b)` (unexported)
+    Roots.bisection64(f, a, b)
+
+(unexported)
 
 * `f`: a callable object, like a function
 
@@ -78,9 +85,10 @@ This function is a bit faster than the slightly more general
 Due to Jason Merrill.
 
 """
-function bisection64(f, a::Number, b::Number)
+function bisection64(f, a0::FloatNN, b0::FloatNN)
 
-    a,b = Float64(a), Float64(b)
+    a,b = promote(a0, b0)
+
 
     if a > b
         b,a = a, b
@@ -88,13 +96,16 @@ function bisection64(f, a::Number, b::Number)
     
     
     m = _middle(a,b)
+
     fa, fb = sign(f(a)), sign(f(b))
 
+    
     fa * fb > 0 && throw(ArgumentError(bracketing_error)) 
     (iszero(fa) || isnan(fa) || isinf(fa)) && return a
     (iszero(fb) || isnan(fb) || isinf(fb)) && return b
     
     while a < m < b
+
         fm = sign(f(m))
 
         if iszero(fm) || isnan(fm) || isinf(fm)
@@ -112,23 +123,45 @@ end
 
 ####
 ## find_zero interface.
+"""
+
+    Bisection()
+
+Use the bisection method over `Float64` values. The bisection method starts with a bracketing interval
+`[a,b]` and splits it into two intervals `[a,c]` and `[c,b]`, If `c` is not a zero, then one of these
+two will be a bracketing interval and the process continues. The computation of `c` is done by
+`_middle`, which reinterprets floating point values as unsigned 64-bit integers and splits there. This
+method avoids floating point issues and guarantees a "best" solution (one where a zero is found
+or the bracketing interval is of the type `[a, nextfloat(a)]`).
+"""    
 type Bisection <: AbstractBisection end
+
+"""
+    Roots.A42()
+
+
+Bracketing method which finds the root of a continuous function within a provided
+interval [a, b], without requiring derivatives. It is based on algorithm 4.2
+described in: 1. G. E. Alefeld, F. A. Potra, and Y. Shi, "Algorithm 748:
+enclosing zeros of continuous functions," ACM Trans. Math. Softw. 21,
+327–344 (1995).
+"""
 type A42 <: AbstractBisection end
 
 function adjust_bracket(x0)
-    a,b = x0
+    a,b = float.(x0)
     if a > b
         a,b=b,a
     end
-    x = promote(float(a), float(b))
+    u, v = promote(float(a), float(b))
 
-    if isinf(x[1])
-        x[1] = nextfloat(x[1])
+    if isinf(u)
+        u = nextfloat(u)
     end
-    if isinf(x[2])
-        x[2] = prevfloat(x[2])
+    if isinf(v)
+        v = prevfloat(v)
     end
-    x
+    u, v
 end
 
 function find_zero{T <: Real}(f, x0::Vector{T}, method::AbstractBisection; kwargs...)
@@ -136,13 +169,13 @@ function find_zero{T <: Real}(f, x0::Vector{T}, method::AbstractBisection; kwarg
 end
 
 ## For speed, bypass find_zero setup for bisection+Float64
-function find_zero{T <: Float64, S <: Float64}(f, x0::Tuple{T,S}, method::Bisection; verbose=false, kwargs...)
+function find_zero{T <: FloatNN, S <: FloatNN}(f, x0::Tuple{T,S}, method::Bisection; verbose=false, kwargs...)
     x = adjust_bracket(x0)
     if verbose
-        prob, options = derivative_free_setup(method, DerivativeFree(f, f(x0[1])), x; verbose=verbose, kwargs...)
+        prob, options = derivative_free_setup(method, DerivativeFree(f, f(x[1])), x; verbose=verbose, kwargs...)
         find_zero(prob, method, options)
     else
-        bisection64(f, x0[1], x0[2])::eltype(x)
+        bisection64(f, x[1], x[2])::eltype(x)
     end
 end
 
@@ -211,7 +244,7 @@ end
 ## The tolerances can be set to 0, in which case, the termination occurs when `nextfloat(x0) = x2`.
 ## The bracket `[a,b]` must be bounded.
 
-function update_state{T<:Float64,S}(method::Bisection, fs, o::Roots.UnivariateZeroState{T,S}, options::UnivariateZeroOptions)
+function update_state{T<:FloatNN,S}(method::Bisection, fs, o::Roots.UnivariateZeroState{T,S}, options::UnivariateZeroOptions)
     f = fs.f
     x0, x2 = o.xn0, o.xn1
     y0, y2 = o.fxn0, o.fxn1
@@ -243,7 +276,11 @@ function assess_convergence(method::Bisection, fs, state, options)
     end
 
     x1 = _middle(x0, x2)
-
+    if iszero(state.fxn1)
+        state.message = ""
+        state.x_converged = true
+        return true
+    end
     x0 < x1 && x1 < x2 && return false
 
     state.message = ""
@@ -256,7 +293,9 @@ end
 
 """
 
-    `Roots.a42(f, a, b; kwargs...)` (not exported)
+    Roots.a42(f, a, b; kwargs...)
+
+(not exported)
 
 Finds the root of a continuous function within a provided
 interval [a, b], without requiring derivatives. It is based on algorithm 4.2
@@ -523,7 +562,7 @@ end
 
 """
 
-    `FalsePosition`
+    FalsePosition()
 
 Use the [false
 position](https://en.wikipedia.org/wiki/False_position_method) method
