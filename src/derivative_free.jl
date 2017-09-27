@@ -149,9 +149,12 @@ function update_state{T}(method::Order0, fs, o::UnivariateZeroState{T}, options:
 
     gamma, issue = guarded_secant_step(alpha, beta, falpha, fbeta)
     if issue
-        o.message = "error with guarded secant step"
-        o.stopped = true
-        return nothing
+        ## try gamma as a midpoint then
+        gamma = alpha + (beta - alpha)/2
+        
+#        o.message = "error with guarded secant step"
+#        o.stopped = true
+#        return nothing
     end
 
     fgamma = f(gamma); incfn(o)
@@ -201,6 +204,11 @@ function update_state{T}(method::Order0, fs, o::UnivariateZeroState{T}, options:
         end
 
         theta, issue = guarded_secant_step(beta, gamma, fbeta, fgamma)
+        if issue
+            ## try midpoint?
+            theta = beta + (gamma - beta)/2
+        end
+        
         ftheta = f(theta); incfn(o)
 
         if sign(ftheta) * sign(fbeta) < 0
