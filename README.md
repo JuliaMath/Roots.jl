@@ -49,7 +49,7 @@ specified, they will be computed using the `ForwardDiff` package.
 
 ## Usage examples
 
-```
+```julia
 f(x) = exp(x) - x^4
 ## bracketing
 fzero(f, 8, 9)		          # 8.613169456441398
@@ -68,14 +68,14 @@ fzero(sin, BigFloat(3.0))	  # 3.1415926535897932384...with 256 bits of precision
 
 The `fzero` function can be used with callable objects:
 
-```
+```julia
 using SymEngine; @vars x
 fzero(x^5 - x - 1, 1.0)
 ```
 
 Or,
 
-```
+```julia
 using Polynomials; x = variable(Int)
 fzero(x^5 - x - 1, 1.0)
 ```
@@ -86,7 +86,7 @@ The well-known methods can be used with or without supplied
 derivatives. If not specified, the `ForwardDiff` package is used for
 automatic differentiation.
 
-```
+```julia
 f(x) = exp(x) - x^4
 fp(x) = exp(x) - 4x^3
 fpp(x) = exp(x) - 12x^2
@@ -100,7 +100,7 @@ secant_method(f, 8, 8.5)
 The automatic derivatives allow for easy solutions to finding critical
 points of a function.
 
-```
+```julia
 ## mean
 as = rand(5)
 function M(x) 
