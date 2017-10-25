@@ -77,7 +77,7 @@ found, switch to bisection, using `Bisection` if possible, else
 quadratic step is used up to 3 times.
     
 """
-type Order0 <: AbstractSecant end
+mutable struct Order0 <: AbstractSecant end
 
 """
     Order1()
@@ -89,7 +89,7 @@ formed from the two points. The secant method uses 1 function
 evaluation and has order `(1+sqrt(5))/2`.
 
 """
-type Secant <: AbstractSecant end
+mutable struct Secant <: AbstractSecant end
 const Order1 = Secant
 
 function init_state{T <: AbstractFloat}(method::AbstractSecant, fs, x::Union{T, Vector{T}}, bracket)
@@ -261,7 +261,7 @@ secant_method(f, x0::Real, x1::Real; kwargs...) = find_zero(f, map(float, [x0,x1
 
 ### Steffensen
 ## https://en.wikipedia.org/wiki/Steffensen's_method#Simple_description
-type Steffensen <: UnivariateZeroMethod
+mutable struct Steffensen <: UnivariateZeroMethod
 end
 
 """
@@ -325,7 +325,7 @@ by Manoj Kumar, Akhilesh Kumar Singh, and Akanksha,
 Appl. Math. Inf. Sci. 9, No. 3, 1507-1513 (2015). Four function calls per step are needed.
 
 """    
-type Order5 <: UnivariateZeroMethod end
+mutable struct Order5 <: UnivariateZeroMethod end
 
 function update_state{T}(method::Order5, fs::DerivativeFree, o::UnivariateZeroState{T}, options::UnivariateZeroOptions)
     xn = o.xn1
@@ -444,7 +444,7 @@ by Rajinder Thukral,
 International Journal of Mathematics and Mathematical Sciences
 Volume 2012 (2012), Article ID 493456, 12 pages. Four function calls per step are required.
 """
-type Order8 <: UnivariateZeroMethod
+mutable struct Order8 <: UnivariateZeroMethod
 end
 
 function update_state{T}(method::Order8, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions)
@@ -535,7 +535,7 @@ Five function calls per step are required. Though rapidly converging, this metho
 function calls/steps) over other methods when using `Float64` values,
 but may be useful for solving over `BigFloat`.
 """
-type Order16 <: UnivariateZeroMethod
+mutable struct Order16 <: UnivariateZeroMethod
 end
 
 function update_state{T}(method::Order16, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions)

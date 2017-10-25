@@ -10,25 +10,25 @@
 ## * a graphic of trace when verbose=true?
 
 ## method names are subtypes
-@compat abstract type UnivariateZeroMethod end
-@compat abstract type AbstractBisection <: UnivariateZeroMethod end
-@compat abstract type AbstractSecant <: UnivariateZeroMethod end
+abstract type UnivariateZeroMethod end
+abstract type AbstractBisection <: UnivariateZeroMethod end
+abstract type AbstractSecant <: UnivariateZeroMethod end
 
 # container for callable objects; not really necessary, but has some value.
-@compat abstract type CallableFunction{R} end
-immutable DerivativeFree{R} <: CallableFunction{R}
+abstract type CallableFunction{R} end
+struct DerivativeFree{R} <: CallableFunction{R}
     f
     fx0::R
 end
 
-immutable FirstDerivative{R} <: CallableFunction{R}
+struct FirstDerivative{R} <: CallableFunction{R}
     f
     fp
     fx0::R
 end
 
 
-immutable SecondDerivative{R} <: CallableFunction{R}
+struct SecondDerivative{R} <: CallableFunction{R}
     f
     fp
     fpp
@@ -45,8 +45,8 @@ end
 
 
 ## object to hold state; allow for subtypes with additional fields
-@compat abstract type  UnivariateZeroState{T, S} end
-type UnivariateZeroStateBase{T,S} <: UnivariateZeroState{T,S}
+abstract type  UnivariateZeroState{T, S} end
+mutable struct UnivariateZeroStateBase{T,S} <: UnivariateZeroState{T,S}
     xn1::T
     xn0::T
     fxn1::S
@@ -94,7 +94,7 @@ end
 
 
 ## Options for convergence, reporting
-type UnivariateZeroOptions{T}
+mutable struct UnivariateZeroOptions{T}
     xabstol::T
     xreltol::T
     abstol::T
@@ -129,7 +129,7 @@ end
         
 
 ## basic container
-type UnivariateZeroProblem{T<:AbstractFloat}
+mutable struct UnivariateZeroProblem{T<:AbstractFloat}
     fs::CallableFunction
     x0::Union{T, Tuple{T,T}, Vector{T}, Complex{T}}
     bracket::Nullable

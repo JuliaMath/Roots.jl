@@ -5,15 +5,15 @@ module Roots
 import Base: *
 
 
-using ForwardDiff
-using Compat
+#using ForwardDiff
+#using Compat
 
 export fzero,
        fzeros,
-       newton, halley,
-       secant_method, steffensen, 
-       D
-export multroot, D2  # deprecated
+#       newton, halley,
+       secant_method, steffensen
+#       D
+#export multroot, D2  # deprecated
 
 export find_zero,
        Order0, Order1, Order2, Order5, Order8, Order16
@@ -21,11 +21,11 @@ export Bisection, FalsePosition
 # export Bisection, Secant, Steffensen, Newton, Halley
 
 ## load in files
-include("adiff.jl")
+#include("adiff.jl")
 include("find_zero.jl")
 include("bracketing.jl")
 include("derivative_free.jl")
-include("newton.jl")
+#include("newton.jl")
 
 
 ## Main functions are

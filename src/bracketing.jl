@@ -1,12 +1,12 @@
 ###
 
 # type to throw on succesful convergence
-type StateConverged
+mutable struct StateConverged
     x0::Real
 end
 
 # type to throw on failure
-type ConvergenceFailed
+mutable struct ConvergenceFailed
     reason::AbstractString
 end
 
@@ -85,8 +85,8 @@ This function is a bit faster than the slightly more general
 Due to Jason Merrill.
 
 """
-function bisection64(f, a0::FloatNN, b0::FloatNN)
-
+function bisection64(@nospecialize(f), a0::FloatNN, b0::FloatNN)
+    
     a,b = promote(a0, b0)
 
 
@@ -134,7 +134,7 @@ two will be a bracketing interval and the process continues. The computation of 
 method avoids floating point issues and guarantees a "best" solution (one where a zero is found
 or the bracketing interval is of the type `[a, nextfloat(a)]`).
 """    
-type Bisection <: AbstractBisection end
+mutable struct Bisection <: AbstractBisection end
 
 """
     Roots.A42()
@@ -146,7 +146,7 @@ described in: 1. G. E. Alefeld, F. A. Potra, and Y. Shi, "Algorithm 748:
 enclosing zeros of continuous functions," ACM Trans. Math. Softw. 21,
 327–344 (1995).
 """
-type A42 <: AbstractBisection end
+mutable struct A42 <: AbstractBisection end
 
 function adjust_bracket(x0)
     a,b = float.(x0)
@@ -591,7 +591,7 @@ Examples
 find_zero(x -> x^5 - x - 1, [-2, 2], FalsePosition())
 ```
 """    
-type FalsePosition <: AbstractBisection
+mutable struct FalsePosition <: AbstractBisection
     reduction_factor::Union{Int, Symbol}
     FalsePosition(x=:anderson_bjork) = new(x)
 end
