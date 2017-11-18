@@ -28,7 +28,7 @@ Consider a different bracket or try fzero(f, c) with an initial guess c.
 const FloatNN = Union{Float64, Float32, Float16}
 _float_int_pairs = Dict(Float64 => UInt64, Float32 => UInt32, Float16 => UInt16)
 
-function _middle{T <: FloatNN}(x::T, y::T) # where {T <: FloatNN}
+function _middle(x::T, y::T) where {T <: FloatNN}
     # Use the usual float rules for combining non-finite numbers
     if !isfinite(x) || !isfinite(y)
         return x + y
@@ -86,7 +86,7 @@ Due to Jason Merrill.
 
 """
 function bisection64(@nospecialize(f), a0::FloatNN, b0::FloatNN)
-    
+
     a,b = promote(a0, b0)
 
 
@@ -164,12 +164,13 @@ function adjust_bracket(x0)
     u, v
 end
 
-function find_zero{T <: Real}(f, x0::Vector{T}, method::AbstractBisection; kwargs...)
+function find_zero(f, x0::Vector{T}, method::AbstractBisection; kwargs...) where {T <: Real}
+    
     find_zero(f, (x0[1], x0[2]), method; kwargs...)
 end
 
 ## For speed, bypass find_zero setup for bisection+Float64
-function find_zero{T <: FloatNN, S <: FloatNN}(f, x0::Tuple{T,S}, method::Bisection; verbose=false, kwargs...)
+function find_zero(f, x0::Tuple{T,S}, method::Bisection; verbose=false, kwargs...) where {T <: FloatNN, S <: FloatNN}
     x = adjust_bracket(x0)
     if verbose
         prob, options = derivative_free_setup(method, DerivativeFree(f, f(x[1])), x; verbose=verbose, kwargs...)
@@ -180,7 +181,7 @@ function find_zero{T <: FloatNN, S <: FloatNN}(f, x0::Tuple{T,S}, method::Bisect
 end
 
 
-# function find_zero{M<:AbstractBisection, T<:Real}(f, x0::Vector{T}, method::M; kwargs...)
+# function find_zero(f, x0::Vector{T}, method::M; kwargs...) where {M<:AbstractBisection, T<:Real}
 #     x = adjust_bracket(x0)
 #     prob, options = derivative_free_setup(method, DerivativeFree(f, f(x[1])), x; kwargs...)
 #     find_zero(prob, method, options)
@@ -189,7 +190,8 @@ end
 
 ## This is a bit clunky, as we use `a42` for bisection when we don't have `Float64` values.
 ## As we don't have the `A42` algorithm implemented through `find_zero`, we adjust here.
-function find_zero{M <: Union{Bisection, A42}, T <: Real, S <: Real}(f, x0::Tuple{T,S}, method::M;  kwargs...)
+function find_zero(f, x0::Tuple{T,S}, method::M;  kwargs...) where {M <: Union{Bisection, A42}, T <: Real, S <: Real}
+
     x = adjust_bracket(x0)
     ## round about way to get options and state
     prob, options = derivative_free_setup(method, DerivativeFree(f, f(x[1])), x[1];  kwargs...)
@@ -208,7 +210,7 @@ end
 # we reach here from calling Bisection midway through the Order0() routine with "big" values.
 # call a42 in this case
 const BigSomething = Union{BigFloat, BigInt}
-function find_zero{T<:BigSomething, S}(method::Bisection, fs::DerivativeFree, o::UnivariateZeroState{T, S}, options::UnivariateZeroOptions)
+function find_zero(method::Bisection, fs::DerivativeFree, o::UnivariateZeroState{T, S}, options::UnivariateZeroOptions) where {T<:BigSomething, S}
     xn0, xn1 = sort([o.xn0, o.xn1])
     o.xn1 = a42(fs.f, o.xn0, o.xn1; xtol=options.xreltol, maxeval=options.maxevals, verbose=options.verbose)
     o.message = "Used Alefeld-Potra-Shi method, `Roots.a42`, to find the zero. Iterations and function evaluations are not counted properly."
@@ -218,7 +220,7 @@ function find_zero{T<:BigSomething, S}(method::Bisection, fs::DerivativeFree, o:
 end
 
 
-function init_state{T <: Real, R}(method::AbstractBisection, fs::DerivativeFree{R}, x::Union{Tuple{T,T}, Vector{T}}, bracket)
+function init_state(method::AbstractBisection, fs::DerivativeFree{R}, x::Union{Tuple{T,T}, Vector{T}}, bracket) where {T <: Real, R}
     x0, x2 = adjust_bracket(x)
     y0::R = fs.f(x0)
     y2::R = fs.f(x2)
@@ -244,7 +246,7 @@ end
 ## The tolerances can be set to 0, in which case, the termination occurs when `nextfloat(x0) = x2`.
 ## The bracket `[a,b]` must be bounded.
 
-function update_state{T<:FloatNN,S}(method::Bisection, fs, o::Roots.UnivariateZeroState{T,S}, options::UnivariateZeroOptions)
+function update_state(method::Bisection, fs, o::Roots.UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T<:FloatNN,S}
     f = fs.f
     x0, x2 = o.xn0, o.xn1
     y0, y2 = o.fxn0, o.fxn1
@@ -316,11 +318,13 @@ output:
 By John Travers
 
 """
-function a42(f, a, b;
+function a42(f, a::Real, b::Real;
                    xtol=zero(float(a)),
                    maxeval::Int=15,
                    verbose::Bool=false
              )
+
+    
     if a > b
         a,b = b,a
     end
@@ -345,7 +349,7 @@ where `c` is passed in.
 Solve f(x) = 0 over bracketing interval [a,b] starting at c, with a < c < b
 
 """
-function a42a(f, a, b, c=(0.5)*(a+b);
+function a42a(@nospecialize(f), a, b, c=(0.5)*(a+b);
                    xtol=zero(float(a)),
                    maxeval::Int=15,
                    verbose::Bool=false
@@ -416,7 +420,7 @@ end
 
 # calculate a scaled tolerance
 # based on algorithm on page 340 of [1]
-function tole{S,R}(a::S, b::R, fa, fb, tol)
+function tole(a::S, b::R, fa, fb, tol) where {S,R}
     T = promote_type(S,R)
     u = abs(fa) < abs(fb) ? abs(a) : abs(b)
     2u*eps(T) + tol
@@ -441,7 +445,7 @@ end
 # root.
 #
 # based on algorithm on page 341 of [1]
-function bracket(f, a, b, c, tol)
+function bracket(@nospecialize(f), a, b, c, tol)
 
     fa = f(a)
     fb = f(b)
@@ -481,7 +485,8 @@ end
 
 # take a secant step, if the resulting guess is very close to a or b, then
 # use bisection instead
-function secant{T}(f, a::T, b)
+function secant(@nospecialize(f), a::T, b) where {T}
+
     c = a - f(a)/(f(b) - f(a))*(b - a)
     tol = eps(T)*5
     if isnan(c) || c <= a + abs(a)*tol || c >= b - abs(b)*tol
@@ -494,7 +499,8 @@ end
 # approximate zero of f using quadratic interpolation
 # if the new guess is outside [a, b] we use a secant step instead
 # based on algorithm on page 330 of [1]
-function newton_quadratic(f, a, b, d, k::Int)
+function newton_quadratic(@nospecialize(f), a, b, d, k::Int)
+
     fa = f(a)
     fb = f(b)
     fd = f(d)
@@ -517,7 +523,8 @@ end
 # approximate zero of f using inverse cubic interpolation
 # if the new guess is outside [a, b] we use a quadratic step instead
 # based on algorithm on page 333 of [1]
-function ipzero(f, a, b, c, d)
+function ipzero(@nospecialize(f), a, b, c, d)
+
     fa = f(a)
     fb = f(b)
     fc = f(c)
@@ -541,13 +548,14 @@ end
 
 # floating point comparison function
 function almost_equal(x, y)
-    const min_diff = realmin(Float64)*32
+    min_diff = realmin(Float64)*32
     abs(x - y) < min_diff
 end
 
 
 # check that all interpolation values are distinct
-function distinct(f, a, b, d, e)
+function distinct(@nospecialize(f), a, b, d, e)
+
     f1 = f(a)
     f2 = f(b)
     f3 = f(d)
@@ -652,7 +660,7 @@ for (nm, i) in [(:pegasus, 1), (:illinois, 8), (:anderson_bjork, 12)]
     galdino[nm] = galdino[i]
 end
 
-function find_zero{T<:Real,S<:Real}(f, x0::Tuple{T,S}, method::FalsePosition; kwargs...)
+function find_zero(f, x0::Tuple{T,S}, method::FalsePosition; kwargs...) where {T<:Real,S<:Real}
     x = adjust_bracket(x0)
     prob, options = derivative_free_setup(method, DerivativeFree(f, f(x[1])), x; kwargs...)
     find_zero(prob, method, options)
@@ -683,7 +691,7 @@ function find_zeros(f, a::Real, b::Real, args...;
 
     a, b = a < b ? (a,b) : (b,a)
     rts = eltype(promote(float(a),b))[]
-    xs = vcat(a, a + (b-a)*sort(rand(no_pts)), b)
+    xs = vcat(a, a .+ (b-a) .* sort(rand(no_pts)), b)
 
 
     ## Look in [ai, bi)

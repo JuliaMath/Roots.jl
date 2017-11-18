@@ -1,4 +1,4 @@
-using Base.Test
+using Compat.Test
 import Roots.fzero
 
 # test robustness of derivative free algorithms

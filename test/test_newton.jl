@@ -1,4 +1,4 @@
-using Base.Test
+using Compat.Test
 import Roots.newton, Roots.halley
 
 @test norm(newton(sin, cos, 0.5) - 0.0) <= 100*eps(1.0)

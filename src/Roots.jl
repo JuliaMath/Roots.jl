@@ -2,11 +2,18 @@ __precompile__(true)
 module Roots
 
 
+## XXX TODO
+## DONE * where {}
+## DONE * @nospecialize
+## * remove arrow {T} on function arguments
+## * remove Nullable bits... Nulls?
+## DONE * remove deprecations
+
 import Base: *
 
 
 #using ForwardDiff
-#using Compat
+using Compat: @nospecialize
 
 export fzero,
        fzeros,
@@ -101,14 +108,14 @@ end
 """
 Find a zero with bracket specified via `[a,b]`, as `fzero(sin, [3,4])`.
 """
-function fzero{T <: Real}(f, bracket::Vector{T}; kwargs...) 
+function fzero(f, bracket::Vector{T}; kwargs...)  where {T <: Real}
     fzero(f, float(bracket[1]), float(bracket[2]); kwargs...)
 end
 
 """
 Find a zero within a bracket with an initial guess to *possibly* speed things along.
 """
-function fzero{T <: Real}(f, x0::Real, bracket::Vector{T}; kwargs...) 
+function fzero(f, x0::Real, bracket::Vector{T}; kwargs...)  where {T <: Real}
     a,b = sort(map(float,bracket))
     (a == -Inf) && (a = nextfloat(a))
     (b == Inf) && (b = prevfloat(b))
@@ -153,44 +160,8 @@ graphically, if possible.
 function fzeros(f, a::Real, b::Real; kwargs...)  
     find_zeros(f, float(a), float(b); kwargs...)
 end
-fzeros{T <: Real}(f, bracket::Vector{T}; kwargs...)  = fzeros(f, a, b; kwargs...)
+fzeros(f, bracket::Vector{T}; kwargs...) where {T <: Real} = fzeros(f, a, b; kwargs...) 
 
 
-## deprecate Polynomial calls
-
-## Don't want to load `Polynomials` to do this...
-# @deprecate roots(p) fzeros(p, a, b) 
-
-@deprecate D2(f) D(f,2)
-fzeros(p) = Base.depwarn("""
-Calling fzeros with just a polynomial is deprecated.
-Either:
-   * Specify an interval to search over: fzeros(p, a, b).
-   * Use the `poly_roots(p, Over.R)` call from `PolynomialZeros`                         
-   * Use `Polynomials` or `PolynomialRoots` and filter. For example, 
-
-```
-using Polynomials
-x=variable()
-filter(isreal, roots(f(x)))
-```
-                         
-""",:fzeros)
-
-multroot(p) = Base.depwarn("The multroot function has moved to the PolynomialZeros package.",:multroot)
-
-polyfactor(p) = Base.depwarn("""
-The polyfactor function is in the PolynomialFactors package:
-
-* if `p` is of type `Poly`: `PolynomialFactors.factor(p)`.
-                             
-* if `p` is a function, try:
-```
-using PolynomialFactors, Polynomials
-x = variable(Int)
-PolynomialFactors.factor(p(x))
-```
-                             
-""",:polyfactor)
 
 end

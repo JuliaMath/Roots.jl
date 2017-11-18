@@ -9,7 +9,7 @@ isissue(x) = (x == 0.0) || isnan(x) || isinf(x)
 """
 heuristic to get a decent first step with Steffensen steps
 """
-function steff_step{T}(x::T, fx)
+function steff_step(x::T, fx) where {T}
     thresh =  max(1, norm(x)) * sqrt(eps(T)) # max(1, sqrt(abs(x/fx))) * 1e-6
     norm(fx) <= thresh ? fx : sign(fx) * thresh
 end
@@ -92,7 +92,7 @@ evaluation and has order `(1+sqrt(5))/2`.
 mutable struct Secant <: AbstractSecant end
 const Order1 = Secant
 
-function init_state{T <: AbstractFloat}(method::AbstractSecant, fs, x::Union{T, Vector{T}}, bracket)
+function init_state(method::AbstractSecant, fs, x::Union{T, Vector{T}}, bracket) where {T <: AbstractFloat}
 
     if isa(x, Vector)
         x0, x1 = x[1:2]
@@ -129,7 +129,7 @@ end
 # * `f(x) == 0.0` or
 # * `f(prevfloat(x)) * f(nextfloat(x)) < 0`.
 # if a bracket is found that can be done, otherwise secant step is used
-function update_state{T}(method::Order0, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions)
+function update_state(method::Order0, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions) where {T}
 
     f = fs.f
     alpha, beta = o.xn0, o.xn1
@@ -225,7 +225,7 @@ end
 
 ## Secant
 ## https://en.wikipedia.org/wiki/Secant_method
-function update_state{T}(method::Secant, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions)
+function update_state(method::Secant, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions) where {T}
 
     xn0, xn1 = o.xn0, o.xn1
     fxn0, fxn1 = o.fxn0, o.fxn1
@@ -278,7 +278,7 @@ initial guesses.
 """    
 const Order2 = Steffensen
 
-function update_state{T}(method::Steffensen, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions)
+function update_state(method::Steffensen, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions) where {T}
 
     xn = o.xn1
     fxn = o.fxn1
@@ -327,7 +327,7 @@ Appl. Math. Inf. Sci. 9, No. 3, 1507-1513 (2015). Four function calls per step a
 """    
 mutable struct Order5 <: UnivariateZeroMethod end
 
-function update_state{T}(method::Order5, fs::DerivativeFree, o::UnivariateZeroState{T}, options::UnivariateZeroOptions)
+function update_state(method::Order5, fs::DerivativeFree, o::UnivariateZeroState{T}, options::UnivariateZeroOptions) where {T}
     xn = o.xn1
     fxn = o.fxn1
     S = eltype(fxn)
@@ -376,7 +376,7 @@ function update_state{T}(method::Order5, fs::DerivativeFree, o::UnivariateZeroSt
 end
 
 ## If we have a derivative
-function update_state{T}(method::Order5, fs::FirstDerivative, o::UnivariateZeroState{T}, options::UnivariateZeroOptions)
+function update_state(method::Order5, fs::FirstDerivative, o::UnivariateZeroState{T}, options::UnivariateZeroOptions) where {T}
 
 
     xn, fxn = o.xn1, o.fxn1
@@ -447,7 +447,7 @@ Volume 2012 (2012), Article ID 493456, 12 pages. Four function calls per step ar
 mutable struct Order8 <: UnivariateZeroMethod
 end
 
-function update_state{T}(method::Order8, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions)
+function update_state(method::Order8, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions) where {T}
     xn = o.xn1
     fxn = o.fxn1
     S = eltype(fxn)
@@ -538,7 +538,7 @@ but may be useful for solving over `BigFloat`.
 mutable struct Order16 <: UnivariateZeroMethod
 end
 
-function update_state{T}(method::Order16, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions)
+function update_state(method::Order16, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions) where {T}
     xn = o.xn1
     fxn = o.fxn1
     S = eltype(fxn)

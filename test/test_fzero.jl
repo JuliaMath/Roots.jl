@@ -1,4 +1,4 @@
-using Base.Test
+using Compat.Test
 import Roots.fzero
 
 ## Test `fzero` interface to `find_zero`
@@ -41,7 +41,7 @@ f =  x -> 1/x - 1
 ##################################################
 ## fzeros function
 rts = 1:5
-@test norm(fzeros(x -> prod([x-r for r in rts]),0,10) - collect(1:5)) <= 1e-15
+@test norm(fzeros(x -> prod([x-r for r in rts]),0,10) .- collect(1:5)) <= 1e-15
 
 fn = x -> sin(10*pi*x)
 @test length(fzeros(fn, 0, 1)) == 11

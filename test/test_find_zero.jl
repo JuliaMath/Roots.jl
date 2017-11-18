@@ -1,6 +1,6 @@
 ## tests of find_zero interface
 using Roots
-using Base.Test, Compat
+using Compat.Test
 
 meths = [Order0(), Order1(), Order2(), Order5(), Order8(), Order16()]
 
@@ -24,15 +24,15 @@ fns = [(x -> x^2 - exp(x) - 3x + 2,   0.257530285439860, [-1, 0.5]),
 
 for (i, (f, xstar, xs)) in enumerate(fns)
     for m in meths
-        for x0 in xs
+        for x0_ in xs
             out = try
-                xn = find_zero(f, x0, m)
+                xn = find_zero(f, x0_, m)
                 @test norm(xn - xstar) < 1e-14 || norm(f(xn)) < 1e-13
                 "."
             catch err
                 "*"
             end
-            out == "*" && println("Fn $i, method $m, x0=$x0 failed")
+            out == "*" && println("Fn $i, method $m, x0=$x0_ failed")
         end
     end
 end
@@ -61,10 +61,10 @@ multiplicity_tests = [
          (x -> (log(x) + sqrt(x^4 + 1) -2)^7,      1.0,  1.222813963628973)
          ]
 
-for (i, (fn, x0, xstar)) in enumerate(multiplicity_tests)
+for (i, (fn_, x0_, xstar)) in enumerate(multiplicity_tests)
     for m in meths
         # println("$i: $m")
-        @test  norm(find_zero(fn, x0, m, maxevals=100) - xstar) < 1e-1 # wow, not too ambitious here, 9th powers...
+        @test  norm(find_zero(fn_, x0_, m, maxevals=100) - xstar) < 1e-1 # wow, not too ambitious here, 9th powers...
     end
 end
 
@@ -157,10 +157,10 @@ galadino_probs = [(x -> x^3 - 1, [.5, 1.5]),
                   ]
         
 
-for (fn, ab) in galadino_probs
+for (fn_, ab) in galadino_probs
     for m in [Roots.A42(), Bisection(), (FalsePosition(i) for i in 1:12)...]
-        x0 = find_zero(fn, ab, m, maxevals=120)
-        @test norm(fn(x0)) <= 1e-14
+        x0 = find_zero(fn_, ab, m, maxevals=120)
+        @test norm(fn_(x0)) <= 1e-14
     end
 end
 
@@ -178,14 +178,14 @@ end
 
 
 ## Callable objects
-type _SampleCallableObject end
+struct _SampleCallableObject end
 _SampleCallableObject(x) = x^5 - x - 1
 for m in meths
     @test find_zero(_SampleCallableObject, 1.0, m) ≈ 1.1673039782614187
 end
 
 ### a wrapper to count function calls, say
-type Cnt
+mutable struct Cnt
     cnt::Int
     f
     Cnt(f) = new(0, f)
@@ -244,6 +244,6 @@ pathological = [
                 ]
 
 
-for (fn, x0) in pathological
-    find_zero(fn, x0, Order0())
+for (fn_, x0_) in pathological
+    find_zero(fn_, x0_, Order0())
 end

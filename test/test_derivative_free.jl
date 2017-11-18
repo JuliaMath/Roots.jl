@@ -1,6 +1,6 @@
 ## tests of derivative free methods (orders 1,2,5,8,16)
 using Roots
-using Base.Test
+using Compat.Test
 
 orders = [1,2,5,8,16]
 

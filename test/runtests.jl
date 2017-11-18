@@ -1,5 +1,5 @@
 using Roots
-using Base.Test
+using Compat.Test
 import SpecialFunctions.erf
 
 include("./test_find_zero.jl")
@@ -11,6 +11,6 @@ include("./test_fzero.jl")
 #include("./test_fzero3.jl")
 #run_robustness_test()
 
-include("./test_newton.jl")
+#XXXinclude("./test_newton.jl")
 
 #include("./test_derivative_free.jl")
