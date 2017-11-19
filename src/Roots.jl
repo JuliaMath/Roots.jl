@@ -6,14 +6,17 @@ module Roots
 ## DONE * where {}
 ## DONE * @nospecialize
 ## * remove arrow {T} on function arguments
-## * remove Nullable bits... Nulls?
+## DONE * remove Nullable bits... Nulls?
 ## DONE * remove deprecations
+## DONE clean up commented out code
 
 import Base: *
 
 
 #using ForwardDiff
 using Compat: @nospecialize
+using Missings
+
 
 export fzero,
        fzeros,
@@ -32,7 +35,7 @@ export Bisection, FalsePosition
 include("find_zero.jl")
 include("bracketing.jl")
 include("derivative_free.jl")
-#include("newton.jl")
+include("newton.jl")
 
 
 ## Main functions are

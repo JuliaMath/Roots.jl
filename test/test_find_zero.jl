@@ -1,6 +1,8 @@
 ## tests of find_zero interface
 using Roots
 using Compat.Test
+import SpecialFunctions.erf
+
 
 meths = [Order0(), Order1(), Order2(), Order5(), Order8(), Order16()]
 
@@ -159,7 +161,7 @@ galadino_probs = [(x -> x^3 - 1, [.5, 1.5]),
 
 for (fn_, ab) in galadino_probs
     for m in [Roots.A42(), Bisection(), (FalsePosition(i) for i in 1:12)...]
-        x0 = find_zero(fn_, ab, m, maxevals=120)
+        global x0 = find_zero(fn_, ab, m, maxevals=120)
         @test norm(fn_(x0)) <= 1e-14
     end
 end
@@ -167,7 +169,7 @@ end
 ## Can use (a,b) or [a,b] for bisection
 fn = x -> x^5 - x - 1
 for m in [Roots.A42(), Bisection(), (FalsePosition(i) for i in 1:12)...]
-    x0 = find_zero(fn, (1,2.0), m)
+    global x0 = find_zero(fn, (1,2.0), m)
     @test norm(fn(x0)) <= 1e-14
 end
 
@@ -239,8 +241,8 @@ pathological = [
                 
                 (x -> ( pi * ( x - 5.0 ) / 180.0 ) - 0.8 * sin( pi * x / 180.0 ), 1),
                 (x -> x^3 - 2*x - 5, 2),
-                (x -> 1e6 * (x^7 -7x^6 +21x^5 -35x^4 +35x^3-21x^2+7x-1),  0.990),
-                (x -> cos(100*x)-4*erf(30*x-10), 0.0) 
+(x -> 1e6 * (x^7 -7x^6 +21x^5 -35x^4 +35x^3-21x^2+7x-1),  0.990),
+(x -> cos(100*x)-4*erf(30*x-10), 0.0) 
                 ]
 
 

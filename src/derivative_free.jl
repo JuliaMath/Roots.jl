@@ -108,7 +108,7 @@ function init_state(method::AbstractSecant, fs, x::Union{T, Vector{T}}, bracket)
     state = UnivariateZeroStateBase(
                                     promote(float(x1), float(x0))...,
                                     promote(fx1, fx0)...,
-                                    isa(bracket, Nullable) ? bracket : Nullable(convert(Vector{T}, sort(bracket))),
+                                    bracket,
                                     0, 2,
                                     false, false, false, false,
                                     "")
@@ -417,18 +417,6 @@ function update_state(method::Order5, fs::FirstDerivative, o::UnivariateZeroStat
 
     nothing
 end
-
-
-# kss5(f, x0; kwargs...) = kss5(f, D(f), x0; kwargs...)
-# function kss5(f, fp, x0; kwargs...)
-#     fs = FirstDerivative(f, fp)
-#     T = typeof(float(x0))
-#     state = init_state(Order5(), fs, x0, Nullable{Vector{T}}())
-#     options = UnivariateZeroOptions(eps(T), eps(T), eps(T), eps(T), 40, 200, true)
-#     zp = UnivariateZeroProblem(fs, state, options)
-
-#     find_zero(zp, Order5())
-# end
 
 
 ##################################################

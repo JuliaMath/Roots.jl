@@ -51,7 +51,7 @@ mutable struct UnivariateZeroStateBase{T,S} <: UnivariateZeroState{T,S}
     xn0::T
     fxn1::S
     fxn0::S
-    bracket::Nullable{Vector{T}}
+    bracket::Union{Vector{T}, Missing}
     steps::Int
     fnevals::Int
     stopped::Bool             # stopped, butmay not have converged
@@ -65,19 +65,13 @@ incfn(o::UnivariateZeroState, k=1)    = o.fnevals += k
 incsteps(o::UnivariateZeroState, k=1) = o.steps += k
 
 ## generic initialization. Modify as necessary for a method, such as secant which uses both xn1 and xn0
-## we use x0 + typemax(Int) as a sentinel. This could be a Nullable, but that
+## we use x0 + typemax(Int) as a sentinel. This could be a Missing, but that
 ## is a bit more hassle
 function init_state(method::Any, fs, x0::T, bracket) where {T}
     fx0 = fs.f(x0); fnevals = 1
 
-    if isa(bracket, Nullable)
-        if !isnull(bracket)
-            a,b = get(bracket)
-            sign(fs.f(a)) * sign(fs.f(b)) > 0 && (warn(bracketing_error); throw(ArgumentError))
-            fnevals += 2
-        end
-    else
-        a,b = bracket[1,2]
+    if !ismissing(bracket)
+        a,b = bracket[1:2]
         sign(fs.f(a)) * sign(fs.f(b)) > 0 &&  (warn(bracketing_error); throw(ArgumentError))
         fnevals += 2
     end
@@ -85,7 +79,7 @@ function init_state(method::Any, fs, x0::T, bracket) where {T}
     S = eltype(fx0)
     state = UnivariateZeroStateBase(x0, x0 + typemax(Int),
                                     fx0, fx0,
-                                    isa(bracket, Nullable) ? bracket : Nullable(convert(Vector{T}, bracket)),
+                                    !ismissing(bracket) ? float.(bracket) : bracket,
                                     0, fnevals,
                                     false, false, false, false,
                                     "")
@@ -132,29 +126,23 @@ end
 mutable struct UnivariateZeroProblem{T<:AbstractFloat}
     fs::CallableFunction
     x0::Union{T, Tuple{T,T}, Vector{T}, Complex{T}}
-    bracket::Nullable
+    bracket::Union{Vector{T}, Missing}
 end
 
 ## frame the problem and the options
 function derivative_free_setup(method::Any, fs::CallableFunction, x0::Union{T, Tuple{T,T}, Vector{T}};
-                                                 bracket=Nullable{Vector{T}}(),
-                                                 xabstol=zero(T), xreltol=zero(T),
-                                                 abstol=4*eps(T), reltol=4*eps(T),
-                                                 maxevals=40, maxfnevals=typemax(Int),
-                                                 verbose::Bool=false,
-                                                 kwargs...
+                               bracket=missing,
+                               xabstol=zero(T), xreltol=zero(T),
+                               abstol=4*eps(T), reltol=4*eps(T),
+                               maxevals=40, maxfnevals=typemax(Int),
+                               verbose::Bool=false,
+                               kwargs...
     ) where {T<:AbstractFloat}
     x = float.(x0)
-    prob = UnivariateZeroProblem(fs, x, isa(bracket, Nullable) ? bracket : Nullable(convert(Vector{T}, bracket)))
-    # options = univariate_zero_options(;xabstol=xabstol,
-    #                                   xreltol=xreltol,
-    #                                   abstol=abstol,
-    #                                   reltol=reltol,
-    #                                   maxevals=maxevals,
-    #                                   maxfnevals=maxfnevals,
-    #                                   verbose=verbose,
-    #                                   kwargs...)
-    options = UnivariateZeroOptions(xabstol, xreltol, abstol, reltol, maxevals, maxfnevals, verbose)
+    prob = UnivariateZeroProblem(fs, x,
+                                 !ismissing(bracket) ? float.(bracket) : missing)
+    options = UnivariateZeroOptions(xabstol, xreltol, abstol,
+                                    reltol, maxevals, maxfnevals, verbose)
     prob, options
 end
 
@@ -267,8 +255,8 @@ function find_zero(method::UnivariateZeroMethod, fs, state::UnivariateZeroState,
     end
     
     while true
-        if  !isnull(state.bracket)
-            m,M = get(state.bracket)
+        if  !ismissing(state.bracket)
+            m,M = state.bracket[1:2]
             if (state.xn1 < m || state.xn1 > M) || state.stopped
                 # do bisection step, update bracket
                 c = m + (M-m)/2
@@ -279,9 +267,9 @@ function find_zero(method::UnivariateZeroMethod, fs, state::UnivariateZeroState,
                 fxn1 = fs.f(c)
                 state.xn1, state.fxn1 = c, fxn1
                 if sign(fxn1) * sign(fs.f(m)) < 0
-                    state.bracket = Nullable([m,c])
+                    state.bracket = [m,c]
                 else
-                    state.bracket = Nullable([c,M])
+                    state.bracket = [c,M]
                 end
                 state.stopped && (state.stopped = false)
                 incfn(state)

@@ -229,7 +229,7 @@ function init_state(method::AbstractBisection, fs::DerivativeFree{R}, x::Union{T
 
     state = UnivariateZeroStateBase(x0, x2,
                                     y0, y2,
-                                    isa(bracket, Nullable) ? bracket : Nullable(convert(Vector{T}, sort(bracket))),
+                                    ismissing(bracket) ? bracket : float.(bracket),
                                     0, 2,
                                     false, false, false, false,
                                     "")
