@@ -2,20 +2,12 @@ __precompile__(true)
 module Roots
 
 
-## XXX TODO
-## DONE * where {}
-## DONE * @nospecialize
-## * remove arrow {T} on function arguments
-## DONE * remove Nullable bits... Nulls?
-## DONE * remove deprecations
-## DONE clean up commented out code
-
-import Base: *
+#import Base: *
 
 
 #using ForwardDiff
-using Compat: @nospecialize
 using Missings
+using Compat: @nospecialize
 
 
 export fzero,
@@ -23,12 +15,10 @@ export fzero,
 #       newton, halley,
        secant_method, steffensen
 #       D
-#export multroot, D2  # deprecated
 
 export find_zero,
        Order0, Order1, Order2, Order5, Order8, Order16
 export Bisection, FalsePosition
-# export Bisection, Secant, Steffensen, Newton, Halley
 
 ## load in files
 #include("adiff.jl")
@@ -70,6 +60,8 @@ function fzero(f, x0::Real; kwargs...)
     derivative_free(f, x; kwargs...)
 end
 
+
+
 """
 Find zero of a function within a bracket
 
@@ -100,12 +92,11 @@ Example:
     `fzero(sin, [big(3), 4]) find pi with more digits
 """
 function fzero(f, a::Real, b::Real; kwargs...)
-    a,b = sort([a,b])
-    a,b = promote(float(a), b)
-    (a == -Inf) && (a = nextfloat(a))
-    (b == Inf) && (b = prevfloat(b))
-    (isinf(a) | isinf(b)) && throw(ConvergenceFailed("A bracketing interval must be bounded"))
-    find_zero(f, [a,b], Bisection(); kwargs...)
+    bracket = adjust_bracket((a, b))
+    a0, b0 = a < b ? promote(float(a), b) : promote(float(b), a)
+    (a0 == -Inf) && (a0 = nextfloat(a0))
+    (b0 == Inf) && (b0 = prevfloat(b0))
+    find_zero(f, bracket, Bisection(); kwargs...)
 end
 
 """
@@ -115,14 +106,14 @@ function fzero(f, bracket::Vector{T}; kwargs...)  where {T <: Real}
     fzero(f, float(bracket[1]), float(bracket[2]); kwargs...)
 end
 
+
 """
 Find a zero within a bracket with an initial guess to *possibly* speed things along.
 """
 function fzero(f, x0::Real, bracket::Vector{T}; kwargs...)  where {T <: Real}
-    a,b = sort(map(float,bracket))
-    (a == -Inf) && (a = nextfloat(a))
-    (b == Inf) && (b = prevfloat(b))
-    (isinf(a) | isinf(b)) && throw(ConvergenceFailed("A bracketing interval must be bounded"))    
+
+    a, b = adjust_bracket(bracket)
+
     try
         ex = a42a(f, a, b, float(x0); kwargs...)
     catch ex

@@ -14,7 +14,7 @@ function steff_step(x::T, fx) where {T}
     norm(fx) <= thresh ? fx : sign(fx) * thresh
 end
 
-function guarded_secant_step(alpha, beta, falpha, fbeta)
+function guarded_secant_step(alpha::T, beta::T, falpha, fbeta) where {T <: AbstractFloat}
     fp = (fbeta - falpha) /  (beta - alpha)
     Δ = fbeta / fp
 
@@ -22,7 +22,22 @@ function guarded_secant_step(alpha, beta, falpha, fbeta)
         Δ = sign(Δ) * 100 * norm(alpha - beta)
     end
 
-    beta - Δ, isissue(Δ)
+    (beta - Δ)::T, isissue(Δ)
+
+end
+
+function guarded_secant_step_diff(alpha::T, beta::T, falpha, fbeta) where {T <: AbstractFloat}
+
+    fp = (fbeta - falpha) /  (beta - alpha)
+    Δ = fbeta / fp
+
+    if isissue(Δ)
+        Δ = one(T)/1000
+    elseif norm(Δ) >= 100 * norm(alpha - beta) # guard runaway
+        Δ = sign(Δ) * 100 * min(1, norm(alpha - beta))
+    end
+
+    Δ::T
 
 end
 
@@ -32,7 +47,7 @@ end
 
 ## use f[a,b] to approximate f'(x)
 function _fbracket(a, b, fa, fb)
-    num, den = fb-fa, b - a
+    num, den = fb - fa, b - a
     num == 0 && den == 0 && return Inf, true
     out = num / den
     out, isissue(out)
@@ -65,7 +80,7 @@ end
     Order0()
 
 
-The `Order0` method is engineered to be more robust, though possibly
+The `Order0` method is engineered to be a more robust, though possibly
 slower, alternative to to the other derivative-free root-finding
 methods. The implementation roughly follows the algorithm described in
 *Personal Calculator Has Key to Solve Any Equation f(x) = 0*, the
@@ -117,6 +132,12 @@ end
 
 ##################################################
 
+function _run_bisection(fs, o, options)
+    verbose = options.verbose; options.verbose=false # turn off verbose
+    find_zero(Bisection(), fs, o, options)
+    options.verbose = verbose
+    o.message = "Used bisection for last step"
+end
 ## order 0
 # goal: more robust to initial guess than higher order methods
 # follows roughly algorithm described http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1979-12.pdf, the SOLVE button from the HP-34C
@@ -129,89 +150,106 @@ end
 # * `f(x) == 0.0` or
 # * `f(prevfloat(x)) * f(nextfloat(x)) < 0`.
 # if a bracket is found that can be done, otherwise secant step is used
-function update_state(method::Order0, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions) where {T}
+function update_state(method::Order0, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions{T}) where {T}
 
     f = fs.f
-    alpha, beta = o.xn0, o.xn1
-    falpha, fbeta = o.fxn0, o.fxn1
-    S = eltype(falpha)
+    α = o.xn0
+    β = o.xn1
+    fα =  o.fxn0
+    fβ = o.fxn1
+
+    S = eltype(fα)
 
     incsteps(o)
 
-    if sign(falpha) * sign(fbeta) < 0.0
-        # use bisection
-        verbose = options.verbose; options.verbose=false # turn off verbose
-        find_zero(Bisection(), fs, o, options)
-        options.verbose = verbose
-        o.message = "Used bisection for last step: [a,b] = [$alpha, $beta]"
+    if sign(fα) * sign(fβ) < 0.0
+        _run_bisection(fs, o, options)
         return nothing
     end
 
-    gamma, issue = guarded_secant_step(alpha, beta, falpha, fbeta)
-    if issue
-        o.message = "error with guarded secant step"
-        o.stopped = true
-        return nothing
+    
+    #    ξ::T, issue = guarded_secant_step(α, β, fα, fβ)
+    dξ = guarded_secant_step_diff(α, β, fα, fβ)
+    if isissue(dξ)
+       o.message = "error with guarded secant step"
+       o.stopped = true
+       return nothing
     end
 
-    fgamma = f(gamma); incfn(o)
-    if sign(fgamma)*sign(fbeta) < 0.0
-        o.xn0, o.xn1 = gamma, beta
-        o.fxn0, o.fxn1 = fgamma, fbeta
-        verbose = options.verbose; options.verbose=false # turn off verbose
-        find_zero(Bisection(), fs, o, options)
-        options.verbose=verbose
-        o.message = "Used bisection for last step"
+    ξ = β - dξ 
+    
+    fξ::S = f(ξ)::S
+    incfn(o)
+
+
+    if sign(fξ) * sign(fβ) < 0.0
+        o.xn0 = ξ
+        o.xn1 =  β
+        o.fxn0 = fξ
+        o.fxn1 = fβ
+        _run_bisection(fs, o, options)
+       return nothing
+    end
+    
+    if norm(fξ) <= norm(fβ)
+        o.xn0 = β
+        o.xn1 = ξ
+        o.fxn0 = fβ
+        o.fxn1 = fξ
         return nothing
     end
-
-    if norm(fgamma) <= norm(fbeta)
-        o.xn0, o.xn1 = beta, gamma
-        o.fxn0, o.fxn1 = fbeta, fgamma
-        return nothing
-    end
-
+    
     ctr = 0
     while true
         ## quadratic step
         ctr += 1
         if ctr >= 3
+           o.stopped = true
+           o.message = "dithering, algorithm failed to improve using quadratic steps"
+           return nothing
+        end
+
+        # quadratic_step. Put new ξ at vertex of parabola through α, β, (old) ξ
+        denom = (β - α) * (fβ - fξ)  - (β - fξ) * (fβ - fα)
+        if isissue(denom)
             o.stopped = true
             o.message = "dithering, algorithm failed to improve using quadratic steps"
             return nothing
         end
-
-        # quadratic_step. Put new gamma at vertex of parabola through alpha, beta, (old) gamma
-        denom = (beta - alpha) * (fbeta - fgamma)  - (beta - fgamma) * (fbeta - falpha)
-        if isissue(denom)
-            o.stopped
-            o.message = "dithering, algorithm failed to improve using quadratic steps"
-            return nothing
-        end
-        gamma = beta -  ((beta - alpha)^2 * (fbeta - fgamma) - (beta - gamma)^2 * (fbeta - falpha))/denom/2
+        ξ = tmp::T = β -  ((β - α)^2 * (fβ - fξ) - (β - ξ)^2 * (fβ - fα))/denom/2
 
 
-        fgamma = f(gamma); incfn(o)
+        fξ = ftmp::S = f(ξ); incfn(o)
         incfn(o)
 
-        if norm(fgamma) < norm(fbeta)
-            o.xn0, o.xn1 = beta, gamma
-            o.fxn0, o.fxn1 = fbeta, fgamma
+        if norm(fξ) < norm(fβ)
+            o.xn0, o.xn1 = β, ξ
+            o.fxn0, o.fxn1 = fβ, fξ
             return nothing
         end
 
-        theta, issue = guarded_secant_step(beta, gamma, fbeta, fgamma)
-        ftheta = f(theta); incfn(o)
-
-        if sign(ftheta) * sign(fbeta) < 0
-            o.xn0, o.xn1 = beta, theta
-            o.fxn0, o.fxn1 = fbeta, ftheta
-
-            opts = deepcopy(options); #opts.verbose=false
-            o.message = "used bisection for last step"
-            find_zero(Bisection(), fs, o, opts)
+        #        θ::S, issue = guarded_secant_step(β, ξ, fβ, fξ)
+        dθ = guarded_secant_step_diff(β, ξ, fβ, fξ)
+        if isissue(dθ)
+            o.stopped = true
+            o.message = "XXX"
             return nothing
         end
+
+        θ = ξ - dθ 
+        fθ::S = f(θ); incfn(o)
+
+        if sign(fθ) * sign(fβ) < 0
+
+            o.xn0 = β
+            o.xn1 = θ
+            o.fxn0 = fβ
+            o.fxn1 = fθ
+
+            _run_bisection(fs, o, options)
+            return nothing
+        end
+
     end
 
     # failed to improve
@@ -225,28 +263,23 @@ end
 
 ## Secant
 ## https://en.wikipedia.org/wiki/Secant_method
-function update_state(method::Secant, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions) where {T}
-
-    xn0, xn1 = o.xn0, o.xn1
-    fxn0, fxn1 = o.fxn0, o.fxn1
-    S = eltype(fxn0)
+function update_state(method::Secant, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions{T}) where {T <: AbstractFloat}
 
     incsteps(o)
 
-    fp, issue = _fbracket(xn0, xn1, fxn0, fxn1)
+    fp, issue = _fbracket(o.xn0, o.xn1, o.fxn0, o.fxn1)
     if issue
         o.stopped = true
         o.message = "Derivative approximation had issues"
         return
     end
 
-    xn2::T = xn1 -  fxn1 / fp
-    fxn2::S = fs.f(xn2)
+    o.xn0 = o.xn1
+    o.fxn0 = o.fxn1
+
+    o.xn1 = o.xn1 -  o.fxn1 / fp
+    o.fxn1 = fs.f(o.xn1)
     incfn(o)
-
-    o.xn0, o.xn1 = xn1, xn2
-    o.fxn0, o.fxn1 = fxn1, fxn2
-
 
     nothing
 end
@@ -278,19 +311,17 @@ initial guesses.
 """    
 const Order2 = Steffensen
 
-function update_state(method::Steffensen, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions) where {T}
+function update_state(method::Steffensen, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions{T}) where {T <: AbstractFloat}
 
-    xn = o.xn1
-    fxn = o.fxn1
-    S = eltype(fxn)
+    S = eltype(o.fxn1)
 
     incsteps(o)
 
-    wn::T = xn + steff_step(xn, fxn)
-    fwn::S = fs.f(wn)
+    wn = o.xn1 + steff_step(o.xn1, o.fxn1)::T
+    fwn = fs.f(wn)::S
     incfn(o)
 
-    fp, issue = _fbracket(xn, wn, fxn, fwn)
+    fp, issue = _fbracket(o.xn1, wn, o.fxn1, fwn)
 
     if issue
         o.stopped = true
@@ -298,14 +329,11 @@ function update_state(method::Steffensen, fs, o::UnivariateZeroState{T}, options
         return
     end
 
-    xn1::T = xn - fxn / fp
-
-
-    fxn1::S = fs.f(xn1)
+    o.xn0 = o.xn1
+    o.fxn0 = o.fxn1
+    o.xn1 = o.xn1 - o.fxn1 / fp #xn1
+    o.fxn1 = fs.f(o.xn1)
     incfn(o)
-
-    o.xn0, o.xn1 = xn, xn1
-    o.fxn0, o.fxn1 = fxn, fxn1
 
 
     nothing
@@ -319,7 +347,7 @@ steffenson(f, x0; kwargs...) = find_zero(f, x0, Steffensen(); kwargs...)
 """
     Order5()
 
-Implements the (algorithm)[ https://en.wikipedia.org/wiki/Steffensen's_method#Simple_description]
+Implements an algorithm
 from *A New Fifth Order Derivative Free Newton-Type Method for Solving Nonlinear Equations*
 by Manoj Kumar, Akhilesh Kumar Singh, and Akanksha,
 Appl. Math. Inf. Sci. 9, No. 3, 1507-1513 (2015). Four function calls per step are needed.
@@ -328,49 +356,49 @@ Appl. Math. Inf. Sci. 9, No. 3, 1507-1513 (2015). Four function calls per step a
 mutable struct Order5 <: UnivariateZeroMethod end
 
 function update_state(method::Order5, fs::DerivativeFree, o::UnivariateZeroState{T}, options::UnivariateZeroOptions) where {T}
+
     xn = o.xn1
     fxn = o.fxn1
-    S = eltype(fxn)
+    S = eltype(o.fxn1)
 
     incsteps(o)
 
-    wn::T = xn + steff_step(xn, fxn)
-    fwn::S = fs.f(wn)
+    wn::T = o.xn1 + steff_step(o.xn1, o.fxn1)
+    fwn = fs.f(wn)::S
     incfn(o)
 
-    fp, issue = _fbracket(xn, wn, fxn, fwn)
+    fp, issue = _fbracket(o.xn1, wn, o.fxn1, fwn)
     if issue
-        o.xn0, o.xn1 = xn, wn
-        o.fxn0, o.fxn1 = fxn, fwn
+        o.xn0, o.xn1 = o.xn1, wn
+        o.fxn0, o.fxn1 = o.fxn1, fwn
         o.message = "Issue with divided difference f[xn, wn]"
         o.stopped  = true
         return
     end
 
-    yn::T = xn - fxn / fp
-    fyn::S = fs.f(yn)
+    yn::T = o.xn1 - o.fxn1 / fp
+    fyn = fs.f(yn)::S
     incfn(o)
 
 
     zn::T = xn - (fxn + fyn) / fp
-    fzn::S = fs.f(zn)
+    fzn = fs.f(zn)::S
     incfn(o)
 
-    fp, issue = _fbracket_ratio(yn, xn, wn, fyn, fxn, fwn)
+    fp, issue = _fbracket_ratio(yn, o.xn1, wn, fyn, o.fxn1, fwn)
     if issue
-        o.xn0, o.xn1 = xn, yn
-        o.fxn0, o.fxn1 = fxn, fyn
+        o.xn0, o.xn1 = o.xn1, yn
+        o.fxn0, o.fxn1 = o.fxn1, fyn
         o.message = "Issue with f[xn,yn]*f[yn,wn] / f[xn, wn]"
         o.stopped = true
         return
     end
 
-    xn1::T = zn  - fzn  / fp
-    fxn1::S = fs.f(xn1)
+    o.xn0 = o.xn1
+    o.fxn0 = o.fxn1
+    o.xn1 = zn  - fzn  / fp
+    o.fxn1 = fs.f(o.xn1)
     incfn(o)
-
-    o.xn0, o.xn1 = xn, xn1
-    o.fxn0, o.fxn1 = fxn, fxn1
 
     nothing
 end
@@ -426,7 +454,7 @@ end
 """
     Order8()
 
-Implements an [algorithm](https://en.wikipedia.org/wiki/Steffensen's_method#Simple_description) from 
+Implements an algorithm from 
 *New Eighth-Order Derivative-Free Methods for Solving Nonlinear Equations*
 by Rajinder Thukral,
 International Journal of Mathematics and Mathematical Sciences

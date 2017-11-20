@@ -127,42 +127,30 @@ end
 
     Bisection()
 
-Use the bisection method over `Float64` values. The bisection method starts with a bracketing interval
-`[a,b]` and splits it into two intervals `[a,c]` and `[c,b]`, If `c` is not a zero, then one of these
-two will be a bracketing interval and the process continues. The computation of `c` is done by
-`_middle`, which reinterprets floating point values as unsigned 64-bit integers and splits there. This
-method avoids floating point issues and guarantees a "best" solution (one where a zero is found
-or the bracketing interval is of the type `[a, nextfloat(a)]`).
+Use the bisection method over `Float64` values. The bisection method
+starts with a bracketing interval `[a,b]` and splits it into two
+intervals `[a,c]` and `[c,b]`, If `c` is not a zero, then one of these
+two will be a bracketing interval and the process continues. The
+computation of `c` is done by `_middle`, which reinterprets floating
+point values as unsigned 64-bit integers and splits there. This method
+avoids floating point issues and guarantees a "best" solution (one
+where a zero is found or the bracketing interval is of the type `[a,
+nextfloat(a)]`).
+    
 """    
 mutable struct Bisection <: AbstractBisection end
 
 """
     Roots.A42()
 
-
-Bracketing method which finds the root of a continuous function within a provided
-interval [a, b], without requiring derivatives. It is based on algorithm 4.2
-described in: 1. G. E. Alefeld, F. A. Potra, and Y. Shi, "Algorithm 748:
-enclosing zeros of continuous functions," ACM Trans. Math. Softw. 21,
-327–344 (1995).
+Bracketing method which finds the root of a continuous function within
+a provided interval [a, b], without requiring derivatives. It is based
+on algorithm 4.2 described in: 1. G. E. Alefeld, F. A. Potra, and
+Y. Shi, "Algorithm 748: enclosing zeros of continuous functions," ACM
+Trans. Math. Softw. 21, 327–344 (1995).
 """
 mutable struct A42 <: AbstractBisection end
 
-function adjust_bracket(x0)
-    a,b = float.(x0)
-    if a > b
-        a,b=b,a
-    end
-    u, v = promote(float(a), float(b))
-
-    if isinf(u)
-        u = nextfloat(u)
-    end
-    if isinf(v)
-        v = prevfloat(v)
-    end
-    u, v
-end
 
 function find_zero(f, x0::Vector{T}, method::AbstractBisection; kwargs...) where {T <: Real}
     
@@ -173,19 +161,13 @@ end
 function find_zero(f, x0::Tuple{T,S}, method::Bisection; verbose=false, kwargs...) where {T <: FloatNN, S <: FloatNN}
     x = adjust_bracket(x0)
     if verbose
-        prob, options = derivative_free_setup(method, DerivativeFree(f, f(x[1])), x; verbose=verbose, kwargs...)
+        prob, options = derivative_free_setup(method, DerivativeFree(f), x; verbose=verbose, kwargs...)
         find_zero(prob, method, options)
     else
         bisection64(f, x[1], x[2])::eltype(x)
     end
 end
 
-
-# function find_zero(f, x0::Vector{T}, method::M; kwargs...) where {M<:AbstractBisection, T<:Real}
-#     x = adjust_bracket(x0)
-#     prob, options = derivative_free_setup(method, DerivativeFree(f, f(x[1])), x; kwargs...)
-#     find_zero(prob, method, options)
-# end
 
 
 ## This is a bit clunky, as we use `a42` for bisection when we don't have `Float64` values.
@@ -194,12 +176,12 @@ function find_zero(f, x0::Tuple{T,S}, method::M;  kwargs...) where {M <: Union{B
 
     x = adjust_bracket(x0)
     ## round about way to get options and state
-    prob, options = derivative_free_setup(method, DerivativeFree(f, f(x[1])), x[1];  kwargs...)
+    prob, options = derivative_free_setup(method, DerivativeFree(f), x[1];  kwargs...)
     o = init_state(method, prob.fs, prob.x0, prob.bracket)
 
     o.xn1 = a42(f, x[1], x[2]; xtol=options.xreltol, maxeval=options.maxevals, verbose=options.verbose)
     o.message = "Used Alefeld-Potra-Shi method, `Roots.a42`, to find the zero. Iterations and function evaluations are not counted properly."
-    o.x_converged = true
+    o.stopped = o.x_converged = true
 
     options.verbose && show_trace(prob.fs, o, [o.xn1], [o.fxn1], method)
     o.xn1
@@ -211,19 +193,19 @@ end
 # call a42 in this case
 const BigSomething = Union{BigFloat, BigInt}
 function find_zero(method::Bisection, fs::DerivativeFree, o::UnivariateZeroState{T, S}, options::UnivariateZeroOptions) where {T<:BigSomething, S}
-    xn0, xn1 = sort([o.xn0, o.xn1])
+    xn0, xn1 = o.xn0 < o.xn1 ? (o.xn0, o.xn1) : (o.xn1, o.xn0)
     o.xn1 = a42(fs.f, o.xn0, o.xn1; xtol=options.xreltol, maxeval=options.maxevals, verbose=options.verbose)
     o.message = "Used Alefeld-Potra-Shi method, `Roots.a42`, to find the zero. Iterations and function evaluations are not counted properly."
-    o.x_converged = true
+    o.stopped = o.x_converged = true
 
     nothing
 end
 
 
-function init_state(method::AbstractBisection, fs::DerivativeFree{R}, x::Union{Tuple{T,T}, Vector{T}}, bracket) where {T <: Real, R}
+function init_state(method::AbstractBisection, fs::DerivativeFree, x::Union{Tuple{T,T}, Vector{T}}, bracket) where {T <: Real}
     x0, x2 = adjust_bracket(x)
-    y0::R = fs.f(x0)
-    y2::R = fs.f(x2)
+    y0 = fs.f(x0)
+    y2 = fs.f(x2)
 
     sign(y0) * sign(y2) > 0 && throw(ArgumentError(bracketing_error))
 
@@ -280,13 +262,13 @@ function assess_convergence(method::Bisection, fs, state, options)
     x1 = _middle(x0, x2)
     if iszero(state.fxn1)
         state.message = ""
-        state.x_converged = true
+        state.stopped = state.x_converged = true
         return true
     end
     x0 < x1 && x1 < x2 && return false
 
     state.message = ""
-    state.x_converged=true
+    state.stopped = state.x_converged = true
     true
 end
 
@@ -662,9 +644,26 @@ end
 
 function find_zero(f, x0::Tuple{T,S}, method::FalsePosition; kwargs...) where {T<:Real,S<:Real}
     x = adjust_bracket(x0)
-    prob, options = derivative_free_setup(method, DerivativeFree(f, f(x[1])), x; kwargs...)
+    prob, options = derivative_free_setup(method, DerivativeFree(f), x; kwargs...)
     find_zero(prob, method, options)
 end
+## helper function
+function adjust_bracket(x0)
+    u, v = float.(x0)
+    if u > v
+        u, v = v, u
+    end
+
+
+    if isinf(u)
+        u = nextfloat(u)
+    end
+    if isinf(v)
+        v = prevfloat(v)
+    end
+    u, v
+end
+
 ## --------------------------------------
 
 """

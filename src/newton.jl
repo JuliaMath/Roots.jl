@@ -124,11 +124,11 @@ struct Halley <: UnivariateZeroMethod
 end
 
 function callable_function(method::Halley, f::Tuple, x0)
-    length(f) == 1 && return SecondDerivative(f[1], D(f[1]), D(f[1],2), f[1](x0))
-    length(f) == 2 && return SecondDerivative(f[1], f[2], D(f[2],1), f[1](x0))
+    length(f) == 1 && return SecondDerivative(f[1], D(f[1]), D(f[1],2))
+    length(f) == 2 && return SecondDerivative(f[1], f[2], D(f[2],1))
     SecondDerivative(f[1], f[2], f[3], f[1](x0))
 end
-callable_function(method::Halley, f, x0) = SecondDerivative(f, D(f), D(f, 2), f(x0))
+callable_function(method::Halley, f, x0) = SecondDerivative(f, D(f), D(f, 2))
 
 
 function update_state(method::Halley, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions) where {T}

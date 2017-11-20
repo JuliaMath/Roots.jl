@@ -1,4 +1,3 @@
-[![Roots](http://pkg.julialang.org/badges/Roots_0.5.svg)](http://pkg.julialang.org/?pkg=Roots&ver=0.5)
 [![Roots](http://pkg.julialang.org/badges/Roots_0.6.svg)](http://pkg.julialang.org/?pkg=Roots&ver=0.6)  
 Linux: [![Build Status](https://travis-ci.org/JuliaMath/Roots.jl.svg?branch=master)](https://travis-ci.org/JuliaMath/Roots.jl)
 Windows: [![Build status](https://ci.appveyor.com/api/projects/status/goteuptn5kypafyl?svg=true)](https://ci.appveyor.com/project/jverzani/roots-jl)
@@ -115,10 +114,26 @@ end
 fzero(D(m), 0, 1)  - median(as)	# 0.0
 ```
 
+
+## Alternate interface
+
+As an alternative interface to the MATLAB-inherited one through
+`fzero`, the function `find_zero` can be used. For this, a type is
+used to specify the method. For example,
+
+```
+find_zero(sin, 3.0, Order0())
+find_zero(x -> x^5 - x- 1, 1.0, Order1())  # also Order2(), Order5(), Order8(), Order16()
+```
+
+And bracketing methods:
+
+```
+find_zero(sin, (3, 4), Bisection())
+find_zero(x -> x^5 - x - 1, (1,2), FalsePosition())
+```
+
+
+----
+
 Some additional documentation can be read [here](http://nbviewer.ipython.org/url/github.com/JuliaLang/Roots.jl/blob/master/doc/roots.ipynb?create=1).
-
-
-## Polynomials
-
-Special methods for finding roots of polynomials have been moved to
-the `PolynomialZeros` package and its `poly_roots(f, domain)` function.

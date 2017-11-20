@@ -15,32 +15,29 @@ abstract type AbstractBisection <: UnivariateZeroMethod end
 abstract type AbstractSecant <: UnivariateZeroMethod end
 
 # container for callable objects; not really necessary, but has some value.
-abstract type CallableFunction{R} end
-struct DerivativeFree{R} <: CallableFunction{R}
+abstract type CallableFunction end
+struct DerivativeFree <: CallableFunction
     f
-    fx0::R
 end
 
-struct FirstDerivative{R} <: CallableFunction{R}
+struct FirstDerivative <: CallableFunction
     f
     fp
-    fx0::R
 end
 
 
-struct SecondDerivative{R} <: CallableFunction{R}
+struct SecondDerivative <: CallableFunction
     f
     fp
     fpp
-    fx0::R
 end
 
 ## allows override for automatic derivatives, see Newton
-function callable_function(m::UnivariateZeroMethod, @nospecialize(f), x0)
-    !isa(f, Tuple) && return DerivativeFree(f, f(x0))
-    length(f) == 1 && return DerivativeFree(f[1], f(x0))
-    length(f) == 2 && return FirstDerivative(f[1], f[2], f(x0))
-    SecondDerivative(f[1], f[2], f[3], f(x0))
+function callable_function(m::UnivariateZeroMethod, @nospecialize(f))
+    !isa(f, Tuple) && return DerivativeFree(f)
+    length(f) == 1 && return DerivativeFree(f[1])
+    length(f) == 2 && return FirstDerivative(f[1], f[2])
+    SecondDerivative(f[1], f[2], f[3])
 end
 
 
@@ -253,7 +250,8 @@ function find_zero(method::UnivariateZeroMethod, fs, state::UnivariateZeroState,
     else
         xns, fxns = [state.xn1], [state.fxn1]
     end
-    
+
+    ## XXX Should just deprecate this in favor of FalsePosition method XXX
     while true
         if  !ismissing(state.bracket)
             m,M = state.bracket[1:2]
@@ -264,12 +262,21 @@ function find_zero(method::UnivariateZeroMethod, fs, state::UnivariateZeroState,
                 if c == state.xn0
                     c = m + (M-m)/4
                 end
-                fxn1 = fs.f(c)
-                state.xn1, state.fxn1 = c, fxn1
-                if sign(fxn1) * sign(fs.f(m)) < 0
-                    state.bracket = [m,c]
+                fc = fs.f(c)
+                if norm(fc) < norm(state.fxn1)
+                    state.xn0 = state.xn1
+                    state.xn1 = c
+                    state.fxn0 = state.fxn1
+                    state.fxn1 = fc
                 else
-                    state.bracket = [c,M]
+                    state.xn0 = c
+                    state.fxn1 = fc
+                end
+
+                if sign(state.fxn1) * sign(fs.f(m)) < 0
+                    state.bracket[2] = c
+                else
+                    state.bracket[1] = c
                 end
                 state.stopped && (state.stopped = false)
                 incfn(state)
@@ -281,7 +288,7 @@ function find_zero(method::UnivariateZeroMethod, fs, state::UnivariateZeroState,
 
 
         if val
-            if state.stopped
+            if state.stopped && !(state.x_converged || state.f_converged)
                 ## stopped is a heuristic, there was an issue with an approximate derivative
                 ## say it converged if pretty close, else say convergence failed.
                 ## (Is this a good idea?)
@@ -394,22 +401,22 @@ function find_zero(f, x0::T, method::M; kwargs...) where {M <: AbstractBisection
 end
 
 function find_zero(f, x0::Vector{T}, method::M; kwargs...) where {T<:Number, M<:AbstractBisection}
-    find_zero(method, callable_function(method, f, float(x0[1])), x0; kwargs...)
+    find_zero(method, callable_function(method, f), x0; kwargs...)
 end
 
 function find_zero(f, x0::Tuple{T}, method::M; kwargs...) where {T<:Number, M<:AbstractBisection}
-    find_zero(method, callable_function(method, f, float(x0[1])), x0; kwargs...)
+    find_zero(method, callable_function(method, f), x0; kwargs...)
 end
 
 function find_zero(f, x0::T, method::UnivariateZeroMethod; kwargs...) where {T<:Number}
-    find_zero(method, callable_function(method, f, float(x0)), x0; kwargs...)
+    find_zero(method, callable_function(method, f), x0; kwargs...)
 end
 
 function find_zero(f, x0::T, method::AbstractSecant; kwargs...) where {T<:Number}
-    find_zero(method, callable_function(method, f, float(x0)), x0; kwargs...)
+    find_zero(method, callable_function(method, f), x0; kwargs...)
 end
 function find_zero(f, x0::Vector{T}, method::AbstractSecant; kwargs...) where {T<:Number}
-    find_zero(method, callable_function(method, f, float(x0[1])), x0; kwargs...)
+    find_zero(method, callable_function(method, f), x0; kwargs...)
 end
 
 ## some defaults for methods
