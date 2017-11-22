@@ -15,29 +15,19 @@ function steff_step(x::T, fx) where {T}
 end
 
 function guarded_secant_step(alpha::T, beta::T, falpha, fbeta) where {T <: AbstractFloat}
-    fp = (fbeta - falpha) /  (beta - alpha)
-    Δ = fbeta / fp
-
-    if norm(Δ) >= 100 * norm(alpha - beta) # guard runaway
-        Δ = sign(Δ) * 100 * norm(alpha - beta)
-    end
-
-    (beta - Δ)::T, isissue(Δ)
-
-end
-
-function guarded_secant_step_diff(alpha::T, beta::T, falpha, fbeta) where {T <: AbstractFloat}
 
     fp = (fbeta - falpha) /  (beta - alpha)
-    Δ = fbeta / fp
-
+    Δ::T = fbeta / fp
+    ## odd, we get allocations if we define Delta, then beta - Delta
+    ## Δ = beta - fbeta * (beta - alpha) / (fbeta - falpha)
+    
     if isissue(Δ)
         Δ = one(T)/1000
     elseif norm(Δ) >= 100 * norm(alpha - beta) # guard runaway
-        Δ = sign(Δ) * 100 * min(1, norm(alpha - beta))
+        Δ = sign(Δ) * 100 * min(one(T), norm(alpha - beta))
     end
 
-    Δ::T
+    beta - Δ, isissue(Δ)    
 
 end
 
@@ -111,13 +101,16 @@ function init_state(method::AbstractSecant, fs, x::Union{T, Vector{T}}, bracket)
 
     if isa(x, Vector)
         x0, x1 = x[1:2]
-        fx0, fx1 = fs.f(x0), fs.f(x1)
+        #        fx0, fx1 = fs.f(x0), fs.f(x1)
+        fx0, fx1 = fs(x0), fs(x1)        
     else
         x0 = float(x)
-        fx0 = fs.f(x0)
+        #        fx0 = fs.f(x0)
+        fx0 = fs(x0)        
         stepsize = max(1/100, min(abs(fx0), abs(x0/100)))
         x1 = x0 + stepsize
-        x0, x1, fx0, fx1  = x1, x0, fs.f(x1), fx0 # switch
+#        x0, x1, fx0, fx1  = x1, x0, fs.f(x1), fx0 # switch
+        x0, x1, fx0, fx1  = x1, x0, fs(x1), fx0 # switch        
     end
 
     state = UnivariateZeroStateBase(
@@ -132,12 +125,15 @@ end
 
 ##################################################
 
+## in Order0, we run bisection if a bracketing interval is found
 function _run_bisection(fs, o, options)
     verbose = options.verbose; options.verbose=false # turn off verbose
     find_zero(Bisection(), fs, o, options)
     options.verbose = verbose
     o.message = "Used bisection for last step"
 end
+
+
 ## order 0
 # goal: more robust to initial guess than higher order methods
 # follows roughly algorithm described http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1979-12.pdf, the SOLVE button from the HP-34C
@@ -152,7 +148,7 @@ end
 # if a bracket is found that can be done, otherwise secant step is used
 function update_state(method::Order0, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions{T}) where {T}
 
-    f = fs.f
+    f = fs
     α = o.xn0
     β = o.xn1
     fα =  o.fxn0
@@ -168,19 +164,15 @@ function update_state(method::Order0, fs, o::UnivariateZeroState{T}, options::Un
     end
 
     
-    #    ξ::T, issue = guarded_secant_step(α, β, fα, fβ)
-    dξ = guarded_secant_step_diff(α, β, fα, fβ)
-    if isissue(dξ)
+    ξ::T, issue = guarded_secant_step(α, β, fα, fβ)
+    if issue
        o.message = "error with guarded secant step"
        o.stopped = true
        return nothing
     end
 
-    ξ = β - dξ 
-    
-    fξ::S = f(ξ)::S
+    fξ = fs(ξ)
     incfn(o)
-
 
     if sign(fξ) * sign(fβ) < 0.0
         o.xn0 = ξ
@@ -228,15 +220,13 @@ function update_state(method::Order0, fs, o::UnivariateZeroState{T}, options::Un
             return nothing
         end
 
-        #        θ::S, issue = guarded_secant_step(β, ξ, fβ, fξ)
-        dθ = guarded_secant_step_diff(β, ξ, fβ, fξ)
-        if isissue(dθ)
+        θ::S, issue = guarded_secant_step(β, ξ, fβ, fξ)
+        if issue
             o.stopped = true
-            o.message = "XXX"
+            o.message = "Issue with secant step"
             return nothing
         end
 
-        θ = ξ - dθ 
         fθ::S = f(θ); incfn(o)
 
         if sign(fθ) * sign(fβ) < 0
@@ -278,14 +268,20 @@ function update_state(method::Secant, fs, o::UnivariateZeroState{T}, options::Un
     o.fxn0 = o.fxn1
 
     o.xn1 = o.xn1 -  o.fxn1 / fp
-    o.fxn1 = fs.f(o.xn1)
+    #    o.fxn1 = fs.f(o.xn1)
+    o.fxn1 = fs(o.xn1)    
     incfn(o)
 
     nothing
 end
 
 """
-secant_method: solve for zero of `f(x) = 0` using the secant method
+
+    secant_method(f, x0, x1; [kwargs...])
+    
+Solve for zero of `f(x) = 0` using the secant method.
+
+Not exported.  Use `find_zero` with `Order1()`.    
 """
 secant_method(f, x0::Real, x1::Real; kwargs...) = find_zero(f, map(float, [x0,x1]), Order1(); kwargs...)
 
@@ -318,7 +314,7 @@ function update_state(method::Steffensen, fs, o::UnivariateZeroState{T}, options
     incsteps(o)
 
     wn = o.xn1 + steff_step(o.xn1, o.fxn1)::T
-    fwn = fs.f(wn)::S
+    fwn = fs(wn)::S
     incfn(o)
 
     fp, issue = _fbracket(o.xn1, wn, o.fxn1, fwn)
@@ -332,7 +328,7 @@ function update_state(method::Steffensen, fs, o::UnivariateZeroState{T}, options
     o.xn0 = o.xn1
     o.fxn0 = o.fxn1
     o.xn1 = o.xn1 - o.fxn1 / fp #xn1
-    o.fxn1 = fs.f(o.xn1)
+    o.fxn1 = fs(o.xn1)
     incfn(o)
 
 
@@ -355,7 +351,7 @@ Appl. Math. Inf. Sci. 9, No. 3, 1507-1513 (2015). Four function calls per step a
 """    
 mutable struct Order5 <: UnivariateZeroMethod end
 
-function update_state(method::Order5, fs::DerivativeFree, o::UnivariateZeroState{T}, options::UnivariateZeroOptions) where {T}
+function update_state(method::Order5, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions) where {T}
 
     xn = o.xn1
     fxn = o.fxn1
@@ -364,7 +360,7 @@ function update_state(method::Order5, fs::DerivativeFree, o::UnivariateZeroState
     incsteps(o)
 
     wn::T = o.xn1 + steff_step(o.xn1, o.fxn1)
-    fwn = fs.f(wn)::S
+    fwn = fs(wn)::S
     incfn(o)
 
     fp, issue = _fbracket(o.xn1, wn, o.fxn1, fwn)
@@ -377,12 +373,12 @@ function update_state(method::Order5, fs::DerivativeFree, o::UnivariateZeroState
     end
 
     yn::T = o.xn1 - o.fxn1 / fp
-    fyn = fs.f(yn)::S
+    fyn = fs(yn)::S
     incfn(o)
 
 
     zn::T = xn - (fxn + fyn) / fp
-    fzn = fs.f(zn)::S
+    fzn = fs(zn)::S
     incfn(o)
 
     fp, issue = _fbracket_ratio(yn, o.xn1, wn, fyn, o.fxn1, fwn)
@@ -397,7 +393,7 @@ function update_state(method::Order5, fs::DerivativeFree, o::UnivariateZeroState
     o.xn0 = o.xn1
     o.fxn0 = o.fxn1
     o.xn1 = zn  - fzn  / fp
-    o.fxn1 = fs.f(o.xn1)
+    o.fxn1 = fs(o.xn1)
     incfn(o)
 
     nothing
@@ -471,7 +467,7 @@ function update_state(method::Order8, fs, o::UnivariateZeroState{T}, options::Un
     incsteps(o)
 
     wn::T = xn + steff_step(xn, fxn)
-    fwn::S = fs.f(wn)
+    fwn::S = fs(wn)
     incfn(o)
 
     if isissue(fwn)
@@ -494,7 +490,7 @@ function update_state(method::Order8, fs, o::UnivariateZeroState{T}, options::Un
     end
 
     yn::T = xn - fxn / fp
-    fyn::S = fs.f(yn)
+    fyn::S = fs(yn)
     incfn(o)
 
     fp, issue = _fbracket(yn, xn, fyn, fxn)
@@ -509,7 +505,7 @@ function update_state(method::Order8, fs, o::UnivariateZeroState{T}, options::Un
 
     phi = (1 + fyn / fwn)           # pick one of options
     zn =  yn - phi * fyn / fp
-    fzn::S = fs.f(zn)
+    fzn::S = fs(zn)
     incfn(o)
 
     fp, issue =  _fbracket_diff(xn, yn, zn, fxn, fyn, fzn)
@@ -526,7 +522,7 @@ function update_state(method::Order8, fs, o::UnivariateZeroState{T}, options::Un
     xi::T = (1 - 2fyn*fyn*fyn / (fwn * fwn * fxn))
 
     xn1::T = zn - w * xi * fzn / fp
-    fxn1::S = fs.f(xn1)
+    fxn1::S = fs(xn1)
     incfn(o)
 
     o.xn0,o.xn1 = xn, xn1
@@ -562,11 +558,12 @@ function update_state(method::Order16, fs, o::UnivariateZeroState{T}, options::U
     incsteps(o)
 
     wn::T = xn + steff_step(xn, fxn)
-    fwn::S = fs.f(wn)
+    fwn::S = fs(wn)
     incfn(o)
 
     fp, issue = _fbracket(xn, wn, fxn, fwn)
 
+  
     if issue
         o.xn0, o.xn1 = xn, wn
         o.fxn0, o.fxn1 = fxn, fwn
@@ -576,7 +573,7 @@ function update_state(method::Order16, fs, o::UnivariateZeroState{T}, options::U
     end
 
     yn::T = xn - fxn / fp
-    fyn::S = fs.f(yn)
+    fyn::S = fs(yn)
     incfn(o)
 
     fp, issue = _fbracket_ratio(yn, xn, wn, fyn, fxn, fwn)
@@ -591,9 +588,10 @@ function update_state(method::Order16, fs, o::UnivariateZeroState{T}, options::U
 
 
     zn::T = yn - fyn / fp
-    fzn::S = fs.f(zn)
+    fzn::S = fs(zn)
     incfn(o)
 
+        
     fp, issue = _fbracket_diff(xn, yn, zn, fxn, fyn, fzn)
     u2, u3, u4 = fzn/fwn, fyn/fxn, fyn/fwn
     eta = 1 / (1 + 2*u3*u4^2) / (1 - u2)
@@ -606,14 +604,11 @@ function update_state(method::Order16, fs, o::UnivariateZeroState{T}, options::U
     end
 
     an = zn - eta * fzn / fp
-    fan = fs.f(an)
+    fan = fs(an)
     incfn(o)
 
+        
     fp, issue = _fbracket_ratio(an, yn, zn, fan, fyn, fzn)
-    u1, u5, u6 = fzn/fxn, fan/fxn, fan/fwn
-    sigma =  1 + u1*u2 - u1*u3*u4^2 + u5 + u6 + u1^2*u4 +
-        u2^2*u3 + 3*u1*u4^2*(u3^2 - u4^2)/_fbracket(xn,yn, fxn, fyn)[1]
-
     if issue
         o.xn0, o.xn1 = xn, an
         o.fxn0, o.fxn1 = fxn, fan
@@ -622,8 +617,16 @@ function update_state(method::Order16, fs, o::UnivariateZeroState{T}, options::U
         return
     end
 
+    u1, u5, u6 = fzn/fxn, fan/fxn, fan/fwn
+    sigma =  1 + u1*u2 - u1*u3*u4^2 + u5 + u6 + u1^2*u4 +
+    u2^2*u3 + 3*u1*u4^2*(u3^2 - u4^2)/_fbracket(xn,yn, fxn, fyn)[1]
+
+
+
+    
+
     xn1 = an - sigma * fan / fp
-    fxn1 = fs.f(xn1)
+    fxn1 = fs(xn1)
     incfn(o)
 
     o.xn0, o.xn1 = xn, xn1

@@ -19,18 +19,20 @@ abstract type CallableFunction end
 struct DerivativeFree <: CallableFunction
     f
 end
+(F::DerivativeFree)(x::Number) = F.f(x)
 
 struct FirstDerivative <: CallableFunction
     f
     fp
 end
-
+(F::FirstDerivative)(x::Number) = F.f(x)
 
 struct SecondDerivative <: CallableFunction
     f
     fp
     fpp
 end
+(F::SecondDerivative)(x::Number) = F.f(x)
 
 ## allows override for automatic derivatives, see Newton
 function callable_function(m::UnivariateZeroMethod, @nospecialize(f))
@@ -65,11 +67,11 @@ incsteps(o::UnivariateZeroState, k=1) = o.steps += k
 ## we use x0 + typemax(Int) as a sentinel. This could be a Missing, but that
 ## is a bit more hassle
 function init_state(method::Any, fs, x0::T, bracket) where {T}
-    fx0 = fs.f(x0); fnevals = 1
+    fx0 = fs(x0); fnevals = 1
 
     if !ismissing(bracket)
         a,b = bracket[1:2]
-        sign(fs.f(a)) * sign(fs.f(b)) > 0 &&  (warn(bracketing_error); throw(ArgumentError))
+        sign(fs(a)) * sign(fs(b)) > 0 &&  (warn(bracketing_error); throw(ArgumentError))
         fnevals += 2
     end
     
@@ -121,13 +123,13 @@ end
 
 ## basic container
 mutable struct UnivariateZeroProblem{T<:AbstractFloat}
-    fs::CallableFunction
+    fs
     x0::Union{T, Tuple{T,T}, Vector{T}, Complex{T}}
     bracket::Union{Vector{T}, Missing}
 end
 
 ## frame the problem and the options
-function derivative_free_setup(method::Any, fs::CallableFunction, x0::Union{T, Tuple{T,T}, Vector{T}};
+function derivative_free_setup(method::Any, fs, x0::Union{T, Tuple{T,T}, Vector{T}};
                                bracket=missing,
                                xabstol=zero(T), xreltol=zero(T),
                                abstol=4*eps(T), reltol=4*eps(T),
@@ -180,7 +182,7 @@ function assess_convergence(method::Any, fs, state, options)
         return true
     end
 
-    λ = max(1, norm(xn1))
+    λ = max(one(xn1), norm(xn1))
     
     if  norm(fxn1) <= max(options.abstol, λ * options.reltol)
         state.f_converged = true
@@ -209,7 +211,7 @@ function show_trace(fs, state, xns, fxns, method)
     println("Results of univariate zero finding:\n")
     if converged
         println("* Converged to: $(xns[end])")
-        println("* Algorithm $(method)")
+        println("* Algorithm: $(method)")
         println("* iterations: $(state.steps)")
         println("* function evaluations: $(state.fnevals)")
         state.x_converged && println("* stopped as x_n ≈ x_{n-1} using atol=xabstol, rtol=xreltol")
@@ -262,7 +264,7 @@ function find_zero(method::UnivariateZeroMethod, fs, state::UnivariateZeroState,
                 if c == state.xn0
                     c = m + (M-m)/4
                 end
-                fc = fs.f(c)
+                fc = fs(c)
                 if norm(fc) < norm(state.fxn1)
                     state.xn0 = state.xn1
                     state.xn1 = c
@@ -273,7 +275,7 @@ function find_zero(method::UnivariateZeroMethod, fs, state::UnivariateZeroState,
                     state.fxn1 = fc
                 end
 
-                if sign(state.fxn1) * sign(fs.f(m)) < 0
+                if sign(state.fxn1) * sign(fs(m)) < 0
                     state.bracket[2] = c
                 else
                     state.bracket[1] = c
@@ -425,7 +427,7 @@ find_zero(f, x0::Vector{T}; kwargs...) where {T <: Number}= find_zero(f, x0, Bis
 find_zero(f, x0::Tuple{T,S};kwargs...) where {T<:Number, S<:Number} = find_zero(f, x0, Bisection(); kwargs...)
 
 
-function find_zero(method::UnivariateZeroMethod, fs::CallableFunction, x0; kwargs...)
+function find_zero(method::UnivariateZeroMethod, fs, x0; kwargs...)
     x = float.(x0)
     prob, options = derivative_free_setup(method, fs, x; kwargs...)
     find_zero(prob, method, options)

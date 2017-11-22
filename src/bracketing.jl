@@ -192,9 +192,9 @@ end
 # we reach here from calling Bisection midway through the Order0() routine with "big" values.
 # call a42 in this case
 const BigSomething = Union{BigFloat, BigInt}
-function find_zero(method::Bisection, fs::DerivativeFree, o::UnivariateZeroState{T, S}, options::UnivariateZeroOptions) where {T<:BigSomething, S}
+function find_zero(method::Bisection, fs, o::UnivariateZeroState{T, S}, options::UnivariateZeroOptions) where {T<:BigSomething, S}
     xn0, xn1 = o.xn0 < o.xn1 ? (o.xn0, o.xn1) : (o.xn1, o.xn0)
-    o.xn1 = a42(fs.f, o.xn0, o.xn1; xtol=options.xreltol, maxeval=options.maxevals, verbose=options.verbose)
+    o.xn1 = a42(fs, o.xn0, o.xn1; xtol=options.xreltol, maxeval=options.maxevals, verbose=options.verbose)
     o.message = "Used Alefeld-Potra-Shi method, `Roots.a42`, to find the zero. Iterations and function evaluations are not counted properly."
     o.stopped = o.x_converged = true
 
@@ -202,10 +202,10 @@ function find_zero(method::Bisection, fs::DerivativeFree, o::UnivariateZeroState
 end
 
 
-function init_state(method::AbstractBisection, fs::DerivativeFree, x::Union{Tuple{T,T}, Vector{T}}, bracket) where {T <: Real}
+function init_state(method::AbstractBisection, fs, x::Union{Tuple{T,T}, Vector{T}}, bracket) where {T <: Real}
     x0, x2 = adjust_bracket(x)
-    y0 = fs.f(x0)
-    y2 = fs.f(x2)
+    y0 = fs(x0)
+    y2 = fs(x2)
 
     sign(y0) * sign(y2) > 0 && throw(ArgumentError(bracketing_error))
 
@@ -229,13 +229,12 @@ end
 ## The bracket `[a,b]` must be bounded.
 
 function update_state(method::Bisection, fs, o::Roots.UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T<:FloatNN,S}
-    f = fs.f
     x0, x2 = o.xn0, o.xn1
     y0, y2 = o.fxn0, o.fxn1
 
     x1 = _middle(x0, x2)
 
-    y1 = f(x1)
+    y1 = fs(x1)
     incfn(o)
 
     if sign(y0) * sign(y1) > 0
@@ -588,7 +587,7 @@ end
 
 function update_state(method::FalsePosition, fs, o, options)
 
-    f = fs.f
+    fs
     a, b =  o.xn0, o.xn1
 
     fa, fb = o.fxn0, o.fxn1
@@ -599,7 +598,7 @@ function update_state(method::FalsePosition, fs, o, options)
         lambda = 1/2
     end
     x = b - lambda * (b-a)        
-    fx = f(x)
+    fx = fs(x)
     incfn(o)
     incsteps(o)
 
