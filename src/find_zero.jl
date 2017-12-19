@@ -182,7 +182,7 @@ function assess_convergence(method::Any, fs, state, options)
         return true
     end
 
-    λ = max(one(xn1), norm(xn1))
+    λ = max(one(real(xn1)), norm(xn1))
     
     if  norm(fxn1) <= max(options.abstol, λ * options.reltol)
         state.f_converged = true

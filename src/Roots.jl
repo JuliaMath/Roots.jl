@@ -2,26 +2,28 @@ __precompile__(true)
 module Roots
 
 
-#import Base: *
+if VERSION >= v"0.7-"
+    using Printf
+else
+    using Missings
+end
 
-
-#using ForwardDiff
-using Missings
+using ForwardDiff
 using Compat: @nospecialize
 
 
 export fzero,
        fzeros,
-#       newton, halley,
-       secant_method, steffensen
-#       D
+       newton, halley,  # deprecate these 4?
+       secant_method, steffensen,
+       D
 
 export find_zero,
        Order0, Order1, Order2, Order5, Order8, Order16
 export Bisection, FalsePosition
 
 ## load in files
-#include("adiff.jl")
+include("adiff.jl")
 include("find_zero.jl")
 include("bracketing.jl")
 include("derivative_free.jl")
