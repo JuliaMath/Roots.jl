@@ -100,8 +100,8 @@ end
 
 function univariate_zero_options(args...;
                                     xabstol::T=zero(T),
-                                    xreltol::T=zero(T),
-                                    abstol::T=4*eps(T),
+                                    xreltol::T=eps(T),
+                                    abstol::T=zero(T),
                                     reltol::T=4*eps(T),
                                     maxevals::Int=40,
                                     maxfnevals::Int=typemax(Int),
