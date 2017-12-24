@@ -131,7 +131,7 @@ end
 ## frame the problem and the options
 function derivative_free_setup(method::Any, fs, x0::Union{T, Tuple{T,T}, Vector{T}};
                                bracket=missing,
-                               xabstol=zero(T), xreltol=zero(T),
+                               xabstol=zero(T), xreltol=eps(T),
                                abstol=4*eps(T), reltol=4*eps(T),
                                maxevals=40, maxfnevals=typemax(Int),
                                verbose::Bool=false,

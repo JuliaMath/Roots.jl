@@ -249,3 +249,29 @@ pathological = [
 for (fn_, x0_) in pathological
     find_zero(fn_, x0_, Order0())
 end
+
+## issue tests: put in tests to ensure closed issues don't reappear.
+
+## issue #94; tolerances not matching documentation
+test_94 = function(;kwargs...)
+    g, T = 1.62850, 14.60000
+    α, t1, tf = 0.00347, 40.91375, 131.86573
+    y, ya, yf = 0.0, 9000.0, 10000.0
+    vy = sqrt(2g*(ya-y))
+    θ0, θ1 = atan(α*tf), atan(α*(tf-t1))
+    I_sintan(x) = tan(x)/2cos(x) - atanh(tan(x/2))
+    I_sintan(x, y) = I_sintan(y) - I_sintan(x)
+    function lhs(θ)
+        tRem = (vy - T/α*(sec(θ1) - sec(θ))) / g
+        val = -yf + y + vy*tRem - 0.5g*tRem^2 - T/α^2*I_sintan(θ, θ1)
+        val
+    end
+
+    meth = Roots.FalsePosition()
+    prob, options = Roots.derivative_free_setup(meth, lhs, [atan(α*tf), atan(α*(tf-t1))])
+    state = Roots.init_state(meth, prob.fs, prob.x0, prob.bracket)
+    find_zero(meth, prob.fs, state, options)
+
+    @test state.steps <= 15
+end
+test_94()
