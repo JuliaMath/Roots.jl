@@ -345,7 +345,7 @@ where `c` is passed in.
 Solve f(x) = 0 over bracketing interval [a,b] starting at c, with a < c < b
 
 """
-a42a(f, a, b, c; args...) = a42(f, a, f(a), b, f(b), c, f(c); args...)
+a42a(f, a, b, c=(a+b)/2; args...) = a42a(f, a, f(a), b, f(b), c, f(c); args...)
 
 function a42a(f, a, fa, b, fb, c, fc;
        xtol=zero(float(a)),
