@@ -21,14 +21,15 @@ known_functions = Func[]
 
 ## Construct a function object, and check root brackets
 macro Func(name)
+    @gensym f p b
     esc(quote
-        f = Func($name, val, bracket, params)
-        for p in params
-            b = bracket(p)
-            @assert val(p, b[1]) * f.val(p, b[2]) < 0 "Invalid bracket"
+        $f = Func($name, val, bracket, params)
+        for $p in params
+            $b = bracket($p)
+            @assert val($p, $b[1]) * $f.val($p, $b[2]) < 0 "Invalid bracket"
         end
-        push!(known_functions, f)
-        f
+        push!(known_functions, $f)
+        $f
     end)
 end
 
