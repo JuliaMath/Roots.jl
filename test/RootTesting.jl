@@ -21,15 +21,16 @@ known_functions = Func[]
 
 ## Construct a function object, and check root brackets
 macro Func(name)
-    quote
-        f = Func($name, val, bracket, params)
-        for p in params
-            b = bracket(p)
-            @assert val(p, b[1]) * f.val(p, b[2]) < 0 "Invalid bracket"
+    @gensym f p b
+    esc(quote
+        $f = Func($name, val, bracket, params)
+        for $p in params
+            $b = bracket($p)
+            @assert val($p, $b[1]) * $f.val($p, $b[2]) < 0 "Invalid bracket"
         end
-        push!(known_functions, f)
-        f
-    end
+        push!(known_functions, $f)
+        $f
+    end)
 end
 
 func1 = let
@@ -200,7 +201,7 @@ end
 function run_benchmark_tests()
     @printf "%s\n" run_tests((f,b) -> Roots.a42(f, b...), name="a42")
     @printf "%s\n" run_tests((f,b) -> find_zero(f, b, Bisection()), name="Bisection")
-    
+
 
     for m in [Order0(), Order1(), Order2(), Order5(), Order8(), Order16()]
         @printf "%s\n" run_tests((f, b) -> find_zero(f, mean(b), m), name="$m")
@@ -211,8 +212,8 @@ function run_benchmark_tests()
     @printf "%s\n" run_tests((f, b) -> halley(f, mean(b)), name="halley")
 
     println("---- using BigFloat ----")
-    
-    @printf "%s\n" run_tests((f,b) -> find_zero(f, big(b), Bisection()), name="a42 (no bisection with Big values)") 
+
+    @printf "%s\n" run_tests((f,b) -> find_zero(f, big(b), Bisection()), name="a42 (no bisection with Big values)")
 
     for m in [Order0(), Order1(), Order2(), Order5(), Order8(), Order16()]
         @printf "%s\n" run_tests((f, b) -> find_zero(f, mean(big(b)), m), name="$m/BigFloat")
