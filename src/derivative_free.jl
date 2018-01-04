@@ -14,6 +14,7 @@ function steff_step{T}(x::T, fx)
     norm(fx) <= thresh ? fx : sign(fx) * thresh
 end
 
+# guard secant step from runaway. Use midpoint if issue
 function guarded_secant_step(alpha, beta, falpha, fbeta)
     fp = (fbeta - falpha) /  (beta - alpha)
     Δ = fbeta / fp
@@ -22,7 +23,11 @@ function guarded_secant_step(alpha, beta, falpha, fbeta)
         Δ = sign(Δ) * 100 * norm(alpha - beta)
     end
 
-    beta - Δ, isissue(Δ)
+    if isissue(Δ)
+        return (alpha + (beta - alpha)*(0.5), true) # midpoint
+    else
+        return (beta - Δ, false)
+    end
 
 end
 
@@ -148,14 +153,6 @@ function update_state{T}(method::Order0, fs, o::UnivariateZeroState{T}, options:
     end
 
     gamma, issue = guarded_secant_step(alpha, beta, falpha, fbeta)
-    if issue
-        ## try gamma as a midpoint then
-        gamma = alpha + (beta - alpha)/2
-        
-#        o.message = "error with guarded secant step"
-#        o.stopped = true
-#        return nothing
-    end
 
     fgamma = f(gamma); incfn(o)
     if sign(fgamma)*sign(fbeta) < 0.0
@@ -204,10 +201,6 @@ function update_state{T}(method::Order0, fs, o::UnivariateZeroState{T}, options:
         end
 
         theta, issue = guarded_secant_step(beta, gamma, fbeta, fgamma)
-        if issue
-            ## try midpoint?
-            theta = beta + (gamma - beta)/2
-        end
         
         ftheta = f(theta); incfn(o)
 
