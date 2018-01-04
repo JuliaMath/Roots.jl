@@ -554,10 +554,8 @@ end
 
 
 # floating point comparison function
-function almost_equal(x, y)
-    # FIXME This should be eps(T), why is this Float64?
-    # FIXME Also, realmin is 1e-308, it's too tiny to be useful here.
-    const min_diff = realmin(Float64)*32
+function almost_equal{T}(x::T, y::T)
+    const min_diff = realmin(T)*32
     abs(x - y) < min_diff
 end
 
