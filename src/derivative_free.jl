@@ -149,71 +149,62 @@ end
 # * `f(x) == 0.0` or
 # * `f(prevfloat(x)) * f(nextfloat(x)) < 0`.
 # if a bracket is found that can be done, otherwise secant step is used
-function update_state(method::Order0, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions{T}) where {T}
+function update_state(method::Order0, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions) where {T}
 
-    f = fs
-    α = o.xn0
-    β = o.xn1
-    fα =  o.fxn0
-    fβ = o.fxn1
-
-    S = eltype(fα)
+    f = fs.f
+    alpha, beta = o.xn0, o.xn1
+    falpha, fbeta = o.fxn0, o.fxn1
 
     incsteps(o)
 
-    if sign(fα) * sign(fβ) < 0.0
+    if sign(falpha) * sign(fbeta) < 0.0
         _run_bisection(fs, o, options)
         return nothing
     end
 
     gamma, issue = guarded_secant_step(alpha, beta, falpha, fbeta)
 
-    fξ = fs(ξ)
-    incfn(o)
+    fgamma = f(gamma); incfn(o)
 
-    if sign(fξ) * sign(fβ) < 0.0
-        o.xn0 = ξ
-        o.xn1 =  β
-        o.fxn0 = fξ
-        o.fxn1 = fβ
+    if sign(fgamma)*sign(fbeta) < 0.0
+        o.xn0, o.xn1 = gamma, beta
+        o.fxn0, o.fxn1 = fgamma, fbeta
         _run_bisection(fs, o, options)
-       return nothing
-    end
-    
-    if norm(fξ) <= norm(fβ)
-        o.xn0 = β
-        o.xn1 = ξ
-        o.fxn0 = fβ
-        o.fxn1 = fξ
         return nothing
     end
-    
+
+    if norm(fgamma) <= norm(fbeta)
+        o.xn0, o.xn1 = beta, gamma
+        o.fxn0, o.fxn1 = fbeta, fgamma
+        return nothing
+    end
+
     ctr = 0
     while true
         ## quadratic step
         ctr += 1
         if ctr >= 3
-           o.stopped = true
-           o.message = "dithering, algorithm failed to improve using quadratic steps"
-           return nothing
-        end
-
-        # quadratic_step. Put new ξ at vertex of parabola through α, β, (old) ξ
-        denom = (β - α) * (fβ - fξ)  - (β - fξ) * (fβ - fα)
-        if isissue(denom)
             o.stopped = true
             o.message = "dithering, algorithm failed to improve using quadratic steps"
             return nothing
         end
-        ξ = tmp::T = β -  ((β - α)^2 * (fβ - fξ) - (β - ξ)^2 * (fβ - fα))/denom/2
+
+        # quadratic_step. Put new gamma at vertex of parabola through alpha, beta, (old) gamma
+        denom = (beta - alpha) * (fbeta - fgamma)  - (beta - fgamma) * (fbeta - falpha)
+        if isissue(denom)
+            o.stopped
+            o.message = "dithering, algorithm failed to improve using quadratic steps"
+            return nothing
+        end
+        gamma = beta -  ((beta - alpha)^2 * (fbeta - fgamma) - (beta - gamma)^2 * (fbeta - falpha))/denom/2
 
 
-        fξ = ftmp::S = f(ξ); incfn(o)
+        fgamma = f(gamma); incfn(o)
         incfn(o)
 
-        if norm(fξ) < norm(fβ)
-            o.xn0, o.xn1 = β, ξ
-            o.fxn0, o.fxn1 = fβ, fξ
+        if norm(fgamma) < norm(fbeta)
+            o.xn0, o.xn1 = beta, gamma
+            o.fxn0, o.fxn1 = fbeta, fgamma
             return nothing
         end
 
@@ -221,17 +212,13 @@ function update_state(method::Order0, fs, o::UnivariateZeroState{T}, options::Un
         
         ftheta = f(theta); incfn(o)
 
-        if sign(fθ) * sign(fβ) < 0
-
-            o.xn0 = β
-            o.xn1 = θ
-            o.fxn0 = fβ
-            o.fxn1 = fθ
+        if sign(ftheta) * sign(fbeta) < 0
+            o.xn0, o.xn1 = beta, theta
+            o.fxn0, o.fxn1 = fbeta, ftheta
 
             _run_bisection(fs, o, options)
             return nothing
         end
-
     end
 
     # failed to improve
@@ -239,7 +226,6 @@ function update_state(method::Order0, fs, o::UnivariateZeroState{T}, options::Un
     o.message = "failure to improve"
     return nothing
 end
-
 
 ##################################################
 
