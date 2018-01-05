@@ -331,7 +331,6 @@ Solve f(x) = 0 over bracketing interval [a,b] starting at c, with a < c < b
 """
 a42a(f, a, b, c=(a+b)/2; args...) = a42a(f, a, f(a), b, f(b), c, f(c); args...)
 
-
 function a42a(f, a, fa, b, fb, c, fc;
        xtol=zero(float(a)),
        maxeval::Int=15,
@@ -343,7 +342,7 @@ function a42a(f, a, fa, b, fb, c, fc;
         ee, fee = d, fd
         for n = 2:maxeval
             # use either a cubic (if possible) or quadratic interpolation
-            if n > 2 && distinct(f, a, fa, b, fb, d, fd, ee, fee)
+            if n > 2 && distinct(a, fa, b, fb, d, fd, ee, fee)
                 c, fc = ipzero(f, a, fa, b, fb, d, fd, ee, fee)
             else
                 c, fc = newton_quadratic(f, a, fa, b, fb, d, fd, 2)
@@ -352,7 +351,7 @@ function a42a(f, a, fa, b, fb, c, fc;
             ab, fab, bb, fbb, db, fdb = bracket(f, a, fa, b, fb, c, fc, xtol)
             eb, feb = d, fd
             # use another cubic (if possible) or quadratic interpolation
-            if distinct(f, ab, fab, bb, fbb, db, fdb, eb, feb)
+            if distinct(ab, fab, bb, fbb, db, fdb, eb, feb)
                 cb, fcb = ipzero(f, ab, fab, bb, fbb, db, fdb, eb, feb)
             else
                 cb, fcb = newton_quadratic(f, ab, fab, bb, fbb, db, fdb, 3)
@@ -437,6 +436,7 @@ end
 #
 # based on algorithm on page 341 of [1]
 function bracket(f, a, fa, b, fb, c, fc, tol)
+
     if !(a <= c <= b)
         error("c must be in (a,b)")
     end
@@ -473,6 +473,7 @@ end
 # take a secant step, if the resulting guess is very close to a or b, then
 # use bisection instead
 function secant(f, a::T, fa, b, fb) where {T}
+
     c = a - fa/(fb - fa)*(b - a)
     tol = eps(T)*5
     if isnan(c) || c <= a + abs(a)*tol || c >= b - abs(b)*tol
@@ -486,7 +487,6 @@ end
 # if the new guess is outside [a, b] we use a secant step instead
 # based on algorithm on page 330 of [1]
 function newton_quadratic(f, a, fa, b, fb, d, fd, k::Int)
-
     B = (fb - fa)/(b - a)
     A = ((fd - fb)/(d - b) - B)/(d - a)
     if A == 0
@@ -536,7 +536,7 @@ end
 
 
 # check that all interpolation values are distinct
-function distinct(f, a, f1, b, f2, d, f3, e, f4)
+function distinct(a, f1, b, f2, d, f3, e, f4)
     !(almost_equal(f1, f2) || almost_equal(f1, f3) || almost_equal(f1, f4) ||
       almost_equal(f2, f3) || almost_equal(f2, f4) || almost_equal(f3, f4))
 end
