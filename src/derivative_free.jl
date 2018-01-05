@@ -27,8 +27,11 @@ function guarded_secant_step(alpha::T, beta::T, falpha, fbeta) where {T <: Abstr
         Δ = sign(Δ) * 100 * min(one(T), norm(alpha - beta))
     end
 
-    beta - Δ, isissue(Δ)    
-
+    if isissue(Δ)
+        return (alpha + (beta - alpha)*(0.5), true) # midpoint
+    else
+        return (beta - Δ, false)
+    end
 end
 
 
@@ -163,13 +166,7 @@ function update_state(method::Order0, fs, o::UnivariateZeroState{T}, options::Un
         return nothing
     end
 
-    
-    ξ::T, issue = guarded_secant_step(α, β, fα, fβ)
-    if issue
-       o.message = "error with guarded secant step"
-       o.stopped = true
-       return nothing
-    end
+    gamma, issue = guarded_secant_step(alpha, beta, falpha, fbeta)
 
     fξ = fs(ξ)
     incfn(o)
@@ -220,14 +217,9 @@ function update_state(method::Order0, fs, o::UnivariateZeroState{T}, options::Un
             return nothing
         end
 
-        θ::S, issue = guarded_secant_step(β, ξ, fβ, fξ)
-        if issue
-            o.stopped = true
-            o.message = "Issue with secant step"
-            return nothing
-        end
-
-        fθ::S = f(θ); incfn(o)
+        theta, issue = guarded_secant_step(beta, gamma, fbeta, fgamma)
+        
+        ftheta = f(theta); incfn(o)
 
         if sign(fθ) * sign(fβ) < 0
 
