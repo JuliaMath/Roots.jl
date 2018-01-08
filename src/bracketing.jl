@@ -545,11 +545,10 @@ function ipzero(f, a, fa, b, fb, c, fc, d, fd)
     D32 = (D31 - Q21)*fc/(fc - fa)
     Q33 = (D32 - Q22)*fa/(fd - fa)
     c = a + (Q31 + Q32 + Q33)
-    fc = f(c)
     if (c <= a) || (c >= b)
-        c, fc = newton_quadratic(f, a, fa, b, fb, d, fd, 3)
+        return newton_quadratic(f, a, fa, b, fb, d, fd, 3)
     end
-    return c, fc
+    return c, f(c)
 end
 
 
