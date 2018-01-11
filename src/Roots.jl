@@ -158,6 +158,23 @@ function fzeros(f, a::Real, b::Real; kwargs...)
 end
 fzeros(f, bracket::Vector{T}; kwargs...) where {T <: Real} = fzeros(f, a, b; kwargs...) 
 
+type MaxEvalError
+    count
+    func
+end
+
+## Make a wrapper around the given function, which counts the number
+## of evaluations, and throws MaxEvalError when the given maxcount is
+## exceeded.
+function maxeval(maxcount::Int, f::Function)
+    counter = 0
+    (args...) -> begin
+        counter >= maxcount && throw(MaxEvalError(counter, f))
+        counter += 1
+        f(args...)
+    end
+end
+
 
 
 end
