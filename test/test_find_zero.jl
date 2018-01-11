@@ -1,6 +1,8 @@
 ## tests of find_zero interface
 using Roots
-using Base.Test, Compat
+using Compat.Test
+import SpecialFunctions.erf
+
 
 meths = [Order0(), Order1(), Order2(), Order5(), Order8(), Order16()]
 
@@ -24,15 +26,15 @@ fns = [(x -> x^2 - exp(x) - 3x + 2,   0.257530285439860, [-1, 0.5]),
 
 for (i, (f, xstar, xs)) in enumerate(fns)
     for m in meths
-        for x0 in xs
+        for x0_ in xs
             out = try
-                xn = find_zero(f, x0, m)
+                xn = find_zero(f, x0_, m)
                 @test norm(xn - xstar) < 1e-14 || norm(f(xn)) < 1e-13
                 "."
             catch err
                 "*"
             end
-            out == "*" && println("Fn $i, method $m, x0=$x0 failed")
+            out == "*" && println("Fn $i, method $m, x0=$x0_ failed")
         end
     end
 end
@@ -61,10 +63,10 @@ multiplicity_tests = [
          (x -> (log(x) + sqrt(x^4 + 1) -2)^7,      1.0,  1.222813963628973)
          ]
 
-for (i, (fn, x0, xstar)) in enumerate(multiplicity_tests)
+for (i, (fn_, x0_, xstar)) in enumerate(multiplicity_tests)
     for m in meths
         # println("$i: $m")
-        @test  norm(find_zero(fn, x0, m, maxevals=100) - xstar) < 1e-1 # wow, not too ambitious here, 9th powers...
+        @test  norm(find_zero(fn_, x0_, m, maxevals=100) - xstar) < 1e-1 # wow, not too ambitious here, 9th powers...
     end
 end
 
@@ -157,17 +159,17 @@ galadino_probs = [(x -> x^3 - 1, [.5, 1.5]),
                   ]
         
 
-for (fn, ab) in galadino_probs
+for (fn_, ab) in galadino_probs
     for m in [Roots.A42(), Bisection(), (FalsePosition(i) for i in 1:12)...]
-        x0 = find_zero(fn, ab, m, maxevals=120)
-        @test norm(fn(x0)) <= 1e-14
+        global x0 = find_zero(fn_, ab, m, maxevals=120)
+        @test norm(fn_(x0)) <= 1e-14
     end
 end
 
 ## Can use (a,b) or [a,b] for bisection
 fn = x -> x^5 - x - 1
 for m in [Roots.A42(), Bisection(), (FalsePosition(i) for i in 1:12)...]
-    x0 = find_zero(fn, (1,2.0), m)
+    global x0 = find_zero(fn, (1,2.0), m)
     @test norm(fn(x0)) <= 1e-14
 end
 
@@ -178,14 +180,14 @@ end
 
 
 ## Callable objects
-type _SampleCallableObject end
+struct _SampleCallableObject end
 _SampleCallableObject(x) = x^5 - x - 1
 for m in meths
     @test find_zero(_SampleCallableObject, 1.0, m) ≈ 1.1673039782614187
 end
 
 ### a wrapper to count function calls, say
-type Cnt
+mutable struct Cnt
     cnt::Int
     f
     Cnt(f) = new(0, f)
@@ -239,11 +241,37 @@ pathological = [
                 
                 (x -> ( pi * ( x - 5.0 ) / 180.0 ) - 0.8 * sin( pi * x / 180.0 ), 1),
                 (x -> x^3 - 2*x - 5, 2),
-                (x -> 1e6 * (x^7 -7x^6 +21x^5 -35x^4 +35x^3-21x^2+7x-1),  0.990),
-                (x -> cos(100*x)-4*erf(30*x-10), 0.0) 
+(x -> 1e6 * (x^7 -7x^6 +21x^5 -35x^4 +35x^3-21x^2+7x-1),  0.990),
+(x -> cos(100*x)-4*erf(30*x-10), 0.0) 
                 ]
 
 
-for (fn, x0) in pathological
-    find_zero(fn, x0, Order0())
+for (fn_, x0_) in pathological
+    find_zero(fn_, x0_, Order0())
 end
+
+## issue tests: put in tests to ensure closed issues don't reappear.
+
+## issue #94; tolerances not matching documentation
+test_94 = function(;kwargs...)
+    g, T = 1.62850, 14.60000
+    α, t1, tf = 0.00347, 40.91375, 131.86573
+    y, ya, yf = 0.0, 9000.0, 10000.0
+    vy = sqrt(2g*(ya-y))
+    θ0, θ1 = atan(α*tf), atan(α*(tf-t1))
+    I_sintan(x) = tan(x)/2cos(x) - atanh(tan(x/2))
+    I_sintan(x, y) = I_sintan(y) - I_sintan(x)
+    function lhs(θ)
+        tRem = (vy - T/α*(sec(θ1) - sec(θ))) / g
+        val = -yf + y + vy*tRem - 0.5g*tRem^2 - T/α^2*I_sintan(θ, θ1)
+        val
+    end
+
+    meth = Roots.FalsePosition()
+    prob, options = Roots.derivative_free_setup(meth, lhs, [atan(α*tf), atan(α*(tf-t1))])
+    state = Roots.init_state(meth, prob.fs, prob.x0, prob.bracket)
+    find_zero(meth, prob.fs, state, options)
+
+    @test state.steps <= 15
+end
+test_94()

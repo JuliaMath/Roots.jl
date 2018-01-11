@@ -1,5 +1,5 @@
 using Roots
-using Base.Test
+using Compat.Test
 import SpecialFunctions.erf
 
 include("./test_find_zero.jl")

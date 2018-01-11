@@ -10,48 +10,47 @@
 ## * a graphic of trace when verbose=true?
 
 ## method names are subtypes
-@compat abstract type UnivariateZeroMethod end
-@compat abstract type AbstractBisection <: UnivariateZeroMethod end
-@compat abstract type AbstractSecant <: UnivariateZeroMethod end
+abstract type UnivariateZeroMethod end
+abstract type AbstractBisection <: UnivariateZeroMethod end
+abstract type AbstractSecant <: UnivariateZeroMethod end
 
 # container for callable objects; not really necessary, but has some value.
-@compat abstract type CallableFunction{R} end
-immutable DerivativeFree{R} <: CallableFunction{R}
+abstract type CallableFunction end
+struct DerivativeFree <: CallableFunction
     f
-    fx0::R
 end
+(F::DerivativeFree)(x::Number) = F.f(x)
 
-immutable FirstDerivative{R} <: CallableFunction{R}
+struct FirstDerivative <: CallableFunction
     f
     fp
-    fx0::R
 end
+(F::FirstDerivative)(x::Number) = F.f(x)
 
-
-immutable SecondDerivative{R} <: CallableFunction{R}
+struct SecondDerivative <: CallableFunction
     f
     fp
     fpp
-    fx0::R
 end
+(F::SecondDerivative)(x::Number) = F.f(x)
 
 ## allows override for automatic derivatives, see Newton
-function callable_function(m::UnivariateZeroMethod, f, x0)
-    !isa(f, Tuple) && return DerivativeFree(f, f(x0))
-    length(f) == 1 && return DerivativeFree(f[1], f(x0))
-    length(f) == 2 && return FirstDerivative(f[1], f[2], f(x0))
-    SecondDerivative(f[1], f[2], f[3], f(x0))
+function callable_function(m::UnivariateZeroMethod, @nospecialize(f))
+    !isa(f, Tuple) && return DerivativeFree(f)
+    length(f) == 1 && return DerivativeFree(f[1])
+    length(f) == 2 && return FirstDerivative(f[1], f[2])
+    SecondDerivative(f[1], f[2], f[3])
 end
 
 
 ## object to hold state; allow for subtypes with additional fields
-@compat abstract type  UnivariateZeroState{T, S} end
-type UnivariateZeroStateBase{T,S} <: UnivariateZeroState{T,S}
+abstract type  UnivariateZeroState{T, S} end
+mutable struct UnivariateZeroStateBase{T,S} <: UnivariateZeroState{T,S}
     xn1::T
     xn0::T
     fxn1::S
     fxn0::S
-    bracket::Nullable{Vector{T}}
+    bracket::Union{Vector{T}, Missing}
     steps::Int
     fnevals::Int
     stopped::Bool             # stopped, butmay not have converged
@@ -65,27 +64,21 @@ incfn(o::UnivariateZeroState, k=1)    = o.fnevals += k
 incsteps(o::UnivariateZeroState, k=1) = o.steps += k
 
 ## generic initialization. Modify as necessary for a method, such as secant which uses both xn1 and xn0
-## we use x0 + typemax(Int) as a sentinel. This could be a Nullable, but that
+## we use x0 + typemax(Int) as a sentinel. This could be a Missing, but that
 ## is a bit more hassle
-function init_state{T}(method::Any, fs, x0::T, bracket)
-    fx0 = fs.f(x0); fnevals = 1
+function init_state(method::Any, fs, x0::T, bracket) where {T}
+    fx0 = fs(x0); fnevals = 1
 
-    if isa(bracket, Nullable)
-        if !isnull(bracket)
-            a,b = get(bracket)
-            sign(fs.f(a)) * sign(fs.f(b)) > 0 && (warn(bracketing_error); throw(ArgumentError))
-            fnevals += 2
-        end
-    else
-        a,b = bracket[1,2]
-        sign(fs.f(a)) * sign(fs.f(b)) > 0 &&  (warn(bracketing_error); throw(ArgumentError))
+    if !ismissing(bracket)
+        a,b = bracket[1:2]
+        sign(fs(a)) * sign(fs(b)) > 0 &&  (warn(bracketing_error); throw(ArgumentError))
         fnevals += 2
     end
     
     S = eltype(fx0)
     state = UnivariateZeroStateBase(x0, x0 + typemax(Int),
                                     fx0, fx0,
-                                    isa(bracket, Nullable) ? bracket : Nullable(convert(Vector{T}, bracket)),
+                                    !ismissing(bracket) ? float.(bracket) : bracket,
                                     0, fnevals,
                                     false, false, false, false,
                                     "")
@@ -94,7 +87,7 @@ end
 
 
 ## Options for convergence, reporting
-type UnivariateZeroOptions{T}
+mutable struct UnivariateZeroOptions{T}
     xabstol::T
     xreltol::T
     abstol::T
@@ -105,15 +98,15 @@ type UnivariateZeroOptions{T}
 end
 
 
-function univariate_zero_options{T}(args...;
+function univariate_zero_options(args...;
                                     xabstol::T=zero(T),
-                                    xreltol::T=zero(T),
-                                    abstol::T=4*eps(T),
+                                    xreltol::T=eps(T),
+                                    abstol::T=zero(T),
                                     reltol::T=4*eps(T),
                                     maxevals::Int=40,
                                     maxfnevals::Int=typemax(Int),
                                     verbose::Bool=false,
-                                    kwargs...)
+                                    kwargs...) where {T}
 
     ## adjust for old argument names
     kw = Dict(kwargs)
@@ -129,32 +122,26 @@ end
         
 
 ## basic container
-type UnivariateZeroProblem{T<:AbstractFloat}
-    fs::CallableFunction
+mutable struct UnivariateZeroProblem{T<:AbstractFloat}
+    fs
     x0::Union{T, Tuple{T,T}, Vector{T}, Complex{T}}
-    bracket::Nullable
+    bracket::Union{Vector{T}, Missing}
 end
 
 ## frame the problem and the options
-function derivative_free_setup{T<:AbstractFloat}(method::Any, fs::CallableFunction, x0::Union{T, Tuple{T,T}, Vector{T}};
-                                                 bracket=Nullable{Vector{T}}(),
-                                                 xabstol=zero(T), xreltol=zero(T),
-                                                 abstol=4*eps(T), reltol=4*eps(T),
-                                                 maxevals=40, maxfnevals=typemax(Int),
-                                                 verbose::Bool=false,
-                                                 kwargs...
-    )
+function derivative_free_setup(method::Any, fs, x0::Union{T, Tuple{T,T}, Vector{T}};
+                               bracket=missing,
+                               xabstol=zero(T), xreltol=eps(T),
+                               abstol=4*eps(T), reltol=4*eps(T),
+                               maxevals=40, maxfnevals=typemax(Int),
+                               verbose::Bool=false,
+                               kwargs...
+    ) where {T<:AbstractFloat}
     x = float.(x0)
-    prob = UnivariateZeroProblem(fs, x, isa(bracket, Nullable) ? bracket : Nullable(convert(Vector{T}, bracket)))
-    # options = univariate_zero_options(;xabstol=xabstol,
-    #                                   xreltol=xreltol,
-    #                                   abstol=abstol,
-    #                                   reltol=reltol,
-    #                                   maxevals=maxevals,
-    #                                   maxfnevals=maxfnevals,
-    #                                   verbose=verbose,
-    #                                   kwargs...)
-    options = UnivariateZeroOptions(xabstol, xreltol, abstol, reltol, maxevals, maxfnevals, verbose)
+    prob = UnivariateZeroProblem(fs, x,
+                                 !ismissing(bracket) ? float.(bracket) : missing)
+    options = UnivariateZeroOptions(xabstol, xreltol, abstol,
+                                    reltol, maxevals, maxfnevals, verbose)
     prob, options
 end
 
@@ -195,7 +182,7 @@ function assess_convergence(method::Any, fs, state, options)
         return true
     end
 
-    λ = max(1, norm(xn1))
+    λ = max(one(real(xn1)), norm(xn1))
     
     if  norm(fxn1) <= max(options.abstol, λ * options.reltol)
         state.f_converged = true
@@ -224,7 +211,7 @@ function show_trace(fs, state, xns, fxns, method)
     println("Results of univariate zero finding:\n")
     if converged
         println("* Converged to: $(xns[end])")
-        println("* Algorithm $(method)")
+        println("* Algorithm: $(method)")
         println("* iterations: $(state.steps)")
         println("* function evaluations: $(state.fnevals)")
         state.x_converged && println("* stopped as x_n ≈ x_{n-1} using atol=xabstol, rtol=xreltol")
@@ -265,10 +252,11 @@ function find_zero(method::UnivariateZeroMethod, fs, state::UnivariateZeroState,
     else
         xns, fxns = [state.xn1], [state.fxn1]
     end
-    
+
+    ## XXX Should just deprecate this in favor of FalsePosition method XXX
     while true
-        if  !isnull(state.bracket)
-            m,M = get(state.bracket)
+        if  !ismissing(state.bracket)
+            m,M = state.bracket[1:2]
             if (state.xn1 < m || state.xn1 > M) || state.stopped
                 # do bisection step, update bracket
                 c = m + (M-m)/2
@@ -276,12 +264,21 @@ function find_zero(method::UnivariateZeroMethod, fs, state::UnivariateZeroState,
                 if c == state.xn0
                     c = m + (M-m)/4
                 end
-                fxn1 = fs.f(c)
-                state.xn1, state.fxn1 = c, fxn1
-                if sign(fxn1) * sign(fs.f(m)) < 0
-                    state.bracket = Nullable([m,c])
+                fc = fs(c)
+                if norm(fc) < norm(state.fxn1)
+                    state.xn0 = state.xn1
+                    state.xn1 = c
+                    state.fxn0 = state.fxn1
+                    state.fxn1 = fc
                 else
-                    state.bracket = Nullable([c,M])
+                    state.xn0 = c
+                    state.fxn1 = fc
+                end
+
+                if sign(state.fxn1) * sign(fs(m)) < 0
+                    state.bracket[2] = c
+                else
+                    state.bracket[1] = c
                 end
                 state.stopped && (state.stopped = false)
                 incfn(state)
@@ -293,7 +290,7 @@ function find_zero(method::UnivariateZeroMethod, fs, state::UnivariateZeroState,
 
 
         if val
-            if state.stopped
+            if state.stopped && !(state.x_converged || state.f_converged)
                 ## stopped is a heuristic, there was an issue with an approximate derivative
                 ## say it converged if pretty close, else say convergence failed.
                 ## (Is this a good idea?)
@@ -401,36 +398,36 @@ find_zero(f, 1.0, Steffensen()) # also Order2()
 find_zero(f, (1.0, 2.0), FalsePosition())    
 ```
 """
-function find_zero{M <: AbstractBisection, T<:Number}(f, x0::T, method::M; kwargs...)
+function find_zero(f, x0::T, method::M; kwargs...) where {M <: AbstractBisection, T<:Number}
     throw(ArgumentError("For bisection methods, x0 must be a vector"))
 end
 
-function find_zero{T<:Number, M<:AbstractBisection}(f, x0::Vector{T}, method::M; kwargs...)
-    find_zero(method, callable_function(method, f, float(x0[1])), x0; kwargs...)
+function find_zero(f, x0::Vector{T}, method::M; kwargs...) where {T<:Number, M<:AbstractBisection}
+    find_zero(method, callable_function(method, f), x0; kwargs...)
 end
 
-function find_zero{T<:Number, M<:AbstractBisection}(f, x0::Tuple{T}, method::M; kwargs...)
-    find_zero(method, callable_function(method, f, float(x0[1])), x0; kwargs...)
+function find_zero(f, x0::Tuple{T}, method::M; kwargs...) where {T<:Number, M<:AbstractBisection}
+    find_zero(method, callable_function(method, f), x0; kwargs...)
 end
 
-function find_zero{T<:Number}(f, x0::T, method::UnivariateZeroMethod; kwargs...)
-    find_zero(method, callable_function(method, f, float(x0)), x0; kwargs...)
+function find_zero(f, x0::T, method::UnivariateZeroMethod; kwargs...) where {T<:Number}
+    find_zero(method, callable_function(method, f), x0; kwargs...)
 end
 
-function find_zero{T<:Number}(f, x0::T, method::AbstractSecant; kwargs...)
-    find_zero(method, callable_function(method, f, float(x0)), x0; kwargs...)
+function find_zero(f, x0::T, method::AbstractSecant; kwargs...) where {T<:Number}
+    find_zero(method, callable_function(method, f), x0; kwargs...)
 end
-function find_zero{T<:Number}(f, x0::Vector{T}, method::AbstractSecant; kwargs...)
-    find_zero(method, callable_function(method, f, float(x0[1])), x0; kwargs...)
+function find_zero(f, x0::Vector{T}, method::AbstractSecant; kwargs...) where {T<:Number}
+    find_zero(method, callable_function(method, f), x0; kwargs...)
 end
 
 ## some defaults for methods
-find_zero{T <: Number}(f, x0::T; kwargs...) = find_zero(f, x0, Order0(); kwargs...)
-find_zero{T <: Number}(f, x0::Vector{T}; kwargs...) = find_zero(f, x0, Bisection(); kwargs...)
-find_zero{T<:Number, S<:Number}(f, x0::Tuple{T,S};kwargs...) = find_zero(f, x0, Bisection(); kwargs...)
+find_zero(f, x0::T; kwargs...)  where {T <: Number}= find_zero(f, x0, Order0(); kwargs...)
+find_zero(f, x0::Vector{T}; kwargs...) where {T <: Number}= find_zero(f, x0, Bisection(); kwargs...)
+find_zero(f, x0::Tuple{T,S};kwargs...) where {T<:Number, S<:Number} = find_zero(f, x0, Bisection(); kwargs...)
 
 
-function find_zero(method::UnivariateZeroMethod, fs::CallableFunction, x0; kwargs...)
+function find_zero(method::UnivariateZeroMethod, fs, x0; kwargs...)
     x = float.(x0)
     prob, options = derivative_free_setup(method, fs, x; kwargs...)
     find_zero(prob, method, options)
@@ -442,8 +439,8 @@ end
 
 ## old interface for fzero
 ## old keyword arguments (see ?fzero) handled in univariate_zero_options
-@noinline function derivative_free{T <: AbstractFloat}(f, x0::T; order::Int=0,
-                                             kwargs...)
+@noinline function derivative_free(f, x0::T; order::Int=0,
+                                             kwargs...) where {T <: AbstractFloat}
     
     if order == 0
         method = Order0()

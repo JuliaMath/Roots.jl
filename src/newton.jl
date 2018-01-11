@@ -15,26 +15,16 @@ will be used, as applicable.
 
 Unlike other methods, this method accepts complex inputs.
 """
-type Newton <: UnivariateZeroMethod
+struct Newton <: UnivariateZeroMethod
 end
 
-function callable_function(method::Newton, f::Tuple, x0)
+function callable_function(method::Newton, f::Tuple)
     length(f) == 1 && return FirstDerivative(f[1], D(f[1]))
-    FirstDerivative(f[1], f[2], f[1](x0))
+    FirstDerivative(f[1], f[2])
 end
-callable_function(method::Newton, f::Any, x0) = FirstDerivative(f, D(f), x0)
+callable_function(method::Newton, f::Any) = FirstDerivative(f, D(f))
 
-# function init_state{T}(method::Newton, fs, x0::T)
-#     state = UnivariateZeroStateBase(x0, x0 + typemax(Int),
-#                                     fs.f(x0), fs.f(x0),
-#                                     Nullable{Vector{T}}(),
-#                                     0, 1,
-#                                     false, false, false, false,
-#                                     "")
-#     state
-# end
-
-function update_state{T}(method::Newton, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions)
+function update_state(method::Newton, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions) where {T}
     xn = o.xn1
     fxn = o.fxn1
     fpxn = fs.fp(xn)
@@ -59,56 +49,33 @@ end
 ## extra work to allow for complex values
 
 ## extra work to allow for complex values
-function derivative_free_setup{T<:AbstractFloat}(method::Newton, fs::CallableFunction, x0::T;
-                                  bracket=Nullable{Vector{T}}(),
+function derivative_free_setup(method::Newton, fs::CallableFunction, x0::T;
+                                  bracket=missing,
                                   xabstol=zero(T), xreltol=zero(T),
                                   abstol=4*eps(T), reltol=4*eps(T),
                                   maxevals=40, maxfnevals=typemax(Int),
-                                  verbose::Bool=false)
+                                  verbose::Bool=false) where {T<:AbstractFloat}
     x = float(x0)
 
-    if !isa(bracket, Nullable)
-        bracket = Nullable(convert(Vector{T}, bracket))
-    end
 
     prob = UnivariateZeroProblem(fs, x, bracket)
     options = UnivariateZeroOptions(xabstol, xreltol, abstol, reltol,  maxevals, maxfnevals, verbose)
     prob, options
 end
 
-function derivative_free_setup{T<:AbstractFloat}(method::Newton, fs::CallableFunction, x0::Complex{T};
-                                  bracket=Nullable{Vector{T}}(),
+function derivative_free_setup(method::Newton, fs::CallableFunction, x0::Complex{T};
+                                  bracket=missing,
                                   xabstol=zero(T), xreltol=zero(T),
                                   abstol=4*eps(T), reltol=4*eps(T),
                                   maxevals=40, maxfnevals=typemax(Int),
-                                  verbose::Bool=false)
+                                  verbose::Bool=false) where {T<:AbstractFloat}
     x = float(x0)
-    bracket = Nullable{Vector{Complex{T}}}()     # bracket makes no sense for complex input, but one is expected
+    bracket = missing     # bracket makes no sense for complex input, but one is expected
 
     prob = UnivariateZeroProblem(fs, x, bracket)
     options = UnivariateZeroOptions(xabstol, xreltol, abstol, reltol,  maxevals, maxfnevals, verbose)
     prob, options
 end
-
-# function derivative_free_setup{T<:AbstractFloat}(method::Newton, fs::CallableFunction, x0::Union{T, Complex{T}};
-#                                   bracket=Nullable{Vector{T}}(),
-#                                   xabstol=zero(T), xreltol=zero(T),
-#                                   abstol=4*eps(T), reltol=4*eps(T),
-#                                   maxevals=40, maxfnevals=typemax(Int),
-#                                   verbose::Bool=false)
-#     x = float(x0)
-
-#     if isa(x, Complex)
-#         bracket = Nullable{Vector{Complex{T}}}()     # bracket makes no sense for complex input, but one is expected
-#     elseif !isa(bracket, Nullable)
-#         bracket = Nullable(convert(Vector{T}, bracket))
-#     end
-
-#     prob = UnivariateZeroProblem(fs, x, bracket)
-#     options = UnivariateZeroOptions(xabstol, xreltol, abstol, reltol,  maxevals, maxfnevals, verbose)
-#     prob, options
-# end
-
 
 """
 
@@ -120,7 +87,7 @@ Arguments:
 
 * `fp::Function=D(f)` -- derivative of `f`. Defaults to automatic derivative
 
-* `x0::Real` -- initial guess
+* `x0::Number` -- initial guess. For Newton's method this may be complex.
 
 Keyword arguments:
 
@@ -153,18 +120,18 @@ Implements Halley's [method](http://tinyurl.com/yd83eytb),
 This method is cubically converging, but requires more function calls per step than
 other methods.
 """    
-type Halley <: UnivariateZeroMethod
+struct Halley <: UnivariateZeroMethod
 end
 
-function callable_function(method::Halley, f::Tuple, x0)
-    length(f) == 1 && return SecondDerivative(f[1], D(f[1]), D(f[1],2), f[1](x0))
-    length(f) == 2 && return SecondDerivative(f[1], f[2], D(f[2],1), f[1](x0))
-    SecondDerivative(f[1], f[2], f[3], f[1](x0))
+function callable_function(method::Halley, f::Tuple)
+    length(f) == 1 && return SecondDerivative(f[1], D(f[1]), D(f[1],2))
+    length(f) == 2 && return SecondDerivative(f[1], f[2], D(f[2],1))
+    SecondDerivative(f[1], f[2], f[3])
 end
-callable_function(method::Halley, f, x0) = SecondDerivative(f, D(f), D(f, 2), f(x0))
+callable_function(method::Halley, f) = SecondDerivative(f, D(f), D(f, 2))
 
 
-function update_state{T}(method::Halley, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions)
+function update_state(method::Halley, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions) where {T}
     xn = o.xn1
     fxn = o.fxn1
     fpxn = fs.fp(xn); incfn(o)

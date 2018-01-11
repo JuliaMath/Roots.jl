@@ -2,23 +2,25 @@ __precompile__(true)
 module Roots
 
 
-import Base: *
-
+if VERSION >= v"0.7-"
+    using Printf
+else
+    using Missings
+end
 
 using ForwardDiff
-using Compat
+using Compat: @nospecialize
+
 
 export fzero,
        fzeros,
-       newton, halley,
-       secant_method, steffensen, 
+       newton, halley,  # deprecate these 4?
+       secant_method, steffensen,
        D
-export multroot, D2  # deprecated
 
 export find_zero,
        Order0, Order1, Order2, Order5, Order8, Order16
 export Bisection, FalsePosition
-# export Bisection, Secant, Steffensen, Newton, Halley
 
 ## load in files
 include("adiff.jl")
@@ -60,6 +62,8 @@ function fzero(f, x0::Real; kwargs...)
     derivative_free(f, x; kwargs...)
 end
 
+
+
 """
 Find zero of a function within a bracket
 
@@ -90,29 +94,28 @@ Example:
     `fzero(sin, [big(3), 4]) find pi with more digits
 """
 function fzero(f, a::Real, b::Real; kwargs...)
-    a,b = sort([a,b])
-    a,b = promote(float(a), b)
-    (a == -Inf) && (a = nextfloat(a))
-    (b == Inf) && (b = prevfloat(b))
-    (isinf(a) | isinf(b)) && throw(ConvergenceFailed("A bracketing interval must be bounded"))
-    find_zero(f, [a,b], Bisection(); kwargs...)
+    bracket = adjust_bracket((a, b))
+    a0, b0 = a < b ? promote(float(a), b) : promote(float(b), a)
+    (a0 == -Inf) && (a0 = nextfloat(a0))
+    (b0 == Inf) && (b0 = prevfloat(b0))
+    find_zero(f, bracket, Bisection(); kwargs...)
 end
 
 """
 Find a zero with bracket specified via `[a,b]`, as `fzero(sin, [3,4])`.
 """
-function fzero{T <: Real}(f, bracket::Vector{T}; kwargs...) 
+function fzero(f, bracket::Vector{T}; kwargs...)  where {T <: Real}
     fzero(f, float(bracket[1]), float(bracket[2]); kwargs...)
 end
+
 
 """
 Find a zero within a bracket with an initial guess to *possibly* speed things along.
 """
-function fzero{T <: Real}(f, x0::Real, bracket::Vector{T}; kwargs...) 
-    a,b = sort(map(float,bracket))
-    (a == -Inf) && (a = nextfloat(a))
-    (b == Inf) && (b = prevfloat(b))
-    (isinf(a) | isinf(b)) && throw(ConvergenceFailed("A bracketing interval must be bounded"))    
+function fzero(f, x0::Real, bracket::Vector{T}; kwargs...)  where {T <: Real}
+
+    a, b = adjust_bracket(bracket)
+
     try
         ex = a42a(f, a, b, float(x0); kwargs...)
     catch ex
@@ -153,44 +156,8 @@ graphically, if possible.
 function fzeros(f, a::Real, b::Real; kwargs...)  
     find_zeros(f, float(a), float(b); kwargs...)
 end
-fzeros{T <: Real}(f, bracket::Vector{T}; kwargs...)  = fzeros(f, a, b; kwargs...)
+fzeros(f, bracket::Vector{T}; kwargs...) where {T <: Real} = fzeros(f, a, b; kwargs...) 
 
 
-## deprecate Polynomial calls
-
-## Don't want to load `Polynomials` to do this...
-# @deprecate roots(p) fzeros(p, a, b) 
-
-@deprecate D2(f) D(f,2)
-fzeros(p) = Base.depwarn("""
-Calling fzeros with just a polynomial is deprecated.
-Either:
-   * Specify an interval to search over: fzeros(p, a, b).
-   * Use the `poly_roots(p, Over.R)` call from `PolynomialZeros`                         
-   * Use `Polynomials` or `PolynomialRoots` and filter. For example, 
-
-```
-using Polynomials
-x=variable()
-filter(isreal, roots(f(x)))
-```
-                         
-""",:fzeros)
-
-multroot(p) = Base.depwarn("The multroot function has moved to the PolynomialZeros package.",:multroot)
-
-polyfactor(p) = Base.depwarn("""
-The polyfactor function is in the PolynomialFactors package:
-
-* if `p` is of type `Poly`: `PolynomialFactors.factor(p)`.
-                             
-* if `p` is a function, try:
-```
-using PolynomialFactors, Polynomials
-x = variable(Int)
-PolynomialFactors.factor(p(x))
-```
-                             
-""",:polyfactor)
 
 end
