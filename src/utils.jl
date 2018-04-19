@@ -11,9 +11,9 @@ heuristic to get a decent first step with Steffensen steps
 function steff_step(x, fx)
 
     xbar, fxbar = x/oneunit(x), fx/oneunit(fx)
-    thresh =  max(1, norm(xbar)) * sqrt(eps(one(xbar))) #^(1/2) # max(1, sqrt(abs(x/fx))) * 1e-6
+    thresh =  max(1, abs(xbar)) * sqrt(eps(one(xbar))) #^(1/2) # max(1, sqrt(abs(x/fx))) * 1e-6
     
-    out = norm(fxbar) <= thresh ? fxbar  : sign(fx) * thresh 
+    out = abs(fxbar) <= thresh ? fxbar  : sign(fx) * thresh 
     out * oneunit(x)
     
 end
@@ -27,8 +27,8 @@ function guarded_secant_step(alpha, beta, falpha, fbeta)
     
     if isissue(Δ)
         Δ = one(alpha)/1000
-    elseif norm(Δ) >= 100 * norm(alpha - beta) # guard runaway
-        Δ = sign(Δ) * 100 * min(one(alpha), norm(alpha - beta))
+    elseif abs(Δ) >= 100 * abs(alpha - beta) # guard runaway
+        Δ = sign(Δ) * 100 * min(one(alpha), abs(alpha - beta))
     end
 
     if isissue(Δ)

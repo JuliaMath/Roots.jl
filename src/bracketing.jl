@@ -569,7 +569,7 @@ end
 
 # floating point comparison function
 function almost_equal(x::T, y::T) where {T}
-    const min_diff = oneunit(x) * realmin(x/oneunit(x))*32
+    min_diff = oneunit(x) * realmin(x/oneunit(x))*32
     abs(x - y) < min_diff
 end
 
@@ -627,7 +627,7 @@ function update_state(method::FalsePosition, fs, o, options)
 
     lambda = fb / (fb - fa)
     tau = 1e-10                   # some engineering to avoid short moves
-    if !(tau < norm(lambda) < 1-tau)
+    if !(tau < abs(lambda) < 1-tau)
         lambda = 1/2
     end
     x = b - lambda * (b-a)        

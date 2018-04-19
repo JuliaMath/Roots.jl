@@ -182,7 +182,7 @@ function assess_convergence(method::Any, state, options)
         return true
     end
 
-    λ = max(oneunit(real(xn1)), norm(xn1))
+    λ = max(oneunit(real(xn1)), abs(xn1))
     
     if  _isapprox(fxn1, zero(fxn1), options.reltol, options.abstol) #abs(fxn1) <= max(options.abstol, λ * options.reltol)
 
@@ -346,7 +346,7 @@ find_zero(f, x0::Tuple; kwargs...) = find_zero(f, x0, Bisection(); kwargs...)
 
 # Main method
 function find_zero(M::AbstractUnivariateZeroMethod,
-                   F::ANY,
+                   @nospecialize(F),
                    options::UnivariateZeroOptions,
                    state::AbstractUnivariateZeroState
                    )

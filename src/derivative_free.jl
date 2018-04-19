@@ -105,7 +105,7 @@ function update_state(method::Order0, fs, o::UnivariateZeroState{T}, options::Un
         return nothing
     end
 
-    if norm(fgamma) <= norm(fbeta)
+    if abs(fgamma) <= abs(fbeta)
         o.xn0, o.xn1 = beta, gamma
         o.fxn0, o.fxn1 = fbeta, fgamma
         return nothing
@@ -134,7 +134,7 @@ function update_state(method::Order0, fs, o::UnivariateZeroState{T}, options::Un
         fgamma = fs(gamma); incfn(o)
         incfn(o)
 
-        if norm(fgamma) < norm(fbeta)
+        if abs(fgamma) < abs(fbeta)
             o.xn0, o.xn1 = beta, gamma
             o.fxn0, o.fxn1 = fbeta, fgamma
             return nothing
