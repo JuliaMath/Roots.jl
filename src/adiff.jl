@@ -19,7 +19,6 @@ function D(f::Function, k::Int=1)
     D(x -> ForwardDiff.derivative(f, x), k-1)
 end
 
-D2(f::Function) = D(f, 2)
 
 ## This conflicts with a definition in Calculus, but is more convenient.
 ## Base.ctranspose(f::Function) = x -> ForwardDiff.derivative(f, x)

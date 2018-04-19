@@ -24,6 +24,7 @@ export Bisection, FalsePosition
 
 ## load in files
 include("adiff.jl")
+include("utils.jl")
 include("find_zero.jl")
 include("bracketing.jl")
 include("derivative_free.jl")

@@ -65,7 +65,7 @@ multiplicity_tests = [
 
 for (i, (fn_, x0_, xstar)) in enumerate(multiplicity_tests)
     for m in meths
-        # println("$i: $m")
+        #println("$i: $m")
         @test  norm(find_zero(fn_, x0_, m, maxevals=100) - xstar) < 1e-1 # wow, not too ambitious here, 9th powers...
     end
 end
@@ -105,16 +105,16 @@ end
 
 
 ## Methods guarded with a bracket
-fn, xstar, x0 = (x -> sin(x) - x - 1,  -1.9345632107520243, 2)
-@test_throws Roots.ConvergenceFailed find_zero(fn, x0, Order2())
-for m in meths
-    @test find_zero(fn, x0, m, bracket=[-2,3]) ≈ xstar
-end
+# fn, xstar, x0 = (x -> sin(x) - x - 1,  -1.9345632107520243, 2)
+# @test_throws Roots.ConvergenceFailed find_zero(fn, x0, Order2())
+# for m in meths
+#     @test find_zero(fn, x0, m, bracket=[-2,3]) ≈ xstar
+# end
 
 
-fn, xstar, x0 = (x -> x * exp( - x ), 0, 1.0)
-@test find_zero(fn, x0, Order0(), bracket=[-1,2]) ≈ xstar
-@test find_zero(fn, 7.0, Order0(), bracket=[-1,2]) ≈ xstar  # out of bracket
+# fn, xstar, x0 = (x -> x * exp( - x ), 0, 1.0)
+# @test find_zero(fn, x0, Order0(), bracket=[-1,2]) ≈ xstar
+# @test find_zero(fn, 7.0, Order0(), bracket=[-1,2]) ≈ xstar  # out of bracket
 
 ## bisection methods
 @test find_zero(x -> cos(x) - x, [0, pi], Bisection()) ≈ 0.7390851332151607
@@ -205,7 +205,7 @@ fn, xstar = x -> sin(x) - x + 1, 1.9345632107520243
 @test find_zero(fn, 20.0, Order2())  ≈ xstar   # needs 16 iterations, 33 fn evaluations
 @test norm(fn(find_zero(fn, 20.0, Order2(), abstol=1e-2)) - xstar) > 1e-12
 @test norm(fn(find_zero(fn, 20.0, Order2(), reltol=1e-2)) - xstar) > 1e-12
-@test_throws Roots.ConvergenceFailed find_zero(fn, 20.0, Order2(), maxevals=10) 
+@test_throws Roots.ConvergenceFailed find_zero(fn, 20.0, Order2(), maxevals=5) 
 @test_throws Roots.ConvergenceFailed find_zero(fn, 20.0, Order2(), maxfnevals=10) 
 
 
@@ -268,9 +268,11 @@ test_94 = function(;kwargs...)
     end
 
     meth = Roots.FalsePosition()
-    prob, options = Roots.derivative_free_setup(meth, lhs, [atan(α*tf), atan(α*(tf-t1))])
-    state = Roots.init_state(meth, prob.fs, prob.x0, prob.bracket)
-    find_zero(meth, prob.fs, state, options)
+    f, x0 = lhs, [atan(α*tf), atan(α*(tf-t1))]
+    F = Roots.DerivativeFree(lhs)
+    state = Roots.init_state(meth, F, x0)
+    options = Roots.init_options(meth, state)
+    find_zero(meth, F, options, state)
 
     @test state.steps <= 15
 end
