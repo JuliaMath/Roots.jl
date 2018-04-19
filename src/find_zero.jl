@@ -96,10 +96,11 @@ function init_options(::Any,
     options
 end
 
-### Functions 
+### Functions
+### Seems faster to not parameterize these
 abstract type CallableFunction end
-struct DerivativeFree{F} <: CallableFunction 
-    f::F
+struct DerivativeFree <: CallableFunction 
+    f
 end
 (F::DerivativeFree)(x::Number) = F.f(x)
 (F::DerivativeFree)(x::Number, n::Int) = F(x, Val{n})
@@ -109,9 +110,9 @@ end
 
 (F::DerivativeFree)(x) = F.f(x)
 
-struct FirstDerivative{F, Fp} <: CallableFunction
-    f::F
-    fp::Fp
+struct FirstDerivative <: CallableFunction
+    f
+    fp
 end
 
 (F::FirstDerivative)(x::Number) = F.f(x)
@@ -119,10 +120,10 @@ end
 (F::FirstDerivative)(x::Number, ::Type{Val{1}}) = F.fp(x)
 (F::FirstDerivative)(x::Number, ::Type{Val{2}}) = D(F.fp,1)(x)
 
-struct SecondDerivative{F,Fp,Fpp} <: CallableFunction
-f::F
-    fp::Fp
-    fpp::Fpp
+struct SecondDerivative <: CallableFunction
+    f
+    fp
+    fpp
 end
 
 (F::SecondDerivative)(x::Number) = F.f(x)
@@ -346,7 +347,7 @@ find_zero(f, x0::Tuple; kwargs...) = find_zero(f, x0, Bisection(); kwargs...)
 
 # Main method
 function find_zero(M::AbstractUnivariateZeroMethod,
-                   @nospecialize(F),
+                   F,
                    options::UnivariateZeroOptions,
                    state::AbstractUnivariateZeroState
                    )
