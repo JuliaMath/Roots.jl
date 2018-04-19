@@ -156,22 +156,30 @@ mutable struct A42 <: AbstractBisection end
 # Can have smaller tolerances for bisection
 function init_options(::AbstractBisection,
                       state;
-                      xabstol=missing,
-                      xreltol=missing,
-                      abstol=missing,
-                      reltol=missing,
+                      xatol=missing,
+                      xrtol=missing,
+                      atol=missing,
+                      rtol=missing,
                       maxevals::Int=typemax(Int),
                       maxfnevals::Int=typemax(Int),
                       verbose::Bool=false,
                       kwargs...)
 
     ## Where we set defaults
-    xn1, fxn1 = real(state.xn1), real(state.fxn1)
+    xn1, fxn1 = real(oneunit(state.xn1)), real(oneunit(float(state.fxn1)))
 
-    options = UnivariateZeroOptions(ismissing(xabstol) ? zero(xn1) : xabstol,       # unit of x
-                                    ismissing(xreltol) ? zero(xn1)/oneunit(xn1) : xreltol,               # unitless
-                                    ismissing(abstol)  ?  zero(fxn1) : abstol,      # units of f(x)
-                                    ismissing(reltol)  ?  zero(fxn1)/oneunit(fxn1) : reltol,            # unitless
+    ## map old tol names to new
+    d = Dict(kwargs)
+    xatol = haskey(d, :xabstol) ? d[:xabstol] : xatol
+    xrtol = haskey(d, :xreltol) ? d[:xreltol] : xatol
+    atol = haskey(d, :abstol) ? d[:abstol] : atol
+    rtol = haskey(d, :reltol) ? d[:reltol] : rtol
+    
+
+    options = UnivariateZeroOptions(ismissing(xatol) ? zero(xn1) : xatol,       # unit of x
+                                    ismissing(xrtol) ? zero(xn1)/oneunit(xn1) : xrtol,               # unitless
+                                    ismissing(atol)  ?  zero(fxn1) : atol,      # units of f(x)
+                                    ismissing(rtol)  ?  zero(fxn1)/oneunit(fxn1) : rtol,            # unitless
                                     maxevals, maxfnevals,
     verbose)    
 
