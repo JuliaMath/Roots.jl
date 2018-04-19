@@ -11,8 +11,7 @@ heuristic to get a decent first step with Steffensen steps
 function steff_step(x, fx)
 
     xbar, fxbar = x/oneunit(x), fx/oneunit(fx)
-    
-    thresh =  max(1, norm(xbar)) * eps(xbar)^(1/4) # max(1, sqrt(abs(x/fx))) * 1e-6
+    thresh =  max(1, norm(xbar)) * sqrt(eps(one(xbar))) #^(1/2) # max(1, sqrt(abs(x/fx))) * 1e-6
     
     out = norm(fxbar) <= thresh ? fxbar  : sign(fx) * thresh 
     out * oneunit(x)

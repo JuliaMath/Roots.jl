@@ -258,54 +258,7 @@ Appl. Math. Inf. Sci. 9, No. 3, 1507-1513 (2015). Four function calls per step a
 """    
 mutable struct Order5 <: AbstractUnivariateZeroMethod end
 
-function update_state(method::Order5, fs, o, options)
-
-    xn = o.xn1
-    fxn = o.fxn1
-
-    incsteps(o)
-
-    wn = o.xn1 + steff_step(o.xn1, o.fxn1)
-    fwn = fs(wn)
-    incfn(o)
-
-    fp, issue = _fbracket(o.xn1, wn, o.fxn1, fwn)
-    if issue
-        o.xn0, o.xn1 = o.xn1, wn
-        o.fxn0, o.fxn1 = o.fxn1, fwn
-        o.message = "Issue with divided difference f[xn, wn]"
-        o.stopped  = true
-        return
-    end
-
-    yn = o.xn1 - o.fxn1 / fp
-    fyn = fs(yn)
-    incfn(o)
-
-
-    zn = xn - (fxn + fyn) / fp
-    fzn = fs(zn)
-    incfn(o)
-
-    fp, issue = _fbracket_ratio(yn, o.xn1, wn, fyn, o.fxn1, fwn)
-    if issue
-        o.xn0, o.xn1 = o.xn1, yn
-        o.fxn0, o.fxn1 = o.fxn1, fyn
-        o.message = "Issue with f[xn,yn]*f[yn,wn] / f[xn, wn]"
-        o.stopped = true
-        return
-    end
-
-    o.xn0 = o.xn1
-    o.fxn0 = o.fxn1
-    o.xn1 = zn  - fzn  / fp
-    o.fxn1 = fs(o.xn1)
-    incfn(o)
-
-    nothing
-end
-
-## If we have a derivative
+## If we have a derivative, we have this
 function update_state(method::Order5, fs::Union{FirstDerivative,SecondDerivative}, o, options) 
 
 
@@ -347,6 +300,54 @@ function update_state(method::Order5, fs::Union{FirstDerivative,SecondDerivative
     nothing
 end
 
+
+function update_state(method::Order5, fs, o, options)
+
+    xn = o.xn1
+    fxn = o.fxn1
+
+    incsteps(o)
+
+    wn = o.xn1 + steff_step(o.xn1, o.fxn1)
+
+    fwn = fs(wn)
+    incfn(o)
+
+    fp, issue = _fbracket(o.xn1, wn, o.fxn1, fwn)
+    if issue
+        o.xn0, o.xn1 = o.xn1, wn
+        o.fxn0, o.fxn1 = o.fxn1, fwn
+        o.message = "Issue with divided difference f[xn, wn]"
+        o.stopped  = true
+        return
+    end
+
+    yn = o.xn1 - o.fxn1 / fp
+    fyn = fs(yn)
+    incfn(o)
+
+
+    zn = xn - (fxn + fyn) / fp
+    fzn = fs(zn)
+    incfn(o)
+
+    fp, issue = _fbracket_ratio(yn, o.xn1, wn, fyn, o.fxn1, fwn)
+    if issue
+        o.xn0, o.xn1 = o.xn1, yn
+        o.fxn0, o.fxn1 = o.fxn1, fyn
+        o.message = "Issue with f[xn,yn]*f[yn,wn] / f[xn, wn]"
+        o.stopped = true
+        return
+    end
+
+    o.xn0 = o.xn1
+    o.fxn0 = o.fxn1
+    o.xn1 = zn  - fzn  / fp
+    o.fxn1 = fs(o.xn1)
+    incfn(o)
+
+    nothing
+end
 
 ##################################################
 
