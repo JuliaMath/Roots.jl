@@ -83,7 +83,6 @@ end
 # if a bracket is found that can be done, otherwise secant step is used
 function update_state(method::Order0, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions) where {T}
 
-    f = fs.f
     alpha, beta = o.xn0, o.xn1
     falpha, fbeta = o.fxn0, o.fxn1
 

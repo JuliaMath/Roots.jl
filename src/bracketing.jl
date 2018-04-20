@@ -207,8 +207,8 @@ end
 
 # control dispatch based on type and verbose (can be faster if we bypass find_zero)
 function _find_zero(::Type{T}, ::Type{Val{false}}, method::Bisection, F, options, state) where {T<: FloatNN}
-    f, x0, x1 = F.f, state.xn0, state.xn1
-    state.xn1 = bisection64(f, x0, x1)
+    x0, x1 = state.xn0, state.xn1
+    state.xn1 = bisection64(F, x0, x1)
     state.message = "Used bisection to find 0, steps not counted."
     state.stopped = state.x_converged = true
     state.xn1
@@ -220,8 +220,8 @@ end
 
 function _find_zero(::Type{T}, ::Type{S}, method::AbstractBisection, F, options, state) where {T,S}
 
-    f, x0, x1 = F.f, state.xn0, state.xn1
-    state.xn1 = a42(f, x0, x1; xtol=options.xabstol, maxeval=options.maxevals,
+    x0, x1 = state.xn0, state.xn1
+    state.xn1 = a42(F, x0, x1; xtol=options.xabstol, maxeval=options.maxevals,
                     verbose=options.verbose)
     state.message = "Used Alefeld-Potra-Shi method, `Roots.a42`, to find the zero. Iterations and function evaluations are not counted properly."
     state.stopped = state.x_converged = true

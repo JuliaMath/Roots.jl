@@ -29,7 +29,7 @@ for (i, (f, xstar, xs)) in enumerate(fns)
         for x0_ in xs
             out = try
                 xn = find_zero(f, x0_, m)
-                @test norm(xn - xstar) < 1e-14 || norm(f(xn)) < 1e-13
+                @test abs(xn - xstar) < 1e-14 || abs(f(xn)) < 1e-13
                 "."
             catch err
                 "*"
@@ -66,7 +66,7 @@ multiplicity_tests = [
 for (i, (fn_, x0_, xstar)) in enumerate(multiplicity_tests)
     for m in meths
         #println("$i: $m")
-        @test  norm(find_zero(fn_, x0_, m, maxevals=100) - xstar) < 1e-1 # wow, not too ambitious here, 9th powers...
+        @test  abs(find_zero(fn_, x0_, m, maxevals=100) - xstar) < 1e-1 # wow, not too ambitious here, 9th powers...
     end
 end
 
@@ -85,7 +85,7 @@ end
 fn, xstar, x0 = x -> cos(x) - 1, 0.0, 0.1
 for m in meths
     xn = find_zero(fn, x0, m)
-    @test norm(fn(xn)) <= 1e-10
+    @test abs(fn(xn)) <= 1e-10
 end
 
 ## issue with large steps
@@ -162,7 +162,7 @@ galadino_probs = [(x -> x^3 - 1, [.5, 1.5]),
 for (fn_, ab) in galadino_probs
     for m in [Roots.A42(), Bisection(), (FalsePosition(i) for i in 1:12)...]
         global x0 = find_zero(fn_, ab, m, maxevals=120)
-        @test norm(fn_(x0)) <= 1e-14
+        @test abs(fn_(x0)) <= 1e-14
     end
 end
 
@@ -170,7 +170,7 @@ end
 fn = x -> x^5 - x - 1
 for m in [Roots.A42(), Bisection(), (FalsePosition(i) for i in 1:12)...]
     global x0 = find_zero(fn, (1,2.0), m)
-    @test norm(fn(x0)) <= 1e-14
+    @test abs(fn(x0)) <= 1e-14
 end
 
 
@@ -203,8 +203,8 @@ end
 ## test tolerance arguments
 fn, xstar = x -> sin(x) - x + 1, 1.9345632107520243
 @test find_zero(fn, 20.0, Order2())  ≈ xstar   # needs 16 iterations, 33 fn evaluations
-@test norm(fn(find_zero(fn, 20.0, Order2(), abstol=1e-2)) - xstar) > 1e-12
-@test norm(fn(find_zero(fn, 20.0, Order2(), reltol=1e-2)) - xstar) > 1e-12
+@test abs(fn(find_zero(fn, 20.0, Order2(), abstol=1e-2)) - xstar) > 1e-12
+@test abs(fn(find_zero(fn, 20.0, Order2(), reltol=1e-2)) - xstar) > 1e-12
 @test_throws Roots.ConvergenceFailed find_zero(fn, 20.0, Order2(), maxevals=5) 
 @test_throws Roots.ConvergenceFailed find_zero(fn, 20.0, Order2(), maxfnevals=10) 
 

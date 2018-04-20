@@ -239,7 +239,7 @@ function show_trace(state, xns, fxns, method)
     println("")
     println("Trace:")
     
-    itr, offset =  0:(endof(xns)-1), 1
+    itr, offset =  0:(lastindex(xns)-1), 1
     for i in itr
         x_i,fx_i, xi, fxi = "x_$i", "f(x_$i)", xns[i+offset], fxns[i+offset]
         println(@sprintf("%s = % 18.16f,\t %s = % 18.16f", x_i, float(xi), fx_i, float(fxi)))
@@ -359,7 +359,7 @@ find_zero(x->sin(x)^5, 3.0, Order2(), verbose=true) # 23 iterations
 
 ```
 """
-function find_zero(@nospecialize(fs), x0, method::AbstractUnivariateZeroMethod; kwargs...)
+function find_zero(fs, x0, method::AbstractUnivariateZeroMethod; kwargs...)
 
     x = float.(x0)
 
@@ -372,13 +372,13 @@ function find_zero(@nospecialize(fs), x0, method::AbstractUnivariateZeroMethod; 
     
 end
 
-find_zero(@nospecialize(f), x0::T; kwargs...)  where {T <: Number}= find_zero(f, x0, Order0(); kwargs...)
-find_zero(@nospecialize(f), x0::Vector; kwargs...) = find_zero(f, x0, Bisection(); kwargs...)
-find_zero(@nospecialize(f), x0::Tuple; kwargs...) = find_zero(f, x0, Bisection(); kwargs...)
+find_zero(f, x0::T; kwargs...)  where {T <: Number}= find_zero(f, x0, Order0(); kwargs...)
+find_zero(f, x0::Vector; kwargs...) = find_zero(f, x0, Bisection(); kwargs...)
+find_zero(f, x0::Tuple; kwargs...) = find_zero(f, x0, Bisection(); kwargs...)
 
 # Main method
 function find_zero(M::AbstractUnivariateZeroMethod,
-                   @nospecialize(F),
+                   F,
                    options::UnivariateZeroOptions,
                    state::AbstractUnivariateZeroState
                    )
@@ -435,145 +435,5 @@ function find_zero(M::AbstractUnivariateZeroMethod,
         end
 
     end
-end
-
-
-
-# """
-
-# Find a zero of a univariate function using one of several different methods.
-
-# Positional arugments:
-
-# * `f` a function, callable object, or tuple of same. A tuple is used
-#   to pass in derivatives, as desired. Most methods are derivative
-#   free. Some (`Newton`, `Halley`) may have derivative(s) computed
-#   using the `ForwardDiff` pacakge.
-
-# * `x0` an initial starting value. Typically a scalar, but may be a two-element
-#   tuple or array for bisection methods. The value `float.(x0)` is passed on.
-
-# * `method` one of several methods, see below.
-
-# Keyword arguments:
-
-# * `xabstol=zero()`: declare convergence if |x_n - x_{n-1}| <= max(xabstol, max(1, |x_n|) * xreltol)
-
-# * `xreltol=eps()`:
-
-# * `abstol=zero()`: declare convergence if |f(x_n)| <= max(abstol, max(1, |x_n|) * reltol)
-
-# * `reltol`:
-
-# * `bracket`: Optional. A bracketing interval for the sought after
-#   root. If given, a hybrid algorithm may be used where bisection is
-#   utilized for steps that would go out of bounds. (Using a `FalsePosition` method
-#   instead would be suggested.)    
-
-# * `maxevals::Int=40`: stop trying after `maxevals` steps
-
-# * `maxfnevals::Int=typemax(Int)`: stop trying after `maxfnevals` function evaluations
-
-# * `verbose::Bool=false`: If `true` show information about algorithm and a trace.
-
-# Returns: 
-
-# Returns `xn` if the algorithm converges. If the algorithm stops, returns `xn` if 
-# |f(xn)| ≤ ϵ^(2/3), where ϵ = reltol, otherwise a `ConvergenceFailed` error is thrown.
-
-# Exported methods: 
-
-# `Bisection()`;
-# `Order0()` (heuristic, slow more robust);
-# `Order1()` (also `Secant()`);
-# `Order2()` (also `Steffensen()`);
-# `Order5()` (KSS);
-# `Order8()` (Thukral);
-# `Order16()` (Thukral);
-# `FalsePosition(i)` (false position, i in 1..12);    
-
-# Not exported:
-
-# `Secant()`, use `Order1()`
-# `Steffensen()` use `Order2()`
-# `Newton()` (use `newton()` function)
-# `Halley()` (use `halley()` function)
-
-# The order 0 method is more robust to the initial starting point, but
-# can utilize many more function calls. The higher order methods may be
-# of use when greater precision is desired.`
-
-
-# Examples:
-
-# ```
-# f(x) = x^5 - x - 1
-# find_zero(f, 1.0, Order5())
-# find_zero(f, 1.0, Steffensen()) # also Order2()
-# find_zero(f, (1.0, 2.0), FalsePosition())    
-# ```
-# """
-# function find_zero(f, x0::T, method::M; kwargs...) where {M <: AbstractBisection, T<:Number}
-#     throw(ArgumentError("For bisection methods, x0 must be a vector"))
-# end
-
-# function find_zero(f, x0::Vector{T}, method::M; kwargs...) where {T<:Number, M<:AbstractBisection}
-#     find_zero(method, callable_function(method, f), x0; kwargs...)
-# end
-
-# function find_zero(f, x0::Tuple{T}, method::M; kwargs...) where {T<:Number, M<:AbstractBisection}
-#     find_zero(method, callable_function(method, f), x0; kwargs...)
-# end
-
-# function find_zero(f, x0::T, method::UnivariateZeroMethod; kwargs...) where {T<:Number}
-#     find_zero(method, callable_function(method, f), x0; kwargs...)
-# end
-
-# function find_zero(f, x0::T, method::AbstractSecant; kwargs...) where {T<:Number}
-#     find_zero(method, callable_function(method, f), x0; kwargs...)
-# end
-# function find_zero(f, x0::Vector{T}, method::AbstractSecant; kwargs...) where {T<:Number}
-#     find_zero(method, callable_function(method, f), x0; kwargs...)
-# end
-
-# ## some defaults for methods
-# find_zero(f, x0::T; kwargs...)  where {T <: Number}= find_zero(f, x0, Order0(); kwargs...)
-# find_zero(f, x0::Vector{T}; kwargs...) where {T <: Number}= find_zero(f, x0, Bisection(); kwargs...)
-# find_zero(f, x0::Tuple{T,S};kwargs...) where {T<:Number, S<:Number} = find_zero(f, x0, Bisection(); kwargs...)
-
-
-# function find_zero(method::UnivariateZeroMethod, fs, x0; kwargs...)
-#     x = float.(x0)
-#     prob, options = derivative_free_setup(method, fs, x; kwargs...)
-#     find_zero(prob, method, options)
-# end
-
-
-
-
-
-# ## old interface for fzero
-# ## old keyword arguments (see ?fzero) handled in univariate_zero_options
-@noinline function derivative_free(f, x0::T; order::Int=0,
-                                             kwargs...) where {T <: AbstractFloat}
-    
-    if order == 0
-        method = Order0()
-    elseif order == 1
-        method = Order1()
-    elseif order == 2
-        method = Order2()
-    elseif order == 5
-        method = Order5()
-    elseif order == 8
-        method = Order8()
-    elseif order == 16
-        method = Order16()
-    else
-        warn("Invalid order. Valid orders are 0, 1, 2, 5, 8, and 16")
-        throw(ArgumentError())
-    end
-
-    find_zero(f, x0, method; kwargs...)
 end
 

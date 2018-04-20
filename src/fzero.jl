@@ -73,7 +73,7 @@ end
 """
 Find a zero with bracket specified via `[a,b]`, as `fzero(sin, [3,4])`.
 """
-function fzero(f, bracket::Vector{T}; kwargs...)  where {T <: Real}
+function fzero(f, bracket::Vector{T}; kwargs...)  where {T <: Number}
     fzero(f, float(bracket[1]), float(bracket[2]); kwargs...)
 end
 
@@ -81,7 +81,7 @@ end
 """
 Find a zero within a bracket with an initial guess to *possibly* speed things along.
 """
-function fzero(f, x0::Real, bracket::Vector{T}; kwargs...)  where {T <: Real}
+function fzero(f, x0::Real, bracket::Vector{T}; kwargs...)  where {T <: Number}
 
     a, b = adjust_bracket(bracket)
 
@@ -101,6 +101,34 @@ end
 Find zero using Newton's method.
 """
 fzero(f::Function, fp::Function, x0::Real; kwargs...) = newton(f, fp, float(x0); kwargs...)
+
+
+
+
+
+
+# match fzero up with find_zero
+@noinline function derivative_free(f, x0; order::Int=0, kwargs...) 
+    
+    if order == 0
+        method = Order0()
+    elseif order == 1
+        method = Order1()
+    elseif order == 2
+        method = Order2()
+    elseif order == 5
+        method = Order5()
+    elseif order == 8
+        method = Order8()
+    elseif order == 16
+        method = Order16()
+    else
+        warn("Invalid order. Valid orders are 0, 1, 2, 5, 8, and 16")
+        throw(ArgumentError())
+    end
+
+    find_zero(f, x0, method; kwargs...)
+end
 
 
 

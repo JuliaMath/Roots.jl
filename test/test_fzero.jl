@@ -21,10 +21,10 @@ fn, xstar, x0, br = x -> x^5 - x - 1, 1.1673039782614187, 1.0, [1.0, 2.0]
 @test fzero(fn, x0, order=1)  ≈ xstar
 
 @test_throws Roots.ConvergenceFailed fzero(fn, x0, order=1, maxevals=2)
-#@test norm(fzero(fn, x0, order=1, ftol=1e-2) - xstar) > 1e-5
-#@test norm(fzero(fn, x0, order=1, xtol=1e-2) - xstar) > 1e-10
+#@test abs(fzero(fn, x0, order=1, ftol=1e-2) - xstar) > 1e-5
+#@test abs(fzero(fn, x0, order=1, xtol=1e-2) - xstar) > 1e-10
 
-@test norm(Roots.a42(fn, br[1], br[2], xtol=1e-2) - xstar) > 1e-5
+@test abs(Roots.a42(fn, br[1], br[2], xtol=1e-2) - xstar) > 1e-5
 
 
 ## various tests
@@ -41,7 +41,8 @@ f =  x -> 1/x - 1
 ##################################################
 ## fzeros function
 rts = 1:5
-@test norm(fzeros(x -> prod([x-r for r in rts]),0,10) .- collect(1:5)) <= 1e-15
+@test all((abs.(fzeros(x -> prod([x-r for r in rts]),0,10)) .- collect(1:5)) .<= 1e-15)
+
 
 fn = x -> sin(10*pi*x)
 @test length(fzeros(fn, 0, 1)) == 11

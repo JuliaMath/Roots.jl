@@ -9,7 +9,7 @@ else
 end
 
 using ForwardDiff
-using Compat: @nospecialize
+using Compat: @nospecialize, lastindex
 
 
 export fzero,
