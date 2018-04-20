@@ -539,8 +539,8 @@ function newton_quadratic(f, a, fa, b, fb, d, fd, k::Int)
     if A == 0
         return secant(f, a, fa, b, fb)
     end
-
-    r = A*fa/oneunit(fa) > 0 ? a : b
+    
+    r = A*fa/oneunit(A*fa) > 0 ? a : b
     for i = 1:k
         r -= (fa + (B + A*(r - b))*(r - a))/(B + A*(2*r - a - b))
     end

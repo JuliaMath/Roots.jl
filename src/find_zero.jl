@@ -10,7 +10,7 @@
 # the initial state through a value for x either x, [a,b], or (a,b) <: AbstractUnivariateZeroState
 # the options (e.g., tolerances) <: UnivariateZeroOptions
 
-# To minimal amount needed to add a method, is to define a Method and an update_state method.
+# The minimal amount needed to add a method, is to define a Method and an update_state method.
 
 ### Methods
 abstract type AbstractUnivariateZeroMethod end
@@ -65,7 +65,7 @@ mutable struct UnivariateZeroOptions{Q,R,S,T}
     verbose::Bool
 end
 
-# Allow for override of default tolerances. Useful, say, for method like bisection
+# Allow for override of default tolerances. Useful, say, for methods like bisection
 function init_options(::Any,
                       state;
                       xatol=missing,
@@ -166,6 +166,7 @@ function assess_convergence(method::Any, state, options)
     if (state.x_converged || state.f_converged)
         return true
     end
+    
     if state.steps > options.maxevals
         state.stopped = true
         state.message = "too many steps taken."
@@ -190,16 +191,17 @@ function assess_convergence(method::Any, state, options)
         return true
     end
 
-    λ = max(oneunit(real(xn1)), abs(xn1))
-    
-    if  _isapprox(fxn1, zero(fxn1), options.reltol, options.abstol) #abs(fxn1) <= max(options.abstol, λ * options.reltol)
-
+    if  _isapprox(fxn1, zero(fxn1), options.reltol, options.abstol)
         state.f_converged = true
         return true
     end
 
     if _isapprox(xn1, xn0,  options.xreltol, options.xabstol)
         # Heuristic check that f is small too in unitless way
+
+        λ = max(oneunit(real(xn1)), abs(xn1))
+    
+
         tol = max(options.abstol, λ * options.reltol)
         if abs(fxn1)/oneunit(fxn1) <= cbrt(tol/oneunit(tol))
             state.x_converged = true
@@ -248,8 +250,6 @@ function show_trace(state, xns, fxns, method)
 end
 
 
-## Convenient interface
-## fs can be f, (f,fp), or (f, fp, fpp)
 """
 
     find_zero(fs, x0, method; kwargs...)
@@ -258,37 +258,37 @@ Interface to one of several methods for find zeros of a univariate function.
 
 
 
-# initial starting value
+# Initial starting value
 
-For most methods, `x0` is a scalar value indicating the initial value in the iterative procedure. Values must be a subtype of `Number` and have methods for `float` and `real` defined. 
+For most methods, `x0` is a scalar value indicating the initial value in the iterative procedure. Values must be a subtype of `Number` and have methods for `float`, `real`, and `oneunit` defined. 
 
 May also be a bracketing interval, specified as a tuple or a vector. A bracketing interval, (a,b), is one where f(a) and f(b) have different signs.
 
-# specifying a method
+# Specifying a method
 
 A method is specified to indicate which algorithm to employ:
 
 * There are methods for bisection where a bracket is specified: `Bisection`
 
-* There are methods for guarded bisection where a bracket is specifed: `FalsePosition`
+* There are methods for guarded bisection where a bracket is specified: `FalsePosition`
 
 * There are several derivative-free methods: cf. `Order0`, `Order1` (secant method), `Order2` (Steffensen), `Order5`, `Order8`, and `Order16`, where the number indicates the order of the convergence.
 
-* There are some classical methods where a derivative is assumed, or computed using `ForwardDiff`: `Newton`, `Halley`. (not exported, so use, e.g., `Roots.Newton()`.
+* There are some classical methods where a derivative is assumed or computed using `ForwardDiff`: `Newton`, `Halley`. (The are not exported, so they need qualification, e.g., `Roots.Newton()`.
 
-For more detail, see the help page for each method. (E.g., `?Order5`.)
+For more detail, see the help page for each method (e.g., `?Order5`).
 
-If no method is specified, the  method depends on `x0`:
+If no method is specified, the default method depends on `x0`:
 
 * If `x0` is a scalar, the default is the slower, but more robust `Order0` method.
 
 * If `x0` is a tuple or vector indicating a *bracketing* interval, the `Bisection` method is use. (this method specializes on floating point values, but otherwise uses an algorithm of Alefeld, Potra, and Shi.)
 
-# specifying the function 
+# Specifying the function 
 
 The function(s) are passed as the first argument. 
 
-For methods the few methods that use a derivative (`Newton`, `Halley`, and optionally `Order5`)
+For the few methods that use a derivative (`Newton`, `Halley`, and optionally `Order5`)
 a tuple of functions is used. For methods requiring a derivative and
 second derivative, a tuple of three functions is used. If the
 derivative functions are not specified, automatic differentiation via
@@ -316,8 +316,14 @@ For most methods there are several heuristics used for convergence:
 
 * if the number of iterations exceeeds `maxevals` or the number of function evaluations exceeds `maxfnevals` a failure to converge is declared
 
-* if x_n is NaN or f(x_n) is infinite  a failure to converge is declared
+* if x_n is `NaN` or f(x_n) is infinite  a failure to converge is declared
 
+
+In general, with floating point numbers, convergence must be
+understood as not an absolute statement. Even if mathematically x is
+an answer the floating point realization, say xstar, may have
+f(xstar) - f(x) = f(xstar) ≈ f'(x) ⋅ eps(x), so tolerances must be
+appreciated, and at times specified.
 
 For the `Bisection` methods, convergence is guaranteed, so the tolerances are set to be 0 by default.
 
@@ -339,10 +345,12 @@ find_zero(sin, 3.0, Roots.Newton())        # use Newton's method with automatic 
 find_zero((sin, cos, x->-sin(x)), 3.0, Roots.Halley())  # use Halley's method
 
 # changing tolerances
-
-
-
-
+fn, x0, xstar = (x -> (2x*cos(x) + x^2 - 3)^10/(x^2 + 1), 3.0,  2.9806452794385368)
+find_zero(fn, x0, Order2()) - xstar        # 0.011550654688925466
+find_zero(fn, x0, Order2(), atol=0.0, rtol=0.0) # error: x_n ≉ x_{n-1}; just f(x_n) ≈ 0
+fn, x0, xstar = (x -> (sin(x)*cos(x) - x^3 + 1)^9,        1.0,  1.117078770687451)
+find_zero(fn, x0, Order2())                # 1.1122461983100858
+find_zero(fn, x0, Order2(), maxevals=10)   # Roots.ConvergenceFailed: 26 iterations neeed
 
 # tracing output
 find_zero(x->sin(x), 3.0, Order2(), verbose=true)   # 3 iterations

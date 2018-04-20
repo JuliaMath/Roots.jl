@@ -11,6 +11,7 @@ We will use `Plots` for plotting.
 ```
 using Roots  
 using Plots
+pyplot()
 ```
 
 ## Bracketing
@@ -408,3 +409,72 @@ plot(x -> flight(x, tstar), 0, howfar(tstar))
 plot!(x -> flight(x, 45), 0, howfar(45))
 ```
 
+
+
+# Use with other number types
+
+[For these examples we will utilize the `find_zero` interface, not `fzero`.]
+
+The `Unitful` package provides a means to attach units to numeric
+values.
+
+For example, a projectile motion with $v_0=10$ and $x_0=16$ could be
+represented with:
+
+```
+using Unitful
+s = u"s"; m = u"m"
+g = 9.8*m/s^2
+v0 = 10m/s
+y0 = 16m
+y(t) = -g*t^2 + v0*t + y0
+```
+
+This motion starts at a height of 16 meters and has an initial
+velocity of 10 meters per second.
+
+The time of touching the ground is found with:
+
+```
+a = find_zero(y, 1s, Order2())
+a
+```
+
+Automatic derivatives don't propogate through `Unitful`, so we define
+the approximate derivative--paying attention to units--with:
+
+```
+Df(f, h=1e-6) = x -> (f(x + h*oneunit(x)) - f(x)) / (h*oneunit(x))
+```
+
+And then the fact the peak is the only local maximum, it can be found from:
+
+```
+find_zero(Df(y), (0s, a), Bisection())
+```
+
+----
+
+The `SymEngine` package provides symbolic values to `Julia`. Rather
+than passing a function to `find_zero`, we can pass a symbolic expression:
+
+```
+using SymEngine
+g, v0, y0 = 9.8, 10, 16
+@vars t
+yt = -g * t^2 + v0 * t + y0
+```
+
+```
+a = find_zero(yt, 1, Order2())
+a
+```
+
+And the peak is determined to be at:
+
+```
+find_zero(diff(yt, t), (0, a), Bisection())
+```
+
+(This also illustrates that symbolic values can be passed to describe
+the `x`-axis values.)
