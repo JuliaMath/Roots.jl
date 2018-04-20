@@ -14,7 +14,8 @@ Find zero of a function using an iterative algorithm
 
 Keyword arguments:
 
-* `ftol`: tolerance for a guess `abs(f(x)) < ftol`
+* `ftol`: tolerance for a guess `abs(f(x)) < ftol + max(1, |xnew|) * ftolrel`
+* `ftolrel`: relative tolerance for convergence towards 0 of f(x)
 * `xtol`: stop if `abs(xold - xnew) <= xtol + max(1, |xnew|)*xtolrel`
 * `xtolrel`: see `xtol`
 * `maxeval`: maximum number of steps
@@ -23,6 +24,8 @@ Keyword arguments:
 * `kwargs...` passed on to different algorithms. There are `maxfneval` when `order` is 1,2,5,8, or 16 and `beta` for orders 2,5,8,16,
 
 This is a polyalgorithm redirecting different algorithms based on the value of `order`. 
+
+(The tolerance arguments can also be given through `atol`, `rtol`, `xatol`, and `xrtol`, as is done with `find_zero`.)
 
 """
 function fzero(f, x0::Number; kwargs...)
@@ -127,7 +130,17 @@ fzero(f::Function, fp::Function, x0::Real; kwargs...) = newton(f, fp, float(x0);
         throw(ArgumentError())
     end
 
-    find_zero(f, x0, method; kwargs...)
+    d = Dict(kwargs)
+    for (o, n) in ((:ftol, :atol), (:ftolrel, :rtol),
+         (:xtol, :xatol), (:xtolrel, :xrtol))
+        if haskey(d, o)
+            d[n] = d[o]
+        end
+    end
+
+
+    
+    find_zero(f, x0, method; d...)
 end
 
 

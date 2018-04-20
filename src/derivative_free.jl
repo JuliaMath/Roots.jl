@@ -448,9 +448,11 @@ American Journal of Computational and Applied Mathematics
 p-ISSN: 2165-8935;    e-ISSN: 2165-8943; 2012;  2(3): 112-118
 doi: 10.5923/j.ajcam.20120203.08.
 
-Five function calls per step are required. Though rapidly converging, this method generally isn't faster (fewer
-function calls/steps) over other methods when using `Float64` values,
-but may be useful for solving over `BigFloat`.
+Five function calls per step are required. Though rapidly converging,
+this method generally isn't faster (fewer function calls/steps) over
+other methods when using `Float64` values, but may be useful for
+solving over `BigFloat`.
+
 """
 mutable struct Order16 <: AbstractUnivariateZeroMethod
 end

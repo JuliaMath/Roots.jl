@@ -1,3 +1,14 @@
+##################################################
+
+# type to throw on succesful convergence
+mutable struct StateConverged
+    x0::Number
+end
+
+# type to throw on failure
+mutable struct ConvergenceFailed
+    reason::AbstractString
+end
 
 ##################################################
 ## Helpers for the various methods

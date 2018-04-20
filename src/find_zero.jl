@@ -101,9 +101,17 @@ end
 ### Functions
 abstract type CallableFunction end
 
-## It is faster the first time a function is used if we do
-## not parameterize this. It is slower the second time a function
-## is used. This seems like the proper tradeoff.
+## It is faster the first time a function is used if we do not
+## parameterize this. (As this requires less compilation) It is slower
+## the second time a function is used. This seems like the proper
+## tradeoff.  If it a case where the same function is being used many
+## times, this function would be helpful
+##
+## function _find_zero(f, x0, method::Roots.AbstractUnivariateZeroMethod;kwargs...)
+##     state = Roots.init_state(method, f, float.(x0))
+##     options = Roots.init_options(method, state; kwargs...)
+##     find_zero(method, f, options, state)
+##  end    
 struct DerivativeFree <: CallableFunction 
     f
 end
@@ -314,7 +322,7 @@ For most methods there are several heuristics used for convergence:
 
 * if the algorithm has an issue (say a value of NaN appears) *and* f(x_n) ≈ 0 with a relaxed tolerance then convergence is declared, otherwise a failure to converge is declared
 
-* if the number of iterations exceeeds `maxevals` or the number of function evaluations exceeds `maxfnevals` a failure to converge is declared
+* if the number of iterations exceeds `maxevals` or the number of function evaluations exceeds `maxfnevals` a failure to converge is declared
 
 * if x_n is `NaN` or f(x_n) is infinite  a failure to converge is declared
 
@@ -350,7 +358,7 @@ find_zero(fn, x0, Order2()) - xstar        # 0.011550654688925466
 find_zero(fn, x0, Order2(), atol=0.0, rtol=0.0) # error: x_n ≉ x_{n-1}; just f(x_n) ≈ 0
 fn, x0, xstar = (x -> (sin(x)*cos(x) - x^3 + 1)^9,        1.0,  1.117078770687451)
 find_zero(fn, x0, Order2())                # 1.1122461983100858
-find_zero(fn, x0, Order2(), maxevals=10)   # Roots.ConvergenceFailed: 26 iterations neeed
+find_zero(fn, x0, Order2(), maxevals=10)   # Roots.ConvergenceFailed: 26 iterations needed
 
 # tracing output
 find_zero(x->sin(x), 3.0, Order2(), verbose=true)   # 3 iterations
@@ -386,13 +394,14 @@ function find_zero(M::AbstractUnivariateZeroMethod,
 
     
     # in case verbose=true
-    if isa(M, AbstractSecant)
-        xns, fxns = [state.xn0, state.xn1], [state.fxn0, state.fxn1]
-    else
-        xns, fxns = [state.xn1], [state.fxn1]
+    if options.verbose
+        if isa(M, AbstractSecant)
+            xns, fxns = [state.xn0, state.xn1], [state.fxn0, state.fxn1]
+        else
+            xns, fxns = [state.xn1], [state.fxn1]
+        end
     end
 
-    ## XXX removed bracket check here
     while true
         
         val = assess_convergence(M, state, options)

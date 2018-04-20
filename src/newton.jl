@@ -52,19 +52,7 @@ Arguments:
 
 * `x0::Number` -- initial guess. For Newton's method this may be complex.
 
-Keyword arguments:
-
-* `ftol`. Stop iterating when |f(xn)| <= max(1, |xn|) * ftol.
-
-* `xtol`. Stop iterating when |xn+1 - xn| <= xtol + max(1, |xn|) * xtolrel
-
-* `xtolrel`. Stop iterating when |xn+1 - xn| <= xtol + max(1, |xn|) * xtolrel
-
-* `maxeval`. Stop iterating if more than this many steps, throw error.
-
-* `maxfneval`. Stop iterating if more than this many function calls, throw error.
-
-* `verbose::Bool=false` Set to `true` to see trace.
+Keyword arguments are passed to `find_zero`.
 
 """
 newton(f, x0; kwargs...) = find_zero(f, x0, Newton(); kwargs...)
@@ -113,19 +101,9 @@ Arguments:
 
 * `fpp:Function=D(f,2)` -- second derivative of `f`.
 
-* `x0::Real` -- initial guess
+* `x0::Number` -- initial guess
 
-Keyword arguments:
-
-* `ftol`. Stop iterating when |f(xn)| <= max(1, |xn|) * ftol.
-
-* `xtol`. Stop iterating when |xn+1 - xn| <= xtol + max(1, |xn|) * xtolrel
-
-* `xtolrel`. Stop iterating when |xn+1 - xn| <= xtol + max(1, |xn|) * xtolrel
-
-* `maxeval`. Stop iterating if more than this many steps, throw error.
-
-* `verbose::Bool=false` Set to `true` to see trace.
+Keyword arguments are passed to `find_zero`.
 
 """
 halley(f,  x0; kwargs...) = find_zero(f, x0, Halley(); kwargs...)

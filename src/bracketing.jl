@@ -1,14 +1,5 @@
 ###
 
-# type to throw on succesful convergence
-mutable struct StateConverged
-    x0::Number
-end
-
-# type to throw on failure
-mutable struct ConvergenceFailed
-    reason::AbstractString
-end
 
 bracketing_error = """The interval [a,b] is not a bracketing interval.
 You need f(a) and f(b) to have different signs (f(a) * f(b) < 0).
@@ -24,7 +15,7 @@ Consider a different bracket or try fzero(f, c) with an initial guess c.
 ## cf. http://squishythinking.com/2014/02/22/bisecting-floats/
 # Alternative "mean" definition that operates on the binary representation
 # of a float. Using this definition, bisection will never take more than
-# 64 steps.
+# 64 steps (over Float64)
 const FloatNN = Union{Float64, Float32, Float16}
 _float_int_pairs = Dict(Float64 => UInt64, Float32 => UInt32, Float16 => UInt16)
 
@@ -186,19 +177,6 @@ function init_options(::AbstractBisection,
     options
 end
 
-
-# ## fs can be f, (f,fp), or (f, fp, fpp)
-# function find_zero(fs, x0::Union{Tuple{T,S}, Vector{T}}, method::AbstractBisection; kwargs...) where {T, S}
-
-#     x = float.(x0)
-    
-#     F = callable_function(fs)
-#     state = init_state(method, F, x)
-#     options = init_options(method, state; kwargs...)
-
-#     find_zero(method, F, options, state)
-    
-# end
 
 function find_zero(method::AbstractBisection, F, options::UnivariateZeroOptions, state::AbstractUnivariateZeroState)
     R = eltype(state.xn1)
