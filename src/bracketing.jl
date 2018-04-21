@@ -43,7 +43,7 @@ function _middle(x::T, y::T) where {T <: FloatNN}
 end
 
 ## fall back or non Floats
-function _middle(x::Real, y::Real)
+function _middle(x::Number, y::Number)
     x + (y-x)/2
 end
 
@@ -144,69 +144,39 @@ Trans. Math. Softw. 21, 327–344 (1995).
 """
 mutable struct A42 <: AbstractBisection end
 
-# Can have smaller tolerances for bisection
-function init_options(::AbstractBisection,
-                      state;
-                      xatol=missing,
-                      xrtol=missing,
-                      atol=missing,
-                      rtol=missing,
-                      maxevals::Int=typemax(Int),
-                      maxfnevals::Int=typemax(Int),
-                      verbose::Bool=false,
-                      kwargs...)
-
-    ## Where we set defaults
-    xn1, fxn1 = real(oneunit(state.xn1)), real(oneunit(float(state.fxn1)))
-
-    ## map old tol names to new
-    d = Dict(kwargs)
-    xatol = haskey(d, :xabstol) ? d[:xabstol] : xatol
-    xrtol = haskey(d, :xreltol) ? d[:xreltol] : xatol
-    atol = haskey(d, :abstol) ? d[:abstol] : atol
-    rtol = haskey(d, :reltol) ? d[:reltol] : rtol
+## we dispatch to either floating-point-bisection or A42 here.
+function find_zero(fs, x0, method::AbstractBisection; kwargs...)
     
+    x = float.(x0)
+    F = callable_function(fs)
+    state = init_state(method, F, x)
+    options = init_options(method, state; kwargs...)
 
-    options = UnivariateZeroOptions(ismissing(xatol) ? zero(xn1) : xatol,       # unit of x
-                                    ismissing(xrtol) ? zero(xn1)/oneunit(xn1) : xrtol,               # unitless
-                                    ismissing(atol)  ?  zero(fxn1) : atol,      # units of f(x)
-                                    ismissing(rtol)  ?  zero(fxn1)/oneunit(fxn1) : rtol,            # unitless
-                                    maxevals, maxfnevals,
-    verbose)    
-
-    options
+    T = eltype(state.xn1)
+    if T <: FloatNN
+        if options.verbose
+            return find_zero(Bisection(), F, options, state)
+        else
+            x0, x1 = state.xn0, state.xn1
+            state.xn1 = bisection64(F, x0, x1)
+            state.message = "Used bisection to find 0, steps not counted."
+            state.stopped = state.x_converged = true
+            return state.xn1
+        end
+    else
+        x0, x1 = state.xn0, state.xn1
+        state.xn1 = a42(F, x0, x1; xtol=options.xabstol, maxeval=options.maxevals,
+                        verbose=options.verbose)
+        state.message = "Used Alefeld-Potra-Shi method, `Roots.a42`, to find the zero. Iterations and function evaluations are not counted properly."
+        state.stopped = state.x_converged = true
+        
+        options.verbose && show_trace(state, [state.xn1], [state.fxn1], method)
+        return state.xn1
+    end
+    
 end
 
 
-function find_zero(method::AbstractBisection, F, options::UnivariateZeroOptions, state::AbstractUnivariateZeroState)
-    R = eltype(state.xn1)
-    _find_zero(R, Val{options.verbose}, method, F, options, state)
-end
-
-# control dispatch based on type and verbose (can be faster if we bypass find_zero)
-function _find_zero(::Type{T}, ::Type{Val{false}}, method::Bisection, F, options, state) where {T<: FloatNN}
-    x0, x1 = state.xn0, state.xn1
-    state.xn1 = bisection64(F, x0, x1)
-    state.message = "Used bisection to find 0, steps not counted."
-    state.stopped = state.x_converged = true
-    state.xn1
-end
-
-function _find_zero(::Type{T}, ::Type{Val{true}}, method::Bisection, F, options, state) where {T<: FloatNN}
-    find_zero(method, F, options, state)
-end
-
-function _find_zero(::Type{T}, ::Type{S}, method::AbstractBisection, F, options, state) where {T,S}
-
-    x0, x1 = state.xn0, state.xn1
-    state.xn1 = a42(F, x0, x1; xtol=options.xabstol, maxeval=options.maxevals,
-                    verbose=options.verbose)
-    state.message = "Used Alefeld-Potra-Shi method, `Roots.a42`, to find the zero. Iterations and function evaluations are not counted properly."
-    state.stopped = state.x_converged = true
-
-    options.verbose && show_trace(state, [state.xn1], [state.fxn1], method)
-    state.xn1
-end
 
 
 # ## helper function
@@ -253,7 +223,7 @@ end
 ##
 ## This terminates when there is no more subdivision or function is zero
 
-function update_state(method::Bisection, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T<:FloatNN,S}
+function update_state(method::Bisection, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T<:Number,S<:Number} 
     x0, x2 = o.xn0, o.xn1
     y0, y2 = o.fxn0, o.fxn1
 
@@ -276,7 +246,9 @@ function update_state(method::Bisection, fs, o::UnivariateZeroState{T,S}, option
     nothing
 end
 
-## convergence is much different there, as we bound between x0, nextfloat(x0) is not measured by eps(), but eps(x0)
+## convergence is much different here
+## the method converges,
+## as we bound between x0, nextfloat(x0) is not measured by eps(), but eps(x0)
 function assess_convergence(method::Bisection, state, options)
     x0, x2 = state.xn0, state.xn1
     if x0 > x2
@@ -289,7 +261,10 @@ function assess_convergence(method::Bisection, state, options)
         state.stopped = state.x_converged = true
         return true
     end
+
+
     x0 < x1 && x1 < x2 && return false
+     
 
     state.message = ""
     state.stopped = state.x_converged = true

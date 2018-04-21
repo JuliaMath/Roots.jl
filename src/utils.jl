@@ -35,11 +35,11 @@ function guarded_secant_step(alpha, beta, falpha, fbeta)
     Δ = fbeta / fp
     ## odd, we get allocations if we define Delta, then beta - Delta
     ## Δ = beta - fbeta * (beta - alpha) / (fbeta - falpha)
-    
+
     if isissue(Δ)
-        Δ = one(alpha)/1000
+        Δ = oneunit(alpha)/1000
     elseif abs(Δ) >= 100 * abs(alpha - beta) # guard runaway
-        Δ = sign(Δ) * 100 * min(one(alpha), abs(alpha - beta))
+        Δ = sign(Δ) * 100 * min(oneunit(alpha), abs(alpha - beta))
     end
 
     if isissue(Δ)

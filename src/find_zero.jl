@@ -159,10 +159,22 @@ end
     
 ## has UnivariateZeroProblem converged?
 ## allow missing values in isapprox
-_isapprox(a, b, rtol, atol) = _isapprox(Val{ismissing(a) || ismissing(b)}, a, b, rtol, atol)
-_isapprox(::Type{Val{true}}, a, b, rtol, atol) = false
-function _isapprox(::Type{Val{false}}, a, b, rtol, atol)
-    isapprox(a, b, rtol=rtol, atol=atol)
+_isapprox(a, b, rtol, atol, lambda=missing, relaxed=false) = _isapprox(Val{ismissing(a) || ismissing(b)}, a, b, rtol, atol,lambda,relaxed)
+
+_isapprox(::Type{Val{true}}, a, b, rtol, atol,lambda, relaxed) = false
+
+function _isapprox(::Type{Val{false}}, a, b, rtol, atol, lambda, relaxed)
+
+    if !ismissing(lambda)
+        rtol *= max(one(lambda), abs(lambda/oneunit(lambda))) 
+    end
+
+    if relaxed
+        tol = cbrt(max(atol/oneunit(atol), rtol))
+        abs(a - b)/oneunit(a) <= tol
+    else
+        isapprox(a, b, rtol=rtol, atol=atol)
+    end
 end
 
 function assess_convergence(method::Any, state, options)
@@ -199,19 +211,16 @@ function assess_convergence(method::Any, state, options)
         return true
     end
 
-    if  _isapprox(fxn1, zero(fxn1), options.reltol, options.abstol)
+    # f(xstar) ≈ xstar * f'(xstar)*eps(), so we pass in lambda
+    if  _isapprox(fxn1, zero(fxn1), options.reltol, options.abstol, abs(xn1))
         state.f_converged = true
         return true
     end
 
     if _isapprox(xn1, xn0,  options.xreltol, options.xabstol)
         # Heuristic check that f is small too in unitless way
-
-        λ = max(oneunit(real(xn1)), abs(xn1))
-    
-
-        tol = max(options.abstol, λ * options.reltol)
-        if abs(fxn1)/oneunit(fxn1) <= cbrt(tol/oneunit(tol))
+        λ = max(one(real(xn1)), abs(xn1/oneunit(xn1)))
+        if _isapprox(fxn1, zero(fxn1), options.reltol, options.abstol, λ, true)
             state.x_converged = true
             return true
         end
@@ -238,7 +247,7 @@ function show_trace(state, xns, fxns, method)
         println("* iterations: $(state.steps)")
         println("* function evaluations: $(state.fnevals)")
         state.x_converged && println("* stopped as x_n ≈ x_{n-1} using atol=xatol, rtol=xrtol")
-        state.f_converged && state.message == "" && println("* stopped as |f(x_n)| ≤ max(δ, max(1,|x|)⋅ϵ) using δ = abstol, ϵ = reltol")
+        state.f_converged && state.message == "" && println("* stopped as |f(x_n)| ≤ max(δ, max(1,|x|)⋅ϵ) using δ = atol, ϵ = rtol")
         state.message != "" && println("* Note: $(state.message)")
     else
         println("* Convergence failed: $(state.message)")
@@ -412,11 +421,10 @@ function find_zero(M::AbstractUnivariateZeroMethod,
                 ## say it converged if pretty close, else say convergence failed.
                 ## (Is this a good idea?)
                 xstar, fxstar = state.xn1, state.fxn1
-                tol = (options.abstol + abs(state.xn1)*options.reltol)
-                
-                
-                if abs(fxstar/oneunit(fxstar)) <= (tol/oneunit(tol))^(2/3)
-                    msg = "Algorithm stopped early, but |f(xn)| < ϵ^(2/3), where ϵ = abstol"
+
+                λ = max(one(real(xstar)), abs(xstar/oneunit(xstar)))
+                if _isapprox(fxstar, zero(fxstar), options.reltol, options.abstol, λ, true)
+                    msg = "Algorithm stopped early, but |f(xn)| < ϵ^(1/3), where ϵ depends on xn, rtol, and atol"
                     state.message = state.message == "" ? msg : state.message * "\n\t" * msg
                     state.f_converged = true
                 else
