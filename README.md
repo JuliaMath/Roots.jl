@@ -7,39 +7,41 @@ Windows: [![Build status](https://ci.appveyor.com/api/projects/status/goteuptn5k
 
 This package contains simple routines for finding roots of continuous
 scalar functions of a single real variable. The `find_zero`function provides the
-primary interface. It support various algorithms through the
-specification of an algorithm. These include:
+primary interface. It supports various algorithms through the
+specification of an method. These include:
 
 * Bisection-like algorithms. For functions where a bracketing interval
-  is known (one where $f(a)$ and $f(b)$ have alternate signs), the
+is known (one where f(a) and f(b) have alternate signs), the
   `Bisection` method can be specified with a guaranteed
   convergence. For most floating point number types, bisection occurs
   in a manner exploiting floating point storage conventions. For
   others, an algorithm of Alefeld, Potra, and Shi is used.
 
   For typically faster convergence -- though not guaranteed -- the
-  `FalsePosition` method can be specified. This methods has one of 12
-  implementations which implement a modified secant method to
+  `FalsePosition` method can be specified. This method has one of 12
+  implementations for a modified secant method to
   accelerate convergence.
 
 * Several derivative-free methods are implemented. These are specified
-  through the methods `Order0`,
-  `Order1` (the secant method), `Order2` (the Steffensen method),
-  `Order5`, `Order8`, and `Order16`. The number indicates roughly the
-  order of convergence. The `Order0` method is  default, and the most robust, but
-  may take many more function calls. The higher order ones promise
-  higer order convergence, though don't always yield results with fewer
-  function calls.
+  through the methods `Order0`, `Order1` (the secant method), `Order2`
+  (the Steffensen method), `Order5`, `Order8`, and `Order16`. The
+  number indicates roughly the order of convergence. The `Order0`
+  method is the default, and the most robust, but generally takes many more
+  function calls. The higher order methods promise higer order
+  convergence, though don't always yield results with fewer function
+  calls than `Order1` or `Order2`.
 
 * There are two historic methods that require a derivative:
   `Roots.Newton` and `Roots.Halley`. (Neither is currently exported.)
   If a derivative is not given, an automatic derivative is found using
   the `ForwardDiff` package.
 
+Each method's documentation has additional detail.
+
 Some examples: 
 
 
-```
+```julia
 # a bisection method has the bracket specified with a tuple or vector
 julia> find_zero(f, (8,9), Bisection())
 8.613169456441398
@@ -80,7 +82,7 @@ fzero(x^5 - x - 1, 1.0)
 
 The function should respect the units of the `Unitful` package:
 
-```
+```julia
 using Unitful
 s = u"s"; m = u"m"
 g = 9.8*m/s^2
@@ -92,7 +94,7 @@ find_zero(y, 1s)
 
 Newton's method can be used without taking derivatives:
 
-```
+```julia
 f(x) = x^3 - 2x - 5
 x0 = 2
 find_zero(f, x0, Roots.Newton())
@@ -126,7 +128,7 @@ is used to identify a zero, otherwise a derivative free method is used
 to check. This algorithm can miss zeros for various reasons, so the
 results should be confirmed by other means.
 
-```
+```julia
 f(x) = exp(x) - x^4
 find_zeros(f, -10, 10)
 ```
@@ -149,8 +151,8 @@ or the number of function calls exceeds `maxfnevals`.
 The tolerances may need to be adjusted. To determine if convergence
 occurs due to f(x_n) ≈ 0, it is necessary to consider that even if
 `xstar` is the correct answer mathematically, due to floating point
-roundoff it is expected that f(xstar) ≈ f'(xstar) ⋅ xstar ⋅ ϵ. A
-relative error accounts for the value of `x`, but the default
+roundoff it is expected that f(xstar) ≈ f'(xstar) ⋅ xstar ⋅ ϵ. The
+relative error used accounts for the value of `x`, but the default
 tolerance may need adjustment if the derivative is large near the
 zero, as the default is a bit aggressive. On the other hand, the
 absolute tolerance might seem too relaxed. 
@@ -164,10 +166,8 @@ The `Bisection` and `Roots.A42` methods will converge, so the tolerances are ign
 ## An alternate interface
 
 For MATLAB users, this functionality is provided by the `fzero`
-function. `Roots` also provides this alternative.
+function. `Roots` also provides this alternative interface:
 
-The function `fzero` which dispatches to an appropriate
-algorithm based on its argument(s):
 
 * `fzero(f, a::Real, b::Real)` and `fzero(f,
   bracket::Vector)` call the `find_zero` algorithm with the

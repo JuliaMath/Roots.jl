@@ -23,7 +23,7 @@ Keyword arguments:
 * `order`: Can specify order of algorithm. 0 is most robust, also 1, 2, 5, 8, 16.
 * `kwargs...` passed on to different algorithms. There are `maxfneval` when `order` is 1,2,5,8, or 16 and `beta` for orders 2,5,8,16,
 
-This is a polyalgorithm redirecting different algorithms based on the value of `order`. 
+This is a polyalgorithm redirecting to different algorithms based on the value of `order`. 
 
 (The tolerance arguments can also be given through `atol`, `rtol`, `xatol`, and `xrtol`, as is done with `find_zero`.)
 
@@ -65,39 +65,11 @@ Example:
     `fzero(sin, 3, 4)` # find pi
     `fzero(sin, [big(3), 4]) find pi with more digits
 """
-function fzero(f, a::Number, b::Number; kwargs...)
-    bracket = adjust_bracket((a, b))
-    a0, b0 = a < b ? promote(float(a), b) : promote(float(b), a)
-    (a0 == -Inf) && (a0 = nextfloat(a0))
-    (b0 == Inf) && (b0 = prevfloat(b0))
-    find_zero(f, bracket, Bisection(); kwargs...)
-end
-
-"""
-Find a zero with bracket specified via `[a,b]`, as `fzero(sin, [3,4])`.
-"""
-function fzero(f, bracket::Vector{T}; kwargs...)  where {T <: Number}
-    fzero(f, float(bracket[1]), float(bracket[2]); kwargs...)
-end
+fzero(f, a::Number, b::Number; kwargs...) = find_zero(f, (a,b), Bisection(); kwargs...)
+fzero(f, bracket::Vector{T}; kwargs...)  where {T <: Number} = find_zero(f, bracket, Bisection(); kwargs...)
+fzero(f, bracket::Tuple{T,S}; kwargs...)  where {T <: Number, S<:Number} = find_zero(f, bracket, Bisection();kwargs...)
 
 
-"""
-Find a zero within a bracket with an initial guess to *possibly* speed things along.
-"""
-function fzero(f, x0::Real, bracket::Vector{T}; kwargs...)  where {T <: Number}
-
-    a, b = adjust_bracket(bracket)
-
-    try
-        ex = a42a(f, a, b, float(x0); kwargs...)
-    catch ex
-        if isa(ex, StateConverged) 
-            return(ex.x0)
-        else
-            rethrow(ex)
-        end
-    end
-end
 
 
 """
@@ -143,6 +115,24 @@ fzero(f::Function, fp::Function, x0::Real; kwargs...) = newton(f, fp, float(x0);
     find_zero(f, x0, method; d...)
 end
 
+## 
+"""
+Find a zero within a bracket with an initial guess to *possibly* speed things along.
+"""
+function fzero(f, x0::Real, bracket::Vector{T}; kwargs...)  where {T <: Number}
+
+    a, b = adjust_bracket(bracket)
+
+    try
+        ex = a42a(f, a, b, float(x0); kwargs...)
+    catch ex
+        if isa(ex, StateConverged) 
+            return(ex.x0)
+        else
+            rethrow(ex)
+        end
+    end
+end
 
 
 ## fzeros
@@ -163,8 +153,9 @@ cross the origin (non-simple zeros). Answers should be confirmed
 graphically, if possible.
 
 """        
-function fzeros(f, a::Real, b::Real; kwargs...)  
+function fzeros(f, a::Number, b::Number; kwargs...)  
     find_zeros(f, float(a), float(b); kwargs...)
 end
-fzeros(f, bracket::Vector{T}; kwargs...) where {T <: Real} = fzeros(f, a, b; kwargs...) 
+fzeros(f, bracket::Vector{T}; kwargs...) where {T <: Number} = fzeros(f, a, b; kwargs...)
+fzeros(f, bracket::Tuple{T,S}; kwargs...) where {T <: Number, S<:Number} = fzeros(f, a, b; kwargs...) 
 
