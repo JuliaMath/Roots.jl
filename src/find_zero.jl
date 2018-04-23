@@ -3,6 +3,21 @@
 ## * a graphic of trace when verbose=true?
 
 
+# 
+# In McNamee & Pan (DOI:10.1016/j.camwa.2011.11.015 there are a number of
+# results on efficiencies of a solution, (1/d) log_10(q)
+# Those implemented here are:
+# quadratic cut (Muller) .265 (in a42)
+# Newton() newton = .1505   or 1/2log(2)
+# Order1() secant method .20 (1/1 * log(1.6)
+# FalsePostion(12) Anderson-Bjork [.226, .233]
+# FalsePostion(3) (King?) .264
+# A42() 0.191 but convergence guaranteed
+# Order8() 8th order 4 steps: .225 (log10(8)/4
+# Order16() 16th order 5 steps .240
+# Order5(): 5th order, 4 steps. 0.1747
+
+
 
 # A zero is found by specifying:
 # the method to use <: AbstractUnivariateZeroMethod

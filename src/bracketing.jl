@@ -132,6 +132,7 @@ When this is not possible, will default to `A42` method.
     
 """    
 mutable struct Bisection <: AbstractBisection end
+mutable struct Bisection64 <: AbstractBisection end
 
 """
     Roots.A42()
@@ -152,30 +153,37 @@ function find_zero(fs, x0, method::AbstractBisection; kwargs...)
     state = init_state(method, F, x)
     options = init_options(method, state; kwargs...)
 
+    # we try a faster alternative for floating point values based on verboseness
+    method == A42() && return find_zero(method, F, options, state)
+    
     T = eltype(state.xn1)
     if T <: FloatNN
         if options.verbose
-            return find_zero(Bisection(), F, options, state)
+            find_zero(Bisection(), F, options, state)
         else
             x0, x1 = state.xn0, state.xn1
             state.xn1 = bisection64(F, x0, x1)
-            state.message = "Used bisection to find 0, steps not counted."
+            state.message = "Used bisection to find the zero, steps not counted."
             state.stopped = state.x_converged = true
             return state.xn1
         end
     else
-        x0, x1 = state.xn0, state.xn1
+        find_zero(A42(), F, options, state)
+    end
+    
+end
+
+
+function find_zero(method::A42, F, options::UnivariateZeroOptions, state::AbstractUnivariateZeroState)
+     x0, x1 = state.xn0, state.xn1
         state.xn1 = a42(F, x0, x1; xtol=options.xabstol, maxeval=options.maxevals,
                         verbose=options.verbose)
         state.message = "Used Alefeld-Potra-Shi method, `Roots.a42`, to find the zero. Iterations and function evaluations are not counted properly."
         state.stopped = state.x_converged = true
         
         options.verbose && show_trace(state, [state.xn1], [state.fxn1], method)
-        return state.xn1
-    end
-    
+    return state.xn1
 end
-
 
 
 
@@ -628,7 +636,7 @@ galdino = Dict{Union{Int,Symbol},Function}(:1 => (fa, fb, fx) -> fa*fb/(fb+fx),
                                            :9 => (fa, fb, fx) -> fa/(1 + fx/fb)^2,
                                            :10 => (fa, fb, fx) -> (fa-fx)/4,
                                            :11 => (fa, fb, fx) -> fx*fa/(fb+fx),
-                                           :12 => (fa, fb, fx) -> (fa * (1-fx/fb > 0 ? 1-fx/fb : 1/2))
+                                           :12 => (fa, fb, fx) -> (fa * (1-fx/fb > 0 ? 1-fx/fb : 1/2))  
 )
 # give common names
 for (nm, i) in [(:pegasus, 1), (:illinois, 8), (:anderson_bjork, 12)]

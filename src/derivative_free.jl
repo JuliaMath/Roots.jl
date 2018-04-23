@@ -63,9 +63,9 @@ end
 ## with verbose turned off
 function _run_bisection(fs, o, options)
     verbose = options.verbose; options.verbose=false # turn off verbose
-    find_zero(Bisection(), fs, options, o)
+    find_zero(A42(), fs, options, o)
     options.verbose = verbose
-    o.message = "Used bisection for last step"
+    o.message = "Used bisection for last step, steps not counted"
 end
 
 
