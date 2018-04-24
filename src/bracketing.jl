@@ -174,7 +174,7 @@ function find_zero(fs, x0, method::AbstractBisection; kwargs...)
 end
 
 
-function find_zero(method::A42, F, options::UnivariateZeroOptions, state::AbstractUnivariateZeroState)
+function find_zero(method::A42, F, options::UnivariateZeroOptions, state::UnivariateZeroState{T,S}) where {T<:Number, S<:Number}
      x0, x1 = state.xn0, state.xn1
         state.xn1 = a42(F, x0, x1; xtol=options.xabstol, maxeval=options.maxevals,
                         verbose=options.verbose)

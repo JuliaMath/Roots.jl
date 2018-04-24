@@ -397,8 +397,7 @@ function find_zero(fs, x0, method::AbstractUnivariateZeroMethod; kwargs...)
 
     F = callable_function(fs)
     state = init_state(method, F, x)
-    options = init_options(method, state;
-                           kwargs...)
+    options = init_options(method, state; kwargs...)
 
     find_zero(method, F, options, state)
     
@@ -412,17 +411,17 @@ find_zero(f, x0::Tuple; kwargs...) = find_zero(f, x0, Bisection(); kwargs...)
 function find_zero(M::AbstractUnivariateZeroMethod,
                    F,
                    options::UnivariateZeroOptions,
-                   state::AbstractUnivariateZeroState
-                   )
+                   state::UnivariateZeroState{T,S}
+                   )  where {T<:Number, S<:Number}
 
 
     
     # in case verbose=true
     if options.verbose
         if isa(M, AbstractSecant)
-            xns, fxns = [state.xn0, state.xn1], [state.fxn0, state.fxn1]
+            xns, fxns = T[state.xn0, state.xn1], S[state.fxn0, state.fxn1]
         else
-            xns, fxns = [state.xn1], [state.fxn1]
+            xns, fxns = T[state.xn1], S[state.fxn1]
         end
     end
 
