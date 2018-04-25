@@ -81,6 +81,14 @@ mutable struct UnivariateZeroOptions{Q,R,S,T}
 end
 
 # Allow for override of default tolerances. Useful, say, for methods like bisection
+function _map_tolerance_arguments(d, xatol, xrtol, atol, rtol)
+    xatol = haskey(d, :xabstol) ? d[:xabstol] : xatol
+    xrtol = haskey(d, :xreltol) ? d[:xreltol] : xatol
+    atol = haskey(d, :abstol) ? d[:abstol] : atol
+    rtol = haskey(d, :reltol) ? d[:reltol] : rtol
+    xatol, xrtol, atol, rtol
+end
+
 function init_options(::Any,
                       state;
                       xatol=missing,
@@ -97,11 +105,9 @@ function init_options(::Any,
     fx1 = real(oneunit(float(state.fxn1)))
 
     ## map old tol names to new
-    d = Dict(kwargs)
-    xatol = haskey(d, :xabstol) ? d[:xabstol] : xatol
-    xrtol = haskey(d, :xreltol) ? d[:xreltol] : xatol
-    atol = haskey(d, :abstol) ? d[:abstol] : atol
-    rtol = haskey(d, :reltol) ? d[:reltol] : rtol
+    ## deprecate in future
+    xatol, xrtol, atol, rtol = _map_tolerance_arguments(Dict(kwargs), xatol, xrtol, atol, rtol)
+    
     
     options = UnivariateZeroOptions(ismissing(xatol) ? zero(x1) : xatol,       # unit of x
                                     ismissing(xrtol) ?  eps(x1/oneunit(x1)) : xrtol,               # unitless

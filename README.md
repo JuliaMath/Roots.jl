@@ -42,6 +42,8 @@ Some examples:
 
 
 ```julia
+f(x) = exp(x) - x^4
+
 # a bisection method has the bracket specified with a tuple or vector
 julia> find_zero(f, (8,9), Bisection())
 8.613169456441398
@@ -50,9 +52,10 @@ julia> find_zero(f, (-10, 0))  # Bisection if x is a tuple and no method
 -0.8155534188089606
 
 
-julia> find_zero(f, (-10, 0), FalsePosition())  # just 19 function evaluations
+julia> find_zero(f, (-10, 0), FalsePosition())  # just 11 function evaluations
 -0.8155534188089607
-	
+
+## find_zero(f, x0::Number) will use Order0()
 julia> find_zero(f, 3)         # default is Order0()
 1.4296118247255556
 
@@ -69,7 +72,7 @@ The `find_zero` function can be used with callable objects:
 ```julia
 using SymEngine
 @vars x
-find_zero(x^5 - x - 1, 1.0)
+find_zero(x^5 - x - 1, 1.0)  # 1.1673039782614185
 ```
 
 Or,
@@ -77,7 +80,7 @@ Or,
 ```julia
 using Polynomials
 x = variable(Int)
-fzero(x^5 - x - 1, 1.0)
+fzero(x^5 - x - 1, 1.0)  # 1.1673039782614185
 ```
 
 The function should respect the units of the `Unitful` package:
@@ -89,7 +92,7 @@ g = 9.8*m/s^2
 v0 = 10m/s
 y0 = 16m
 y(t) = -g*t^2 + v0*t + y0
-find_zero(y, 1s)
+find_zero(y, 1s)      # 1.886053370668014 s
 ```
 
 Newton's method can be used without taking derivatives:
@@ -97,7 +100,7 @@ Newton's method can be used without taking derivatives:
 ```julia
 f(x) = x^3 - 2x - 5
 x0 = 2
-find_zero(f, x0, Roots.Newton())
+find_zero(f, x0, Roots.Newton())   # 2.0945514815423265
 ```
 
 Automatic derivatives allow for easy solutions to finding critical

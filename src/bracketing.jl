@@ -145,6 +145,37 @@ Trans. Math. Softw. 21, 327–344 (1995).
 """
 mutable struct A42 <: AbstractBisection end
 
+
+function init_options(::M,
+                      state;
+                      xatol=missing,
+                      xrtol=missing,
+                      atol=missing,
+                      rtol=missing,
+                      maxevals::Int=typemax(Int),
+                      maxfnevals::Int=typemax(Int),
+                      verbose::Bool=false,
+                      kwargs...) where {M <: Union{Bisection64, A42}}
+
+    ## Where we set defaults
+    x1 = real(oneunit(state.xn1))
+    fx1 = real(oneunit(float(state.fxn1)))
+
+    ## map old tol names to new
+    ## deprecate in future
+    xatol, xrtol, atol, rtol = _map_tolerance_arguments(Dict(kwargs), xatol, xrtol, atol, rtol)
+    
+    # all are 0 by default
+    options = UnivariateZeroOptions(ismissing(xatol) ? zero(x1) : xatol,       # unit of x
+                                    ismissing(xrtol) ?  zero(x1/oneunit(x1)) : xrtol,               # unitless
+                                    ismissing(atol)  ? zero(fx1) : atol,  # units of f(x)
+                                    ismissing(rtol)  ?  zero(fx1/oneunit(fx1)) : rtol,            # unitless
+                                    maxevals, maxfnevals,
+    verbose)    
+
+    options
+end
+
 ## we dispatch to either floating-point-bisection or A42 here.
 function find_zero(fs, x0, method::AbstractBisection; kwargs...)
     
@@ -154,12 +185,13 @@ function find_zero(fs, x0, method::AbstractBisection; kwargs...)
     options = init_options(method, state; kwargs...)
 
     # we try a faster alternative for floating point values based on verboseness
-    method == A42() && return find_zero(method, F, options, state)
+    isa(method, A42) && return find_zero(method, F, options, state)
+    isa(method, FalsePosition) && return find_zero(method, F, options, state)
     
     T = eltype(state.xn1)
     if T <: FloatNN
         if options.verbose
-            find_zero(Bisection(), F, options, state)
+            find_zero(Bisection64(), F, options, state)
         else
             x0, x1 = state.xn0, state.xn1
             state.xn1 = bisection64(F, x0, x1)
@@ -176,7 +208,7 @@ end
 
 function find_zero(method::A42, F, options::UnivariateZeroOptions, state::UnivariateZeroState{T,S}) where {T<:Number, S<:Number}
      x0, x1 = state.xn0, state.xn1
-        state.xn1 = a42(F, x0, x1; xtol=options.xabstol, maxeval=options.maxevals,
+    state.xn1 = a42(F, x0, x1; xtol=options.xabstol, maxeval=options.maxevals,
                         verbose=options.verbose)
         state.message = "Used Alefeld-Potra-Shi method, `Roots.a42`, to find the zero. Iterations and function evaluations are not counted properly."
         state.stopped = state.x_converged = true
@@ -185,6 +217,21 @@ function find_zero(method::A42, F, options::UnivariateZeroOptions, state::Univar
     return state.xn1
 end
 
+
+## in Order0, we run bisection if a bracketing interval is found
+## this is meant to be as speedy as possible
+function _run_bisection(fs, options, state::UnivariateZeroState{T,S}) where {T<:FloatNN, S<:Number}
+    xn0, xn1 = state.xn0, state.xn1
+    state.xn1 = bisection64(fs, xn0, xn1)
+    state.x_converged = true
+    state.message = "Used Bisection() for last step, steps not counted"
+end
+
+function _run_bisection(fs, options, state::UnivariateZeroState{T,S}) where {T<:Number, S<:Number}
+    state.xn1 = find_zero(A42(), fs, options, state)
+    state.x_converged = true
+    state.message = "Used A42() for last step, steps not counted"
+end
 
 
 # ## helper function
@@ -231,7 +278,7 @@ end
 ##
 ## This terminates when there is no more subdivision or function is zero
 
-function update_state(method::Bisection, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T<:Number,S<:Number} 
+function update_state(method::Union{Bisection,Bisection64}, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T<:Number,S<:Number} 
     x0, x2 = o.xn0, o.xn1
     y0, y2 = o.fxn0, o.fxn1
 
@@ -257,7 +304,7 @@ end
 ## convergence is much different here
 ## the method converges,
 ## as we bound between x0, nextfloat(x0) is not measured by eps(), but eps(x0)
-function assess_convergence(method::Bisection, state, options)
+function assess_convergence(method::Union{Bisection64,Bisection}, state, options)
     x0, x2 = state.xn0, state.xn1
     if x0 > x2
         x0, x2 = x2, x0
@@ -266,12 +313,16 @@ function assess_convergence(method::Bisection, state, options)
     x1 = _middle(x0, x2)
     if iszero(state.fxn1)
         state.message = ""
-        state.stopped = state.x_converged = true
+        state.stopped = state.f_converged = true
         return true
     end
 
-
-    x0 < x1 && x1 < x2 && return false
+    x0 == x1 || x1 == x2 && return true
+    d1 = isapprox(x0, x1, atol=options.xabstol, rtol=options.xreltol)
+    d2 = isapprox(x1, x2, atol=options.xabstol, rtol=options.xreltol)
+    !d1 && !d2 && return false
+    
+#    x0 < x1 && x1 < x2 && return false
      
 
     state.message = ""
@@ -325,7 +376,7 @@ function a42(f, a, b;
     end
 
     c, fc = secant(f, a, fa, b, fb)
-    a42a(f, a, fa, b, fb, c, fc,
+    a42a(f, float(a), fa, float(b), fb, float(c), fc,
          xtol=xtol, maxeval=maxeval, verbose=verbose)
 end
 
@@ -373,7 +424,11 @@ function a42a(f, a, fa, b, fb, c, fc;
                 u, fu = bb, fbb
             end
             # u = abs(fab) < abs(fbb) ? ab : bb
-            cb = u - 2*fu/(fbb - fab)*(bb - ab)
+#            cb = u - 2*fu/(fbb - fab)*(bb - ab)
+            del =  2*fu/(fbb - fab)*(bb - ab)
+            if !isnan(del) # add check on NaN
+                cb = u - del
+            end
             fcb = f(cb)
             if abs(cb - u) > (bb - ab)/2
                 ch, fch = ab+(bb-ab)/2, f(ab+(bb-ab)/2)
@@ -396,10 +451,10 @@ function a42a(f, a, fa, b, fb, c, fc;
 
             verbose && println(@sprintf("a=%18.15f, n=%s", float(a), n))
 
-            if nextfloat(ch) * prevfloat(ch) <= 0 * oneunit(ch)^2
+            if nextfloat(float(ch)) * prevfloat(float(ch)) <= 0 * oneunit(ch)^2
                 throw(StateConverged(ch))
             end
-            if nextfloat(a) >= b
+            if nextfloat(float(a)) >= b
                 throw(StateConverged(a))
             end
         end
@@ -483,7 +538,7 @@ end
 function secant(f, a::T, fa, b, fb) where {T}
 
     c = a - fa/(fb - fa)*(b - a)
-    tol = eps(a/oneunit(a))*5
+    tol = 5*eps(T)/oneunit(T)
     if isnan(c) || c <= a + abs(a)*tol || c >= b - abs(b)*tol
         return a + (b - a)/2, f(a+(b-a)/2)
     end
@@ -538,7 +593,7 @@ end
 
 # floating point comparison function
 function almost_equal(x::T, y::T) where {T}
-    min_diff = oneunit(x) * realmin(x/oneunit(x))*32
+    min_diff = oneunit(x) * realmin(float(x/oneunit(x)))*32
     abs(x - y) < min_diff
 end
 

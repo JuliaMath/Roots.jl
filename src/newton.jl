@@ -75,7 +75,7 @@ struct Halley <: AbstractUnivariateZeroMethod
 end
 
 
-function update_state(method::Halley, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions) where {T}
+function update_state(method::Halley, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
     xn = o.xn1
     fxn = o.fxn1
     fpxn = fs(xn,1); incfn(o)

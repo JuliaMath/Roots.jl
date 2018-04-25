@@ -59,15 +59,6 @@ end
 
 ##################################################
 
-## in Order0, we run bisection if a bracketing interval is found
-## with verbose turned off
-function _run_bisection(fs, o, options)
-    verbose = options.verbose; options.verbose=false # turn off verbose
-    find_zero(A42(), fs, options, o)
-    options.verbose = verbose
-    o.message = "Used bisection for last step, steps not counted"
-end
-
 
 ## order 0
 # goal: more robust to initial guess than higher order methods
@@ -81,7 +72,7 @@ end
 # * `f(x) == 0.0` or
 # * `f(prevfloat(x)) * f(nextfloat(x)) < 0`.
 # if a bracket is found that can be done, otherwise secant step is used
-function update_state(method::Order0, fs, o::UnivariateZeroState{T}, options::UnivariateZeroOptions) where {T}
+function update_state(method::Order0, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
 
     alpha, beta = o.xn0, o.xn1
     falpha, fbeta = o.fxn0, o.fxn1
@@ -89,7 +80,7 @@ function update_state(method::Order0, fs, o::UnivariateZeroState{T}, options::Un
     incsteps(o)
 
     if sign(falpha) * sign(fbeta) < 0.0
-        _run_bisection(fs, o, options)
+        _run_bisection(fs, options, o)
         return nothing
     end
 
@@ -100,7 +91,7 @@ function update_state(method::Order0, fs, o::UnivariateZeroState{T}, options::Un
     if sign(fgamma)*sign(fbeta) < 0.0
         o.xn0, o.xn1 = gamma, beta
         o.fxn0, o.fxn1 = fgamma, fbeta
-        _run_bisection(fs, o, options)
+        _run_bisection(fs, options, o)
         return nothing
     end
 
@@ -147,7 +138,7 @@ function update_state(method::Order0, fs, o::UnivariateZeroState{T}, options::Un
             o.xn0, o.xn1 = beta, theta
             o.fxn0, o.fxn1 = fbeta, ftheta
 
-            _run_bisection(fs, o, options)
+            _run_bisection(fs, options, o)
             return nothing
         end
     end
