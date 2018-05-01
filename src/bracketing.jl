@@ -1,7 +1,7 @@
 ###
 
 
-bracketing_error = """The interval [a,b] is not a bracketing interval.
+const bracketing_error = """The interval [a,b] is not a bracketing interval.
 You need f(a) and f(b) to have different signs (f(a) * f(b) < 0).
 Consider a different bracket or try fzero(f, c) with an initial guess c.
 
@@ -17,7 +17,7 @@ Consider a different bracket or try fzero(f, c) with an initial guess c.
 # of a float. Using this definition, bisection will never take more than
 # 64 steps (over Float64)
 const FloatNN = Union{Float64, Float32, Float16}
-_float_int_pairs = Dict(Float64 => UInt64, Float32 => UInt32, Float16 => UInt16)
+const _float_int_pairs = Dict(Float64 => UInt64, Float32 => UInt32, Float16 => UInt16)
 
 function _middle(x::T, y::T) where {T <: FloatNN}
     # Use the usual float rules for combining non-finite numbers
@@ -25,7 +25,7 @@ function _middle(x::T, y::T) where {T <: FloatNN}
         return x + y
     end
     # Always return 0.0 when inputs have opposite sign
-    if sign(x) != sign(y) && !iszero(x) && ! iszero(y)
+    if sign(x) != sign(y) && !iszero(x) && !iszero(y)
         return zero(T)
     end
     
@@ -374,7 +374,7 @@ function a42(f, a, b;
     if xtol/oneunit(xtol) < 0.0
         error("tolerance must be >= 0.0")
     end
-
+    
     c, fc = secant(f, a, fa, b, fb)
     a42a(f, float(a), fa, float(b), fb, float(c), fc,
          xtol=xtol, maxeval=maxeval, verbose=verbose)
