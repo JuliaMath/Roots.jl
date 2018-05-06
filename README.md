@@ -4,46 +4,186 @@ Windows: [![Build status](https://ci.appveyor.com/api/projects/status/goteuptn5k
 
 # Root finding functions for Julia
 
+
 This package contains simple routines for finding roots of continuous
-scalar functions of a single real variable. The basic interface is
-through the function `fzero` which dispatches to an appropriate
-algorithm based on its argument(s):
+scalar functions of a single real variable. The `find_zero`function provides the
+primary interface. It supports various algorithms through the
+specification of an method. These include:
+
+* Bisection-like algorithms. For functions where a bracketing interval
+is known (one where f(a) and f(b) have alternate signs), the
+  `Bisection` method can be specified with a guaranteed
+  convergence. For most floating point number types, bisection occurs
+  in a manner exploiting floating point storage conventions. For
+  others, an algorithm of Alefeld, Potra, and Shi is used.
+
+  For typically faster convergence -- though not guaranteed -- the
+  `FalsePosition` method can be specified. This method has one of 12
+  implementations for a modified secant method to
+  accelerate convergence.
+
+* Several derivative-free methods are implemented. These are specified
+  through the methods `Order0`, `Order1` (the secant method), `Order2`
+  (the Steffensen method), `Order5`, `Order8`, and `Order16`. The
+  number indicates roughly the order of convergence. The `Order0`
+  method is the default, and the most robust, but generally takes many more
+  function calls. The higher order methods promise higer order
+  convergence, though don't always yield results with fewer function
+  calls than `Order1` or `Order2`.
+
+* There are two historic methods that require a derivative:
+  `Roots.Newton` and `Roots.Halley`. (Neither is currently exported.)
+  If a derivative is not given, an automatic derivative is found using
+  the `ForwardDiff` package.
+
+Each method's documentation has additional detail.
+
+Some examples: 
+
+
+```julia
+f(x) = exp(x) - x^4
+
+# a bisection method has the bracket specified with a tuple or vector
+julia> find_zero(f, (8,9), Bisection())
+8.613169456441398
+
+julia> find_zero(f, (-10, 0))  # Bisection if x is a tuple and no method
+-0.8155534188089606
+
+
+julia> find_zero(f, (-10, 0), FalsePosition())  # just 11 function evaluations
+-0.8155534188089607
+
+## find_zero(f, x0::Number) will use Order0()
+julia> find_zero(f, 3)         # default is Order0()
+1.4296118247255556
+
+julia> find_zero(f, 3, Order1()) # same answer, different method
+1.4296118247255556
+
+julia> find_zero(sin, BigFloat(3.0), Order16())
+3.141592653589793238462643383279502884197169399375105820974944592307816406286198
+```
+
+
+The `find_zero` function can be used with callable objects:
+
+```julia
+using SymEngine
+@vars x
+find_zero(x^5 - x - 1, 1.0)  # 1.1673039782614185
+```
+
+Or,
+
+```julia
+using Polynomials
+x = variable(Int)
+fzero(x^5 - x - 1, 1.0)  # 1.1673039782614185
+```
+
+The function should respect the units of the `Unitful` package:
+
+```julia
+using Unitful
+s = u"s"; m = u"m"
+g = 9.8*m/s^2
+v0 = 10m/s
+y0 = 16m
+y(t) = -g*t^2 + v0*t + y0
+find_zero(y, 1s)      # 1.886053370668014 s
+```
+
+Newton's method can be used without taking derivatives:
+
+```julia
+f(x) = x^3 - 2x - 5
+x0 = 2
+find_zero(f, x0, Roots.Newton())   # 2.0945514815423265
+```
+
+Automatic derivatives allow for easy solutions to finding critical
+points of a function.
+
+```julia
+## mean
+as = rand(5)
+function M(x) 
+  sum([(x-a)^2 for a in as])
+end
+fzero(D(M), .5) - mean(as)	  # 0.0
+
+## median
+function m(x) 
+  sum([abs(x-a) for a in as])
+
+end
+fzero(D(m), 0, 1)  - median(as)	# 0.0
+```
+
+### Multiple zeros
+
+The `find_zeros` function can be used to search for all zeros in a
+specified interval. The basic algorithm splits the interval into many
+subintervals. For each, if there is a bracket a bracketing algorithm
+is used to identify a zero, otherwise a derivative free method is used
+to check. This algorithm can miss zeros for various reasons, so the
+results should be confirmed by other means.
+
+```julia
+f(x) = exp(x) - x^4
+find_zeros(f, -10, 10)
+```
+
+
+### Convergence
+
+For most algorithms (besides the `Bisection` ones) convergence is decided when
+
+* The value f(x_n) ≈ 0 with tolerances `atol` and `rtol` *or*
+
+* the values x_n ≈ x_{n-1} with tolerances `xatol` and `xrtol` *and*
+f(x_n) ≈ 0 with a *relaxed* tolerance based on `atol` and `rtol`.
+
+* an algorithm encounters an `NaN` or `Inf` and yet f(x_n) ≈ 0 with a *relaxed* tolerance based on `atol` and `rtol`.
+
+There is no convergence if the number of iterations exceed `maxevals`,
+or the number of function calls exceeds `maxfnevals`.
+
+The tolerances may need to be adjusted. To determine if convergence
+occurs due to f(x_n) ≈ 0, it is necessary to consider that even if
+`xstar` is the correct answer mathematically, due to floating point
+roundoff it is expected that f(xstar) ≈ f'(xstar) ⋅ xstar ⋅ ϵ. The
+relative error used accounts for the value of `x`, but the default
+tolerance may need adjustment if the derivative is large near the
+zero, as the default is a bit aggressive. On the other hand, the
+absolute tolerance might seem too relaxed. 
+
+To determine if convergence is determined as x_n ≈ x_{n-1} the check
+on f(x_n) ≈ 0 is done as algorithms can be fooled by asymptotes, or
+other areas where the tangent lines have large slopes.
+
+The `Bisection` and `Roots.A42` methods will converge, so the tolerances are ignored.
+
+## An alternate interface
+
+For MATLAB users, this functionality is provided by the `fzero`
+function. `Roots` also provides this alternative interface:
+
 
 * `fzero(f, a::Real, b::Real)` and `fzero(f,
-  bracket::Vector)` call the `find_zero` algorithm to find a root
-  within the bracket `[a,b]`.  When a bracket is used with `Float64`
-  arguments, the algorithm is guaranteed to converge to a value `x`
-  with either `f(x) == 0` or at least one of `f(prevfloat(x))*f(x) < 0`
-  or `f(x)*f(nextfloat(x)) < 0`. (The function need not be continuous
-  to apply the algorithm, as the last condition can still hold.)
-
+  bracket::Vector)` call the `find_zero` algorithm with the
+  `Bisection` method.
+  
 * `fzero(f, x0::Real; order::Int=0)` calls a
-  derivative-free method. The default method is a bit plodding but
-  more robust to the quality of the initial guess than some others.
-  For faster convergence and fewer function calls, an order can be
-  specified. Possible values are 1, 2, 5, 8, and 16. The order 2
-  Steffensen method can be the fastest, but is in need of a good
-  initial guess. The order 8 method is more robust and often as
-  fast. The higher-order methods may be faster when using `Big` values.
+  derivative-free method. with the order specified matching one of
+  `Order0`, `Order1`, etc.
+  
+* `fzeros(f, a::Real, b::Real; no_pts::Int=200)` will call `find_zeros`.
 
-* `fzero(f, x0::Real, bracket::Vector)` calls
-  a derivative-free algorithm with initial guess `x0` with steps constrained
-  to remain in the specified bracket.
-
-* `fzeros(f, a::Real, b::Real; no_pts::Int=200)` will split
-  the interval `[a,b]` into many subintervals and search for zeros in
-  each using a bracketing method if possible. This naive algorithm
-  may miss  double zeros that lie within the same subinterval and zeros
-  where there is no crossing of the x-axis.
-
-
-
-
-
-For historical purposes, there are implementations of Newton's method
-(`newton`), Halley's method (`halley`), and the secant method
-(`secant_method`). For the first two, if derivatives are not
-specified, they will be computed using the `ForwardDiff` package.
+* The function `secant_method`, `newton`, and `halley` provide direct
+  access to those methods.
 
 
 ## Usage examples
@@ -60,78 +200,10 @@ fzero(f, 3)			          # 1.4296118247255558
 
 ## use a different order
 fzero(sin, 3, order=16)		  # 3.141592653589793
-
-## BigFloat values yield more precision
-fzero(sin, BigFloat(3.0))	  # 3.1415926535897932384...with 256 bits of precision
-```
-
-The `fzero` function can be used with callable objects:
-
-```julia
-using SymEngine; @vars x
-fzero(x^5 - x - 1, 1.0)
-```
-
-Or,
-
-```julia
-using Polynomials; x = variable(Int)
-fzero(x^5 - x - 1, 1.0)
 ```
 
 
 
-The well-known methods can be used with or without supplied
-derivatives. If not specified, the `ForwardDiff` package is used for
-automatic differentiation.
-
-```julia
-f(x) = exp(x) - x^4
-fp(x) = exp(x) - 4x^3
-fpp(x) = exp(x) - 12x^2
-newton(f, fp, 8)              # 8.613169456441398
-newton(f, 8)	
-halley(f, fp, fpp, 8)
-halley(f, 8)
-secant_method(f, 8, 8.5)
-```
-
-The automatic derivatives allow for easy solutions to finding critical
-points of a function.
-
-```julia
-## mean
-as = rand(5)
-function M(x) 
-  sum([(x-a)^2 for a in as])
-end
-fzero(D(M), .5) - mean(as)	  # 0.0
-
-## median
-function m(x) 
-  sum([abs(x-a) for a in as])
-end
-fzero(D(m), 0, 1)  - median(as)	# 0.0
-```
-
-
-## Alternate interface
-
-As an alternative interface to the MATLAB-inherited one through
-`fzero`, the function `find_zero` can be used. For this, a type is
-used to specify the method. For example,
-
-```
-find_zero(sin, 3.0, Order0())
-find_zero(x -> x^5 - x- 1, 1.0, Order1())  # also Order2(), Order5(), Order8(), Order16()
-```
-
-And bracketing methods:
-
-```
-find_zero(sin, (3, 4), Bisection())
-find_zero(x -> x^5 - x - 1, (1,2), FalsePosition())
-```
 
 
 ----

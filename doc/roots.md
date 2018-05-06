@@ -3,14 +3,14 @@
 The `Roots` package contains simple routines for finding zeros of
 continuous scalar functions of a single real variable.  A zero of $f$
 is a value $c$ where $f(c) = 0$.  The basic interface is through the
-function `fzero`, which through multiple dispatch and keyword
-arguments can handle many different cases.
+function `find_zero`, which through multiple dispatch can handle many different cases.
 
 We will use `Plots` for plotting.
 
 ```
 using Roots  
 using Plots
+pyplot()
 ```
 
 ## Bracketing
@@ -38,11 +38,10 @@ plot(f, -2, 2)
 plot!([0,1], [0,0], linewidth=2)
 ```
 
-The basic function call specifies a bracket using either two values or
-vector notation:
+We use a vector or tuple to specify the initial condition for `Bisection`:
 
 ```
-x = fzero(f, 0, 1)    # also fzero(f, [0, 1])
+x = find_zero(f, (0, 1), Bisection())    # alternatively fzero(f, [0, 1])
 x, f(x)
 ```
 
@@ -51,11 +50,13 @@ For this function we see that `f(x) == 0.0`.
 ----
 
 Next consider $f(x) = \sin(x)$. A known root is $\pi$. Trignometry
-tells us that $[\pi/2, 3\pi/2]$ will be a bracket:
+tells us that $[\pi/2, 3\pi/2]$ will be a bracket. Here `Bisection()`
+is not specified, as it will be the default when the initial value is
+specified as pair of numbers:
 
 ```
 f(x) = sin(x)
-x = fzero(f, pi/2, 3pi/2)
+x = find_zero(f, (pi/2, 3pi/2))
 x, f(x)
 ```
 
@@ -67,10 +68,20 @@ f(prevfloat(x)) * f(x) < 0.0 || f(x) * f(nextfloat(x)) < 0.0
 
 That is, at `x` the function is changing sign.
 
-The algorithm identifies discontinuities, not just zeros:
+From a mathematical perspective, a zero is guaranteed for a
+*continuous* function. However, the computer algorithm doesn't assume
+continuity, it just looks for changes of sign. As such, the algorithm
+will  identify discontinuities, not just zeros. For example:
 
 ```
-fzero(x -> 1/x, -1, 1)
+find_zero(x -> 1/x, (-1, 1))
+```
+
+
+The endpoints can even be infinite:
+
+```
+find_zero(x -> Inf*sign(x), (-Inf, Inf))  # Float64 only
 ```
 
 
@@ -78,17 +89,15 @@ The basic algorithm used for bracketing when the values are simple
 floating point values is the bisection method. For big float values, an
 algorithm due to Alefeld, Potra, and Shi is used.
 
-The endpoints can even be infinite:
-
 ```
-fzero(x -> Inf*sign(x), -Inf, Inf)  # Float64 only
+find_zero(sin, (big(3), big(4)))    # uses a different algorithm then for (3,4)
 ```
 
 ## Using an initial guess
 
 Bracketing methods have guaranteed convergence, but in general require
 many more function calls than are needed to produce an answer.  If a
-good initial guess is known, then the `fzero` function provides an
+good initial guess is known, then the `find_zero` function provides an
 interface to some different iterative algorithms that are more
 efficient. Unlike bracketing methods, these algorithms may not
 converge to the desired root if the initial guess is not well chosen.
@@ -96,7 +105,7 @@ converge to the desired root if the initial guess is not well chosen.
 The default algorithm is modeled after an algorithm used for
 [HP-34 calculators](http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1979-12.pdf). This
 algorithm is designed to be more forgiving of the quality of the
-initial guess at the cost of possible performing many more steps. In
+initial guess at the cost of possibly performing many more steps. In
 many cases it satisfies the criteria for a bracketing solution, as it
 will use bracketing if within the algorithm a bracket is identified.
 
@@ -105,7 +114,7 @@ we can find the zero with:
 
 ```
 f(x) = cos(x) - x
-x = fzero(f , 1)
+x = find_zero(f , 1)
 x, f(x)
 ```
 
@@ -113,14 +122,14 @@ For the polynomial $f(x) = x^3 - 2x - 5$, an initial guess of 2 seems reasonable
 
 ```
 f(x) = x^3 - 2x - 5
-x = fzero(f, 2)
+x = find_zero(f, 2)
 x, f(x), sign(f(prevfloat(x)) * f(nextfloat(x)))
 ```
 
 For even more precision, `BigFloat` numbers can be used
 
 ```
-x = fzero(sin, big(3))
+x = find_zero(sin, big(3))
 x, sin(x), x - pi
 ```
 
@@ -131,42 +140,41 @@ then possibly bracketing, which involves potentially many more function
 calls. Though specifying a initial value is more convenient than a
 bracket, there may be times where a more efficient algorithm is sought.
 For such, a higher-order method might be better
-suited. There are algorithms of order 1 (secant method), 2
-([Steffensen](http://en.wikipedia.org/wiki/Steffensen's_method)), 5,
-8, and 16. The order 2 method is generally more efficient, but is more
+suited. There are algorithms `Order1` (secant method), `Order2`
+([Steffensen](http://en.wikipedia.org/wiki/Steffensen's_method)), `Order5`,
+`Order8`, and `Order16`. The order 2 method is generally more efficient, but is more
 sensitive to the initial guess than, say, the order 8 method. These
-algorithms are accessed by specifying a value for the `order`
-argument:
+algorithms are accessed by specifying the method after the initial point:
 
 ```
 f(x) = 2x - exp(-x)
-x = fzero(f, 1, order=2)
+x = find_zero(f, 1, Order2())      # also fzero(f, 1, order=2)
 x, f(x)
 ```
 
 ```
 f(x) = (x + 3) * (x - 1)^2
-x = fzero(f, -2, order=5)
+x = find_zero(f, -2, Order5())
 x, f(x)
 ```
 
 ```
-x = fzero(f, 2, order=8)
+x = find_zero(f, 2, Order8())
 x, f(x)
 ```
 
 The latter shows that zeros need not be simple zeros (i.e. $f'(x) = 0$,
-if defined) to be found.
+if defined) to be found. (Though non-simple zeros may take many more
+steps to converge.)
 
 To investigate the algorithm and its convergence, the argument
 `verbose=true` may be specified.
 
 
 For some functions, adjusting the default tolerances may be necessary
-to achieve convergence. These include `abstol` and `reltol`, which are
-used to check if `norm(f(x)) <= max(abstol, norm(x)*reltol)`;
-`xabstol`, `xreltol`, to check if `norm(x1-x0) <= max(xabstol,
-norm(x1)*xreltol)`; and `maxevals` and `maxfnevals` to limit the
+to achieve convergence. These include `atol` and `rtol`, which are
+used to check if $f(x_n) \approx 0$;
+`xatol`, `xrtol`, to check if $x_n \approx x_{n-1}$; and `maxevals` and `maxfnevals` to limit the
 number of steps in the algorithm or function calls.
 
 
@@ -189,13 +197,13 @@ the issue, we have $f(x) = x^{1/3}$:
 
 ```
 f(x) = cbrt(x)
-x = fzero(f, 1, order=2)	# all of 2, 5, 8, and 16 fail or diverge towards infinity
+x = find_zero(f, 1, Order2())	# all of 2, 5, 8, and 16 fail or diverge towards infinity
 ```
 
 However, the default finds the root here, as a bracket is identified:
 
 ```
-x = fzero(f, 1)
+x = find_zero(f, 1)
 x,  f(x)
 ```
 
@@ -203,16 +211,16 @@ Order 8 illustrates that sometimes the stopping rules can be misleading and
 checking the returned value is always a good idea:
 
 ```
-fzero(f, 1, order=8)
+find_zero(f, 1, Order8())
 ```
 
 The algorithm rapidly marches off towards infinity so the relative
-tolerance $|x| \cdot
+tolerance $\approx |x| \cdot
 \epsilon$ is large compared to the far-from zero $f(x)$.
 
 ----
 
-This example illustrates that the default `fzero`
+This example illustrates that the default `find_zero`
 call is more forgiving to an initial guess. The devilish function
 defined below comes from a [test
 suite](http://people.sc.fsu.edu/~jburkardt/cpp_src/test_zero/test_zero.html)
@@ -224,13 +232,13 @@ plot(f, -2, 2)
 ```
 
 ```
-fzero(f, 0)
+find_zero(f, 0)
 ```
 
-Whereas, with `order=n` methods fail. For example,
+Whereas, with higher order methods fail. For example,
 
 ```
-fzero(f, 0, order=8)
+find_zero(f, 0, Order8())
 ```
 
 Basically the high order oscillation can send the proxy tangent line
@@ -247,13 +255,13 @@ happen, but it isn't guaranteed:
 ```
 f(x) = x^5 - x - 1
 x0 = 0.1
-fzero(f, x0)
+find_zero(f, x0)
 ```
 
 Whereas, 
 
 ```
-fzero(f, x0, order=2)
+find_zero(f, x0, Order2())
 ```
 
 A graph shows the issue. We have overlayed a 15 steps of Newton's
@@ -280,13 +288,13 @@ always work.
 
 The bracketing methods suggest a simple algorithm to recover multiple
 zeros: partition an interval into many small sub-intervals. For those
-that bracket a root find the root. This is essentially implemented with `fzeros(f,
+that bracket a root find the root. This is essentially implemented with `find_zeros(f,
 a, b)`. The algorithm has problems with non-simple zeros (in particular ones
 that don't change sign at the zero) and zeros which bunch together. Simple usage is often succesful
 enough, but a graph should be used to assess if all the zeros are found:
 
 ```
-fzeros(x -> exp(x) - x^4, -10, 10)
+find_zeros(x -> exp(x) - x^4, -10, 10)
 ```
 
 
@@ -350,7 +358,7 @@ point of the function $f(x) = 1/x^2 + x^3, x > 0$ near $1.0$ can be found with:
 
 ```
 f(x) = 1/x^2 + x^3
-fzero(D(f), 1)
+find_zero(D(f), 1)
 ```
 
 For more complicated expressions, `D` will not work. In this example,
@@ -376,7 +384,7 @@ so we start our search at `a-5`:
 ```
 function howfar(theta)
 	 a = 200*cosd(theta)
-	 fzero(x -> flight(x, theta), a-5)
+	 find_zero(x -> flight(x, theta), a-5)
 end
 ```	 
 
@@ -398,7 +406,7 @@ non-windy day:
 ```
 h = 1e-5
 howfarp(theta) = (howfar(theta+h) - howfar(theta-h)) / (2h)
-tstar = fzero(howfarp, 45)
+tstar = find_zero(howfarp, 45)
 ```
 
 This shows the differences in the trajectories:
@@ -408,3 +416,71 @@ plot(x -> flight(x, tstar), 0, howfar(tstar))
 plot!(x -> flight(x, 45), 0, howfar(45))
 ```
 
+
+
+# Use with other number types
+
+
+The `Unitful` package provides a means to attach units to numeric
+values.
+
+For example, a projectile motion with $v_0=10$ and $x_0=16$ could be
+represented with:
+
+```
+using Unitful
+s = u"s"; m = u"m"
+g = 9.8*m/s^2
+v0 = 10m/s
+y0 = 16m
+y(t) = -g*t^2 + v0*t + y0
+```
+
+This motion starts at a height of 16 meters and has an initial
+velocity of 10 meters per second.
+
+The time of touching the ground is found with:
+
+```
+a = find_zero(y, 1s, Order2())
+a
+```
+
+Automatic derivatives don't propogate through `Unitful`, so we define
+the approximate derivative--paying attention to units--with:
+
+```
+Df(f, h=1e-6) = x -> (f(x + h*oneunit(x)) - f(x)) / (h*oneunit(x))
+```
+
+And then the fact the peak is the only local maximum, it can be found from:
+
+```
+find_zero(Df(y), (0s, a), Bisection())
+```
+
+----
+
+The `SymEngine` package provides symbolic values to `Julia`. Rather
+than passing a function to `find_zero`, we can pass a symbolic expression:
+
+```
+using SymEngine
+g, v0, y0 = 9.8, 10, 16
+@vars t
+yt = -g * t^2 + v0 * t + y0
+```
+
+```
+a = find_zero(yt, 1, Order2())
+a
+```
+
+And the peak is determined to be at:
+
+```
+find_zero(diff(yt, t), (0, a), Bisection())
+```
+
+(This also illustrates that symbolic values can be passed to describe
+the `x`-axis values.)
