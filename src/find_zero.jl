@@ -101,7 +101,7 @@ function init_options(::Any,
                       kwargs...)
 
     ## Where we set defaults
-    x1 = real(oneunit(state.xn1))
+    x1 = real(oneunit(float(state.xn1)))
     fx1 = real(oneunit(float(state.fxn1)))
 
     ## map old tol names to new
@@ -111,8 +111,8 @@ function init_options(::Any,
     # assign defaults when missing
     options = UnivariateZeroOptions(ismissing(xatol) ? zero(x1) : xatol, # units of x
                                     ismissing(xrtol) ?  eps(x1/oneunit(x1)) : xrtol,  # unitless
-                                    ismissing(atol)  ?  4 * eps(fx1) : atol,  # units of f(x)
-                                    ismissing(rtol)  ?  4 * eps(fx1/oneunit(fx1)) : rtol, # unitless
+                                    ismissing(atol)  ?  4.0 * eps(fx1) : atol,  # units of f(x)
+                                    ismissing(rtol)  ?  4.0 * eps(fx1/oneunit(fx1)) : rtol, # unitless
                                     maxevals, maxfnevals,
     verbose)    
 
@@ -180,8 +180,9 @@ end
     
 ## has UnivariateZeroProblem converged?
 ## allow missing values in isapprox
-_isapprox(a, b, rtol, atol, lambda=missing, relaxed=false) = _isapprox(Val{ismissing(a) || ismissing(b)}, a, b, rtol, atol,lambda,relaxed)
-
+function _isapprox(a, b, rtol, atol, lambda=missing, relaxed=false)
+    _isapprox(Val{ismissing(a) || ismissing(b)}, float(a), float(b), rtol, atol,float(lambda),relaxed)
+end
 ### missing data so not approx
 _isapprox(::Type{Val{true}}, a, b, rtol, atol,lambda, relaxed) = false
 
