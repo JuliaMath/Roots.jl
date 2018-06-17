@@ -181,7 +181,8 @@ end
 ## has UnivariateZeroProblem converged?
 ## allow missing values in isapprox
 function _isapprox(a, b, rtol, atol, lambda=missing, relaxed=false)
-    _isapprox(Val{ismissing(a) || ismissing(b)}, float(a), float(b), rtol, atol,float(lambda),relaxed)
+    _isapprox(Val{ismissing(a) || ismissing(b)}, float(a), float(b), rtol, atol,
+              float(lambda),relaxed)
 end
 ### missing data so not approx
 _isapprox(::Type{Val{true}}, a, b, rtol, atol,lambda, relaxed) = false
