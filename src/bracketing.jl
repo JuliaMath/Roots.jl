@@ -724,11 +724,36 @@ function find_zeros(f, a::Real, b::Real, args...;
 
     cur_range = get_real_finite_range(f, a, b, no_pts)
 
-    isempty(cur_range) && return []
+    root_list = Real[]
 
-    root_list = _find_recursive_zeros(
+    isempty(cur_range) && return root_list
+
+    if a != first(cur_range)
+      sub_no_pts = Int(floor( no_pts / 10 ))
+      cur_sub_range = collect(linspace(a, first(cur_range), sub_no_pts))
+
+      append!(
+        root_list,
+        find_bisection_roots(f, cur_sub_range, abstol, reltol)
+      )
+    end
+
+    if b != last(cur_range)
+      sub_no_pts = Int(floor( no_pts / 10 ))
+      cur_sub_range = collect(linspace(last(cur_range), b, sub_no_pts))
+
+      append!(
+        root_list,
+        find_bisection_roots(f, cur_sub_range, abstol, reltol)
+      )
+    end
+
+    append!(
+      root_list,
+      _find_recursive_zeros(
         f, cur_range, args...;
         no_pts=no_pts, abstol=abstol, reltol=reltol, kwargs...
+      )
     )
 
     # redo if it appears function oscillates alot in this interval...
@@ -746,39 +771,44 @@ end
 
 function get_real_finite_range(f, a::Real, b::Real, no_pts::Int)
     f_a, f_b = f(a), f(b)
-    
-    function is_valid_f(cur_f) 
+
+    work_range = collect(linspace(a,b,no_pts))
+
+    f_a_next, f_b_prev = f(work_range[2]), f(work_range[end-1])
+
+    function is_valid_f(cur_f)
         tmp_f = float(cur_f)
         isreal(tmp_f) && !isinf(tmp_f)
     end
-    
-    is_valid_a = is_valid_f(f_a)
-    is_valid_b = is_valid_f(f_b)
-    
-    is_valid_a && is_valid_b && 
-        return collect(linspace(a,b,no_pts))
-    
+
+    is_valid_a = is_valid_f(f_a) && is_valid_f(f_a_next)
+    is_valid_b = is_valid_f(f_b) && is_valid_f(f_b_prev)
+
+    is_valid_a && is_valid_b && return work_range
     is_valid_a || is_valid_b || return []
-    
+
     fixed_value = is_valid_a ? a : b
-    float_value = is_valid_a ? b : a
-    
-    stash_value = float_value
-    
+    wrong_value = is_valid_a ? b : a
+
+    float_value = fixed_value
+    stash_value = fixed_value
+
     attempt_count = 15
-        
+
     for cur_attempt in 1:attempt_count
-        float_value += fixed_value
+        float_value += wrong_value
         float_value /= 2
-                
-        is_valid_f(f(float_value)) && break
+
+        is_valid_f(f(float_value)) || break
         stash_value = float_value
     end
-        
-    cur_diff = ( stash_value - float_value ) 
+
+    cur_diff = ( float_value - stash_value )
     cur_diff /= ( attempt_count + 1 )
-    
-    found_value = float_value
+
+    found_value = stash_value
+    float_value = stash_value
+
     for cur_attempt in 1:attempt_count
         float_value += cur_diff
 
@@ -827,7 +857,7 @@ function _find_recursive_zeros(f, cur_range::AbstractVector{T}, args...;
 end
 
 function find_root_list(f, cur_range::AbstractVector{T}, abstol::Real, reltol::Real) where T <: Real
-    isempty(cur_range) && return []
+    isempty(cur_range) && return Real[]
 
     cur_roots = find_bisection_roots(f, cur_range, abstol, reltol)
     isempty(cur_roots) || return cur_roots
@@ -841,16 +871,29 @@ function find_bisection_roots(f, cur_range::AbstractVector{T}, abstol::Real, rel
     no_pts = length(cur_range)
 
     cur_roots = Real[]
-    
+
+    function work_f(x)
+      cur_f = float(f(x))
+      isreal(cur_f) && return cur_f
+
+      real_f, imag_f = real(cur_f), imag(cur_f)
+      cur_ratio = real_f / imag_f
+
+      ( abs(cur_ratio) > 1e6 ) && return real_f
+      ( abs(real_f) < 1e-3 && abs(imag_f) < 1e-6 ) && return real_f
+
+      cur_f
+    end
+
     cur_values = map(
         cur_f -> isapprox(cur_f, 0.0, rtol=reltol, atol=abstol) ? 0.0 : cur_f,
-        map(float, f.(cur_range))
+        map(float, work_f.(cur_range))
     )
 
     cur_signs = map(sign, cur_values[1:end-1] .* cur_values[2:end])
 
     for (cur_index, cur_sign) in enumerate(cur_signs)
-        isreal(cur_sign) || continue 
+        imag(cur_sign) < 1e-6 || continue
         isinf(cur_sign) && continue
 
         cur_a, cur_b = cur_range[cur_index:cur_index+1]
@@ -865,10 +908,31 @@ function find_bisection_roots(f, cur_range::AbstractVector{T}, abstol::Real, rel
         end
 
         ( real(cur_sign) > 0 ) && continue
-        
-        cur_root = find_zero(f, [cur_a, cur_b], Bisection())
-        push!(cur_roots, cur_root)
+
+        tmp_roots = _find_recursive_bisection_roots(work_f, cur_a, cur_b)
+        append!(cur_roots, tmp_roots)
     end
+
+    cur_roots
+end
+
+function _find_recursive_bisection_roots(f, a::Real, b::Real; cur_depth::Int=1)
+    cur_end_points = [a, b]
+
+    try
+        cur_root = find_zero(f, cur_end_points, Bisection())
+        return [cur_root]
+    catch cur_error
+        isa(cur_error, ArgumentError) && return []
+        isa(cur_error, MethodError) || rethrow(cur_error)
+        ( cur_depth > 8 ) && return []
+    end
+
+    cur_roots = []
+    cur_average = mean(cur_end_points)
+
+    append!(cur_roots, _find_recursive_bisection_roots(f, a, cur_average, cur_depth=cur_depth+1))
+    append!(cur_roots, _find_recursive_bisection_roots(f, cur_average, b, cur_depth=cur_depth+1))
 
     cur_roots
 end
