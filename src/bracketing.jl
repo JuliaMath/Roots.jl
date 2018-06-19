@@ -700,57 +700,217 @@ end
 
 ## --------------------------------------
 
+## find zeros code
+## Interval is either a bracket or not
+struct Interval
+l
+m
+r
+fl
+fm
+fr
+end
+
+
+function Interval(f, l, r)
+    m = midpoint(l, r) # _middle?
+    Interval(l, m, r, f(l), f(m), f(r))
+end
+
+isbracket(a::Interval) = sign(a.fl) * sign(a.fr) < 0
+deltax(a::Interval) = a.r - a.l
+deltaf(a::Interval) = a.fr - a.fl
+Base.norm(a::Interval) = max(abs(a.r), abs(a.l))
+
+function first_derivative(a::Interval)
+    deltaf(a) / deltax(a)
+end
+
+# from adaptive_grid
+function second_derivative(a::Interval)
+    x1,x2,x3 = a.l, a.m, a.r
+    y1,y2,y3 = a.fl, a.fm, a.fr
+    fpp = 2 * (y1/(x2-x1)/(x3-x1) - y2/(x3-x2)/(x2-x1) + y3/(x3-x2)/(x3-x1))
+    fpp
+#    println("f'' ~ $fpp")
+end
+
+
+midpoint(l, r) = l + (r-l)/2
+
+
+# Halving threshold
+# return true to keep, false to drop
+# hueristic
+function HT(a::Interval, C, maxmultiplicity=1)
+    # why should we keep non-bracketing interval?
+    # - quadratic expansion (with boost) is a bracket
+    # - f is reasonably close
+    dx = deltax(a)
+    fp = first_derivative(a)
+    fpp = second_derivative(a)
+    fmin = min(abs(a.fl), abs(a.fr))
+    qstep = C * abs(fp) * dx + C/2 * abs(fpp) * dx^2
+    fmin - qstep < 0 && return true
+    
+    # condition from paper
+    # dx > 1/C * min(|fl|, |fr|) / dx
+    max(1.0, abs(fpp)) * dx > 1/C * fmin / dx^maxmultiplicity && return true
+    false
+end
+
+function keep_nonbracket(a::Interval, C, maxmultiplicity)
+    HT(a,C, maxmultiplicity)
+end
+
+# have more data here, can better estimate?
+function keep_nonbracket(a::Interval, la::Interval, ra::Interval, C, maxmultiplicity)
+    HT(a, C, maxmultiplicity)
+end
+    
+# bracket threshod
+function BT(a::Interval, xtol, xreltol)
+    # paper uses min(xtolrel * deltax(a), xtol)
+    # but compares with deltax(a), so can't possibly be caught
+    # L > min(epsilon*L, epsilon_m) ???
+    # Here we want to ensure separation -- can bracket
+    # have two or more distinct zeros
+    # user must specify zero separation parameters
+
+    max(xtol, abs(a.m) * xreltol)
+end
+
+## do we still keep bracket or do we solve
+function still_bracket(a::Interval, atol, rtol)
+    deltax(a) > BT(a, atol, rtol)
+end
+
+## is fm ~ 0  f(x+xd) ~ f(x) + f'(x)*xd
+function isapproxzero(a::Interval, atol, rtol)
+    abs(a.fm) <= min(max(1.0, abs(a.m)) * rtol, atol)
+end
+
+#
+# * bigger values of C then more aggressive with the halving of non-bracketing intervals
+# * xatol, xrtol used to gauge if a bracketing interval possibly has more than one distinct zero
+# * atol and rtol used to gauge if f(xm) ~ 0
+
+
+
 """
-
-Searches for zeros  of `f` in an interval [a, b].
-
-Basic algorithm used:
-
-* split interval [a,b] into `no_pts` subintervals.
-* For each bracketing interval finds a bracketed zero.
-* For other subintervals does a quick search with a derivative-free method.
-
-If there are many zeros relative to the number of points, the process
-is repeated with more points, in hopes of finding more zeros for
-oscillating functions.
-
-Called by `fzeros` or `Roots.find_zeros`.
-
-"""
-function find_zeros(f, a::Real, b::Real, args...;
-                    no_pts::Int=100,
-                    abstol::Real=10*eps(), reltol::Real=10*eps(), ## should be abstol, reltol as used. 
-                    kwargs...)
-
-    a, b = a < b ? (a,b) : (b,a)
-    rts = eltype(promote(float(a),b))[]
-    xs = vcat(a, a .+ (b-a) .* sort(rand(no_pts)), b)
+    find_zeros(f, a, b; C, xatol, xrtol, atol, rtol)
 
 
-    ## Look in [ai, bi)
-    for i in 1:(no_pts+1)
-        ai,bi=xs[i:i+1]
-        if isapprox(f(ai), 0.0, rtol=reltol, atol=abstol)
-            push!(rts, ai)
-        elseif sign(f(ai)) * sign(f(bi)) < 0
-            push!(rts, find_zero(f, [ai, bi], Bisection()))
-        else
-            try
-                x = find_zero(f, ai + (0.5)* (bi-ai), Order8(); maxevals=10, abstol=abstol, reltol=reltol)
-                if ai < x < bi
-                    push!(rts, x)
+"""    
+function find_zeros(f, a, b;
+              C= 10 * one(float(a)),
+              maxmultiplicity = 1,
+              xatol=1e-4, xrtol = 1e-4,
+              atol=0.0, rtol = 8*eps())
+
+
+    ints = Interval[Interval(f, float(a), float(b))]
+    T = eltype(float(a))
+    
+    xroots = T[]
+
+    while !isempty(ints)
+        a = pop!(ints)
+        
+        la = Interval(f, a.l, a.m)
+        ra = Interval(f, a.m, a.r)
+        if isbracket(a)
+            if still_bracket(a, xatol, xrtol)
+                if isbracket(la) # left is bracket. Do we keep right?
+                    push!(ints, la)                    
+                    if keep_nonbracket(ra, C, maxmultiplicity)
+                        push!(ints, ra)
+                    end
+                else  # right is bracket. Do we keep left?
+                    push!(ints, ra)
+                    if keep_nonbracket(la, C, maxmultiplicity)
+                        push!(ints, la)
+                    end
                 end
-            catch e
+            else
+                # diff is close, so we can close up
+                ##println("find zero in bracket ($(a.l), $(a.r))")
+                push!(xroots, find_zero(f, (a.l, a.r)))
+            end
+        else
+            # we have f(x+xD) approx f'(x) x D
+            if isapproxzero(a, atol, rtol)  # XXX work on tolerances
+                # a zero
+#                println("f(xm) ~ 0; xm=$xm: $(fm) < $(max(1, abs(xm))*freltol)")
+                push!(xroots, a.m)
+            else
+                if keep_nonbracket(a, la, ra, C, maxmultiplicity)
+                    push!(ints, la)
+                    push!(ints, ra)
+                end
             end
         end
     end
-    ## finally, b?
-    isapprox(f(b), 0.0, rtol=reltol, atol=abstol) && push!(rts, b)
 
-    ## redo if it appears function oscillates alot in this interval...
-    if length(rts) > (1/4) * no_pts
-        return(find_zeros(f, a, b, args...; no_pts = 10*no_pts, abstol=abstol, reltol=reltol, kwargs...))
-    else
-        return(sort(rts))
-    end
+    xroots
 end
+    
+
+
+
+
+
+# """
+
+# Searches for zeros  of `f` in an interval [a, b].
+
+# Basic algorithm used:
+
+# * split interval [a,b] into `no_pts` subintervals.
+# * For each bracketing interval finds a bracketed zero.
+# * For other subintervals does a quick search with a derivative-free method.
+
+# If there are many zeros relative to the number of points, the process
+# is repeated with more points, in hopes of finding more zeros for
+# oscillating functions.
+
+# Called by `fzeros` or `Roots.find_zeros`.
+
+# """
+# function find_zeros(f, a::Real, b::Real, args...;
+#                     no_pts::Int=100,
+#                     abstol::Real=10*eps(), reltol::Real=10*eps(), ## should be abstol, reltol as used. 
+#                     kwargs...)
+
+#     a, b = a < b ? (a,b) : (b,a)
+#     rts = eltype(promote(float(a),b))[]
+#     xs = vcat(a, a .+ (b-a) .* sort(rand(no_pts)), b)
+
+
+#     ## Look in [ai, bi)
+#     for i in 1:(no_pts+1)
+#         ai,bi=xs[i:i+1]
+#         if isapprox(f(ai), 0.0, rtol=reltol, atol=abstol)
+#             push!(rts, ai)
+#         elseif sign(f(ai)) * sign(f(bi)) < 0
+#             push!(rts, find_zero(f, [ai, bi], Bisection()))
+#         else
+#             try
+#                 x = find_zero(f, ai + (0.5)* (bi-ai), Order8(); maxevals=10, abstol=abstol, reltol=reltol)
+#                 if ai < x < bi
+#                     push!(rts, x)
+#                 end
+#             catch e
+#             end
+#         end
+#     end
+#     ## finally, b?
+#     isapprox(f(b), 0.0, rtol=reltol, atol=abstol) && push!(rts, b)
+
+#     ## redo if it appears function oscillates alot in this interval...
+#     if length(rts) > (1/4) * no_pts
+#         return(find_zeros(f, a, b, args...; no_pts = 10*no_pts, abstol=abstol, reltol=reltol, kwargs...))
+#     else
+#         return(sort(rts))
+#     end
+# end
