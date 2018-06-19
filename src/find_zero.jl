@@ -85,7 +85,7 @@ function _map_tolerance_arguments(d, xatol, xrtol, atol, rtol)
     xatol = get(d, :xabstol, xatol)
     xrtol = get(d, :xreltol, xrtol)
     atol = get(d, :abstol, atol)
-    atol = get(d, :reltol, rtol)
+    rtol = get(d, :reltol, rtol)
     xatol, xrtol, atol, rtol
 end
 
