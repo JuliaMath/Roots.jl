@@ -729,7 +729,7 @@ function find_zeros(f, a::Real, b::Real, args...;
     isempty(cur_range) && return root_list
 
     if a != first(cur_range)
-      sub_no_pts = Int(floor( no_pts / 10 )) + 1
+      sub_no_pts = Int(floor( no_pts / 4 )) + 1
       cur_sub_range = collect(linspace(a, first(cur_range), sub_no_pts))
 
       append!(
@@ -739,7 +739,7 @@ function find_zeros(f, a::Real, b::Real, args...;
     end
 
     if b != last(cur_range)
-      sub_no_pts = Int(floor( no_pts / 10 )) + 1
+      sub_no_pts = Int(floor( no_pts / 4 )) + 1
       cur_sub_range = collect(linspace(last(cur_range), b, sub_no_pts))
 
       append!(
