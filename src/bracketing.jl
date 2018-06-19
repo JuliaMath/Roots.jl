@@ -729,7 +729,7 @@ function find_zeros(f, a::Real, b::Real, args...;
     isempty(cur_range) && return root_list
 
     if a != first(cur_range)
-      sub_no_pts = Int(floor( no_pts / 10 ))
+      sub_no_pts = Int(floor( no_pts / 10 )) + 1
       cur_sub_range = collect(linspace(a, first(cur_range), sub_no_pts))
 
       append!(
@@ -739,7 +739,7 @@ function find_zeros(f, a::Real, b::Real, args...;
     end
 
     if b != last(cur_range)
-      sub_no_pts = Int(floor( no_pts / 10 ))
+      sub_no_pts = Int(floor( no_pts / 10 )) + 1
       cur_sub_range = collect(linspace(last(cur_range), b, sub_no_pts))
 
       append!(
@@ -833,7 +833,7 @@ function _find_recursive_zeros(f, cur_range::AbstractVector{T}, args...;
 
     isempty(root_list) && return root_list
 
-    sub_no_pts = Int(ceil( no_pts / (2^cur_depth) ))
+    sub_no_pts = Int(ceil( no_pts / (length(root_list)/2 * 2^(cur_depth-1)) )) + 1
 
     cur_intervals = zip(
         vcat(first(cur_range),root_list),
