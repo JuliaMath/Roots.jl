@@ -877,10 +877,10 @@ function find_bisection_roots(f, cur_range::AbstractVector{T}, abstol::Real, rel
       isreal(cur_f) && return cur_f
 
       real_f, imag_f = real(cur_f), imag(cur_f)
-      cur_ratio = real_f / imag_f
+      cur_ratio = abs( real_f / imag_f )
 
-      ( abs(cur_ratio) > 1e6 ) && return real_f
-      ( abs(real_f) < 1e-3 && abs(imag_f) < 1e-6 ) && return real_f
+      ( cur_ratio > 1e6 ) && return real_f
+      ( abs(real_f) < 1e-3 && abs(imag_f) < 1e-3 ) && return real_f
 
       cur_f
     end
