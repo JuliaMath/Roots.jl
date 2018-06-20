@@ -711,10 +711,17 @@ fm
 fr
 end
 
-
+midpoint(l, r) = l + (r-l)/2
 function Interval(f, l, r)
-    m = midpoint(l, r) # _middle?
+    m = midpoint(l, r) # _middle? (middle fails on tiger's tail)
     Interval(l, m, r, f(l), f(m), f(r))
+end
+
+function split_interval(f, a)
+    lm = midpoint(a.l, a.m)
+    rm = midpoint(a.m, a.r)
+    flm, frm = f(lm), f(rm)
+    Interval(a.l, lm, a.m, a.fl, flm, a.fm), Interval(a.m, rm, a.r, a.fm, frm, a.fr)
 end
 
 isbracket(a::Interval) = sign(a.fl) * sign(a.fr) < 0
@@ -736,7 +743,7 @@ function second_derivative(a::Interval)
 end
 
 
-midpoint(l, r) = l + (r-l)/2
+
 
 
 # Halving threshold
@@ -750,12 +757,20 @@ function HT(a::Interval, C, maxmultiplicity=1)
     fp = first_derivative(a)
     fpp = second_derivative(a)
     fmin = min(abs(a.fl), abs(a.fr))
-    qstep = C * abs(fp) * dx + C/2 * abs(fpp) * dx^2
-    fmin - qstep < 0 && return true
+    qstep = C * (abs(fp) * dx + 1/2 * abs(fpp) * dx^2)
+    if isfinite(fpp) && fmin <= qstep 
+        println("taylor $fmin $qstep")
+        return true
+    end
     
     # condition from paper
     # dx > 1/C * min(|fl|, |fr|) / dx
-    max(1.0, abs(fpp)) * dx > 1/C * fmin / dx^maxmultiplicity && return true
+    lambda = isfinite(fpp) ? max(1.0, abs(fpp)) : 1
+    if fmin < lambda  * C * dx * dx^maxmultiplicity
+        println("small fmin: $fmin fpp=$fpp: ($(a.l),$(a.r))")
+        return true
+    end
+
     false
 end
 
@@ -800,6 +815,7 @@ end
 """
     find_zeros(f, a, b; C, xatol, xrtol, atol, rtol)
 
+Find zeros on (a,b) for f(x).
 
 """    
 function find_zeros(f, a, b;
@@ -809,16 +825,18 @@ function find_zeros(f, a, b;
               atol=0.0, rtol = 8*eps())
 
 
-    ints = Interval[Interval(f, float(a), float(b))]
+    ints = Interval[Interval(f, float(a)+eps(), float(b)-eps())]
     T = eltype(float(a))
     
     xroots = T[]
 
+    ctr = 0
     while !isempty(ints)
+        ctr += 1
         a = pop!(ints)
-        
-        la = Interval(f, a.l, a.m)
-        ra = Interval(f, a.m, a.r)
+
+        la,ra = split_interval(f, a)
+
         if isbracket(a)
             if still_bracket(a, xatol, xrtol)
                 if isbracket(la) # left is bracket. Do we keep right?
@@ -851,7 +869,7 @@ function find_zeros(f, a, b;
             end
         end
     end
-
+    println("$ctr loops")
     xroots
 end
     
