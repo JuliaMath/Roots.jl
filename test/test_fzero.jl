@@ -45,7 +45,7 @@ rts = 1:5
 
 
 fn = x -> sin(10*pi*x)
-@test length(fzeros(fn, 0, 1)) == 11
+@test length(fzeros(fn, 0, 1)) == 9 # 9 in (0, 1)
 
 ### issue with fzeros and roots near 'b'
 @test 0 <  maximum(fzeros(x -> sin(x) - 1/1000*x, 0, pi)) < pi

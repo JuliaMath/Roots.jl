@@ -1028,5 +1028,5 @@ function find_zeros(f, a, b;
         println("")
     end
 
-    return xzeros
+    return sort(xzeros)
 end
