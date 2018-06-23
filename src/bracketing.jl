@@ -371,7 +371,7 @@ function a42(f, a, b;
     if a >= b || sign(fa)*sign(fb) >= 0
         error("on input a < b and f(a)f(b) < 0 must both hold")
     end
-    if xtol/oneunit(xtol) < 0.0
+    if strip_unit(xtol) < 0.0
         error("tolerance must be >= 0.0")
     end
     
@@ -476,8 +476,9 @@ end
 function tole(a::S, b::R, fa, fb, tol) where {S,R}
     u = abs(fa) < abs(fb) ? abs(a) : abs(b)
     T = promote_type(S,R)
-    epsilon = eps(T)
-    2u*(epsilon/oneunit(epsilon)) + tol
+    epsilon = strip_unit(eps(T))
+
+    2u * epsilon + tol
 end
 
 
@@ -515,7 +516,7 @@ function bracket(f, a, fa, b, fb, c, fc, tol)
         c = b - 2delta
         fc = f(c)
     end
-    if fc == 0
+    if iszero(fc) 
         throw(Roots.StateConverged(c))
     elseif sign(fa)*sign(fc) < 0 
         aa, faa = a, fa
@@ -539,8 +540,7 @@ end
 function secant(f, a::T, fa, b, fb) where {T}
 
     c = a - fa/(fb - fa)*(b - a)
-    _tol = 5*eps(T)
-    tol=_tol/oneunit(_tol)
+    tol = strip_unit(5*eps(T))
 
     if isnan(c) || c <= a + abs(a)*tol || c >= b - abs(b)*tol
         return a + (b - a)/2, f(a+(b-a)/2)
@@ -555,11 +555,11 @@ end
 function newton_quadratic(f, a, fa, b, fb, d, fd, k::Int)
     B = (fb - fa)/(b - a)
     A = ((fd - fb)/(d - b) - B)/(d - a)
-    if A == 0
+    if iszero(A)
         return secant(f, a, fa, b, fb)
     end
     
-    r = A*fa/oneunit(A*fa) > 0 ? a : b
+    r = strip_unit(A*fa) > 0 ? a : b
     for i = 1:k
         r -= (fa + (B + A*(r - b))*(r - a))/(B + A*(2*r - a - b))
     end
@@ -596,7 +596,7 @@ end
 
 # floating point comparison function
 function almost_equal(x::T, y::T) where {T}
-    min_diff = oneunit(x) * realmin(float(x/oneunit(x)))*32
+    min_diff = oneunit(x) * realmin(float(strip_unit(x)))*32
     abs(x - y) < min_diff
 end
 
@@ -714,15 +714,31 @@ fm
 fr
 end
 
-midpoint(l, r) = l + 0.484375 * (r-l) # avoid 1/2 to avoid nice fractional power
+
+midpoint(l,r) = l + 0.4875 * (r-l)
+function midpoint(l,r,fl,fr)
+    # slower, but more predictable here
+    return midpoint(l,r)
+    
+    # use "secant" method to find midpoint when possible, o/w _middle
+    Delta = fr*(r-l)/(fr - fl)
+    isinf(Delta) || isnan(Delta) && return _middle(l,r)
+    m = l + Delta
+    lambda = 0.05
+    delta = lambda * (r - l)
+    l + lambda < m < r - lambda && return m
+    return _middle(l,r)
+end
+
 function Interval(f, l, r)
-    m = midpoint(l, r) 
-    Interval(l, m, r, f(l), f(m), f(r))
+    fl, fr = f(l), f(r)
+    m = midpoint(l, r, fl, fr) 
+    Interval(l, m, r, fl, f(m), fr)
 end
 
 function split_interval(f, a)
-    lm = midpoint(a.l, a.m)
-    rm = midpoint(a.m, a.r)
+    lm = midpoint(a.l, a.m, a.fl, a.fm)
+    rm = midpoint(a.m, a.r, a.fm, a.fr)
     flm, frm = f(lm), f(rm)
     Interval(a.l, lm, a.m, a.fl, flm, a.fm), Interval(a.m, rm, a.r, a.fm, frm, a.fr)
 end
@@ -744,52 +760,53 @@ function second_derivative(a::Interval)
 end
 
 
-# Halving threshold heuristic
-# return true to keep, false to drop
-function HT(a::Interval, C, maxmultiplicity=1)
-    # why should we keep non-bracketing interval?
-    # - quadratic expansion (with boost) is a bracket
-    # - f is reasonably close
-    dx = deltax(a) |> strip_unit
-    fp = first_derivative(a) |> strip_unit
-    fpp = second_derivative(a) |> strip_unit
-    fmin = min(abs(a.fl), abs(a.fr)) |> strip_unit
+## does interval b ⊂ a have promise?
+## return true and keep interval, else return false
+## a may or may not be a bracketing interval
+function quadratic(x1,x2,x3,y1,y2,y3)
+    a = y1*(x2^2 - x3^2) - y2 *(x1^2 - x3^2) +y3 * (x1^2 - x2^2)
+    b = 2*(y1*(x2-x3) -y2*(x1-x3) +y3*(x1-x2))
+    a/b
+end
+
+# halving threshold heuristic
+function has_promise(f, a::Interval, b::Interval, C, maxmultiplicity)
+
+    sign(b.fl) * sign(b.fm) < 0 || sign(b.fm) * sign(b.fr) < 0 && return true # brackets
+    abs(b.fm) < abs(a.fm) && return true # decreasing f
+   
+    # we keep if:
+    # the value decreases
+    abs(b.fm) < abs(a.fm) && return true
+
+    # a quadratic fit improves on a.fm
+    h = quadratic(b.l, b.m, b.r, b.fl, b.fm, b.fr)
+    a.l < h < a.r && abs(f(h)) < abs(a.fm) && return true
+
+    # a taylor type step would possibly be zero
+    dx = deltax(b) |> strip_unit
+    fp = first_derivative(b) |> strip_unit
+    fpp = second_derivative(b) |> strip_unit
+    fmin = min(abs(b.fl), abs(b.fr)) |> strip_unit
     
     qstep = C * (abs(fp) * dx + 1/2 * abs(fpp) * dx^2)
-    if isfinite(fpp) && fmin <= qstep 
-        return true
-    end
-    
+    isfinite(fpp) && fmin <= qstep && return true
+
     # condition from paper
     # dx > 1/C * min(|fl|, |fr|) / dx
     lambda = min(1.0, abs(fpp)) 
-    if fmin < lambda  * C * dx * dx^maxmultiplicity
-        return true
-    end
-
+    fmin < lambda  * C * dx * dx^maxmultiplicity && return true
+    
     return false
 end
 
-# check if a non-bracketing interval has any promise. Keep
-# if it does. 
-function has_promise(a::Interval, C, maxmultiplicity)
-    HT(a,C, maxmultiplicity)
-end
 
-# have more data here, can better estimate?
-function has_promise(a::Interval, la::Interval, ra::Interval, C, maxmultiplicity)
-    HT(a, C, maxmultiplicity)
+## Is interval alpha smaller than minimal distance between two zeros
+## as specified by a.r ~ a.l atol=xatol, rtol=xtrol
+## BT in paper
+function is_smaller_min_separation_distance(alpha::Interval, xatol, xrtol)
+    isapprox(alpha.r, alpha.l, atol=xatol, rtol=xrtol)
 end
-    
-# bracket threshod
-function BT(a::Interval, xatol, xrtol)
-    # paper uses min(rtol * deltax(a), xatol), we use |a.m|
-    # Here we want to ensure separation -- can bracket
-    # have two or more distinct zeros
-
-    max(xatol, abs(a.m) * xrtol)
-end
-
 
 
 ## is fm ~ 0?
@@ -800,38 +817,20 @@ end
 ## f(x+xd) ~ f(x) + f'(x)*x*d, so if f(x) is zero
 ## and f(x(1+d)) the function eval on floating point approx, we have a tolerance
 ## that should be like C |x| * d. 
-##
-## If so, we then will use `find_zero` to search for a root in the interval
-## As such, this uses a relaxed tolerance composed from rtol and atol
 function isapproxzero(alpha::Interval, atol, rtol)
 
-    # this seems wrong, but results are good on most test cases
-#    return isapprox(alpha.fm, zero(alpha.fm), atol=atol, rtol=rtol)
-
-    # this adds in factor of |x|, but keeps |fx| factor too
-#    lambda = max(1.0, strip_unit(abs(alpha.m)))
-#    return isapprox(alpha.fm, zero(alpha.fm), atol=atol, rtol=lambda * rtol)
-
-
-    # this seems right but... not include |fx| with rtol
+    # using isapprox(fm, 0) will add |fm| to the relative error.
+    # we avoid this
     axm, afm = abs(alpha.m), abs(alpha.fm)
-    lambda = max(1.0, strip_unit(axm)) * oneunit(afm)
-    ftol = max(atol, lambda * rtol)
+    lambda = strip_unit(axm) * oneunit(afm)
+    ftol = max(oneunit(afm)/oneunit(axm) * atol, lambda * rtol)
     return afm < ftol
-
-    # # more relaxed, lets find_zero polish off answer
-    # lambda = max(1.0, strip_unit(axm)) * strip_unit(afm)
-    # p = 1/2
-    # ftol = lambda * rtol
-    # ftol = (ftol < 1 ? (ftol)^(p) : ftol^(1/p))
-    # tol = max(strip_unit(atol), ftol)
-    # return strip_unit(afm) <= tol
 end
 
 
 """
     
-    find_zeros(f, a, b; C, maxmultiplicity, no_pts, xatl, xrtol, atol, rtol, maxevals, maxfnevals)
+    find_zeros(f, a, [b]; C, maxmultiplicity, no_pts, xatl, xrtol, atol, rtol, maxevals, maxfnevals)
 
 Search for zeros of a univariate function over the interval (a,b).
 
@@ -840,14 +839,18 @@ is split in two. Those which are bracketing intervals are kept, those
 which show "promise" to contain a zero are kept, others are dropped
 from consideration. The process repeats.
 
+Alternatively, the interval and sub interval can be specified by an
+iterable object `a`, assumed to be specified in increasing order. This
+can be useful if there are known bracketing intervals. (None of these
+values should be zeros.)
+
 Once bracketing intervals are smaller than the proposed zero
 separation, bisection is used to find the zero, guaranteed by the
 bracket (assuming a continuous function, otherwise only a zero
-crossing is guaranteed). Once "promising" intervals have a function
-value at its midpoint close enough to a zero, `find_zero` will be used
-to search for a zero in the interval.
+crossing is guaranteed). Once "promising" intervals are small enough,
+`find_zero` will be used to search for a zero in the interval.
 
-The basic algorithm follows one proposed by
+The algorithm used is related to one proposed by
 [Razbani](https://arxiv.org/pdf/1501.05298.pdf).
 
     
@@ -855,30 +858,33 @@ The adaptive selection of promising intervals is dependent on some parameters
 
 * `xatol`, `xrtol`: These are used to set the size of the gap between
   successive zeros. (These are *not* used as a criteria for
-  convergence, as when used with `find_zero`.) Bisection is used to
-  find zeros of bracketing intervals once an interval is smaller than
-  this gap. The number of function evaluations is dependent on this
-  tolerance.
+  convergence, as when used with `find_zero`.)  Once an interval is
+  smaller than this gap (`l ≈ r` with these tolerances), `find_zero`
+  is used to find a zero. A bracketing interval is guaranteed to find
+  a zero. For non-bracketing intervals, a zero may not be found or it
+  may fall out of the interval. In either case, nothing is done. The
+  number of function evaluations is dependent on this tolerance. Both
+  values may need adjustment to make these smaller, as the larger of
+  `xatol` and `max(|l|,|r|)*xrtol` is used for the tolerance.
 
+* `atol`, `rtol`: These are used to identify if `f(m)` is zero at the
+  `midpoint` of an interval. The criteria is essentially
+  `|f(m)|<=max(atol,|m|*rtol)`.  (For the default tolerances, this is
+  `eps()^2`.) These values are also passed to `find_zero` when a
+  non-bracketing interval is searched for a zero.
 
-* `atol`, `rtol`: These are used to find a tolerance on the smallness
-  of `f` at the midpoint of an interval. Once the value is smaller
-  than the tolerance, `find_zero` is used to
-  search for a zero within the interval.
-
-
-* `C`, `maxmultiplicity`: An interval shows "promise" if an optimistic
-  (quadratic) Taylor approximation indicates a possible zero *or* if
-  `f` at the midpoint is smaller than ` lambda * C * dx *
-  dx^maxmultiplicity` where `lambda` depends on an estimate for the
-  second derivative. The heuristic is that the `f` value is reasonably
-  small, so may lead to a zero, even if the interval is not a
-  bracketing interval.      
+* `C`, `maxmultiplicity`: An interval shows "promise" if the value at
+  the new midpoint gets closer to 0, an optimistic (quadratic) Taylor
+  approximation indicates a possible zero, *or* if `f` at the midpoint
+  is smaller than ` lambda * C * dx * dx^maxmultiplicity` where
+  `lambda` depends on an estimate for the second derivative. The
+  heuristic is that the `f` value is reasonably small, so may lead to
+  a zero, even if the interval is not a bracketing interval.
 
 The parameters `maxevals` and `maxfnevals` can be set to limit the
 number of steps or function evaluations the algorithm will take.
 
-Setting `verbose=true` will display a print out of the algorithm.
+Setting `verbose=true` will display a summary of the algorithm.
 
 
 ### Notes:
@@ -912,57 +918,86 @@ different results.
 ### Examples:
 
 ```
+using Roots
 f(x) = exp(x) - x^4
 find_zeros(f, -5, 20) # three zeros 8.61317, 1.42961, -0.815553
 f(x) = cos(x) - x/10
 find_zeros(f, 0, 10)  # three zeros 7.06889, 5.26712, 1.42755
 ```
 
-    
-"""    
+Some difficult examples:
+
+These all need parameters adjusted. For some, the strict tolerance on what
+f(x) ~ 0 means is adjusted with either rtol or atol. For others, the size
+of the gap between zeros is adjusted with xrtol and xatol.    
+
+```
+W(n) = x -> prod((x-i)^i for i in 1:n)
+find_zeros(W(5), -1, 6)   # misses (x-2)^2*(x-4)^4 part
+find_zeros(W(5), -1, 6, rtol=eps()) # can find 2 and 4 now
+
+f(x) = (x-0.5)^2 * (x - (0.51))^2 # (0,1)
+find_zeros(f, 0, 1)    # no problem
+f(x) = (x-0.5)^2 * (x - 0.501)^2
+find_zeros(f, -1, 1)   # can't distinguish 0.500 and 0.501
+
+f(x) = (x - 0.5)^3 * (x - (0.501)) * (x - 1)
+find_zeros(f, 0.0, 1.1) # no problem
+f(x) = (x - 0.5)^3 * (x - (0.5001)) * (x - 1)
+find_zeros(f, 0.0, 1.1) # even misses 0.5 (basically it sees (x-0.5)^4) and
+                        # can;t solve with strict tolerances. rtol=eps() find 0.5
+find_zeros(f, 0.0, 1.1, xatol=1e-5, xrtol=1e-5)  # smaller expected gap between zeros works
+"""
 function find_zeros(f, a, b;
-                    C= 10 * one(float(a)),
-                    maxmultiplicity = 1,
                     no_pts::Int=101,
-                    xatol = 1e-3 * oneunit(float(a)),
+                    kwargs...)
+
+    find_zeros(f, linspace(float(a), float(b), no_pts); kwargs...)
+end
+
+# as is an interable with length 2 or more specifying initial subintervals as:
+# (a=a1,a2),(a2,a3),(a3,a4), ... (ai_1,an=b)
+# checks that a1 < a2 < ..., iszero(f(ai)) for a < ai < b
+function find_zeros(f, as;
+                    C= 10 * one(float(as[1])),
+                    maxmultiplicity = 1,
+                    xatol = 1e-3 * oneunit(float(as[1])),
                     xrtol = 1e-3,
-                    atol = 8*eps(eltype(float(a))) * oneunit(f(float(a))),
-                    rtol = eps(eltype(float(a))),
+                    atol = eps(eltype(float(as[1])))^2 * oneunit(float(as[1])),
+                    rtol = strip_unit(zero(float(as[1]))),
                     maxevals::Int=typemax(Int),
                     maxfnevals::Int=1_000_000,  # high, but not impossible to reach
                     verbose::Bool=false
     )
 
+
+ 
     ctr, fnctr = 0, 0
-    
-    # start with npts initial intervals    
-    if no_pts > 1
-        ints = Interval[]
-        d = (b-a)/no_pts
-        l = float(a)
-        fl = f(l)
-        fnctr += 1
-        for i in 1:(no_pts-1)
-            r = a + i * d
-            m = midpoint(l, r)
-            fm, fr = f(m), f(r)
-            fnctr += 2
-            push!(ints, Interval(l, m, r , fl, fm, fr))
-            l,fl = r, fr
-        end
-        r = float(b)
-        m = midpoint(l, r)
-        fm, fr = f(m), f(r)
-        fnctr += 2
-        push!(ints, Interval(l, m, r, fl, fm, fr))
-    else
-        ints = Interval[Interval(f, float(a), float(b))]
-        fnctr += 3
-    end
+
+    # as... is an increasing sequence of points
+    ints = Interval[]
+
+    l = float(as[1])
+    fl = f(l)
+    fnctr += 1
 
     # container for zeros
-    T = eltype(float(a))
+    T = eltype(l)
     xzeros = T[]
+    
+    for i in 2:length(as)
+        r = float(as[i])
+        l < r || throw(ArgumentError("subinterval points specified are non-increasing"))
+        fr = f(r)
+        l > as[1] && iszero(fl) && push!(xzeros, l) # is an interval point a zero?
+        m = midpoint(l, r, fl, fr)
+        fm = f(m)
+        push!(ints, Interval(l,m,r,fl,fm,fr))
+        fnctr += 2
+        l,fl = r, fr
+    end
+
+   
 
     while !isempty(ints)
         ctr += 1
@@ -975,7 +1010,7 @@ function find_zeros(f, a, b;
 
         if isbracket(alpha)
             # a bracket and small interval -> solve
-            if dx <= BT(alpha, xatol, xrtol)
+            if is_smaller_min_separation_distance(alpha, xatol, xrtol)
                 push!(xzeros, find_zero(f, (alpha.l, alpha.r), Bisection()))
             continue
             end
@@ -983,33 +1018,39 @@ function find_zeros(f, a, b;
             # keep the new bracket, check if other has promise
             if isbracket(lalpha) 
                 push!(ints, lalpha)                    
-                has_promise(ralpha, C, maxmultiplicity) && push!(ints, ralpha)
+                has_promise(f, alpha, ralpha, C, maxmultiplicity) && push!(ints, ralpha)
             else  
                 push!(ints, ralpha)
-                has_promise(lalpha, C, maxmultiplicity) && push!(ints, lalpha)
+                has_promise(f, alpha, lalpha, C, maxmultiplicity) && push!(ints, lalpha)
             end
             
         else
             
             # do we try to find zero in non-bracketing interval?
-            # do we divide and try again?
-            if isapproxzero(alpha, atol, rtol)
+            if is_smaller_min_separation_distance(alpha, xatol, xrtol)
                 # polish off to see if can find zero in interval
+                # println("Try to find zero in interval $alpha")
                 try
                     rt = find_zero(f, alpha.m, Order2(), atol=atol, rtol=rtol)
                     if alpha.l < rt < alpha.r
                         push!(xzeros, rt)
                     end
                 catch err
-#                    push!(xzeros, alpha.m) # push anyways?
                 end
+                continue
+                
+            end
+            
+            if isapproxzero(alpha, atol, rtol)
+                # polish off to see if can find zero in interval
+                push!(xzeros, alpha.m)
                 continue
             end
 
-            ## this could check if lalpha or ralpha have promise
-            ## has_promise(lalpha, C, maxmultiplicity) && push!(ints, lalpha)
-            ## has_promise(rlapha, C, maxmultiplicity) && push!(ints, ralpha)            
-            has_promise(alpha, lalpha, ralpha, C, maxmultiplicity) && append!(ints, (lalpha, ralpha))
+            ## do we divide and try again?
+            ##  check if lalpha or ralpha have promise
+            has_promise(f, alpha, lalpha, C, maxmultiplicity) && push!(ints, lalpha)
+            has_promise(f, alpha, ralpha, C, maxmultiplicity) && push!(ints, ralpha)            
             
         end
 
@@ -1022,7 +1063,7 @@ function find_zeros(f, a, b;
     if verbose
         nrts = length(xzeros)
         plural = nrts == 1 ? "" : "s"
-        println("find_zeros found $nrts zero$plural in ($a, $b).")
+        println("find_zeros found $nrts zero$plural in ($(as[1]), $(as[end])).")
         println(" * there were $ctr subintervals considered")
         println(" * there were $fnctr function evaluations taken")
         println("")
