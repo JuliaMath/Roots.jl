@@ -766,18 +766,6 @@ function find_zeros(f, a::Real, b::Real, args...;
 
     sort!(root_list)
 
-    repeat_indices = Int[]
-
-    for (cur_index, cur_root) in enumerate(root_list)
-      in(cur_index, repeat_indices) && continue
-      for (cur_other_index, cur_other_root) in enumerate(root_list[cur_index+1:end])
-        isapprox(cur_root, cur_other_root, atol=abstol, rtol=reltol) || break
-        push!(repeat_indices, cur_index+cur_other_index)
-      end
-    end
-
-    deleteat!(root_list, repeat_indices)
-
     root_list
 end
 
@@ -835,6 +823,50 @@ function get_real_finite_range(f, a::Real, b::Real, no_pts::Int)
     cur_range
 end
 
+function find_next_non_root(cur_root, cur_func, barrier_point, reltol, abstol)
+    if ( cur_root < 0 )
+      cur_adder = ( cur_root < barrier_point ) ? -abstol : +abstol
+    else
+      cur_adder = ( cur_root < barrier_point ) ? +abstol : -abstol
+    end
+
+    cur_value = cur_root + cur_adder
+
+    while ( cur_root < 0 ) ? ( ( cur_root > barrier_point ) ? ( cur_value > barrier_point ) : ( cur_value < barrier_point ) ) : ( ( cur_root < barrier_point ) ? ( cur_value < barrier_point ) : ( cur_value > barrier_point ) )
+        cur_f = cur_func(cur_value)
+        isapprox(cur_f, 0.0, atol=abstol) || break
+
+        cur_adder *= 2
+        cur_value += cur_adder
+    end
+
+    for tmp_value in linspace(cur_value - cur_adder, cur_value)
+        isapprox(cur_root, tmp_value, rtol=reltol, atol=abstol) && continue
+
+        cur_f = cur_func(tmp_value)
+        isapprox(cur_f, 0.0, atol=abstol) && continue
+
+        cur_value = tmp_value
+        break
+    end
+
+    if cur_root < 0
+      if ( cur_root > barrier_point )
+          ( cur_value > barrier_point ) || ( cur_value = NaN )
+      else
+          ( cur_value < barrier_point ) || ( cur_value = NaN )
+      end
+    else
+      if ( cur_root < barrier_point )
+          ( cur_value < barrier_point ) || ( cur_value = NaN )
+      else
+          ( cur_value > barrier_point ) || ( cur_value = NaN )
+      end
+    end
+
+    cur_value
+end
+
 function _find_recursive_zeros(f, cur_range::AbstractVector{T}, args...;
                       cur_depth::Int=1,
                       no_pts::Int=101,
@@ -845,6 +877,9 @@ function _find_recursive_zeros(f, cur_range::AbstractVector{T}, args...;
 
     isempty(root_list) && return root_list
 
+    println(">>  ", first(cur_range), ", ", last(cur_range), ", ", length(cur_range))
+    println(root_list)
+
     sub_no_pts = Int(ceil( no_pts / (length(root_list)/2 * 2^(cur_depth-1)) )) + 1
 
     cur_intervals = zip(
@@ -854,7 +889,21 @@ function _find_recursive_zeros(f, cur_range::AbstractVector{T}, args...;
 
     for (cur_a, cur_b) in cur_intervals
         isapprox(cur_a, cur_b, rtol=reltol, atol=abstol) && continue
-        cur_sub_range = collect(linspace(cur_a, cur_b, sub_no_pts))[2:end-1]
+
+        tmp_diff = cur_b - cur_a
+        tmp_a = find_next_non_root(cur_a, f, cur_a - tmp_diff, reltol, abstol)
+        tmp_b = find_next_non_root(cur_b, f, cur_b + tmp_diff, reltol, abstol)
+
+        println(123123)
+        println(cur_a, " - ", cur_b, " - ", isapprox(cur_a, cur_b, rtol=reltol, atol=abstol))
+        println(tmp_a, " ~ ", tmp_b, " ~ ", isapprox(tmp_a, tmp_b, rtol=reltol, atol=abstol))
+
+        println(333)
+        println(sub_no_pts)
+
+        cur_sub_range = collect(linspace(tmp_a, tmp_b, sub_no_pts))
+
+        println(222)
 
         cur_roots = _find_recursive_zeros(
             f, cur_sub_range, args...;
@@ -872,9 +921,11 @@ function find_root_list(f, cur_range::AbstractVector{T}, abstol::Real, reltol::R
     isempty(cur_range) && return Real[]
 
     cur_roots = find_bisection_roots(f, cur_range, abstol, reltol)
+    println(123123, " - ", cur_roots)
     isempty(cur_roots) || return cur_roots
 
     cur_roots = find_order_roots(f, cur_range, abstol, reltol)
+    println(333333, " - ", cur_roots)
 
     cur_roots
 end
@@ -905,7 +956,6 @@ function find_bisection_roots(f, cur_range::AbstractVector{T}, abstol::Real, rel
     cur_signs = map(sign, cur_values[1:end-1] .* cur_values[2:end])
 
     for (cur_index, cur_sign) in enumerate(cur_signs)
-        imag(cur_sign) < 1e-6 || continue
         isinf(cur_sign) && continue
 
         cur_a, cur_b = cur_range[cur_index:cur_index+1]
@@ -919,16 +969,18 @@ function find_bisection_roots(f, cur_range::AbstractVector{T}, abstol::Real, rel
             continue
         end
 
-        ( real(cur_sign) > 0 ) && continue
+        if iszero(imag(cur_sign))
+          ( real(cur_sign) > 0 ) && continue
+        end
 
-        tmp_roots = _find_recursive_bisection_roots(work_f, cur_a, cur_b)
+        tmp_roots = _find_recursive_bisection_roots(work_f, cur_a, cur_b, abstol, reltol)
         append!(cur_roots, tmp_roots)
     end
 
     cur_roots
 end
 
-function _find_recursive_bisection_roots(f, a::Real, b::Real; cur_depth::Int=1)
+function _find_recursive_bisection_roots(f, a::Real, b::Real, abstol::Real, reltol::Real; cur_depth::Int=1)
     cur_end_points = [a, b]
 
     try
@@ -943,8 +995,12 @@ function _find_recursive_bisection_roots(f, a::Real, b::Real; cur_depth::Int=1)
     cur_roots = []
     cur_average = mean(cur_end_points)
 
-    append!(cur_roots, _find_recursive_bisection_roots(f, a, cur_average, cur_depth=cur_depth+1))
-    append!(cur_roots, _find_recursive_bisection_roots(f, cur_average, b, cur_depth=cur_depth+1))
+    append!(cur_roots, _find_recursive_bisection_roots(f, a, cur_average, abstol, reltol, cur_depth=cur_depth+1))
+    append!(cur_roots, _find_recursive_bisection_roots(f, cur_average, b, abstol, reltol, cur_depth=cur_depth+1))
+
+    isapprox(
+        first(cur_roots), last(cur_roots), atol=abstol, rtol=reltol
+    ) && ( cur_roots = cur_roots[1:1] )
 
     cur_roots
 end
@@ -969,7 +1025,7 @@ function find_order_roots(f, cur_range::AbstractVector{T}, abstol::Real, reltol:
             continue
         end
 
-        ( min_value < tmp_root < max_value ) || continue
+        ( min_value <= tmp_root <= max_value ) || continue
 
         any(
             work_root -> isapprox(tmp_root, work_root, rtol=reltol, atol=abstol),
