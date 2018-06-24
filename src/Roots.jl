@@ -11,6 +11,7 @@ end
 using ForwardDiff
 using Compat: @nospecialize, lastindex
 
+using Revise
 
 export fzero,
        fzeros,
