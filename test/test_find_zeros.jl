@@ -16,7 +16,7 @@ using Compat.Test
     @test length(rts) == 20
 
     W1(n) = x -> prod((x-i)^i for i in 1:n)
-    rts = find_zeros(W1(5), -0.5:1.0:5.5, rtol=1e-12) # o/w even powers hard
+    rts = find_zeros(W1(5), -0.5, 5.5, rtol=1e-12) # o/w even powers hard
     @test length(rts) == 5
 
     T11(x) = 1024*x^11 - 2816x^9  + 2816x^7 - 1232x^5 + 220x^3 - 11x
@@ -40,7 +40,6 @@ delta1 = .01
 f4(x) = (x-0.5)^2 * (x - (0.5+delta1))^2 # (0,1)
 delta = .001
 f5(x) = (x - 0.5)^3 * (x - (0.5+delta)) * (x - 1)
-f6(x) = (x - 0.5)^3 * (x - (0.5+delta))^3 * (x-4)*(x-(4+delta))*(x-4.2)^2
 
 ## test number of function calls with this
 mutable struct CallableFunction
@@ -70,12 +69,8 @@ f7 = CallableFunction(x -> sin(x-0.1), 0)
     rts = find_zeros(f5, 0.0, 1.1, xatol=1e-5, xrtol=1e-5)
     @test length(rts) == 3
 
-    rts = find_zeros(f6, 0.0, 5.0, xatol=1e-5, xrtol=1e-5)
-    @test length(rts) == 5
 
     rts = find_zeros(f7, -pi/2, pi/2)
     @test f7.n <= 6000 # 3002
-
-
 
 end

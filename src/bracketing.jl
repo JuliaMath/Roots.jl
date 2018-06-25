@@ -730,10 +730,7 @@ function find_zeros(f, a::Real, b::Real, args...;
     function work_f(x)
       cur_f = float(f(x))
 
-      if isreal(cur_f)
-        cur_f = isapprox(cur_f, 0.0, atol=abstol) ? 0.0 : cur_f
-        return cur_f
-      end
+      isreal(cur_f) && return cur_f
 
       real_f, imag_f = real(cur_f), imag(cur_f)
       cur_ratio = abs( real_f / imag_f )
@@ -772,7 +769,6 @@ function _find_recursive_zeros(f, a::Real, b::Real, args...;
 
     cur_range = collect(linspace(a, b, no_pts))
 
-    println("DEPTH = ", cur_depth)
     root_list = find_root_list(f, cur_range, abstol, reltol)
 
     isempty(root_list) && return root_list
@@ -790,13 +786,15 @@ function _find_recursive_zeros(f, a::Real, b::Real, args...;
     )
 
     for (cur_a, cur_b) in cur_intervals
-        isapprox(cur_a, cur_b, rtol=reltol, atol=abstol) && continue
+        isapprox(cur_a, cur_b, rtol=reltol) && continue
+        isapprox(cur_a, cur_b, atol=abstol) && continue
 
         tmp_a = find_next_non_root(cur_a, f, cur_b, reltol, abstol)
         tmp_b = find_next_non_root(cur_b, f, cur_a, reltol, abstol)
 
         isnan(tmp_a) || isnan(tmp_b) && continue
-        isapprox(tmp_a, tmp_b, rtol=reltol, atol=abstol) && continue
+        isapprox(tmp_a, tmp_b, rtol=reltol) && continue
+        isapprox(tmp_a, tmp_b, atol=abstol) && continue
         ( tmp_a < tmp_b ) || continue
 
         cur_roots = _find_recursive_zeros(
@@ -819,8 +817,13 @@ function find_next_non_root(cur_root, cur_func, barrier_point, reltol, abstol)
     cur_value = cur_root + cur_adder
 
     while sign(barrier_point - cur_value) == cur_direction
-        cur_f = cur_func(cur_value)
-        isapprox(cur_f, 0.0, atol=10*abstol) || break
+        needs_skip = isapprox(cur_value, cur_root, rtol=reltol)
+        needs_skip |= isapprox(cur_value, cur_root, atol=abstol)
+
+        if !needs_skip
+          cur_f = cur_func(cur_value)
+          isapprox(cur_f, 0.0, atol=abstol) || break
+        end
 
         cur_adder *= 2
         cur_value += cur_adder
@@ -830,11 +833,14 @@ function find_next_non_root(cur_root, cur_func, barrier_point, reltol, abstol)
     is_in_range || return NaN
 
     for tmp_value in linspace(cur_value - cur_adder, cur_value)
-        ( tmp_value < cur_root ) && continue
-        isapprox(tmp_value, cur_root, rtol=reltol, atol=abstol) && continue
+        ( sign(tmp_value - cur_root) == cur_direction ) || continue
+
+        isapprox(tmp_value, cur_root, rtol=reltol) && continue
+        isapprox(tmp_value, cur_root, atol=abstol) && continue
 
         cur_f = cur_func(tmp_value)
-        isapprox(cur_f, 0.0, atol=10*abstol) && continue
+
+        isapprox(cur_f, 0.0, atol=abstol) && continue
 
         cur_value = tmp_value
         break
@@ -849,11 +855,9 @@ function find_root_list(f, cur_range::AbstractVector{T}, abstol::Real, reltol::R
     isempty(cur_range) && return Real[]
 
     cur_roots = find_bisection_roots(f, cur_range, abstol, reltol)
-    # isempty(cur_roots) || println("asdf -", cur_roots)
     isempty(cur_roots) || return cur_roots
 
     cur_roots = find_order_roots(f, cur_range, abstol, reltol)
-    println("zxcv -", cur_roots)
     cur_roots
 end
 
@@ -880,40 +884,12 @@ function find_bisection_roots(f, cur_range::AbstractVector{T}, abstol::Real, rel
             continue
         end
 
-        if iszero(imag(cur_sign))
+        if isapprox(imag(cur_sign), 0.0, atol=abstol)
           ( real(cur_sign) > 0 ) && continue
         end
 
         tmp_roots = _find_recursive_bisection_roots(f, cur_a, cur_b, abstol, reltol)
         append!(root_list, tmp_roots)
-    end
-
-    if isempty(root_list) && no_pts > 2
-      log_values = map(abs, cur_values)
-      log_values = map(log10, log_values)
-
-      cur_low_bar = maximum(log_values) / 10
-
-      log_values[1] = Inf
-      log_values[end] = Inf
-
-      cur_indices = collect(1:length(log_values))
-      sort!(cur_indices, by= cur_index -> abs(log_values[cur_index]) )
-
-      for cur_index in cur_indices[1:min(4, length(cur_indices))]
-        log_value = log_values[cur_index]
-
-        ( log_value < cur_low_bar ) || break
-
-        println("@@h@")
-        println(cur_range, " JK ", no_pts)
-        tmp_roots = find_bisection_roots(f, collect(linspace(cur_range[cur_index-1], cur_range[cur_index+1], Int(ceil(no_pts/2)))), abstol, reltol)
-        isempty(tmp_roots) && continue
-
-        println("")
-        append!(root_list, tmp_roots)
-        break
-      end
     end
 
     root_list
@@ -937,8 +913,10 @@ function _find_recursive_bisection_roots(f, a::Real, b::Real, abstol::Real, relt
     append!(cur_roots, _find_recursive_bisection_roots(f, a, cur_average, cur_depth=cur_depth+1, abstol, reltol))
     append!(cur_roots, _find_recursive_bisection_roots(f, cur_average, b, cur_depth=cur_depth+1, abstol, reltol))
 
-    isapprox(first(cur_roots), last(cur_roots), rtol=reltol, atol=abstol) &&
-      ( cur_roots = cur_roots[1:1] )
+    is_same_value = isapprox(first(cur_roots), last(cur_roots), rtol=reltol)
+    is_same_value |= isapprox(first(cur_roots), last(cur_roots), atol=abstol)
+
+    is_same_value && ( cur_roots = cur_roots[1:1] )
 
     cur_roots
 end
@@ -965,8 +943,13 @@ function find_order_roots(f, cur_range::AbstractVector{T}, abstol::Real, reltol:
 
         ( min_value < tmp_root < max_value ) || continue
 
+        isapprox(f(tmp_root), 0.0, atol=abstol) || continue
+
         any(
-            work_root -> isapprox(tmp_root, work_root, rtol=reltol, atol=abstol),
+            work_root -> (
+              isapprox(tmp_root, work_root, rtol=reltol) ||
+              isapprox(tmp_root, work_root, atol=abstol)
+            ),
             root_list
         ) && continue
 
