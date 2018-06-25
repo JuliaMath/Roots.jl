@@ -718,39 +718,243 @@ Called by `fzeros` or `Roots.find_zeros`.
 
 """
 function find_zeros(f, a::Real, b::Real, args...;
-                    no_pts::Int=100,
-                    abstol::Real=10*eps(), reltol::Real=10*eps(), ## should be abstol, reltol as used. 
+                    no_pts::Int=101,
+                    abstol::Real=10*eps(), reltol::Real=10*eps(), ## should be abstol, reltol as used.
                     kwargs...)
 
-    a, b = a < b ? (a,b) : (b,a)
-    rts = eltype(promote(float(a),b))[]
-    xs = vcat(a, a .+ (b-a) .* sort(rand(no_pts)), b)
+    @assert a != b
+    @assert no_pts > 1
 
+    ( a < b ) || ( (a, b) = (b, a) )
 
-    ## Look in [ai, bi)
-    for i in 1:(no_pts+1)
-        ai,bi=xs[i:i+1]
-        if isapprox(f(ai), 0.0, rtol=reltol, atol=abstol)
-            push!(rts, ai)
-        elseif sign(f(ai)) * sign(f(bi)) < 0
-            push!(rts, find_zero(f, [ai, bi], Bisection()))
-        else
-            try
-                x = find_zero(f, ai + (0.5)* (bi-ai), Order8(); maxevals=10, abstol=abstol, reltol=reltol)
-                if ai < x < bi
-                    push!(rts, x)
-                end
-            catch e
-            end
+    function work_f(x)
+      cur_f = float(f(x))
+
+      isreal(cur_f) && return cur_f
+
+      real_f, imag_f = real(cur_f), imag(cur_f)
+      cur_ratio = abs( real_f / imag_f )
+
+      real_f = isapprox(real_f, 0.0, atol=abstol) ? 0.0 : real_f
+
+      ( cur_ratio > 1e6 ) && return real_f
+      ( abs(real_f) < 1e-3 && abs(imag_f) < 1e-3 ) && return real_f
+
+      cur_f
+    end
+
+    root_list = _find_recursive_zeros(
+      work_f, a, b, args...;
+      no_pts=no_pts, abstol=abstol, reltol=reltol, kwargs...
+    )
+
+    # redo if it appears function oscillates alot in this interval...
+    if length(root_list) > Int(ceil( (1/4) * no_pts ))
+        return find_zeros(
+            f, a, b, args...;
+            no_pts = 10*no_pts, abstol=abstol, reltol=reltol, kwargs...
+        )
+    end
+
+    sort!(root_list)
+
+    root_list
+end
+
+function _find_recursive_zeros(f, a::Real, b::Real, args...;
+                      cur_depth::Int=1,
+                      no_pts::Int=101,
+                      abstol::Real=10*eps(), reltol::Real=10*eps(), ## should be abstol, reltol as used.
+                      kwargs...)
+
+    cur_range = collect(linspace(a, b, no_pts))
+
+    root_list = find_root_list(f, cur_range, abstol, reltol)
+
+    isempty(root_list) && return root_list
+
+    sub_no_pts = no_pts
+    sub_no_pts /= max( 1 ,  length(root_list) / 4 )
+    sub_no_pts /= 2 ^ ( cur_depth - 1 )
+    sub_no_pts = Int(round(sub_no_pts))
+
+    ( sub_no_pts > 1 ) || return root_list
+
+    cur_intervals = zip(
+        vcat(first(cur_range),root_list),
+        vcat(root_list,last(cur_range))
+    )
+
+    for (cur_a, cur_b) in cur_intervals
+        isapprox(cur_a, cur_b, rtol=reltol) && continue
+        isapprox(cur_a, cur_b, atol=abstol) && continue
+
+        tmp_a = find_next_non_root(cur_a, f, cur_b, reltol, abstol)
+        tmp_b = find_next_non_root(cur_b, f, cur_a, reltol, abstol)
+
+        isnan(tmp_a) || isnan(tmp_b) && continue
+        isapprox(tmp_a, tmp_b, rtol=reltol) && continue
+        isapprox(tmp_a, tmp_b, atol=abstol) && continue
+        ( tmp_a < tmp_b ) || continue
+
+        cur_roots = _find_recursive_zeros(
+            f, tmp_a, tmp_b, args...;
+            no_pts=sub_no_pts, abstol=abstol, reltol=reltol,
+            cur_depth=(cur_depth+1), kwargs...
+        )
+
+        append!(root_list, cur_roots)
+    end
+
+    root_list
+end
+
+function find_next_non_root(cur_root, cur_func, barrier_point, reltol, abstol)
+    cur_direction = sign(barrier_point - cur_root)
+
+    cur_adder = abstol * cur_direction
+
+    cur_value = cur_root + cur_adder
+
+    while sign(barrier_point - cur_value) == cur_direction
+        needs_skip = isapprox(cur_value, cur_root, rtol=reltol)
+        needs_skip |= isapprox(cur_value, cur_root, atol=abstol)
+
+        if !needs_skip
+          cur_f = cur_func(cur_value)
+          isapprox(cur_f, 0.0, atol=abstol) || break
         end
-    end
-    ## finally, b?
-    isapprox(f(b), 0.0, rtol=reltol, atol=abstol) && push!(rts, b)
 
-    ## redo if it appears function oscillates alot in this interval...
-    if length(rts) > (1/4) * no_pts
-        return(find_zeros(f, a, b, args...; no_pts = 10*no_pts, abstol=abstol, reltol=reltol, kwargs...))
-    else
-        return(sort(rts))
+        cur_adder *= 2
+        cur_value += cur_adder
     end
+
+    is_in_range = ( sign(barrier_point - cur_value) == cur_direction )
+    is_in_range || return NaN
+
+    for tmp_value in linspace(cur_value - cur_adder, cur_value)
+        ( sign(tmp_value - cur_root) == cur_direction ) || continue
+
+        isapprox(tmp_value, cur_root, rtol=reltol) && continue
+        isapprox(tmp_value, cur_root, atol=abstol) && continue
+
+        cur_f = cur_func(tmp_value)
+
+        isapprox(cur_f, 0.0, atol=abstol) && continue
+
+        cur_value = tmp_value
+        break
+    end
+
+    ( cur_root == cur_value ) && return NaN
+
+    cur_value
+end
+
+function find_root_list(f, cur_range::AbstractVector{T}, abstol::Real, reltol::Real) where T <: Real
+    isempty(cur_range) && return Real[]
+
+    cur_roots = find_bisection_roots(f, cur_range, abstol, reltol)
+    isempty(cur_roots) || return cur_roots
+
+    cur_roots = find_order_roots(f, cur_range, abstol, reltol)
+    cur_roots
+end
+
+function find_bisection_roots(f, cur_range::AbstractVector{T}, abstol::Real, reltol::Real) where T <: Real
+    no_pts = length(cur_range)
+
+    root_list = Real[]
+
+    cur_values = f.(cur_range)
+
+    cur_signs = map(sign, cur_values[1:end-1] .* cur_values[2:end])
+
+    for (cur_index, cur_sign) in enumerate(cur_signs)
+        isinf(cur_sign) && continue
+
+        cur_a, cur_b = cur_range[cur_index:cur_index+1]
+
+        if iszero(cur_sign)
+            iszero(cur_values[cur_index]) && push!(root_list, cur_a)
+
+            ( cur_index == no_pts - 1 ) &&
+              iszero(cur_values[cur_index+1]) && push!(root_list, cur_b)
+
+            continue
+        end
+
+        if isapprox(imag(cur_sign), 0.0, atol=abstol)
+          ( real(cur_sign) > 0 ) && continue
+        end
+
+        tmp_roots = _find_recursive_bisection_roots(f, cur_a, cur_b, abstol, reltol)
+        append!(root_list, tmp_roots)
+    end
+
+    root_list
+end
+
+function _find_recursive_bisection_roots(f, a::Real, b::Real, abstol::Real, reltol::Real; cur_depth::Int=1)
+    cur_end_points = [a, b]
+
+    try
+        cur_root = find_zero(f, cur_end_points, Bisection())
+        return [cur_root]
+    catch cur_error
+        isa(cur_error, ArgumentError) && return []
+        isa(cur_error, MethodError) || rethrow(cur_error)
+        ( cur_depth > 8 ) && return []
+    end
+
+    cur_roots = []
+    cur_average = mean(cur_end_points)
+
+    append!(cur_roots, _find_recursive_bisection_roots(f, a, cur_average, cur_depth=cur_depth+1, abstol, reltol))
+    append!(cur_roots, _find_recursive_bisection_roots(f, cur_average, b, cur_depth=cur_depth+1, abstol, reltol))
+
+    is_same_value = isapprox(first(cur_roots), last(cur_roots), rtol=reltol)
+    is_same_value |= isapprox(first(cur_roots), last(cur_roots), atol=abstol)
+
+    is_same_value && ( cur_roots = cur_roots[1:1] )
+
+    cur_roots
+end
+
+function find_order_roots(f, cur_range::AbstractVector{T}, abstol::Real, reltol::Real) where T <: Real
+    root_list = Real[]
+
+    min_value = first(cur_range)
+    max_value = last(cur_range)
+
+    cur_guesses = view( cur_range , (2:2:length(cur_range)-1) )
+
+    for cur_guess in cur_guesses
+        tmp_root = NaN
+
+        try
+            tmp_root = find_zero(
+                f, cur_guess, Order8();
+                maxevals=10, abstol=abstol, reltol=reltol
+            )
+        catch cur_error
+            continue
+        end
+
+        ( min_value < tmp_root < max_value ) || continue
+
+        isapprox(f(tmp_root), 0.0, atol=abstol) || continue
+
+        any(
+            work_root -> (
+              isapprox(tmp_root, work_root, rtol=reltol) ||
+              isapprox(tmp_root, work_root, atol=abstol)
+            ),
+            root_list
+        ) && continue
+
+        push!(root_list, tmp_root)
+    end
+
+    root_list
 end
