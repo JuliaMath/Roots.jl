@@ -12,12 +12,6 @@ a = halley(x -> exp(x) - cos(x),
 @test abs(a - 0.0) <= 1e-14
 
 
-## tests with auto derivatives
-@test newton(sin, 3) ≈ pi
-@test halley(sin, 3) ≈ pi
-
-## More tests with autoderivaitves. Derivative of D operation:
-@test newton(D(sin), 1.5) ≈ pi/2
 
 ## test with Complex input
 
