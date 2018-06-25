@@ -727,21 +727,7 @@ function find_zeros(f, a::Real, b::Real, args...;
 
     ( a < b ) || ( (a, b) = (b, a) )
 
-    function work_f(x)
-      cur_f = float(f(x))
-
-      isreal(cur_f) && return cur_f
-
-      real_f, imag_f = real(cur_f), imag(cur_f)
-      cur_ratio = abs( real_f / imag_f )
-
-      real_f = isapprox(real_f, 0.0, atol=abstol) ? 0.0 : real_f
-
-      ( cur_ratio > 1e6 ) && return real_f
-      ( abs(real_f) < 1e-3 && abs(imag_f) < 1e-3 ) && return real_f
-
-      cur_f
-    end
+    work_f(x) = real(float(f(complex(x))))
 
     root_list = _find_recursive_zeros(
       work_f, a, b, args...;
@@ -774,7 +760,7 @@ function _find_recursive_zeros(f, a::Real, b::Real, args...;
     isempty(root_list) && return root_list
 
     sub_no_pts = no_pts
-    sub_no_pts /= max( 1 ,  length(root_list) / 4 )
+    sub_no_pts /= 1 + length(root_list) / 3
     sub_no_pts /= 2 ^ ( cur_depth - 1 )
     sub_no_pts = Int(round(sub_no_pts))
 
@@ -813,7 +799,6 @@ function find_next_non_root(cur_root, cur_func, barrier_point, reltol, abstol)
     cur_direction = sign(barrier_point - cur_root)
 
     cur_adder = abstol * cur_direction
-
     cur_value = cur_root + cur_adder
 
     while sign(barrier_point - cur_value) == cur_direction
@@ -857,7 +842,10 @@ function find_root_list(f, cur_range::AbstractVector{T}, abstol::Real, reltol::R
     cur_roots = find_bisection_roots(f, cur_range, abstol, reltol)
     isempty(cur_roots) || return cur_roots
 
-    cur_roots = find_order_roots(f, cur_range, abstol, reltol)
+    cur_root = find_order_root(f, cur_range, abstol, reltol)
+    isnan(cur_root) && return Real[]
+
+    cur_roots = [cur_root]
     cur_roots
 end
 
@@ -884,50 +872,21 @@ function find_bisection_roots(f, cur_range::AbstractVector{T}, abstol::Real, rel
             continue
         end
 
-        if isapprox(imag(cur_sign), 0.0, atol=abstol)
-          ( real(cur_sign) > 0 ) && continue
-        end
+        ( cur_sign > 0 ) && continue
 
-        tmp_roots = _find_recursive_bisection_roots(f, cur_a, cur_b, abstol, reltol)
-        append!(root_list, tmp_roots)
+        push!(root_list, find_zero(f, [cur_a, cur_b], Bisection()))
     end
 
     root_list
 end
 
-function _find_recursive_bisection_roots(f, a::Real, b::Real, abstol::Real, reltol::Real; cur_depth::Int=1)
-    cur_end_points = [a, b]
-
-    try
-        cur_root = find_zero(f, cur_end_points, Bisection())
-        return [cur_root]
-    catch cur_error
-        isa(cur_error, ArgumentError) && return []
-        isa(cur_error, MethodError) || rethrow(cur_error)
-        ( cur_depth > 8 ) && return []
-    end
-
-    cur_roots = []
-    cur_average = mean(cur_end_points)
-
-    append!(cur_roots, _find_recursive_bisection_roots(f, a, cur_average, cur_depth=cur_depth+1, abstol, reltol))
-    append!(cur_roots, _find_recursive_bisection_roots(f, cur_average, b, cur_depth=cur_depth+1, abstol, reltol))
-
-    is_same_value = isapprox(first(cur_roots), last(cur_roots), rtol=reltol)
-    is_same_value |= isapprox(first(cur_roots), last(cur_roots), atol=abstol)
-
-    is_same_value && ( cur_roots = cur_roots[1:1] )
-
-    cur_roots
-end
-
-function find_order_roots(f, cur_range::AbstractVector{T}, abstol::Real, reltol::Real) where T <: Real
-    root_list = Real[]
-
+function find_order_root(f, cur_range::AbstractVector{T}, abstol::Real, reltol::Real) where T <: Real
     min_value = first(cur_range)
     max_value = last(cur_range)
 
-    cur_guesses = view( cur_range , (2:2:length(cur_range)-1) )
+    cur_guesses = view( cur_range , (3:4:length(cur_range)-2) )
+
+    cur_root = NaN
 
     for cur_guess in cur_guesses
         tmp_root = NaN
@@ -945,16 +904,10 @@ function find_order_roots(f, cur_range::AbstractVector{T}, abstol::Real, reltol:
 
         isapprox(f(tmp_root), 0.0, atol=abstol) || continue
 
-        any(
-            work_root -> (
-              isapprox(tmp_root, work_root, rtol=reltol) ||
-              isapprox(tmp_root, work_root, atol=abstol)
-            ),
-            root_list
-        ) && continue
+        cur_root = tmp_root
 
-        push!(root_list, tmp_root)
+        break
     end
 
-    root_list
+    cur_root
 end
