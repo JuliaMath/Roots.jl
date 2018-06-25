@@ -16,3 +16,5 @@ include("./test_newton.jl")
 #include("./test_derivative_free.jl")
 
 include("./test_find_zeros.jl")
+
+# include("./test_composable.jl")
