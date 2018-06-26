@@ -772,15 +772,13 @@ function _find_recursive_zeros(f, a::Real, b::Real, args...;
     )
 
     for (cur_a, cur_b) in cur_intervals
-        isapprox(cur_a, cur_b, rtol=reltol) && continue
-        isapprox(cur_a, cur_b, atol=abstol) && continue
+        loose_isapprox(cur_a, cur_b, abstol, reltol) && continue
 
         tmp_a = find_next_non_root(cur_a, f, cur_b, reltol, abstol)
         tmp_b = find_next_non_root(cur_b, f, cur_a, reltol, abstol)
 
         isnan(tmp_a) || isnan(tmp_b) && continue
-        isapprox(tmp_a, tmp_b, rtol=reltol) && continue
-        isapprox(tmp_a, tmp_b, atol=abstol) && continue
+        loose_isapprox(tmp_a, tmp_b, abstol, reltol) && continue
         ( tmp_a < tmp_b ) || continue
 
         cur_roots = _find_recursive_zeros(
@@ -802,10 +800,7 @@ function find_next_non_root(cur_root, cur_func, barrier_point, reltol, abstol)
     cur_value = cur_root + cur_adder
 
     while sign(barrier_point - cur_value) == cur_direction
-        needs_skip = isapprox(cur_value, cur_root, rtol=reltol)
-        needs_skip |= isapprox(cur_value, cur_root, atol=abstol)
-
-        if !needs_skip
+        if !loose_isapprox(cur_value, cur_root, abstol, reltol)
           cur_f = cur_func(cur_value)
           isapprox(cur_f, 0.0, atol=abstol) || break
         end
@@ -820,8 +815,7 @@ function find_next_non_root(cur_root, cur_func, barrier_point, reltol, abstol)
     for tmp_value in linspace(cur_value - cur_adder, cur_value)
         ( sign(tmp_value - cur_root) == cur_direction ) || continue
 
-        isapprox(tmp_value, cur_root, rtol=reltol) && continue
-        isapprox(tmp_value, cur_root, atol=abstol) && continue
+        loose_isapprox(tmp_value, cur_root, abstol, reltol) && continue
 
         cur_f = cur_func(tmp_value)
 
@@ -910,4 +904,11 @@ function find_order_root(f, cur_range::AbstractVector{T}, abstol::Real, reltol::
     end
 
     cur_root
+end
+
+function loose_isapprox(first_value, second_value, atol, rtol)
+  isapprox(first_value, second_value, atol=atol) && return true
+  isapprox(first_value, second_value, rtol=rtol) && return true
+
+  false
 end
