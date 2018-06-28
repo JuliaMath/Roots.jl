@@ -1067,7 +1067,8 @@ function find_zeros(f, as;
     # as... is an increasing sequence of points
     ints = Interval[]
 
-    l = float(first(as))
+    a,b = first(as), last(as)
+    l = float(a)
     fl = f(l)
     fnctr += 1
 
@@ -1149,7 +1150,32 @@ function find_zeros(f, as;
         fnctr >= maxfnevals && throw(ConvergenceFailed("too many fn evaluations"))
         
     end
+
+
+    # Are there more roots than we might have expected? If so, rerun with different tolerances
+    sort!(xzeros)
+    no_zeros = length(xzeros)
     
+    if no_zeros > 5
+         no_pts = length(as)
+         min_gap = minimum(diff(xzeros))
+
+        ## how to control too many recursive calls? This is simple minded
+        ## some constants could be adjusted: 1/3, 4, ...
+        if (no_zeros >= (1/3) * no_pts || min_gap < 4 * xatol) && no_pts < 100_000
+            # more roots than initial points, rerun with 10 times the points, 1/10th the gap
+            verbose && println("Possibly missing zeros. Re-running with more points, smaller tolerance")
+             xzeros = find_zeros(f, a, b, no_pts=10*no_pts,
+                                 xatol=xatol/10, xrtol=xrtol, atol=atol, rtol=rtol,
+                                 maxevals=maxevals, maxfnevals=100*maxfnevals,
+                                 C=C, maxmultiplicity=maxmultiplicity,
+                                 verbose=verbose
+                                 )
+         end
+    end
+
+
+    ## report back
     if verbose
         nrts = length(xzeros)
         plural = nrts == 1 ? "" : "s"
@@ -1159,5 +1185,5 @@ function find_zeros(f, as;
         println("")
     end
 
-    return sort(xzeros)
+    return xzeros
 end
