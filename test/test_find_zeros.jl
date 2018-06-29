@@ -81,19 +81,19 @@ end
     xrts = find_zeros(f3, 0.0, 5.0)
     push!(fussy_tests, (:f3, length(xrts) == 2))
     
-    xrts = find_zeros(f4, 0.0, 1.0)  # fussy
+    xrts = find_zeros(f4, 0.0, 1.0,xatol=0.005)  # delta1 < xatol
     push!(fussy_tests, (:f4, length(xrts) == 2))
 
     # need to crank up xatol, xrtol to find smaller gaps (d=0.001)
-    xrts = find_zeros(f5, 0.0, 1.1, xatol=1e-5) 
+    xrts = find_zeros(f5, 0.0, 1.1, xatol=delta/2) 
     push!(fussy_tests, (:f5, length(xrts) == 3))
 
-    xrts = find_zeros(f6, 0.0, 5.0, xatol=1e-5)
+    xrts = find_zeros(f6, 0.0, 5.0, xatol=delta/2) # much harder due to 6th order near 0.5
     push!(fussy_tests, (:f6, length(xrts) == 5))
 
 
     W1(n) = x -> prod((x-i)^i for i in 1:n)
-    xrts = find_zeros(W1(5), -0.5:1.0:5.5, rtol=eps()) # o/w even powers hard
+    xrts = find_zeros(W1(5), -1, 6) # o/w even powers hard
     push!(fussy_tests, (:W1, length(xrts) == 5))
 
 

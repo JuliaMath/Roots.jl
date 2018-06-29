@@ -712,22 +712,50 @@ r
 fl
 fm
 fr
+depth::Int
 end
+
 
 # a simple visualization
-function display_interval(alpha, m,M, chr=isbracket(alpha) ? "~" : "." , n=80)
-    del = M - m
-    a = ceil(Int, (alpha.l - m)/del * n)
-    b = floor(Int, (alpha.r - m)/del * n)
-    io = IOBuffer()
-    for i in 1:80
-        print(io, a <=i<=b ? chr : " ")
+function visualize_tracks(tracks, m, M, width=80)
+    d = Dict()
+    pixel = Dict(:endofline    => "†",
+                 :hasoffspring => "∘",
+                 :missedshot   => "*",
+                 :Order2       => "∆",
+                 :Bisection    => "∇",
+                 :gotlucky      =>"∩")
+    for t in tracks
+        if !haskey(d, t[1].depth)
+            d[t[1].depth] = Any[]
+        end
+        push!(d[t[1].depth], t)
     end
-    out = String(take!(io))
-    close(io)
-    out
+    depth = maximum(keys(d))
+    for k = 0:depth
+        buf = IOBuffer()
+        for j in 1:width
+            x = m + j*(M-m)/width
+            ininterval = false
+            
+            for t in d[k]
+                ininterval && continue
+                if t[1].l <= x <= t[1].r
+                    # -1: last in line, 0:has offspring, 1:no root found, 2: root found
+                    print(buf, pixel[t[2]])
+                    ininterval=true
+                end
+            end
+            !ininterval && print(buf, " ")
+        end
+
+        str = String(take!(buf))
+        close(buf)
+        println(str)
+    end
 end
 
+    
 # find midpoint of interval
 # we avoid simple aliasing by not choosing 0.5
 midpoint(l,r) = l + 0.4875 * (r-l)
@@ -737,11 +765,11 @@ function midpoint(l,r,fl,fr)
     return midpoint(l,r)
 end
 
-function Interval(f, l, r)
+function Interval(f, l, r, depth=0)
     fl, fr = f(l), f(r)
     m = midpoint(l, r, fl, fr)
     # could check if f(m) is a zero. Best that it isn't
-    Interval(l, m, r, fl, f(m), fr)
+    Interval(l, m, r, fl, f(m), fr, depth)
 end
 
 # split interval in two. Try to avoid a zero when splitting
@@ -759,7 +787,7 @@ function split_interval(f, a)
         frm = f(rm)
     end
         
-    Interval(a.l, lm, a.m, a.fl, flm, a.fm), Interval(a.m, rm, a.r, a.fm, frm, a.fr)
+    Interval(a.l, lm, a.m, a.fl, flm, a.fm,a.depth+1), Interval(a.m, rm, a.r, a.fm, frm, a.fr,a.depth+1)
 end
 
 isbracket(a::Interval) = sign(a.fl) * sign(a.fr) < 0
@@ -885,7 +913,6 @@ end
         
 
 """
-    
     find_zeros(f, a, [b]; [no_pts],
        xatol, xrtol, atol, rtol, maxevals, maxfnevals, verbose,
        C, maxmultiplicity)
@@ -982,7 +1009,7 @@ lead quite different results.
     
 ### Examples:
 
-```
+```julia
 using Roots
 f(x) = exp(x) - x^4
 find_zeros(f, -5, 20) # three zeros -0.815553, 1.42961, 8.61317
@@ -998,7 +1025,7 @@ These all need parameters adjusted. For some, the strict tolerance on what
 f(x) ≈ 0 means is adjusted with either rtol or atol. For others, the size
 of the gap between zeros is adjusted with xrtol and xatol. For others, it helps to start with well-chosen intervals.
 
-```
+```julia
 f(x) = x^2  # non-simple root that has no bracket is sensitive to tolerances
 find_zeros(f, -1/2, 1/2, rtol=0.0)  # misses
 find_zeros(f, -1/4, 1/2, rtol=0.0)  # hits
@@ -1032,7 +1059,8 @@ There are alternative algorithms for Julia that should be able to produce better
 * The [ApproxFun](https://github.com/JuliaApproximation/ApproxFun.jl) package has an approach where functions are well approximated by polynomials and the zeros of those polynomials are used to give zeros of the function. [Boyd](https://epubs.siam.org/doi/abs/10.1137/110838297) provides an enjoyable overview for the MATLAB implementation.
 
 * The [IntervalRootFinding](https://github.com/JuliaIntervals/IntervalRootFinding.jl) package provides methods that provide a guarantee on the results.
-    
+
+
 """
 function find_zeros(f, a, b;
                     no_pts::Int=22,
@@ -1041,7 +1069,9 @@ function find_zeros(f, a, b;
     find_zeros(f, range(float(a), stop=float(b), length=no_pts); kwargs...)
 end
 
-_default_zero_gap(as,n=1000) = (last(as)-first(as))/n 
+# default for `xatol`. If an interval is smaller than this, `find_zero` is
+# used to identify a zero, when possible.
+_default_zero_gap(as,n=100) = (last(as)-first(as))/n 
 
 
 # as is an interable with length 2 or more specifying initial subintervals as:
@@ -1060,13 +1090,12 @@ function find_zeros(f, as;
     )
 
 
-    DEBUG = false
-
     ctr, fnctr = 0, 0
 
     # as... is an increasing sequence of points
     ints = Interval[]
-
+    tracks = Any[] # used by verbose
+    
     a,b = first(as), last(as)
     l = float(a)
     fl = f(l)
@@ -1077,7 +1106,7 @@ function find_zeros(f, as;
     xzeros = T[]
 
     # intilialize initial intervals
-    length(as) < 2 && throw(ArgumentErros("interval specification needs 2 or more increasing values"))
+    length(as) < 2 && throw(ArgumentError("interval specification needs 2 or more increasing values"))
     
     for i in 2:length(as)
         r = float(as[i])
@@ -1086,7 +1115,7 @@ function find_zeros(f, as;
         l > first(as) && iszero(fl) && append_zero!(xzeros, l,xatol, xrtol) # is an interval point a zero?
         m = midpoint(l, r, fl, fr)
         fm = f(m)
-        push!(ints, Interval(l,m,r,fl,fm,fr))
+        push!(ints, Interval(l,m,r,fl,fm,fr,0))
         fnctr += 2
         l,fl = r, fr
     end
@@ -1094,17 +1123,15 @@ function find_zeros(f, as;
     while !isempty(ints)
         ctr += 1
         alpha = pop!(ints)
-        DEBUG && println(display_interval(alpha, first(as), last(as)))
 
         # some checks
         # if small interval, does it have a zero?
         if is_smaller_min_separation_distance(alpha, xatol, xrtol)
             if isbracket(alpha)
                 rt = find_zero(f, (alpha.l, alpha.r), Bisection())
-                DEBUG && println(display_interval(alpha, first(as), last(as), "*"))
                 push!(xzeros, rt)
+                verbose && push!(tracks, (alpha, :Bisection))
             else
-                DEBUG && println(display_interval(alpha, first(as), last(as), "?"))
                 rt = nothing
                 try
                     rt = find_zero(f, alpha.m, Order2(), maxfnevals=16, atol=atol, rtol=rtol)
@@ -1115,8 +1142,9 @@ function find_zeros(f, as;
                     end
                 catch err
                 end
-                if DEBUG && rt != nothing 
-                    println(display_interval(alpha, first(as), last(as), "*"))
+                if verbose
+                    rt == nothing && push!(tracks,  (alpha, :missedshot))
+                    rt != nothing && push!(tracks,  (alpha, :Order2))
                 end
             end
             continue
@@ -1125,8 +1153,8 @@ function find_zeros(f, as;
         # is midpoint a zero? This is a design decision. Midpoint being a zero can
         # lead to missed zeros in tossed out intervals.
         if isapproxzero(alpha, atol, rtol)
-            # polish off to see if can find zero in interval
             append_zero!(xzeros, alpha.m, xatol,xrtol)
+            verbose && push!(tracks, (alpha, :gotlucky))
             continue
         end
         
@@ -1137,13 +1165,19 @@ function find_zeros(f, as;
         fnctr +=2
 
         ## we keep [l/r]alpha if a bracket or promising
+        legacy = 0
         if  has_promise(f, alpha, lalpha, C, maxmultiplicity)
+            legacy += 1
             push!(ints, lalpha)
         end
 
         if has_promise(f, alpha, ralpha, C, maxmultiplicity)
+            legacy += 1
             push!(ints, ralpha)
         end
+
+        verbose  && iszero(legacy) && push!(tracks, (alpha, :endofline))
+        verbose  && !iszero(legacy) && push!(tracks, (alpha, :hasoffspring))
 
         # Is this taking too long?
         ctr >= maxevals     && throw(ConvergenceFailed("too many evaluations $ctr $fnctr"))
@@ -1183,6 +1217,7 @@ function find_zeros(f, as;
         println(" * there were $ctr subintervals considered")
         println(" * there were $fnctr function evaluations taken to identify these")
         println("")
+        visualize_tracks(tracks, first(as), last(as))
     end
 
     return xzeros
