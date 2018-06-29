@@ -44,8 +44,8 @@ rts = 1:5
 @test all((abs.(fzeros(x -> prod([x-r for r in rts]),0,10)) .- collect(1:5)) .<= 1e-15)
 
 
-fn = x -> sin(10*pi*x)
-@test length(fzeros(fn, 0, 1)) == 11
+fn = x -> cos(10*pi*x)
+@test length(fzeros(fn, 0, 1)) == 10 # 9 in (0, 1)
 
 ### issue with fzeros and roots near 'b'
 @test 0 <  maximum(fzeros(x -> sin(x) - 1/1000*x, 0, pi)) < pi

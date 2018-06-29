@@ -12,6 +12,10 @@ end
 
 ##################################################
 ## Helpers for the various methods
+
+# take units off a value when Unitful is being used
+strip_unit(x) = x/oneunit(x)
+
 ## issue with approx derivative
 isissue(x) = iszero(x) || isnan(x) || isinf(x)
 
