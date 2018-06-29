@@ -1084,9 +1084,10 @@ function find_zeros(f, as;
                     rtol = eps(eltype(float(first(as)))), # eps
                     maxevals::Int=typemax(Int),
                     maxfnevals::Int=100_000,  
-                    verbose::Bool=false,
                     C= 10 * one(float(first(as))),
-                    maxmultiplicity = 1
+                    maxmultiplicity = 1,
+                    verbose::Bool=false, tracks=Any[]
+
     )
 
 
@@ -1094,7 +1095,6 @@ function find_zeros(f, as;
 
     # as... is an increasing sequence of points
     ints = Interval[]
-    tracks = Any[] # used by verbose
     
     a,b = first(as), last(as)
     l = float(a)
