@@ -476,7 +476,7 @@ end
 function tole(a::S, b::R, fa, fb, tol) where {S,R}
     u = abs(fa) < abs(fb) ? abs(a) : abs(b)
     T = promote_type(S,R)
-    2u*eps(T)/oneunit(T) + tol
+    2u*eps(one(T)) + tol
 end
 
 
@@ -514,7 +514,7 @@ function bracket(f, a, fa, b, fb, c, fc, tol)
         c = b - 2delta
         fc = f(c)
     end
-    if fc == 0
+    if iszero(fc)
         throw(Roots.StateConverged(c))
     elseif sign(fa)*sign(fc) < 0 
         aa, faa = a, fa
@@ -538,7 +538,7 @@ end
 function secant(f, a::T, fa, b, fb) where {T}
 
     c = a - fa/(fb - fa)*(b - a)
-    tol = 5*eps(T)/oneunit(T)
+    tol = 5*eps(one(a))
     if isnan(c) || c <= a + abs(a)*tol || c >= b - abs(b)*tol
         return a + (b - a)/2, f(a+(b-a)/2)
     end
@@ -552,7 +552,7 @@ end
 function newton_quadratic(f, a, fa, b, fb, d, fd, k::Int)
     B = (fb - fa)/(b - a)
     A = ((fd - fb)/(d - b) - B)/(d - a)
-    if A == 0
+    if iszero(A)
         return secant(f, a, fa, b, fb)
     end
     
