@@ -9,7 +9,7 @@ else
 end
 
 using ForwardDiff
-using Compat: @nospecialize, lastindex
+using Compat: @nospecialize, lastindex, range
 
 
 export fzero,
@@ -28,6 +28,8 @@ include("utils.jl")
 include("find_zero.jl")
 include("bracketing.jl")
 include("derivative_free.jl")
+include("simple.jl")
+include("find_zeros.jl")
 include("newton.jl")
 include("fzero.jl")
 

@@ -12,6 +12,9 @@ end
 
 ##################################################
 ## Helpers for the various methods
+
+_unitless(x) = x / oneunit(x)
+
 ## issue with approx derivative
 isissue(x) = iszero(x) || isnan(x) || isinf(x)
 
@@ -48,6 +51,28 @@ function guarded_secant_step(alpha, beta, falpha, fbeta)
         return (beta - Δ, false)
     end
 end
+
+
+# for the 3 points, find parabola. Then return vertex of the closest 0
+# to the mean of x1, x2, x3
+function quad_vertex(x1,fx1,x2,fx2,x3,fx3)
+    vertex = -(-fx1*(x2^2 - x3^2) + fx2*(x1^2 - x3^2) - fx3*(x1^2 - x2^2))/(2*(fx1*(x2 - x3) - fx2*(x1 - x3) + fx3*(x1 - x2)))
+    discr = -4*(fx1*(x2 - x3) - fx2*(x1 - x3) + fx3*(x1 - x2))*(fx1*x2*x3*(x2 - x3) - fx2*x1*x3*(x1 - x3) + fx3*x1*x2*(x1 - x2))/(x1^2*x2 - x1^2*x3 - x1*x2^2 + x1*x3^2 + x2^2*x3 - x2*x3^2)^2 + (-fx1*(x2^2 - x3^2) + fx2*(x1^2 - x3^2) - fx3*(x1^2 - x2^2))^2/(x1^2*x2 - x1^2*x3 - x1*x2^2 + x1*x3^2 + x2^2*x3 - x2*x3^2)^2
+
+    if discr > zero(discr)
+        b = (-fx1*(x2^2 - x3^2) + fx2*(x1^2 - x3^2) - fx3*(x1^2 - x2^2))/(x1^2*x2 - x1^2*x3 - x1*x2^2 + x1*x3^2 + x2^2*x3 - x2*x3^2)
+        a = (fx1*(x2 - x3) - fx2*(x1 - x3) + fx3*(x1 - x2))/(x1^2*x2 - x1^2*x3 - x1*x2^2 + x1*x3^2 + x2^2*x3 - x2*x3^2)
+        gamma1, gamma2 = (-b + sqrt(discr))/2a, (-b - sqrt(discr))/2a
+
+        xbar = (x1+x2+x3)/3
+        d1,d2,d3 = abs(gamma1 - xbar), abs(gamma2-xbar), abs(vertex - xbar)
+        # return closest
+        d1 < min(d2,d3) && return gamma1
+        d2 < min(d1,d3) && return gamma2
+    end
+    return vertex
+end
+
 
 
 ## Different functions for approximating f'(xn)
