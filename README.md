@@ -33,8 +33,6 @@ is known (one where f(a) and f(b) have alternate signs), the
 
 * There are two historic methods that require a derivative:
   `Roots.Newton` and `Roots.Halley`. (Neither is currently exported.)
-  If a derivative is not given, an automatic derivative is found using
-  the `ForwardDiff` package.
 
 Each method's documentation has additional detail.
 
@@ -95,12 +93,21 @@ y(t) = -g*t^2 + v0*t + y0
 find_zero(y, 1s)      # 1.886053370668014 s
 ```
 
-Newton's method can be used without taking derivatives:
+Newton's method can be used without taking derivatives, if the
+`ForwardDiff` packages is available:
+
 
 ```julia
+using ForwardDiff
+D(f) = x -> ForwardDiff.derivative(f,x)
+```
+
+Now we have:
+
+```
 f(x) = x^3 - 2x - 5
 x0 = 2
-find_zero(f, x0, Roots.Newton())   # 2.0945514815423265
+find_zero((f,D(f)) x0, Roots.Newton())   # 2.0945514815423265
 ```
 
 Automatic derivatives allow for easy solutions to finding critical

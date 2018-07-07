@@ -264,10 +264,12 @@ Whereas,
 find_zero(f, x0, Order2())
 ```
 
-A graph shows the issue. We have overlayed a 15 steps of Newton's
+A graph shows the issue. We have overlayed 15 steps of Newton's
 method, the other algorithms being somewhat similar:
 
 ```figure,nocode
+using ForwardDiff
+D(f) = x -> ForwardDiff.derivative(f,float(x))
 xs = [x0]
 n = 15
 for i in 1:(n-1) push!(xs, xs[end] - f(xs[end])/D(f)(xs[end])) end
@@ -332,23 +334,27 @@ x, f(x), f(prevfloat(x)) * f(nextfloat(x))
 ```
 
 
-For many function, the derivatives can be computed automatically. The
-`ForwardDiff` package provides a means. This package wraps the
-process into an operator, `D` which returns the derivative of a
-function `f` (for simple-enough functions):
+For many functions, the derivatives can be computed automatically. The
+`ForwardDiff` package provides a means. Here we define an operator `D`
+to compute a derivative:
 
 ```
-newton(f, D(f), 2)    # just newton(f, 2) works here
+using FowardDiff
+D(f) = x -> ForwardDiff.derivative(f, float(x))
+D(f, n) = n > 1 ? D(D(f),n-1) : D(f)
+```
+
+
+```
+newton(f, D(f), 2)    
 ```
 
 Or for Halley's method
 
 ```
-halley(f, D(f), D(f,2), 2)  # just halley(f, 2) works here
+halley(f, D(f), D(f,2), 2)  
 ```
 
-Specifying the derivative(s) can be skipped, the functions will
-default to the above calls.
 
 ## Finding critical points
 
@@ -409,7 +415,7 @@ howfarp(theta) = (howfar(theta+h) - howfar(theta-h)) / (2h)
 tstar = find_zero(howfarp, 45)
 ```
 
-This shows the differences in the trajectories:
+This graph shows the differences in the trajectories:
 
 ```figure
 plot(x -> flight(x, tstar), 0, howfar(tstar))
@@ -456,7 +462,7 @@ Df(f, h=1e-6) = x -> (f(x + h*oneunit(x)) - f(x)) / (h*oneunit(x))
 And then the fact the peak is the only local maximum, it can be found from:
 
 ```
-find_zero(Df(y), (0s, a), Bisection())
+find_zero(Df(y), a/2, Order2())
 ```
 
 ----
@@ -484,3 +490,5 @@ find_zero(diff(yt, t), (0, a), Bisection())
 
 (This also illustrates that symbolic values can be passed to describe
 the `x`-axis values.)
+
+Similarly, the `SymPy` package could be used in an identical way.

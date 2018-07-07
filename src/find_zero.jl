@@ -148,6 +148,8 @@ struct SecondDerivative <: CallableFunction
     fpp
 end
 
+
+
 (F::DerivativeFree)(x::Number) = F.f(x)
 (F::FirstDerivative)(x::Number) = F.f(x)
 (F::SecondDerivative)(x::Number) = F.f(x)
@@ -156,12 +158,20 @@ end
 (F::FirstDerivative)(x::Number, n::Int)  = F(x, Val{n})
 (F::SecondDerivative)(x::Number, n::Int)  = F(x, Val{n})
 
-(F::DerivativeFree)(x::Number, ::Type{Val{1}}) = D(F.f)(x)
+error_msg_d1 = """
+A first derivative must be specified. Automatic derivatives can be used:
+e.g., define `D(f) = x->ForwardDiff.derivative(f, float(x))`, then use `D(f)`.
+"""
+(F::DerivativeFree)(x::Number, ::Type{Val{1}}) = error(error_msg_d1)
 (F::FirstDerivative)(x::Number, ::Type{Val{1}}) = F.fp(x)
 (F::SecondDerivative)(x::Number, ::Type{Val{1}}) = F.fp(x)
 
-(F::DerivativeFree)(x::Number, ::Type{Val{2}}) = D(F.f, 2)(x)
-(F::FirstDerivative)(x::Number, ::Type{Val{2}}) = D(F.f, 2)(x)
+error_msg_d2 = """
+A second derivative must be specified.  Automatic derivatives can be used:
+e.g., define `D(f) = x->ForwardDiff.derivative(f, float(x))`, then use `D(D(f))`.
+"""
+(F::DerivativeFree)(x::Number, ::Type{Val{2}}) = error(error_msg_d2)
+(F::FirstDerivative)(x::Number, ::Type{Val{2}}) =  error(error_msg_d2)
 (F::SecondDerivative)(x::Number, ::Type{Val{2}}) = F.fpp(x)
 
 
@@ -315,7 +325,7 @@ A method is specified to indicate which algorithm to employ:
 
 * There are several derivative-free methods: cf. `Order0`, `Order1` (secant method), `Order2` (Steffensen), `Order5`, `Order8`, and `Order16`, where the number indicates the order of the convergence.
 
-* There are some classical methods where a derivative is assumed or computed using `ForwardDiff`: `Newton`, `Halley`. (The are not exported, so they need qualification, e.g., `Roots.Newton()`.
+* There are some classical methods where a derivative is assumed: `Newton`, `Halley`. (The are not exported, so they need qualification, e.g., `Roots.Newton()`.
 
 For more detail, see the help page for each method (e.g., `?Order5`).
 
@@ -329,11 +339,11 @@ If no method is specified, the default method depends on `x0`:
 
 The function(s) are passed as the first argument. 
 
-For the few methods that use a derivative (`Newton`, `Halley`, and optionally `Order5`)
-a tuple of functions is used. For methods requiring a derivative and
-second derivative, a tuple of three functions is used. If the
-derivative functions are not specified, automatic differentiation via
-the `ForwardDiff` package will be employed (for `Newton` and `Halley`).
+For the few methods that use a derivative (`Newton`, `Halley`, and
+optionally `Order5`) a tuple of functions is used. For methods
+requiring a derivative and second derivative, a tuple of three
+functions is used. Automatic differentiation is encouraged, but is not
+done by default.
 
 # Optional arguments (tolerances, limit evaluations, tracing)
 
@@ -382,7 +392,6 @@ find_zero(sin, big(3.0), Order16())        # rapid convergence
 find_zero(sin, (3, 4), FalsePosition())    # fewer function calls than Bisection(), in this case
 find_zero(sin, (3, 4), FalsePosition(8))   # 1 or 12 possible algorithms for false position
 find_zero((sin,cos), 3.0, Roots.Newton())  # use Newton's method
-find_zero(sin, 3.0, Roots.Newton())        # use Newton's method with automatic f'(x)
 find_zero((sin, cos, x->-sin(x)), 3.0, Roots.Halley())  # use Halley's method
 
 # changing tolerances
