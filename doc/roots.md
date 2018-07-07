@@ -269,7 +269,7 @@ method, the other algorithms being somewhat similar:
 
 ```figure,nocode
 using ForwardDiff
-D(f) = x -> ForwardDiff.derivative(f,x)
+D(f) = x -> ForwardDiff.derivative(f,float(x))
 xs = [x0]
 n = 15
 for i in 1:(n-1) push!(xs, xs[end] - f(xs[end])/D(f)(xs[end])) end
@@ -340,7 +340,7 @@ to compute a derivative:
 
 ```
 using FowardDiff
-D(f) = x -> ForwardDiff.derivative(f, x)
+D(f) = x -> ForwardDiff.derivative(f, float(x))
 D(f, n) = n > 1 ? D(D(f),n-1) : D(f)
 ```
 

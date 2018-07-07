@@ -160,7 +160,7 @@ end
 
 error_msg_d1 = """
 A first derivative must be specified. Automatic derivatives can be used:
-e.g., define `D(f) = x->ForwardDiff.derivative(f, x)`, then use `D(f)`.
+e.g., define `D(f) = x->ForwardDiff.derivative(f, float(x))`, then use `D(f)`.
 """
 (F::DerivativeFree)(x::Number, ::Type{Val{1}}) = error(error_msg_d1)
 (F::FirstDerivative)(x::Number, ::Type{Val{1}}) = F.fp(x)
@@ -168,7 +168,7 @@ e.g., define `D(f) = x->ForwardDiff.derivative(f, x)`, then use `D(f)`.
 
 error_msg_d2 = """
 A second derivative must be specified.  Automatic derivatives can be used:
-e.g., define `D(f) = x->ForwardDiff.derivative(f, x)`, then use `D(D(f))`.
+e.g., define `D(f) = x->ForwardDiff.derivative(f, float(x))`, then use `D(D(f))`.
 """
 (F::DerivativeFree)(x::Number, ::Type{Val{2}}) = error(error_msg_d2)
 (F::FirstDerivative)(x::Number, ::Type{Val{2}}) =  error(error_msg_d2)

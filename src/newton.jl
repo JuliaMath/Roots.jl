@@ -51,7 +51,7 @@ Arguments:
 * `x0::Number` -- initial guess. For Newton's method this may be complex.
 
 With the `FowardDiff` package derivatives may be computed automatically. For example,  defining
-`D(f) = x -> ForwardDiff.derivative(f, x)` allows `D(f)` to be used for the first derivative.
+`D(f) = x -> ForwardDiff.derivative(f, float(x))` allows `D(f)` to be used for the first derivative.
 
 Keyword arguments are passed to `find_zero`.
 
@@ -105,7 +105,7 @@ Arguments:
 * `x0::Number` -- initial guess
 
 With the `FowardDiff` package derivatives may be computed automatically. For example,  defining
-`D(f) = x -> ForwardDiff.derivative(f, x)` allows `D(f)` and `D(D(f))` to be used for the first and second
+`D(f) = x -> ForwardDiff.derivative(f, float(x))` allows `D(f)` and `D(D(f))` to be used for the first and second
 derivatives, respectively.
 
 Keyword arguments are passed to `find_zero`.
