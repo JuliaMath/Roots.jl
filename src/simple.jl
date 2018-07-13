@@ -47,7 +47,7 @@ function bisection(f, a, b; xatol=zero(float(a)), xrtol=zero(one(float(a))))
     
     sign(f(u)) * sign(f(v)) < 0 || throw(ArgumentError("Interval [a,b] is not a bracket. f(a) and f(b) must have opposite signs"))
 
-    zero_tolerance =  (xatol <= oneunit(a) * eps(one(a))^2 && xrtol <= eps(one(a)))
+    zero_tolerance =  (xatol <= oneunit(a) * eps(one(u))^2 && xrtol <= eps(one(u)))
     _bisect(Val{zero_tolerance},  f, u, v, xatol, xrtol)
 end
 
