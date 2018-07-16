@@ -207,7 +207,7 @@ function find_zeros(f, a, b; no_pts = 21,
     _fz!(zs, f, a0, b0, no_pts,4)  # initial zeros
     
     ints = Interval{T}[] # collect subintervals
-    !naive && make_intervals!(ints, f, a0, b0, zs, 1, xatol, xrtol, atol, rtol)
+    !naive && !isempty(zs) &&  make_intervals!(ints, f, a0, b0, zs, 1, xatol, xrtol, atol, rtol)
 
     nzs = T[]
     cnt = 0
