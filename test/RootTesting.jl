@@ -1,5 +1,6 @@
 using Roots
-
+using ForwardDiff
+#D(f,n=1) = n > 1 ? D(D(f), n-1) : x -> ForwardDiff.derivative(f, float(x))
 import Base: show
 
 ## This set of tests is useful for benchmarking the number of function calls, failures, and max errors
@@ -179,6 +180,7 @@ function run_tests(method; verbose=false, trace=false, name=nothing, abandon=fal
             result, residual = nothing, nothing
             try
                 result = method(feval, f.bracket(p))
+                isnan(result) && error("NaN")
                 residual = f.val(p, result)
                 verbose && @printf "%s[%d] ⇒ %d / %s, residual %.5e\n" f i evalcount result residual
             catch ex
@@ -201,27 +203,33 @@ end
 function run_benchmark_tests()
     @printf "%s\n" run_tests((f,b) -> Roots.a42(f, b...), name="a42")
     @printf "%s\n" run_tests((f,b) -> find_zero(f, b, Bisection()), name="Bisection")
+    @printf "%s\n" run_tests((f,b) -> find_zero(f, b, FalsePosition()), name="FalsePosition")
 
 
     for m in [Order0(), Order1(), Order2(), Order5(), Order8(), Order16()]
         @printf "%s\n" run_tests((f, b) -> find_zero(f, mean(b), m), name="$m")
     end
-
+    
     @printf "%s\n" run_tests((f, b) -> find_zero(f, D(f), mean(b), Order5()), name="Order5/D")
-    @printf "%s\n" run_tests((f, b) -> newton(f, mean(b)), name="newton")
-    @printf "%s\n" run_tests((f, b) -> halley(f, mean(b)), name="halley")
+    @printf "%s\n" run_tests((f, b) -> Roots.secant_method(f, b), name="secant_method")
+    @printf "%s\n" run_tests((f, b) -> Roots.dfree(f, mean(b)), name="dfree")    
+    @printf "%s\n" run_tests((f, b) -> newton(f, D(f), mean(b)), name="newton")
+    @printf "%s\n" run_tests((f, b) -> halley(f, D(f), D(f,2), mean(b)), name="halley")
 
     println("---- using BigFloat ----")
 
-    @printf "%s\n" run_tests((f,b) -> find_zero(f, big(b), Bisection()), name="a42 (no bisection with Big values)")
+    @printf "%s\n" run_tests((f,b) -> find_zero(f, big.(b), Bisection()), name="a42 (no bisection with Big values)")
+    @printf "%s\n" run_tests((f,b) -> find_zero(f, big.(b), FalsePosition()), name="FalsePosition")
 
     for m in [Order0(), Order1(), Order2(), Order5(), Order8(), Order16()]
-        @printf "%s\n" run_tests((f, b) -> find_zero(f, mean(big(b)), m), name="$m/BigFloat")
+        @printf "%s\n" run_tests((f, b) -> find_zero(f, mean(big.(b)), m), name="$m/BigFloat")
     end
 
-    @printf "%s\n" run_tests((f, b) -> find_zero(f, D(f), mean(big(b)), Order5()), name="Order5/D;BigFloat")
-    @printf "%s\n" run_tests((f, b) -> newton(f, mean(big(b))), name="newton/BigFloat")
-    @printf "%s\n" run_tests((f, b) -> halley(f, mean(big(b))), name="halley/BigFloat")
+    @printf "%s\n" run_tests((f, b) -> find_zero(f, D(f), mean(big.(b)), Order5()), name="Order5/D;BigFloat")
+    @printf "%s\n" run_tests((f, b) -> Roots.secant_method(f, big.(b)), name="secant_method")
+    @printf "%s\n" run_tests((f, b) -> Roots.dfree(f, mean(big.(b))), name="dfree")
+    @printf "%s\n" run_tests((f, b) -> newton(f, D(f), mean(big.(b))), name="newton/BigFloat")
+    @printf "%s\n" run_tests((f, b) -> halley(f, D(f), D(f,2), mean(big.(b))), name="halley/BigFloat")
 end
 
 

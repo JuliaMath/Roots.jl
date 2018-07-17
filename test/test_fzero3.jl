@@ -1,4 +1,3 @@
-using Compat.Test
 import Roots.fzero
 
 # test robustness of derivative free algorithms
@@ -15,6 +14,13 @@ function newton_baffler(x)
     end
 end
 
+
+
+mutable struct CallableFunction
+f
+n
+end
+(F::CallableFunction)(x) = (F.n+=1; F.f(x))
 
 pathological = [
                 (x ->sin( x ) - x / 2, .1),
@@ -40,57 +46,88 @@ pathological = [
                 (x -> 1e6 * (x^7 -7x^6 +21x^5 -35x^4 +35x^3-21x^2+7x-1),  0.990),
                 (x -> cos(100*x)-4*erf(30*x-10), 0.0) 
                 ]
-                
-for (f1, x0) in pathological
+      
 
-      try
-          x = fzero(f1, x0)
-          @assert (f1(x) == 0.0 || f1(prevfloat(x)) * f1(nextfloat(x)) <= 0 || abs(f1(x)) <= eps(float(x0))^(1/2))
-      catch err
-#          rethrow(err)
-#          if !isa(err, Roots.PossibleExtremaReached)
-#              throw(err)
-#          end
-      end
+function howgood(f1, xstar)
+    if isnan(xstar)
+        "x"
+    elseif iszero(f1(xstar))       # perfect
+        "."
+    elseif f1(prevfloat(xstar)) * f1(nextfloat(xstar)) < 0 # perfect
+        "."
+    elseif abs(f1(xstar)) < 8 * eps(xstar) # nearly perfect
+        "."
+    elseif abs(f1(xstar)) <= 10eps(xstar)^(1/3)
+        "~"
+    elseif abs(xstar) > 5   # ran away yet converged
+        "!"
+    else                    # not close?
+        "*"
+    end
 end
 
 ## make a graphic comparing values
-function run_robustness_test()
+function run_robustness_test(bigfloats=false)
     orders = [0,1,2,5,8,16]
-    N = length(orders)
+    N = length(orders) + 1
     k,n = length(pathological), 50
     m = ["" for i=1:(N + 2)*k, j=1:n]
     ## how to mark values. If error we also use "x"
-    function howgood(f1, xstar)
-        if f1(xstar) == 0       # perfect
-            "."
-        elseif f1(prevfloat(xstar)) * f1(nextfloat(xstar)) < 0 # perfect
-        "-"
-        elseif -1e-16 < f1(xstar) < 1e-16 # approximate
-            "~"
-        elseif abs(xstar) > 5   # ran away yet converged
-            "!"
-        else                    # not close?
-            "*"
-        end
-    end
+  
+    marks = ["HP", "0 ", "1 ", "2 ", "5 ", "8 ", "16"]
+    io = IOBuffer()
 
     for i in 1:k
+
+        println("")
+        println("-- $i ---")
+        println("")
+
+
         f1,x = pathological[i]
-        xs = linspace(-5, 5, n)
+        if bigfloats
+            xs = -big(5):10/50:5
+        else
+            xs = linspace(-5, 5, n)
+        end
+
+        calls = Int[0]
+        hits = 0
+        j = 1
+        print(io, marks[j], " ")
         for k in 1:n
-            for j in 1:length(orders)
+            F = CallableFunction(f1, 0)
+            xstar = Roots.dfree(F, xs[k])
+            push!(calls, F.n)
+            val = howgood(f1, xstar)
+            val in [".", "~"] && (hits += 1)
+            print(io, val)
+        end
+        print(String(take!(io)))
+        print(" h=$hits n = $(sum(calls)) max=$(maximum(calls))")
+        println("")
+        
+        for j in 2:N
+            calls = Int[0]
+            hits = 0
+            print(io, marks[j], " ")
+            for k in 1:n
                 try
-                    xstar = fzero(f1, xs[k], order=orders[j], maxeval=100)
-                    m[(N+1)*(i-1)+j, k] = howgood(f1, xstar)
+                    F = CallableFunction(f1, 0)
+                    xstar = fzero(F, xs[k], order=orders[j-1], maxeval=100)
+                    push!(calls, F.n)
+                    val = howgood(f1, xstar)
+                    val in [".", "~"] && (hits += 1)
+                    print(io, val)
                 catch e
-                    m[(N+1)*(i-1)+j, k] = "x"
+                    print(io, howgood(f1, NaN))
                 end
             end
+            print(String(take!(io)))
+            print(" h=$hits n = $(sum(calls)) max=$(maximum(calls))")
+            println("")
         end
     end
-    println("\n----")
-    print(join(mapslices(join, m, 2),"\n"))
 end
 
 
