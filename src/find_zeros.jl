@@ -15,34 +15,42 @@ end
 
 function _fz!(zs, f, a, b, no_pts, k=4)
     
-    pts = range(a, stop=b, length=no_pts)
-    for (u,v) in zip(pts[1:end-1], pts[2:end])
-        # oversample for bisection
-        cs = range(u, stop=v, length=k+1)
-        fs = f.(cs)
-        sfs = sign.(fs)
-        fu, fv = fs[1], fs[end]
-        found_bisection_zero = false
-        for i in 1:k
-            if iszero(sfs[i+1])
-                found_bisection_zero = true # kinda
-                push!(zs, cs[i+1])
-            elseif sfs[i] * sfs[i+1] < 0
-                found_bisection_zero = true
-                rt = find_zero(f, (cs[i],cs[i+1]), Bisection())
-                push!(zs, rt)
+    pts = range(a, stop=b, length=(no_pts-1)*k+1)
+    n = length(pts)
+
+    fs = f.(pts)
+    sfs = sign.(fs)
+
+    u = first(pts)  # keep track of bigger interval
+    found_bisection_zero = false
+
+    for (i,x) in enumerate(pts[1:end])
+        q,r = divrem(i-1, k)
+        
+        if i > 1 && iszero(r)
+            v = x
+            if !found_bisection_zero
+                rt = dfree(f, u+(v-u)/2)
+                if !isnan(rt) && u < rt <= v
+                    push!(zs, rt)
+                end
             end
+            u = v
+            found_bisection_zero = false
         end
-        if !found_bisection_zero
-            # dfree works better than OrderN methods here
-            # on harder problems, 
-            # though more (~2x) fn calls in some cases
-            rt = dfree(f, u+(v-u)/2)
-            if !isnan(rt) && u < rt <= v
+
+        if i < n
+            if iszero(fs[i+1])
+                found_bisection_zero = true # kinda
+                push!(zs, pts[i+1])
+            elseif  sfs[i] * sfs[i+1] < 0
+                found_bisection_zero = true
+                rt = find_zero(f, (x, pts[i+1]), Bisection())
                 push!(zs, rt)
             end
         end
     end
+    
     sort!(zs)
 end
 
@@ -122,7 +130,7 @@ end
 
 
 """
-   find_zeros(f, a, b; [no_pts=21, naive=false, xatol, xrtol, atol, rtol])
+   find_zeros(f, a, b; [no_pts=12, k=8, naive=false, xatol, xrtol, atol, rtol])
 
 Search for zeros of f in the interval (a,b), assuming a, b are not zeros.
 
@@ -133,10 +141,12 @@ Search for zeros of f in the interval (a,b), assuming a, b are not zeros.
 find_zeros(x -> exp(x) - x^4, -5, 20)        # a few well-spaced zeros
 find_zeros(x -> sin(x^2) + cos(x)^2, 0, 10)  # many zeros
 find_zeros(x -> cos(x) + cos(2x), 0, 4pi)    # mix of simple, non-simple zeros
-f(x) = (x-0.5)^3 * (x-0.5001) * (x-1)        # nearby zeros
+f(x) = (x-0.5) * (x-0.5001) * (x-1)          # nearby zeros
 find_zeros(f, 0,2)
-f(x) = (x-0.5)^2 * (x-0.5001)^3 * (x-4) * (x-4.001) * (x-4.2)^2  # hard to identify
-find_zeros(f, 0,5)
+f(x) = (x-0.5) * (x-0.5001) * (x-4) * (x-4.001) * (x-4.2) 
+find_zeros(f, 0, 10)    
+f(x) = (x-0.5)^2 * (x-0.5001)^3 * (x-4) * (x-4.001) * (x-4.2)^2  # hard to identify    
+find_zeros(f, 0, 10, no_pts=21)                # too hard for default
 ```
 
 Notes:
@@ -149,16 +159,22 @@ underreported:
 * if there are nearby zeros
 
 The basic algorithm initially divides the interval (a,b) into
-subintervals determined by `no_pts` and then proceeds to look for
-zeros through bisection or a derivative-free method. If any zeros are
-found, the algorithm uses these to partition (a,b) into
-subintervals. Each subinterval is shrunk so that the endpoints are not
-zeros and the process is repeated on the subinterval. If the initial
-interval is too large, then the naive scanning for zeros may be
-fruitless and no zeros will be reported. If there are nearby zeros,
+`no_pts-1` subintervals and then proceeds to look for zeros through
+bisection or a derivative-free method.  As checking for a bracketing
+interval is relatively cheap and bisection is guaranteed to converge,
+each interval has `k` pairs of intermediate points checked for a
+bracket.
+
+If any zeros are found, the algorithm uses these to partition (a,b)
+into subintervals. Each subinterval is shrunk so that the endpoints
+are not zeros and the process is repeated on the subinterval. If the
+initial interval is too large, then the naive scanning for zeros may
+be fruitless and no zeros will be reported. If there are nearby zeros,
 the shrinking of the interval may jump over them, though as seen in
-the examples, nearby roots can be identified correctly, though the
-search can be sensitive to the choice of the initial interval.
+the examples, nearby roots can be identified correctly, though for
+really nearby points, or very flat functions, it may help to increase
+`no_pts`.
+
 
 The tolerances are used to shrink the intervals, but not to find zeros
 within a search. For searches, bisection is guaranteed to converge
@@ -184,7 +200,7 @@ The algorithm is derived from one in a
 
 
 """
-function find_zeros(f, a, b; no_pts = 21,
+function find_zeros(f, a, b; no_pts = 12, k=8,
                     naive = false,
                     kwargs...
                     )
@@ -204,13 +220,15 @@ function find_zeros(f, a, b; no_pts = 21,
     T = eltype(a0)
 
     zs = T[]  # collect zeros
-    _fz!(zs, f, a0, b0, no_pts,4)  # initial zeros
+    
+    _fz!(zs, f, a0, b0, no_pts,k)  # initial zeros
     
     ints = Interval{T}[] # collect subintervals
     !naive && !isempty(zs) &&  make_intervals!(ints, f, a0, b0, zs, 1, xatol, xrtol, atol, rtol)
 
     nzs = T[]
     cnt = 0
+
     while !naive && !isempty(ints)
         cnt += 1
         i = pop!(ints)
@@ -228,7 +246,7 @@ function find_zeros(f, a, b; no_pts = 21,
         
         empty!(nzs)
         if sub_no_pts >= 2
-            _fz!(nzs, f, i.a, i.b, sub_no_pts, 4)
+            _fz!(nzs, f, i.a, i.b, sub_no_pts, k)
         end
 
         if !isempty(nzs)
