@@ -17,40 +17,7 @@ Consider a different bracket or try fzero(f, c) with an initial guess c.
 # of a float. Using this definition, bisection will never take more than
 # 64 steps (over Float64)
 const FloatNN = Union{Float64, Float32, Float16}
-function _middle(x::T, y::T) where {T <: FloatNN}
-    T == Float64 && return _middle(T, UInt64, x, y)
-    T == Float32 && return _middle(T, UInt32, x, y)
-    T == Float16 && return _middle(T, UInt16, x, y)
-    _middle(T, UInt64, x, y)
-end
 
-function _middle(T, S, x, y)
-    # Use the usual float rules for combining non-finite numbers
-    if !isfinite(x) || !isfinite(y)
-        return x + y
-    end
-    # Always return 0.0 when inputs have opposite sign
-    if sign(x) != sign(y) && !iszero(x) && !iszero(y)
-        return zero(T)
-    end
-    
-    negate = sign(x) < 0 || sign(y) < 0
-
-    # do division over unsigned integers with bit shift
-    xint = reinterpret(S, abs(x))
-    yint = reinterpret(S, abs(y))
-    mid = (xint + yint) >> 1
-
-    # reinterpret in original floating point
-    unsigned = reinterpret(T, mid)
-
-    negate ? -unsigned : unsigned
-end
-
-## fall back or non Floats
-function _middle(x::Number, y::Number)
-    x + (y-x)/2
-end
 
 
 """
@@ -81,41 +48,68 @@ This function is a bit faster than the slightly more general
 Due to Jason Merrill.
 
 """
-function bisection64(f, a0::FloatNN, b0::FloatNN)
+function bisection64(f, a::T, b::T) where {T <: Union{Float64, Float32, Float16}}
+    u, v = promote(float(a), float(b))
+    if v < u
+        u,v = v,u
+    end
 
-    a,b = promote(a0, b0)
+    isinf(u) && (u = nextfloat(u))
+    isinf(v) && (u = prevfloat(u))
 
-
-    if a > b
-        b,a = a, b
+    su, sv = sign(u), sign(v)
+    
+    if su * sv < 0
+        # move to 0
+        c = zero(u)
+        sfu, sfc = sign(f(u)), sign(f(c))
+        if sfu == sfc
+            u =  c
+        else
+            v = c
+        end
     end
     
-    
-    m = _middle(a,b)
+    T == Float64 && return _bisection64(T, UInt64, f, u, v)
+    T == Float32 && return _bisection64(T, UInt32, f, u, v)
+    return _bisection64(T, UInt16, f, u, v)
+end
 
-    fa, fb = sign(f(a)), sign(f(b))
+## a,b same sign or zero, sfa * sfb < 0 is assumed
+function _bisection64(T, S, f, a, b)
+    nan = (0*a)/(0*a)
+    negate = sign(a) < 0 ? -one(T) : one(T)
 
+    ai, bi = reinterpret(S, abs(a)), reinterpret(S, abs(b))
     
-    fa * fb > 0 && return throw(ArgumentError(bracketing_error)) 
+    fa = f(a)
+    iszero(fa) && return a
+    sfa = sign(f(a))
+    iszero(f(b)) && return b
+    ai == bi && return nan
+    
+    mi = (ai + bi ) >> 1
+    m = negate * reinterpret(T, mi)
 
-    (iszero(fa) || isnan(fa)) && return a
-    (iszero(fb) || isnan(fb)) && return b
-    
     while a < m < b
+        
 
-        fm = sign(f(m))
+        sfm = sign(f(m))
+        iszero(sfm) && return m
+        isnan(sfm) && return nan
 
-        if iszero(fm) || isnan(fm)
-            return m
-        elseif fa * fm < 0
-            b,fb=m,fm
+        if sfa * sfm < 0
+            b, bi = m,  mi
         else
-            a,fa=m,fm
+            a, sfa, ai = m, sfm, mi
         end
-        m = _middle(a,b)
+
+        mi = (ai + bi) >> 1
+        m = negate * reinterpret(T, mi)
     end
     return m
 end
+        
 
 
 ####
