@@ -21,7 +21,6 @@ const FloatNN = Union{Float64, Float32, Float16}
 
 
 """
-
     Roots.bisection64(f, a, b)
 
 (unexported)
@@ -118,17 +117,23 @@ end
 
     Bisection()
 
-If possible, will use the bisection method over `Float64` values. The
-bisection method starts with a bracketing interval `[a,b]` and splits
-it into two intervals `[a,c]` and `[c,b]`, If `c` is not a zero, then
-one of these two will be a bracketing interval and the process
-continues. The computation of `c` is done by `_middle`, which
-reinterprets floating point values as unsigned integers and splits
-there. This method avoids floating point issues and guarantees a
+If possible, will use the bisection method over `Float64` values
+(`Bisection64`). The bisection method starts with a bracketing
+interval `[a,b]` and splits it into two intervals `[a,c]` and `[c,b]`,
+If `c` is not a zero, then one of these two will be a bracketing
+interval and the process continues. The computation of `c` is done by
+`_middle`, which reinterprets floating point values as unsigned
+integers and splits there. This method avoids floating point issues
+and when the tolerances are set to zero (the default) guarantees a
 "best" solution (one where a zero is found or the bracketing interval
 is of the type `[a, nextfloat(a)]`).
 
-When this is not possible, will default to `A42` method.
+When tolerances are given, this algorithm terminates when the midpoint
+is approximately equal to an endpoint using absolute tolerance `xatol`
+and relative tolerance `xrtol`. 
+
+When a zero tolerance is given and the values are not `Float64`
+values, this will call the `A42` method which has guaranteed convergence.
     
 """    
 mutable struct Bisection <: AbstractBisection end
@@ -182,15 +187,17 @@ function find_zero(fs, x0, method::AbstractBisection; kwargs...)
     x = float.(x0)
     F = callable_function(fs)
     state = init_state(method, F, x)
-    options = init_options(method, state; kwargs...)
-
-    # we try a faster alternative for floating point values based on verboseness
-    isa(method, A42) && return find_zero(method, F, options, state)
-    isa(method, FalsePosition) && return find_zero(method, F, options, state)
     
+    if isa(method, A42) || isa(method, FalsePosition)
+        options = init_options(method, state; kwargs...)
+        return find_zero(method, F, options, state)
+    end
+
     T = eltype(state.xn1)
     if T <: FloatNN
-        if options.verbose
+        options = init_options(Bisection64(), state; kwargs...)
+        tol = max(options.xabstol, maximum(abs.(x0)) * options.xreltol)
+        if options.verbose || !iszero(tol)
             find_zero(Bisection64(), F, options, state)
         else
             x0, x1 = state.xn0, state.xn1
@@ -200,15 +207,16 @@ function find_zero(fs, x0, method::AbstractBisection; kwargs...)
             return state.xn1
         end
     else
+        options = init_options(A42(), state; kwargs...)
         find_zero(A42(), F, options, state)
     end
-    
 end
 
 
 function find_zero(method::A42, F, options::UnivariateZeroOptions, state::UnivariateZeroState{T,S}) where {T<:Number, S<:Number}
-     x0, x1 = state.xn0, state.xn1
-    state.xn1 = a42(F, x0, x1; xtol=options.xabstol, maxeval=options.maxevals,
+    x0, x1 = state.xn0, state.xn1
+    tol = max(options.xabstol, max(abs(x0), abs(x1)) * options.xreltol)
+    state.xn1 = a42(F, x0, x1; xtol=tol, maxeval=options.maxevals,
                         verbose=options.verbose)
         state.message = "Used Alefeld-Potra-Shi method, `Roots.a42`, to find the zero. Iterations and function evaluations are not counted properly."
         state.stopped = state.x_converged = true
