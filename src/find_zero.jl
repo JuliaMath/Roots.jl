@@ -201,6 +201,15 @@ function _isapprox(::Type{Val{false}}, a, b, rtol, atol, lambda, relaxed)
     end
 end
 
+# assume f(x+h) = f(x) + f(x) * h, so f(x(1+h)) =f(x) + f'(x)(xh) = xf'(x)h
+function _is_f_approx_0(fa, a, atol, rtol, relaxed=false)
+    tol = max(atol, abs(a) * rtol)
+    if relaxed
+        tol = cbrt(_unitless(tol)) * oneunit(tol) # relax test
+    end
+    abs(fa) <= tol
+end
+    
 function assess_convergence(method::Any, state, options)
 
     xn0, xn1 = state.xn0, state.xn1
@@ -236,7 +245,7 @@ function assess_convergence(method::Any, state, options)
     end
 
     # f(xstar) ≈ xstar * f'(xstar)*eps(), so we pass in lambda
-    if  _isapprox(fxn1, zero(fxn1), options.reltol, options.abstol, abs(xn1))
+    if   _is_f_approx_0(fxn1, xn1, options.abstol, options.reltol)
         state.f_converged = true
         return true
     end
@@ -244,7 +253,7 @@ function assess_convergence(method::Any, state, options)
     if _isapprox(xn1, xn0,  options.xreltol, options.xabstol)
         # Heuristic check that f is small too in unitless way
         λ = max(one(real(xn1)), abs(xn1/oneunit(xn1)))
-        if _isapprox(fxn1, zero(fxn1), options.reltol, options.abstol, λ, true)
+        if _is_f_approx_0(fxn1, xn1, options.abstol, λ * options.reltol, true)
             state.x_converged = true
             return true
         end
@@ -446,7 +455,7 @@ function find_zero(M::AbstractUnivariateZeroMethod,
                 xstar, fxstar = state.xn1, state.fxn1
 
                 λ = max(one(real(xstar)), abs(xstar/oneunit(xstar)))
-                if _isapprox(fxstar, zero(fxstar), options.reltol, options.abstol, λ, true)
+                if _is_f_approx_0(fxstar, xstar, options.abstol, λ * options.reltol, true)
                     msg = "Algorithm stopped early, but |f(xn)| < ϵ^(1/3), where ϵ depends on xn, rtol, and atol"
                     state.message = state.message == "" ? msg : state.message * "\n\t" * msg
                     state.f_converged = true
