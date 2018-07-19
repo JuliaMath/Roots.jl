@@ -1,4 +1,5 @@
-[![Roots](http://pkg.julialang.org/badges/Roots_0.6.svg)](http://pkg.julialang.org/?pkg=Roots&ver=0.6)  
+[![Roots](http://pkg.julialang.org/badges/Roots_0.6.svg)](http://pkg.julialang.org/?pkg=Roots&ver=0.6)
+[![Roots](http://pkg.julialang.org/badges/Roots_0.7.svg)](http://pkg.julialang.org/?pkg=Roots&ver=0.7)  
 Linux: [![Build Status](https://travis-ci.org/JuliaMath/Roots.jl.svg?branch=master)](https://travis-ci.org/JuliaMath/Roots.jl)
 Windows: [![Build status](https://ci.appveyor.com/api/projects/status/goteuptn5kypafyl?svg=true)](https://ci.appveyor.com/project/jverzani/roots-jl)
 
@@ -40,6 +41,7 @@ Some examples:
 
 
 ```julia
+using Roots
 f(x) = exp(x) - x^4
 
 # a bisection method has the bracket specified with a tuple or vector

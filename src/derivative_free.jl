@@ -43,8 +43,8 @@ function init_state(method::AbstractSecant, fs, x)
         # need an initial x0,x1 if two not specified
         x0 = x
         fx0 = fs(x0)        
-        stepsize = max(1/100, min(abs(fx0/oneunit(fx0)), abs(x0/oneunit(x0)/100)))
-        x1 = x0 + stepsize*oneunit(x0)
+        stepsize = max(1/100, min(abs(fx0/oneunit(fx0)), abs(x0/oneunit(x0)/100))) * oneunit(x0)
+        x1 = x0 * _unitless(one(x0) + stepsize)  + (x0 < 0 ? -1 : 1) * stepsize
         x0, x1, fx0, fx1  = x1, x0, fs(x1), fx0 # switch        
     end
 
@@ -112,13 +112,16 @@ function update_state(method::Order0, fs, o::UnivariateZeroState{T,S}, options::
         end
 
         # quadratic_step. Put new gamma at vertex of parabola through alpha, beta, (old) gamma
-        denom = (beta - alpha) * (fbeta - fgamma)  - (beta - fgamma) * (fbeta - falpha)
-        if isissue(denom)
+        gamma = quad_vertex(alpha, falpha, beta, fbeta, gamma, fgamma)
+#        denom = (beta - alpha) * (fbeta - fgamma)  - (beta - fgamma) * (fbeta - falpha)
+#        if isissue(denom)
+        if isissue(gamma)            
             o.stopped
             o.message = "dithering, algorithm failed to improve using quadratic steps"
             return nothing
         end
-        gamma = beta -  ((beta - alpha)^2 * (fbeta - fgamma) - (beta - gamma)^2 * (fbeta - falpha))/denom/2
+        #        gamma = beta -  ((beta - alpha)^2 * (fbeta - fgamma) - (beta - gamma)^2 * (fbeta - falpha))/denom/2
+
 
 
         fgamma = fs(gamma); incfn(o)
@@ -156,7 +159,6 @@ end
 function update_state(method::Secant, fs, o, options) 
 
     incsteps(o)
-
     fp, issue = _fbracket(o.xn0, o.xn1, o.fxn0, o.fxn1)
     if issue
         o.stopped = true
@@ -174,15 +176,6 @@ function update_state(method::Secant, fs, o, options)
     nothing
 end
 
-"""
-
-    secant_method(f, x0, x1; [kwargs...])
-    
-Solve for zero of `f(x) = 0` using the secant method.
-
-Not exported.  Use `find_zero` with `Order1()`.    
-"""
-secant_method(f, x0::Number, x1::Number; kwargs...) = find_zero(f, (x0, x1), Order1(); kwargs...)
 
 
 ##################################################

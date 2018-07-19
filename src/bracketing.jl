@@ -17,35 +17,7 @@ Consider a different bracket or try fzero(f, c) with an initial guess c.
 # of a float. Using this definition, bisection will never take more than
 # 64 steps (over Float64)
 const FloatNN = Union{Float64, Float32, Float16}
-const _float_int_pairs = Dict(Float64 => UInt64, Float32 => UInt32, Float16 => UInt16)
 
-function _middle(x::T, y::T) where {T <: FloatNN}
-    # Use the usual float rules for combining non-finite numbers
-    if !isfinite(x) || !isfinite(y)
-        return x + y
-    end
-    # Always return 0.0 when inputs have opposite sign
-    if sign(x) != sign(y) && !iszero(x) && !iszero(y)
-        return zero(T)
-    end
-    
-    negate = sign(x) < 0 || sign(y) < 0 
-
-    # do division over unsigned integers with bit shift
-    xint = reinterpret(_float_int_pairs[T], abs(x))
-    yint = reinterpret(_float_int_pairs[T], abs(y))
-    mid = (xint + yint) >> 1
-
-    # reinterpret in original floating point
-    unsigned = reinterpret(T, mid)
-
-    negate ? -unsigned : unsigned
-end
-
-## fall back or non Floats
-function _middle(x::Number, y::Number)
-    x + (y-x)/2
-end
 
 
 """
@@ -76,40 +48,68 @@ This function is a bit faster than the slightly more general
 Due to Jason Merrill.
 
 """
-function bisection64(@nospecialize(f), a0::FloatNN, b0::FloatNN)
+function bisection64(f, a::T, b::T) where {T <: Union{Float64, Float32, Float16}}
+    u, v = promote(float(a), float(b))
+    if v < u
+        u,v = v,u
+    end
 
-    a,b = promote(a0, b0)
+    isinf(u) && (u = nextfloat(u))
+    isinf(v) && (u = prevfloat(u))
 
-
-    if a > b
-        b,a = a, b
+    su, sv = sign(u), sign(v)
+    
+    if su * sv < 0
+        # move to 0
+        c = zero(u)
+        sfu, sfc = sign(f(u)), sign(f(c))
+        if sfu == sfc
+            u =  c
+        else
+            v = c
+        end
     end
     
-    
-    m = _middle(a,b)
+    T == Float64 && return _bisection64(T, UInt64, f, u, v)
+    T == Float32 && return _bisection64(T, UInt32, f, u, v)
+    return _bisection64(T, UInt16, f, u, v)
+end
 
-    fa, fb = sign(f(a)), sign(f(b))
+## a,b same sign or zero, sfa * sfb < 0 is assumed
+function _bisection64(T, S, f, a, b)
+    nan = (0*a)/(0*a)
+    negate = sign(a) < 0 ? -one(T) : one(T)
 
+    ai, bi = reinterpret(S, abs(a)), reinterpret(S, abs(b))
     
-    fa * fb > 0 && throw(ArgumentError(bracketing_error)) 
-    (iszero(fa) || isnan(fa) || isinf(fa)) && return a
-    (iszero(fb) || isnan(fb) || isinf(fb)) && return b
+    fa = f(a)
+    iszero(fa) && return a
+    sfa = sign(f(a))
+    iszero(f(b)) && return b
+    ai == bi && return nan
     
+    mi = (ai + bi ) >> 1
+    m = negate * reinterpret(T, mi)
+
     while a < m < b
+        
 
-        fm = sign(f(m))
+        sfm = sign(f(m))
+        iszero(sfm) && return m
+        isnan(sfm) && return nan
 
-        if iszero(fm) || isnan(fm) || isinf(fm)
-            return m
-        elseif fa * fm < 0
-            b,fb=m,fm
+        if sfa * sfm < 0
+            b, bi = m,  mi
         else
-            a,fa=m,fm
+            a, sfa, ai = m, sfm, mi
         end
-        m = _middle(a,b)
+
+        mi = (ai + bi) >> 1
+        m = negate * reinterpret(T, mi)
     end
     return m
 end
+        
 
 
 ####
@@ -278,6 +278,40 @@ end
 ##
 ## This terminates when there is no more subdivision or function is zero
 
+function _middle(x::T, y::T) where {T <: FloatNN}
+    T == Float64 && return _middle(T, UInt64, x, y)
+    T == Float32 && return _middle(T, UInt32, x, y)
+    T == Float16 && return _middle(T, UInt16, x, y)
+    _middle(T, UInt64, x, y)
+end
+
+function _middle(T, S, x, y)
+    # Use the usual float rules for combining non-finite numbers
+    if !isfinite(x) || !isfinite(y)
+        return x + y
+    end
+    # Always return 0.0 when inputs have opposite sign
+    if sign(x) != sign(y) && !iszero(x) && !iszero(y)
+        return zero(T)
+    end
+    
+    negate = sign(x) < 0 || sign(y) < 0
+
+    # do division over unsigned integers with bit shift
+    xint = reinterpret(S, abs(x))
+    yint = reinterpret(S, abs(y))
+    mid = (xint + yint) >> 1
+
+    # reinterpret in original floating point
+    unsigned = reinterpret(T, mid)
+
+    negate ? -unsigned : unsigned
+end
+
+## fall back or non Floats
+function _middle(x::Number, y::Number)
+    x + (y-x)/2
+end
 function update_state(method::Union{Bisection,Bisection64}, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T<:Number,S<:Number} 
     x0, x2 = o.xn0, o.xn1
     y0, y2 = o.fxn0, o.fxn1
@@ -375,7 +409,7 @@ function a42(f, a, b;
         error("tolerance must be >= 0.0")
     end
     
-    c, fc = secant(f, a, fa, b, fb)
+    c, fc = secant_step(f, a, fa, b, fb)
     a42a(f, float(a), fa, float(b), fb, float(c), fc,
          xtol=xtol, maxeval=maxeval, verbose=verbose)
 end
@@ -476,7 +510,7 @@ end
 function tole(a::S, b::R, fa, fb, tol) where {S,R}
     u = abs(fa) < abs(fb) ? abs(a) : abs(b)
     T = promote_type(S,R)
-    2u*eps(T)/oneunit(T) + tol
+    2u*eps(one(T)) + tol
 end
 
 
@@ -514,7 +548,7 @@ function bracket(f, a, fa, b, fb, c, fc, tol)
         c = b - 2delta
         fc = f(c)
     end
-    if fc == 0
+    if iszero(fc)
         throw(Roots.StateConverged(c))
     elseif sign(fa)*sign(fc) < 0 
         aa, faa = a, fa
@@ -535,10 +569,10 @@ end
 
 # take a secant step, if the resulting guess is very close to a or b, then
 # use bisection instead
-function secant(f, a::T, fa, b, fb) where {T}
+function secant_step(f, a::T, fa, b, fb) where {T}
 
     c = a - fa/(fb - fa)*(b - a)
-    tol = 5*eps(T)/oneunit(T)
+    tol = 5*eps(one(a))
     if isnan(c) || c <= a + abs(a)*tol || c >= b - abs(b)*tol
         return a + (b - a)/2, f(a+(b-a)/2)
     end
@@ -552,8 +586,8 @@ end
 function newton_quadratic(f, a, fa, b, fb, d, fd, k::Int)
     B = (fb - fa)/(b - a)
     A = ((fd - fb)/(d - b) - B)/(d - a)
-    if A == 0
-        return secant(f, a, fa, b, fb)
+    if iszero(A)
+        return secant_step(f, a, fa, b, fb)
     end
     
     r = A*fa/oneunit(A*fa) > 0 ? a : b
@@ -561,7 +595,7 @@ function newton_quadratic(f, a, fa, b, fb, d, fd, k::Int)
         r -= (fa + (B + A*(r - b))*(r - a))/(B + A*(2*r - a - b))
     end
     if isnan(r) || (r <= a || r >= b)
-        r, fr = secant(f, a, fa, b, fb)
+        r, fr = secant_step(f, a, fa, b, fb)
     else
         fr = f(r)
     end
@@ -696,61 +730,4 @@ galdino = Dict{Union{Int,Symbol},Function}(:1 => (fa, fb, fx) -> fa*fb/(fb+fx),
 # give common names
 for (nm, i) in [(:pegasus, 1), (:illinois, 8), (:anderson_bjork, 12)]
     galdino[nm] = galdino[i]
-end
-
-## --------------------------------------
-
-"""
-
-Searches for zeros  of `f` in an interval [a, b].
-
-Basic algorithm used:
-
-* split interval [a,b] into `no_pts` subintervals.
-* For each bracketing interval finds a bracketed zero.
-* For other subintervals does a quick search with a derivative-free method.
-
-If there are many zeros relative to the number of points, the process
-is repeated with more points, in hopes of finding more zeros for
-oscillating functions.
-
-Called by `fzeros` or `Roots.find_zeros`.
-
-"""
-function find_zeros(f, a::Real, b::Real, args...;
-                    no_pts::Int=100,
-                    abstol::Real=10*eps(), reltol::Real=10*eps(), ## should be abstol, reltol as used. 
-                    kwargs...)
-
-    a, b = a < b ? (a,b) : (b,a)
-    rts = eltype(promote(float(a),b))[]
-    xs = vcat(a, a .+ (b-a) .* sort(rand(no_pts)), b)
-
-
-    ## Look in [ai, bi)
-    for i in 1:(no_pts+1)
-        ai,bi=xs[i:i+1]
-        if isapprox(f(ai), 0.0, rtol=reltol, atol=abstol)
-            push!(rts, ai)
-        elseif sign(f(ai)) * sign(f(bi)) < 0
-            push!(rts, find_zero(f, [ai, bi], Bisection()))
-        else
-            try
-                x = find_zero(f, ai + (0.5)* (bi-ai), Order8(); maxevals=10, abstol=abstol, reltol=reltol)
-                if ai < x < bi
-                    push!(rts, x)
-                end
-            catch e
-            end
-        end
-    end
-    ## finally, b?
-    isapprox(f(b), 0.0, rtol=reltol, atol=abstol) && push!(rts, b)
-
-    ## redo if it appears function oscillates alot in this interval...
-    if length(rts) > (1/4) * no_pts
-        return(find_zeros(f, a, b, args...; no_pts = 10*no_pts, abstol=abstol, reltol=reltol, kwargs...))
-    else
-        return(sort(rts))
-    end
 end
