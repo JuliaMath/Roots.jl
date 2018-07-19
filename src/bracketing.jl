@@ -278,6 +278,40 @@ end
 ##
 ## This terminates when there is no more subdivision or function is zero
 
+function _middle(x::T, y::T) where {T <: FloatNN}
+    T == Float64 && return _middle(T, UInt64, x, y)
+    T == Float32 && return _middle(T, UInt32, x, y)
+    T == Float16 && return _middle(T, UInt16, x, y)
+    _middle(T, UInt64, x, y)
+end
+
+function _middle(T, S, x, y)
+    # Use the usual float rules for combining non-finite numbers
+    if !isfinite(x) || !isfinite(y)
+        return x + y
+    end
+    # Always return 0.0 when inputs have opposite sign
+    if sign(x) != sign(y) && !iszero(x) && !iszero(y)
+        return zero(T)
+    end
+    
+    negate = sign(x) < 0 || sign(y) < 0
+
+    # do division over unsigned integers with bit shift
+    xint = reinterpret(S, abs(x))
+    yint = reinterpret(S, abs(y))
+    mid = (xint + yint) >> 1
+
+    # reinterpret in original floating point
+    unsigned = reinterpret(T, mid)
+
+    negate ? -unsigned : unsigned
+end
+
+## fall back or non Floats
+function _middle(x::Number, y::Number)
+    x + (y-x)/2
+end
 function update_state(method::Union{Bisection,Bisection64}, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T<:Number,S<:Number} 
     x0, x2 = o.xn0, o.xn1
     y0, y2 = o.fxn0, o.fxn1
