@@ -12,9 +12,9 @@ using Compat: @nospecialize, lastindex, range
 
 
 export fzero,
-       fzeros,
-       newton, halley,  # deprecate these 4?
-       secant_method, steffensen
+       fzeros
+       #newton, halley,  # deprecate these 4?
+       #secant_method, steffensen
 
 export find_zero, find_zeros,
        Order0, Order1, Order2, Order5, Order8, Order16

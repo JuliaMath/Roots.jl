@@ -70,7 +70,7 @@ end
 
 
 ### Options
-mutable struct UnivariateZeroOptions{Q,R,S,T}
+struct UnivariateZeroOptions{Q,R,S,T}
     xabstol::Q
     xreltol::R
     abstol::S
@@ -106,7 +106,7 @@ function init_options(::Any,
 
     ## map old tol names to new
     ## deprecate in future
-    xatol, xrtol, atol, rtol = _map_tolerance_arguments(Dict(kwargs), xatol, xrtol, atol, rtol)
+    ##    xatol, xrtol, atol, rtol = _map_tolerancearguments(Dict(kwargs), xatol, xrtol, atol, rtol)
     
     # assign defaults when missing
     options = UnivariateZeroOptions(ismissing(xatol) ? zero(x1) : xatol, # units of x
