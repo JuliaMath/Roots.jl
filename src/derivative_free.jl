@@ -43,8 +43,8 @@ function init_state(method::AbstractSecant, fs, x)
         # need an initial x0,x1 if two not specified
         x0 = x
         fx0 = fs(x0)        
-        stepsize = max(1/100, min(abs(fx0/oneunit(fx0)), abs(x0/oneunit(x0)/100)))
-        x1 = x0 + stepsize*oneunit(x0)
+        stepsize = max(1/100, min(abs(fx0/oneunit(fx0)), abs(x0/oneunit(x0)/100))) * oneunit(x0)
+        x1 = x0 * _unitless(one(x0) + stepsize)  + (x0 < 0 ? -1 : 1) * stepsize
         x0, x1, fx0, fx1  = x1, x0, fs(x1), fx0 # switch        
     end
 

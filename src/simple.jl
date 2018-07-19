@@ -124,8 +124,8 @@ function secant_method(f, xs; atol=0.0, rtol=8eps(), maxevals=100)
     if length(xs) == 1 # secant needs x0, x1; only x0 given
         a = float(xs[1])
         fa = f(a)
-        db = min(abs(fa/oneunit(fa)), sqrt(eps(one(a))))
-        b = float(a + db * oneunit(a))
+        db = min(abs(fa/oneunit(fa)), sqrt(eps(one(a)))) * oneunit(a)
+        b = a * (1+db) + (a < 0 ? -1 : 1) * db
     else
         a, b = promote(float(xs[1]), float(xs[2]))
     end
