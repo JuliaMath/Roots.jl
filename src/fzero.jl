@@ -6,26 +6,15 @@
 
 
 """
+    fzero(f, x0; order=0; kwargs...)
 
 Find zero of a function using an iterative algorithm
 
 * `f`: a scalar function or callable object
 * `x0`: an initial guess, finite valued.
-
-Keyword arguments:
-
-* `ftol`: tolerance for a guess `abs(f(x)) < ftol + max(1, |xnew|) * ftolrel`
-* `ftolrel`: relative tolerance for convergence towards 0 of f(x)
-* `xtol`: stop if `abs(xold - xnew) <= xtol + max(1, |xnew|)*xtolrel`
-* `xtolrel`: see `xtol`
-* `maxeval`: maximum number of steps
-* `verbose`: Boolean. Set `true` to trace algorithm
-* `order`: Can specify order of algorithm. 0 is most robust, also 1, 2, 5, 8, 16.
-* `kwargs...` passed on to different algorithms. There are `maxfneval` when `order` is 1,2,5,8, or 16 and `beta` for orders 2,5,8,16,
-
-This is a polyalgorithm redirecting to different algorithms based on the value of `order`. 
-
-(The tolerance arguments can also be given through `atol`, `rtol`, `xatol`, and `xrtol`, as is done with `find_zero`.)
+* `order`
+    
+This is a polyalgorithm redirecting to different algorithms based on the value of `order`. Dispatches to `find_zero(f, x0, OrderN(); kwargs...)`.
 
 """
 function fzero(f, x0::Number; kwargs...)
@@ -37,33 +26,12 @@ end
 
 
 """
-Find zero of a function within a bracket
+    fzero(f, a, b; kwargs...)
+    
+Find zero of a function within a bracket, [a,b].
 
-Uses a modified bisection method for non `big` arguments
+Dispatches to `find_zero(f, (a,b), Bisection())`.
 
-Arguments:
-
-* `f` A scalar function or callable object
-* `a` left endpont of interval
-* `b` right endpont of interval
-* `xtol` optional additional tolerance on sub-bracket size.
-
-For a bracket to be valid, it must be that `f(a)*f(b) < 0`.
-
-For `Float64` values, the answer is such that `f(prevfloat(x)) *
-f(nextfloat(x)) < 0` unless a non-zero value of `xtol` is specified in
-which case, it stops when the sub-bracketing produces an bracket with
-length less than `max(xtol, abs(x1)*xtolrel)`. 
-
-For `Big` values, which defaults to the algorithm of Alefeld, Potra, and Shi, a
-default tolerance is used for the sub-bracket length that can be enlarged with `xtol`.
-
-If `a==-Inf` it is replaced with `nextfloat(a)`; if `b==Inf` it is replaced with `prevfloat(b)`.
-
-Example:
-
-    `fzero(sin, 3, 4)` # find pi
-    `fzero(sin, [big(3), 4]) find pi with more digits
 """
 fzero(f, a::Number, b::Number; kwargs...) = find_zero(f, (a,b), Bisection(); kwargs...)
 fzero(f, bracket::Vector{T}; kwargs...)  where {T <: Number} = find_zero(f, bracket, Bisection(); kwargs...)
@@ -73,7 +41,12 @@ fzero(f, bracket::Tuple{T,S}; kwargs...)  where {T <: Number, S<:Number} = find_
 
 
 """
+    fzero(f, fp, x0; kwargs)
+    
 Find zero using Newton's method.
+
+Dispatches to `find_zero((f,fp), x0, Roots.Newton(); kwargs...)`.
+    
 """
 fzero(f::Function, fp::Function, x0::Real; kwargs...) = newton(f, fp, float(x0); kwargs...)
 
@@ -117,7 +90,12 @@ end
 
 ## 
 """
+    fzero(f, x0, bracket; kwargs...)
+    
 Find a zero within a bracket with an initial guess to *possibly* speed things along.
+
+Dispatches to the `A42` method.
+    
 """
 function fzero(f, x0::Real, bracket::Vector{T}; kwargs...)  where {T <: Number}
 
@@ -138,20 +116,11 @@ end
 ## fzeros
 """
 
-`fzeros(f, a, b)`
+`fzeros(f, a, b; kwargs...)`
     
-Attempt to find all zeros of `f` within an interval `[a,b]`.
+Searches for all zeros of `f` within an interval `(a,b)`. Assume neither `a` or `b` is a zero.
 
-Simple algorithm that splits `[a,b]` into subintervals and checks each
-for a root.  For bracketing subintervals, bisection is
-used. Otherwise, a derivative-free method is used. If there are a
-large number of zeros found relative to the number of subintervals, the
-number of subintervals is increased and the process is re-run.
-
-There are possible issues with close-by zeros and zeros which do not
-cross the origin (non-simple zeros). Answers should be confirmed
-graphically, if possible.
-
+Dispatches to `find_zeros(f, a, b; kwargs...)`.
 """        
 function fzeros(f, a::Number, b::Number; kwargs...)  
     find_zeros(f, float(a), float(b); kwargs...)

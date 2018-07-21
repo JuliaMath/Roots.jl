@@ -146,7 +146,7 @@ Bracketing method which finds the root of a continuous function within
 a provided interval [a, b], without requiring derivatives. It is based
 on algorithm 4.2 described in: 1. G. E. Alefeld, F. A. Potra, and
 Y. Shi, "Algorithm 748: enclosing zeros of continuous functions," ACM
-Trans. Math. Softw. 21, 327–344 (1995).
+Trans. Math. Softw. 21, 327–344 (1995), DOI: 10.1145/210089.210111 .
 """
 mutable struct A42 <: AbstractBisection end
 
@@ -175,7 +175,7 @@ function init_options(::M,
                                     ismissing(xrtol) ?  zero(x1/oneunit(x1)) : xrtol,               # unitless
                                     ismissing(atol)  ? zero(fx1) : atol,  # units of f(x)
                                     ismissing(rtol)  ?  zero(fx1/oneunit(fx1)) : rtol,            # unitless
-                                    maxevals, maxfnevals,
+                                    maxevals, maxfnevals, true,
     verbose)    
 
     options
@@ -203,7 +203,6 @@ function find_zero(fs, x0, method::AbstractBisection; kwargs...)
             x0, x1 = state.xn0, state.xn1
             state.xn1 = bisection64(F, x0, x1)
             state.message = "Used bisection to find the zero, steps not counted."
-            state.stopped = state.x_converged = true
             return state.xn1
         end
     else
@@ -219,7 +218,7 @@ function find_zero(method::A42, F, options::UnivariateZeroOptions, state::Univar
     state.xn1 = a42(F, x0, x1; xtol=tol, maxeval=options.maxevals,
                         verbose=options.verbose)
         state.message = "Used Alefeld-Potra-Shi method, `Roots.a42`, to find the zero. Iterations and function evaluations are not counted properly."
-        state.stopped = state.x_converged = true
+        state.stopped = state.x_converged  = true
         
         options.verbose && show_trace(state, [state.xn1], [state.fxn1], method)
     return state.xn1
@@ -228,17 +227,15 @@ end
 
 ## in Order0, we run bisection if a bracketing interval is found
 ## this is meant to be as speedy as possible
-function _run_bisection(fs, options, state::UnivariateZeroState{T,S}) where {T<:FloatNN, S<:Number}
+function _run_bisection(fs, options, state)
     xn0, xn1 = state.xn0, state.xn1
-    state.xn1 = bisection64(fs, xn0, xn1)
+    state.xn1 = bisection(fs, xn0, xn1)
     state.x_converged = true
-    state.message = "Used Bisection() for last step, steps not counted"
-end
-
-function _run_bisection(fs, options, state::UnivariateZeroState{T,S}) where {T<:Number, S<:Number}
-    state.xn1 = find_zero(A42(), fs, options, state)
-    state.x_converged = true
-    state.message = "Used A42() for last step, steps not counted"
+    state.f_converged = true # prevent check on f(xn)
+     if options.verbose
+        (state.fxn1 = fs(state.xn1))
+        state.message = "Used bisection for last step, steps not counted"
+    end
 end
 
 
@@ -346,13 +343,13 @@ end
 ## convergence is much different here
 ## the method converges,
 ## as we bound between x0, nextfloat(x0) is not measured by eps(), but eps(x0)
-function assess_convergence(method::Union{Bisection64,Bisection}, state, options)
-    x0, x2 = state.xn0, state.xn1
+function assess_convergence(method::Union{Bisection64,Bisection}, state::UnivariateZeroState{T,S}, options) where {T, S}
+    x0::T, x2::T = state.xn0, state.xn1
     if x0 > x2
         x0, x2 = x2, x0
     end
 
-    x1 = _middle(x0, x2)
+    x1 = _middle(x0, x2) ## awkward, two calls to _middle
     if iszero(state.fxn1)
         state.message = ""
         state.stopped = state.f_converged = true
@@ -408,17 +405,19 @@ function a42(f, a, b;
     if a > b
         a,b = b,a
     end
-    fa, fb = f(a), f(b)
+    u, v = promote(float(a), float(b))
+    fu, fv = f(u), f(v)
 
-    if a >= b || sign(fa)*sign(fb) >= 0
+    if u >= v || sign(fu)*sign(fv) >= 0
         error("on input a < b and f(a)f(b) < 0 must both hold")
     end
+    
     if xtol/oneunit(xtol) < 0.0
         error("tolerance must be >= 0.0")
     end
     
-    c, fc = secant_step(f, a, fa, b, fb)
-    a42a(f, float(a), fa, float(b), fb, float(c), fc,
+    c, fc = secant_step(f, u, fu, v, fv)
+    a42a(f, u, fu, v, fv, float(c), fc,
          xtol=xtol, maxeval=maxeval, verbose=verbose)
 end
 

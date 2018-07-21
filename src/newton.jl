@@ -10,8 +10,8 @@
 
 Implements Newton's [method](http://tinyurl.com/b4d7vls): `x_n1 = xn -
 f(xn)/f'(xn)`.  This is a quadratically converging method requiring
-one derivative. A derivative need not be specified, as the `ForwardDiff` package
-may be used to compute this.
+one derivative. Two function calls per step.
+    
 """
 struct Newton <: AbstractUnivariateZeroMethod
 end
@@ -39,7 +39,8 @@ function update_state(method::Newton, fs, o, options)
 end
 
 """
-
+    newton(f, fp, x0; kwargs...)
+    
 Implementation of Newton's method: `x_n1 = x_n - f(x_n)/ f'(x_n)`
 
 Arguments:
@@ -53,7 +54,7 @@ Arguments:
 With the `FowardDiff` package derivatives may be computed automatically. For example,  defining
 `D(f) = x -> ForwardDiff.derivative(f, float(x))` allows `D(f)` to be used for the first derivative.
 
-Keyword arguments are passed to `find_zero`.
+Keyword arguments are passed to `find_zero` using the `Roots.Newton()` method.
 
 """
 newton(f, x0; kwargs...) = find_zero(f, x0, Newton(); kwargs...) # deprecated now
@@ -64,12 +65,11 @@ newton(f, fp, x0; kwargs...) = find_zero((f, fp), x0, Newton(); kwargs...)
 
 
 """
-    
     Roots.Halley()
 
 Implements Halley's [method](http://tinyurl.com/yd83eytb),
 `x_n1 = xn - (2 f(xn)*f'(xn)) / (2 f'(xn)^2 - f(xn) * f''(xn))`.
-This method is cubically converging, but requires more function calls per step than
+This method is cubically converging, but requires more function calls per step (3) than
 other methods.
 """    
 struct Halley <: AbstractUnivariateZeroMethod
@@ -91,7 +91,8 @@ function update_state(method::Halley, fs, o::UnivariateZeroState{T,S}, options::
 end
 
 """
-
+    halley(f, fp, fpp, x0; kwargs...)
+    
 Implementation of Halley's method. `xn1 = xn - 2f(xn)*f'(xn) / (2*f'(xn)^2 - f(xn) * f''(xn))`
     
 Arguments:
@@ -108,7 +109,7 @@ With the `FowardDiff` package derivatives may be computed automatically. For exa
 `D(f) = x -> ForwardDiff.derivative(f, float(x))` allows `D(f)` and `D(D(f))` to be used for the first and second
 derivatives, respectively.
 
-Keyword arguments are passed to `find_zero`.
+Keyword arguments are passed to `find_zero` using the `Roots.Halley()` method.
 
 """
 halley(f,  x0; kwargs...) = find_zero(f, x0, Halley(); kwargs...)

@@ -142,7 +142,7 @@ find_zeros(x -> exp(x) - x^4, -5, 20)        # a few well-spaced zeros
 find_zeros(x -> sin(x^2) + cos(x)^2, 0, 10)  # many zeros
 find_zeros(x -> cos(x) + cos(2x), 0, 4pi)    # mix of simple, non-simple zeros
 f(x) = (x-0.5) * (x-0.5001) * (x-1)          # nearby zeros
-find_zeros(f, 0,2)
+find_zeros(f, 0, 2)
 f(x) = (x-0.5) * (x-0.5001) * (x-4) * (x-4.001) * (x-4.2) 
 find_zeros(f, 0, 10)    
 f(x) = (x-0.5)^2 * (x-0.5001)^3 * (x-4) * (x-4.001) * (x-4.2)^2  # hard to identify    
