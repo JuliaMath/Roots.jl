@@ -30,9 +30,12 @@ function _fz!(zs, f, a, b, no_pts, k=4)
         if i > 1 && iszero(r)
             v = x
             if !found_bisection_zero
-                rt = dfree(f, u+(v-u)/2)
-                if !isnan(rt) && u < rt <= v
-                    push!(zs, rt)
+                try
+                    rt = dfree(f, u+(v-u)/2)
+                    if !isnan(rt) && u < rt <= v
+                        push!(zs, rt)
+                    end
+                catch err
                 end
             end
             u = v
