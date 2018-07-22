@@ -17,14 +17,14 @@ pyplot()
 
 For a function $f: R \rightarrow R$ a *bracket* is a pair $ a < b $ for
 which $f(a) \cdot f(b) < 0$. That is they have different signs. If $f$
-is a continuous function this ensures there to be a zero (a $c$ with
-$f(c) = 0$) in the interval $[a,b]$,
-otherwise, if $f$ is only piecewise continuous, there must be a point
+is a continuous function this ensures there will be a zero
+in the interval $[a,b]$.
+Otherwise, if $f$ is only piecewise continuous, there must be a point
 $c$ in $[a,b]$ with the left limit and right limit at $c$ having
-different signs (or $0$). Such values can be found, up to floating point
-roundoff.
+different signs (or $0$).
 
-That is, given `f(a) * f(b) < 0`, a value `c` with `a < c < b` can be
+Such values can be found, up to floating point
+roundoff. That is, given `f(a) * f(b) < 0`, a value `c` with `a < c < b` can be
 found where either `f(c) == 0.0` or at least `f(prevfloat(c)) *
 f(nextfloat(c)) <= 0`.
 
@@ -71,7 +71,8 @@ That is, at `x` the function is changing sign.
 From a mathematical perspective, a zero is guaranteed for a
 *continuous* function. However, the computer algorithm doesn't assume
 continuity, it just looks for changes of sign. As such, the algorithm
-will  identify discontinuities, not just zeros. For example:
+will  identify discontinuities, not just zeros. For example, here we
+see the vertical asymptote identified:
 
 ```
 find_zero(x -> 1/x, (-1, 1))
@@ -95,22 +96,23 @@ find_zero(sin, (big(3), big(4)))    # uses a different algorithm then for (3,4)
 
 By default, bisection will converge to machine tolerance. This may
 provide more accurancy than desired. A tolerance may be specified to
-terminate early, thereby utilizing fewer resources. For example, this
+terminate early, thereby utilizing fewer resources. For example, the following
 uses 19 steps to reach accuracy to $10^{-6}$ (without specifying `xatol` it uses
 52 steps):
 
 ```
-rt =find_zero(sin, 3.0, xatol=1e-6)
+rt =find_zero(sin, (3.0, 4), xatol=1e-6)
 rt - pi
 ```
 
 
-## Using an initial guess
+## Non-bracketing algorithms
 
-Bracketing methods have guaranteed convergence, but in general require
+Bracketing methods have guaranteed convergence, but in general
+identifying a bracket can take  more effort and the algorithms may require
 many more function calls than are needed to produce an answer.  If a
 good initial guess is known, then the `find_zero` function provides an
-interface to some different iterative algorithms that are more
+interface to some different iterative algorithms that are usually more
 efficient. Unlike bracketing methods, these algorithms may not
 converge to the desired root if the initial guess is not well chosen.
 
@@ -147,17 +149,17 @@ x, sin(x), x - pi
 
 ### Higher order methods
 
-The default call to `fzero` uses a first order method and
-then possibly bracketing, which involves potentially many more function
+The default call to `fzero` uses a first order method and then
+possibly bracketing, which involves potentially many more function
 calls. Though specifying a initial value is more convenient than a
-bracket, there may be times where a more efficient algorithm is sought.
-For such, a higher-order method might be better
-suited. There are algorithms `Order1` (secant method), `Order2`
-([Steffensen](http://en.wikipedia.org/wiki/Steffensen's_method)), `Order5`,
-`Order8`, and `Order16`. The order 1 or 2 methods are generally quite efficient, but they more
-sensitive to the initial guess than, say, the order 8 method. These
-algorithms are accessed by specifying the method after the initial
-starting point:
+bracket, there may be times where a more efficient algorithm is
+sought.  For such, a higher-order method might be better suited. There
+are algorithms `Order1` (secant method), `Order2`
+([Steffensen](http://en.wikipedia.org/wiki/Steffensen's_method)),
+`Order5`, `Order8`, and `Order16`.  The order 1 or 2 methods are
+generally quite efficient. The higher order ones may be more efficient
+when higher precision is sought.  These algorithms are accessed by
+specifying the method after the initial starting point:
 
 ```
 f(x) = 2x - exp(-x)
@@ -268,7 +270,7 @@ find_zero(f, 0)
 Whereas, with higher order methods fail. For example,
 
 ```
-find_zero(f, 0, Order8())
+find_zero(f, 0, Order1())
 ```
 
 Basically the high order oscillation can send the proxy tangent line
