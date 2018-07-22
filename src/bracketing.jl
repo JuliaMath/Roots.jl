@@ -406,17 +406,19 @@ function a42(f, a, b;
     if a > b
         a,b = b,a
     end
-    fa, fb = f(a), f(b)
+    u, v = promote(float(a), float(b))
+    fu, fv = f(u), f(v)
 
-    if a >= b || sign(fa)*sign(fb) >= 0
+    if u >= v || sign(fu)*sign(fv) >= 0
         error("on input a < b and f(a)f(b) < 0 must both hold")
     end
+    
     if xtol/oneunit(xtol) < 0.0
         error("tolerance must be >= 0.0")
     end
     
-    c, fc = secant_step(f, a, fa, b, fb)
-    a42a(f, float(a), fa, float(b), fb, float(c), fc,
+    c, fc = secant_step(f, u, fu, v, fv)
+    a42a(f, u, fu, v, fv, float(c), fc,
          xtol=xtol, maxeval=maxeval, verbose=verbose)
 end
 
