@@ -119,22 +119,24 @@ Roots.secant_method(sin, (3,4))
 Roots.secant_method(x -> x^5 -x - 1, 1.1)
 ```
 """
-function secant_method(f, xs; atol=0.0, rtol=8eps(), maxevals=100)
+function secant_method(f, xs; atol=zero(float(real(first(xs)))), rtol=8eps(one(float(real(first(xs))))), maxevals=100)
 
     if length(xs) == 1 # secant needs x0, x1; only x0 given
         a = float(xs[1])
         fa = f(a)
-        db = min(abs(fa/oneunit(fa)), sqrt(eps(one(a))))
-        b = float(a + db * oneunit(a))
+
+        h = eps(one(real(a)))^(1/3)
+        da = h*oneunit(a) + abs(a)*h^2 # adjust for if eps(a) > h
+        b = a + da
+        
     else
         a, b = promote(float(xs[1]), float(xs[2]))
     end
-
     secant(f, a, b, atol, rtol, maxevals)
 end
 
 
-function secant(f, a::T, b::T, atol=zero(T), rtol=8eps(T), maxevals=100) where {T <: AbstractFloat}
+function secant(f, a::T, b::T, atol=zero(T), rtol=8eps(T), maxevals=100) where {T}
     nan = (0a)/(0a)
     cnt = 0
 
@@ -204,8 +206,10 @@ function dfree(f, xs)
     if length(xs) == 1
         a = float(xs[1])
         fa = f(a)
-        db = min(abs(fa/oneunit(fa)), sqrt(eps(one(a))))
-        b = float(a + db * oneunit(a))
+
+        h = eps(one(a))^(1/3)
+        da = h*oneunit(a) + abs(a)*h^2 # adjust for if eps(a) > h
+        b = float(a + da)
         fb = f(b)
     else
         a, b = promote(float(xs[1]), float(xs[2]))

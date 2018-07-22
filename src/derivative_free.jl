@@ -34,26 +34,26 @@ evaluation and has order `(1+sqrt(5))/2`.
 mutable struct Secant <: AbstractSecant end
 const Order1 = Secant
 
-function init_state(method::AbstractSecant, fs, x)
 
-    if isa(x, Vector) || isa(x, Tuple)
-        x0, x1 = x[1], x[2]
-        fx0, fx1 = fs(x0), fs(x1)        
-    else
-        # need an initial x0,x1 if two not specified
-        x0 = x
-        fx0 = fs(x0)        
-        stepsize = max(1/100, min(abs(fx0/oneunit(fx0)), abs(x0/oneunit(x0)/100)))
-        x1 = x0 + stepsize*oneunit(x0)
-        x0, x1, fx0, fx1  = x1, x0, fs(x1), fx0 # switch        
-    end
+function init_state(method::AbstractSecant, fs, x::Union{Tuple, Vector})
+    x0, x1 = promote(float(x[1]), float(x[2]))
+    fx0, fx1 = fs(x0), fs(x1)        
+    UnivariateZeroState(x1, x0, fx1, fx0, 0, 2,
+                        false, false, false, false, "")
+end
 
-    state = UnivariateZeroState( promote(x1, x0)...,
-                                 promote(fx1, fx0)...,
-                                 0, 2,
-                                 false, false, false, false,
-                                 "")
-    state
+function init_state(method::AbstractSecant, fs, x::Number)
+
+    # need an initial x0,x1 if two not specified
+    x0 = float(x)
+    fx0 = fs(x0)
+
+    h = eps(one(real(x0)))^(1/3)
+    dx = h*oneunit(x0) + abs(x0)*h^2 # adjust for if eps(x0) > h
+    x1 = x0 + dx
+
+    UnivariateZeroState(x0, x1, fx0, fs(x1), 0, 2,
+                        false, false, false, false, "")
 
 end
 
