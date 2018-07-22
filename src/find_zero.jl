@@ -451,8 +451,11 @@ function find_zero(M::AbstractUnivariateZeroMethod,
     while true
         
         val = assess_convergence(M, state, options)
-
         if val
+
+            println("xxx $state")
+
+            
             if (state.stopped || state.x_converged) && !(state.f_converged)
                 ## stopped is a heuristic, x_converged can mask issues
                 ## if strict == false, this will also check f(xn) ~ - with a relaxed
@@ -475,6 +478,7 @@ function find_zero(M::AbstractUnivariateZeroMethod,
                 end
             end
 
+            
             if state.f_converged
                 options.verbose && show_trace(state, xns, fxns, M)
                 return state.xn1
