@@ -12,7 +12,7 @@
 #
 
 """
-    bisection(f, a, b, [xatol, xrtol])
+    bisection(f, a, b; [xatol, xrtol])
 
 Performs bisection method to find a zero of a continuous
 function. 
@@ -47,7 +47,7 @@ function bisection(f, a, b; xatol=zero(float(a)), xrtol=zero(one(float(a))))
     
     sign(f(u)) * sign(f(v)) < 0 || throw(ArgumentError("Interval [a,b] is not a bracket. f(a) and f(b) must have opposite signs"))
 
-    zero_tolerance =  (xatol <= oneunit(a) * eps(one(u))^2 && xrtol <= eps(one(u)))
+    zero_tolerance =  iszero(max(xatol, oneunit(a) * xrtol))
     _bisect(Val{zero_tolerance},  f, u, v, xatol, xrtol)
 end
 
@@ -162,6 +162,7 @@ function secant(f, a::T, b::T, atol=zero(T), rtol=8eps(T), maxevals=100) where {
 
         cnt += 1
     end
+
     return nan
 end 
 
@@ -247,7 +248,7 @@ function dfree(f, xs)
             gamma = b + sign(gamma-b) * 100 * abs(b-a)  ## too big
         end
         fgamma = f(gamma)
-
+        
         # change sign
         if sign(fgamma) * sign(fb) < 0
             return bisection(f, gamma, b)
