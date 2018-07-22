@@ -31,7 +31,8 @@ function _fz!(zs, f, a, b, no_pts, k=4)
             v = x
             if !found_bisection_zero
                 try
-                    rt = dfree(f, u+(v-u)/2)
+                    p1 = identify_starting_point(u, v, sfs[(i-k):i])
+                    rt = dfree(f, p1)
                     if !isnan(rt) && u < rt <= v
                         push!(zs, rt)
                     end

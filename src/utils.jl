@@ -109,3 +109,20 @@ function _fbracket_ratio(a, b, c, fa, fb, fc)
     out, isissue(out)
 end
 
+## from https://core.ac.uk/download/pdf/82282744.pdf
+## signum based iteration allows one to guarantee a valid starting point
+## if N is big enough. (THough this depends on algorithm, a, b and function)
+## N here would need to be tuned. But, as is, this may prove useful anyways.
+function identify_starting_point(f, a, b, N)
+    pts = range(a, stop=b, length=N+1)
+    fxs = f.(pts)
+    sfxs = sign.(f.(pts))
+    identify_starting_point(a,b,sfxs)
+end
+
+function identify_starting_point(a, b, sfxs)
+    N = length(sfxs) - 1
+    p0 = a + (b-a)/2
+    p1 = p0 + (b-a)/(2N) * sfxs[1] * sum(s for s in sfxs[2:end-1])
+    p1
+end
