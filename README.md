@@ -9,33 +9,31 @@ Windows: [![Build status](https://ci.appveyor.com/api/projects/status/goteuptn5k
 This package contains simple routines for finding roots of continuous
 scalar functions of a single real variable. The `find_zero`function provides the
 primary interface. It supports various algorithms through the
-specification of an method. These include:
+specification of a method. These include:
 
 * Bisection-like algorithms. For functions where a bracketing interval
-is known (one where f(a) and f(b) have alternate signs), the
-  `Bisection` method can be specified with a guaranteed
-  convergence. For most floating point number types, bisection occurs
+  is known (one where `f(a)` and `f(b)` have alternate signs), the
+  `Bisection` method can be specified. For most floating point number types, bisection occurs
   in a manner exploiting floating point storage conventions. For
-  others, an algorithm of Alefeld, Potra, and Shi is used.
+  others, an algorithm of Alefeld, Potra, and Shi is used. These
+  methods are guaranteed to converge.
 
   For typically faster convergence -- though not guaranteed -- the
   `FalsePosition` method can be specified. This method has one of 12
-  implementations for a modified secant method to
+  implementations for a modified secant method to potentially
   accelerate convergence.
 
 * Several derivative-free methods are implemented. These are specified
   through the methods `Order0`, `Order1` (the secant method), `Order2`
   (the Steffensen method), `Order5`, `Order8`, and `Order16`. The
   number indicates roughly the order of convergence. The `Order0`
-  method is the default, and the most robust, but generally takes many more
-  function calls. The higher order methods promise higer order
+  method is the default, and the most robust, but may take many more
+  function calls to converge. The higher order methods promise higer order
   convergence, though don't always yield results with fewer function
   calls than `Order1` or `Order2`.
 
-* There are two historic methods that require a derivative:
-  `Roots.Newton` and `Roots.Halley`. (Neither is currently exported.)
-  If a derivative is not given, an automatic derivative is found using
-  the `ForwardDiff` package.
+* There are two historic methods that require a derivative or two:
+  `Roots.Newton` and `Roots.Halley`. (Neither is exported.)
 
 Each method's documentation has additional detail.
 
@@ -56,7 +54,12 @@ julia> find_zero(f, (-10, 0))  # Bisection if x is a tuple and no method
 
 julia> find_zero(f, (-10, 0), FalsePosition())  # just 11 function evaluations
 -0.8155534188089607
+```
 
+For non-bracketing methods, the initial position is passed in as a
+scalar:
+
+```julia
 ## find_zero(f, x0::Number) will use Order0()
 julia> find_zero(f, 3)         # default is Order0()
 1.4296118247255556
@@ -82,7 +85,7 @@ Or,
 ```julia
 using Polynomials
 x = variable(Int)
-fzero(x^5 - x - 1, 1.0)  # 1.1673039782614185
+find_zero(x^5 - x - 1, 1.0)  # 1.1673039782614185
 ```
 
 The function should respect the units of the `Unitful` package:
@@ -97,12 +100,21 @@ y(t) = -g*t^2 + v0*t + y0
 find_zero(y, 1s)      # 1.886053370668014 s
 ```
 
-Newton's method can be used without taking derivatives:
+Newton's method can be used without taking derivatives, if the
+`ForwardDiff` packages is available:
+
 
 ```julia
+using ForwardDiff
+D(f) = x -> ForwardDiff.derivative(f,float(x))
+```
+
+Now we have:
+
+```
 f(x) = x^3 - 2x - 5
 x0 = 2
-find_zero(f, x0, Roots.Newton())   # 2.0945514815423265
+find_zero((f,D(f)) x0, Roots.Newton())   # 2.0945514815423265
 ```
 
 Automatic derivatives allow for easy solutions to finding critical
@@ -130,7 +142,7 @@ The `find_zeros` function can be used to search for all zeros in a
 specified interval. The basic algorithm splits the interval into many
 subintervals. For each, if there is a bracket a bracketing algorithm
 is used to identify a zero, otherwise a derivative free method is used
-to check. This algorithm can miss zeros for various reasons, so the
+to search for zeros. This algorithm can miss zeros for various reasons, so the
 results should be confirmed by other means.
 
 ```julia
@@ -141,9 +153,9 @@ find_zeros(f, -10, 10)
 
 ### Convergence
 
-For most algorithms (besides the `Bisection` ones) convergence is decided when
+For most algorithms convergence is decided when
 
-* The value f(x_n) ≈ 0 with tolerances `atol` and `rtol` *or*
+* The value f(x_n) ≈ 0 with tolerance `max(atol, abs(x_n)*rtol)`
 
 * the values x_n ≈ x_{n-1} with tolerances `xatol` and `xrtol` *and*
 f(x_n) ≈ 0 with a *relaxed* tolerance based on `atol` and `rtol`.
@@ -153,20 +165,24 @@ f(x_n) ≈ 0 with a *relaxed* tolerance based on `atol` and `rtol`.
 There is no convergence if the number of iterations exceed `maxevals`,
 or the number of function calls exceeds `maxfnevals`.
 
-The tolerances may need to be adjusted. To determine if convergence
-occurs due to f(x_n) ≈ 0, it is necessary to consider that even if
-`xstar` is the correct answer mathematically, due to floating point
-roundoff it is expected that f(xstar) ≈ f'(xstar) ⋅ xstar ⋅ ϵ. The
-relative error used accounts for the value of `x`, but the default
-tolerance may need adjustment if the derivative is large near the
-zero, as the default is a bit aggressive. On the other hand, the
-absolute tolerance might seem too relaxed. 
+The tolerances may need to be adjusted. Determining whether f(x_n) ≈ 0
+is not done with `isapprox`, as this will not make use of a relative
+tolerance. Further, it is necessary to consider that even if `xstar`
+is the correct answer mathematically, due to floating point roundoff
+it is expected that f(xstar) ≈ f'(xstar) ⋅ xstar ⋅ ϵ. The relative
+error used accounts for the value of `x`, but the default tolerance
+may need adjustment if the derivative is large near the zero. On the
+other hand, the absolute tolerance might seem too relaxed for
+non-simple zeros.
 
-To determine if convergence is determined as x_n ≈ x_{n-1} the check
-on f(x_n) ≈ 0 is done as algorithms can be fooled by asymptotes, or
+To determine if x_n ≈ x_{n-1} implies convergence, a check
+on f(x_n) ≈ 0 is done, as algorithms can be fooled by asymptotes, or
 other areas where the tangent lines have large slopes.
 
-The `Bisection` and `Roots.A42` methods will converge, so the tolerances are ignored.
+The `Bisection` and `Roots.A42` methods are guaranteed to converge
+even if the tolerance are set to zero, so these are the
+defaults. Non-zero values for `xatol` and `xrtol` can be specified to
+reduce the number of function calls when lower precision is required.
 
 ## An alternate interface
 
@@ -182,7 +198,7 @@ function. `Roots` also provides this alternative interface:
   derivative-free method. with the order specified matching one of
   `Order0`, `Order1`, etc.
   
-* `fzeros(f, a::Real, b::Real; no_pts::Int=200)` will call `find_zeros`.
+* `fzeros(f, a::Real, b::Real)` will call `find_zeros`.
 
 * The function `secant_method`, `newton`, and `halley` provide direct
   access to those methods.
