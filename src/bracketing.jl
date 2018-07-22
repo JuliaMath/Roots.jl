@@ -175,7 +175,7 @@ function init_options(::M,
                                     ismissing(xrtol) ?  zero(x1/oneunit(x1)) : xrtol,               # unitless
                                     ismissing(atol)  ? zero(fx1) : atol,  # units of f(x)
                                     ismissing(rtol)  ?  zero(fx1/oneunit(fx1)) : rtol,            # unitless
-                                    maxevals, maxfnevals,
+                                    maxevals, maxfnevals, true,
     verbose)    
 
     options
@@ -219,7 +219,7 @@ function find_zero(method::A42, F, options::UnivariateZeroOptions, state::Univar
     state.xn1 = a42(F, x0, x1; xtol=tol, maxeval=options.maxevals,
                         verbose=options.verbose)
         state.message = "Used Alefeld-Potra-Shi method, `Roots.a42`, to find the zero. Iterations and function evaluations are not counted properly."
-        state.stopped = state.x_converged = true
+        state.stopped = state.x_converged  = true
         
         options.verbose && show_trace(state, [state.xn1], [state.fxn1], method)
     return state.xn1
@@ -228,17 +228,15 @@ end
 
 ## in Order0, we run bisection if a bracketing interval is found
 ## this is meant to be as speedy as possible
-function _run_bisection(fs, options, state::UnivariateZeroState{T,S}) where {T<:FloatNN, S<:Number}
+function _run_bisection(fs, options, state)
     xn0, xn1 = state.xn0, state.xn1
-    state.xn1 = bisection64(fs, xn0, xn1)
+    state.xn1 = bisection(fs, xn0, xn1)
     state.x_converged = true
-    state.message = "Used Bisection() for last step, steps not counted"
-end
-
-function _run_bisection(fs, options, state::UnivariateZeroState{T,S}) where {T<:Number, S<:Number}
-    state.xn1 = find_zero(A42(), fs, options, state)
-    state.x_converged = true
-    state.message = "Used A42() for last step, steps not counted"
+    state.f_converged = true # prevent check on f(xn)
+     if options.verbose
+        (state.fxn1 = fs(state.xn1))
+        state.message = "Used bisection for last step, steps not counted"
+    end
 end
 
 
@@ -346,13 +344,13 @@ end
 ## convergence is much different here
 ## the method converges,
 ## as we bound between x0, nextfloat(x0) is not measured by eps(), but eps(x0)
-function assess_convergence(method::Union{Bisection64,Bisection}, state, options)
-    x0, x2 = state.xn0, state.xn1
+function assess_convergence(method::Union{Bisection64,Bisection}, state::UnivariateZeroState{T,S}, options) where {T, S}
+    x0::T, x2::T = state.xn0, state.xn1
     if x0 > x2
         x0, x2 = x2, x0
     end
 
-    x1 = _middle(x0, x2)
+    x1 = _middle(x0, x2) ## awkward, two calls to _middle
     if iszero(state.fxn1)
         state.message = ""
         state.stopped = state.f_converged = true

@@ -70,13 +70,14 @@ end
 
 
 ### Options
-mutable struct UnivariateZeroOptions{Q,R,S,T}
+struct UnivariateZeroOptions{Q,R,S,T}
     xabstol::Q
     xreltol::R
     abstol::S
     reltol::T
     maxevals::Int
     maxfnevals::Int
+    strict::Bool
     verbose::Bool
 end
 
@@ -97,6 +98,7 @@ function init_options(::Any,
                       rtol=missing,
                       maxevals::Int=40,
                       maxfnevals::Int=typemax(Int),
+                      strict::Bool=false,
                       verbose::Bool=false,
                       kwargs...)
 
@@ -106,14 +108,14 @@ function init_options(::Any,
 
     ## map old tol names to new
     ## deprecate in future
-    xatol, xrtol, atol, rtol = _map_tolerance_arguments(Dict(kwargs), xatol, xrtol, atol, rtol)
+    ##    xatol, xrtol, atol, rtol = _map_tolerancearguments(Dict(kwargs), xatol, xrtol, atol, rtol)
     
     # assign defaults when missing
     options = UnivariateZeroOptions(ismissing(xatol) ? zero(x1) : xatol, # units of x
                                     ismissing(xrtol) ?  eps(x1/oneunit(x1)) : xrtol,  # unitless
                                     ismissing(atol)  ?  4.0 * eps(fx1) : atol,  # units of f(x)
                                     ismissing(rtol)  ?  4.0 * eps(fx1/oneunit(fx1)) : rtol, # unitless
-                                    maxevals, maxfnevals,
+                                    maxevals, maxfnevals, strict,
     verbose)    
 
     options
@@ -201,13 +203,24 @@ function _isapprox(::Type{Val{false}}, a, b, rtol, atol, lambda, relaxed)
     end
 end
 
-function assess_convergence(method::Any, state, options)
+# assume f(x+h) = f(x) + f(x) * h, so f(x(1+h)) =f(x) + f'(x)(xh) = xf'(x)h
+function _is_f_approx_0(fa, a, atol, rtol, relaxed=false)
+    aa, afa = abs(a), abs(fa)
+    tol = max(_unitless(atol), _unitless(aa) * rtol)
 
-    xn0, xn1 = state.xn0, state.xn1
-    fxn0, fxn1 = state.fxn0, state.fxn1
+    if relaxed
+        tol = abs(_unitless(tol))^(1/3)  # relax test
+    end
+    afa < tol * oneunit(afa)
+end
 
+function assess_convergence(method::Any, state::UnivariateZeroState{T,S}, options) where {T,S}
+
+    xn0::T = ismissing(state.xn0) ? -Inf*oneunit(state.xn1) : state.xn0
+    xn1::T = state.xn1
+    fxn1::S = state.fxn1
     
-    if (state.x_converged || state.f_converged)
+    if (state.x_converged || state.f_converged || state.stopped)
         return true
     end
     
@@ -223,40 +236,32 @@ function assess_convergence(method::Any, state, options)
         return true
     end
 
-    if isnan(xn1)
+    if isnan(xn1) || isnan(fxn1)
         state.convergence_failed = true
         state.message = "NaN produced by algorithm."
         return true
     end
     
-    if isinf(fxn1)
+    if isinf(xn1) || isinf(fxn1)
         state.convergence_failed = true
         state.message = "Inf produced by algorithm."
         return true
     end
 
     # f(xstar) ≈ xstar * f'(xstar)*eps(), so we pass in lambda
-    if  _isapprox(fxn1, zero(fxn1), options.reltol, options.abstol, abs(xn1))
+    if   _is_f_approx_0(fxn1, xn1, options.abstol, options.reltol)
         state.f_converged = true
         return true
     end
 
-    if _isapprox(xn1, xn0,  options.xreltol, options.xabstol)
-        # Heuristic check that f is small too in unitless way
-        λ = max(one(real(xn1)), abs(xn1/oneunit(xn1)))
-        if _isapprox(fxn1, zero(fxn1), options.reltol, options.abstol, λ, true)
-            state.x_converged = true
-            return true
-        end
-    end
-
-
-    if state.stopped
-        if state.message == ""
-            error("no message? XXX debug this XXX")
-        end
+    # stop when xn1 ~ xn.
+    # in find_zeros there is a check that f could be a zero with a relaxed tolerance
+    if abs(xn1 - xn0) < max(options.xabstol, max(abs(xn1), abs(xn0)) * options.xreltol)
+        state.message = "x_n ≈ x_{n-1}"
+        state.x_converged = true
         return true
     end
+
 
     return false
 end
@@ -439,23 +444,29 @@ function find_zero(M::AbstractUnivariateZeroMethod,
         val = assess_convergence(M, state, options)
 
         if val
-            if state.stopped && !(state.x_converged || state.f_converged)
-                ## stopped is a heuristic, there was an issue with an approximate derivative
-                ## say it converged if pretty close, else say convergence failed.
-                ## (Is this a good idea?)
-                xstar, fxstar = state.xn1, state.fxn1
-
-                λ = max(one(real(xstar)), abs(xstar/oneunit(xstar)))
-                if _isapprox(fxstar, zero(fxstar), options.reltol, options.abstol, λ, true)
-                    msg = "Algorithm stopped early, but |f(xn)| < ϵ^(1/3), where ϵ depends on xn, rtol, and atol"
-                    state.message = state.message == "" ? msg : state.message * "\n\t" * msg
-                    state.f_converged = true
+            if (state.stopped || state.x_converged) && !(state.f_converged)
+                ## stopped is a heuristic, x_converged can mask issues
+                ## if strict == false, this will also check f(xn) ~ - with a relaxed
+                ## tolerance
+                if options.strict
+                    if state.x_converged
+                        state.f_converged = true
+                    else
+                        state.convergence_failed = true
+                    end
                 else
-                    state.convergence_failed = true
+                    xstar, fxstar = state.xn1, state.fxn1
+                    if _is_f_approx_0(fxstar, xstar, options.abstol, options.reltol, true)
+                        msg = "Algorithm stopped early, but |f(xn)| < ϵ^(1/3), where ϵ depends on xn, rtol, and atol"
+                        state.message = state.message == "" ? msg : state.message * "\n\t" * msg
+                        state.f_converged = true
+                    else
+                        state.convergence_failed = true
+                    end
                 end
             end
-                
-            if state.x_converged || state.f_converged
+
+            if state.f_converged
                 options.verbose && show_trace(state, xns, fxns, M)
                 return state.xn1
             end
