@@ -143,16 +143,20 @@ function secant(f, a::T, b::T, atol=zero(T), rtol=8eps(T), maxevals=100) where {
     fa, fb = f(a), f(b)
     fb == fa && return nan
 
-    uatol = atol / oneunit(atol) * oneunit(a)
-    adjustunit = oneunit(fb)/oneunit(b)
-    
+    uatol = atol / oneunit(atol) * oneunit(real(a))
+    adjustunit = oneunit(real(fb))/oneunit(real(b))
+
     while cnt < maxevals
         m = b - (b-a)*fb/(fb - fa)
         fm = f(m)
 
         iszero(fm) && return m
         abs(fm) <= adjustunit * max(uatol, abs(m) * rtol) && return m
-        fm == fb && return nan
+        if fm == fb
+            sign(fm) * sign(f(nextfloat(m))) <= 0 && return m
+            sign(fm) * sign(f(prevfloat(m))) <= 0 && return m            
+            return nan
+        end
         
         a,b,fa,fb = b,m,fb,fm
 
