@@ -10,10 +10,8 @@
 
 Implements Newton's [method](http://tinyurl.com/b4d7vls): `x_n1 = xn -
 f(xn)/f'(xn)`.  This is a quadratically converging method requiring
-one derivative. If a derivative is not specified, the `ForwardDiff` package
-will be used, as applicable.
-
-Unlike other methods, this method accepts complex inputs.
+one derivative. A derivative need not be specified, as the `ForwardDiff` package
+may be used to compute this.
 """
 struct Newton <: AbstractUnivariateZeroMethod
 end
@@ -48,15 +46,18 @@ Arguments:
 
 * `f::Function` -- function to find zero of
 
-* `fp::Function=D(f)` -- derivative of `f`. Defaults to automatic derivative
+* `fp::Function` -- the derivative of `f`. 
 
 * `x0::Number` -- initial guess. For Newton's method this may be complex.
+
+With the `FowardDiff` package derivatives may be computed automatically. For example,  defining
+`D(f) = x -> ForwardDiff.derivative(f, float(x))` allows `D(f)` to be used for the first derivative.
 
 Keyword arguments are passed to `find_zero`.
 
 """
-newton(f, x0; kwargs...) = find_zero(f, x0, Newton(); kwargs...)
 newton(f, fp, x0; kwargs...) = find_zero((f, fp), x0, Newton(); kwargs...)
+@deprecate newton(f, x0; kwargs...)  newton(f, fp, x0; kwargs...)
 
 
 ## Halley
@@ -97,15 +98,21 @@ Arguments:
 
 * `f::Function` -- function to find zero of
 
-* `fp::Function=D(f)` -- derivative of `f`. Defaults to automatic derivative
+* `fp::Function` -- derivative of `f`.
 
-* `fpp:Function=D(f,2)` -- second derivative of `f`.
+* `fpp:Function` -- second derivative of `f`.
 
 * `x0::Number` -- initial guess
+
+With the `FowardDiff` package derivatives may be computed automatically. For example,  defining
+`D(f) = x -> ForwardDiff.derivative(f, float(x))` allows `D(f)` and `D(D(f))` to be used for the first and second
+derivatives, respectively.
 
 Keyword arguments are passed to `find_zero`.
 
 """
-halley(f,  x0; kwargs...) = find_zero(f, x0, Halley(); kwargs...)
-halley(f, fp, x0; kwargs...) = find_zero((f, fp), x0, Halley(); kwargs...)
 halley(f, fp, fpp, x0; kwargs...) = find_zero((f, fp, fpp), x0, Halley(); kwargs...)
+#halley(f,  x0; kwargs...) = find_zero(f, x0, Halley(); kwargs...) # deprecated
+#halley(f, fp, x0; kwargs...) = find_zero((f, fp), x0, Halley(); kwargs...) # deprecated
+@deprecate halley(f,  x0; kwargs...)    halley(f, fp, fpp, x0; kwargs...)
+@deprecate halley(f, fp, x0; kwargs...) halley(f, fp, fpp, x0; kwargs...)

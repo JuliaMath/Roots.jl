@@ -8,22 +8,19 @@ else
     using Missings
 end
 
-using ForwardDiff
 using Compat: @nospecialize, lastindex, range
 
 
 export fzero,
        fzeros,
-       newton, halley,  # deprecate these 4?
-       secant_method, steffensen,
-       D
+       secant_method
+
 
 export find_zero, find_zeros,
        Order0, Order1, Order2, Order5, Order8, Order16
 export Bisection, FalsePosition
 
 ## load in files
-include("adiff.jl")
 include("utils.jl")
 include("find_zero.jl")
 include("bracketing.jl")

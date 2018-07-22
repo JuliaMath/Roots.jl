@@ -1,6 +1,6 @@
 using Roots
 using ForwardDiff
-#D(f,n=1) = n > 1 ? D(D(f), n-1) : x -> ForwardDiff.derivative(f, float(x))
+D(f,n=1) = n > 1 ? D(D(f), n-1) : x -> ForwardDiff.derivative(f, float(x))
 import Base: show
 
 ## This set of tests is useful for benchmarking the number of function calls, failures, and max errors
