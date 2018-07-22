@@ -93,6 +93,18 @@ algorithm due to Alefeld, Potra, and Shi is used.
 find_zero(sin, (big(3), big(4)))    # uses a different algorithm then for (3,4)
 ```
 
+By default, bisection will converge to machine tolerance. This may
+provide more accurancy than desired. A tolerance may be specified to
+terminate early, thereby utilizing fewer resources. For example, this
+uses 19 steps to reach accuracy to $10^{-6}$ (without specifying `xatol` it uses
+52 steps):
+
+```
+rt =find_zero(sin, 3.0, xatol=1e-6)
+rt - pi
+```
+
+
 ## Using an initial guess
 
 Bracketing methods have guaranteed convergence, but in general require
@@ -105,9 +117,9 @@ converge to the desired root if the initial guess is not well chosen.
 The default algorithm is modeled after an algorithm used for
 [HP-34 calculators](http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1979-12.pdf). This
 algorithm is designed to be more forgiving of the quality of the
-initial guess at the cost of possibly performing many more steps. In
-many cases it satisfies the criteria for a bracketing solution, as it
-will use bracketing if within the algorithm a bracket is identified.
+initial guess at the cost of possibly performing many more steps. If
+the algorithm encounters a bracket, bisection will be used, so it may
+use many function calls.
 
 For example, the answer to our initial problem is near 1. Given this,
 we can find the zero with:
@@ -142,32 +154,38 @@ bracket, there may be times where a more efficient algorithm is sought.
 For such, a higher-order method might be better
 suited. There are algorithms `Order1` (secant method), `Order2`
 ([Steffensen](http://en.wikipedia.org/wiki/Steffensen's_method)), `Order5`,
-`Order8`, and `Order16`. The order 2 method is generally more efficient, but is more
+`Order8`, and `Order16`. The order 1 or 2 methods are generally quite efficient, but they more
 sensitive to the initial guess than, say, the order 8 method. These
-algorithms are accessed by specifying the method after the initial point:
+algorithms are accessed by specifying the method after the initial
+starting point:
 
 ```
 f(x) = 2x - exp(-x)
-x = find_zero(f, 1, Order2())      # also fzero(f, 1, order=2)
+x = find_zero(f, 1, Order1())      # also fzero(f, 1, order=1)
 x, f(x)
 ```
 
+The above makes $8$ function calls, to the $57$ made with `Order0`.
+
 ```
 f(x) = (x + 3) * (x - 1)^2
-x = find_zero(f, -2, Order5())
+x = find_zero(f, -2, Order2())
 x, f(x)
 ```
+
 
 ```
 x = find_zero(f, 2, Order8())
 x, f(x)
 ```
 
-The latter shows that zeros need not be simple zeros (i.e. $f'(x) = 0$,
-if defined) to be found. (Though non-simple zeros may take many more
-steps to converge.)
+The latter shows that zeros need not be simple zeros (i.e. $f'(x) =
+0$, if defined) to be found. Generally speaking, non-simple zeros are
+expected to take many more function calls, as the methods are no
+longer super-linear. This is the case here where `Order2` uses $55$
+function calls, `Order8` uses $41$, and `Order0` takes a comparable $42$.)
 
-To investigate the algorithm and its convergence, the argument
+To investigate an algorithm and its convergence, the argument
 `verbose=true` may be specified.
 
 
@@ -218,6 +236,17 @@ The algorithm rapidly marches off towards infinity so the relative
 tolerance $\approx |x| \cdot
 \epsilon$ is large compared to the far-from zero $f(x)$.
 
+Relative tolerances are important when answers could possible be quite
+large. Just evaluating a floating point approximation to a zero can
+produce a value on the size of $f'(x) x \epsilon$. If it is known that
+large $x$ values are not sought, then setting the relative tolerance
+to zero will avoid the issue of marching off towards infinity and
+returning what appears to be a valid zero:
+
+```
+find_zero(f, 1, Order8(), rtol=0.0)
+```
+
 ----
 
 This example illustrates that the default `find_zero`
@@ -227,6 +256,7 @@ suite](http://people.sc.fsu.edu/~jburkardt/cpp_src/test_zero/test_zero.html)
 of difficult functions. The default method finds the zero starting at 0:
 
 ```figure
+using SpecialFunctions
 f(x) = cos(100*x)-4*erf(30*x-10)
 plot(f, -2, 2)
 ```
@@ -264,10 +294,12 @@ Whereas,
 find_zero(f, x0, Order2())
 ```
 
-A graph shows the issue. We have overlayed a 15 steps of Newton's
+A graph shows the issue. We have overlayed 15 steps of Newton's
 method, the other algorithms being somewhat similar:
 
 ```figure,nocode
+using ForwardDiff
+D(f) = x -> ForwardDiff.derivative(f,float(x))
 xs = [x0]
 n = 15
 for i in 1:(n-1) push!(xs, xs[end] - f(xs[end])/D(f)(xs[end])) end
@@ -284,86 +316,92 @@ relative minimum -- nearer the zero -- would avoid this trap. The default
 method employs a trick to bounce out of such traps, though it doesn't
 always work.
 
-## Finding more than one zero
-
-The bracketing methods suggest a simple algorithm to recover multiple
-zeros: partition an interval into many small sub-intervals. For those
-that bracket a root find the root. This is essentially implemented with `find_zeros(f,
-a, b)`. The algorithm has problems with non-simple zeros (in particular ones
-that don't change sign at the zero) and zeros which bunch together. Simple usage is often succesful
-enough, but a graph should be used to assess if all the zeros are found:
-
-```
-find_zeros(x -> exp(x) - x^4, -10, 10)
-```
-
-
 
 ## Classical methods
 
 The package provides some classical methods for root finding:
-`newton`, `halley`, and `secant_method`. We can see how each works on
-a problem studied by Newton himself. Newton's method uses the function
-and its derivative:
+`Roots.newton`, `Roots.halley`, and `Roots.secant_method`. (Currently
+these are not exported, so must be prefixed with the package name to
+be used.) We can see how each works on a problem studied by Newton
+himself. Newton's method uses the function and its derivative:
 
 ```
 f(x) = x^3 - 2x - 5
 fp(x) = 3x^2 - 2
-x = newton(f, fp, 2)
+x = Roots.newton(f, fp, 2)
 x, f(x), sign(f(prevfloat(x)) * f(nextfloat(x)))
 ```
 
-To see the algorithm in progress, the argument `verbose=true` may be specified. 
+To see the algorithm in progress, the argument `verbose=true` may be
+specified.
 
-The secant method needs two starting points, here we start with 2 and 3:
+Alternatively, `Roots.Newton()` can be specified as the method for `find_zero`. The
+functions are specified as a tuple:
 
 ```
-x = secant_method(f, 2,3)
-x, f(x), f(prevfloat(x)) * f(nextfloat(x))
+find_zero((f,fp), 2, Roots.Newton())
 ```
+
+The secant method typically needs two starting points, here we start with 2 and 3:
+
+```
+x = Roots.secant_method(f, (2,3))
+x, f(x), sign(f(prevfloat(x)) * f(nextfloat(x)))
+```
+
+(This is like `Order1()`, but the implementation is significantly
+faster, as the framework is bypassed, and fewer checks on convergence
+are used. This method can be used when speed is very important.)
 
 Halley's method has cubic convergence, as compared to Newton's
 quadratic convergence. It uses the second derivative as well:
 
 ```
 fpp(x) = 6x
-x = halley(f, fp, fpp, 2)
-x, f(x), f(prevfloat(x)) * f(nextfloat(x))
+x = Roots.halley(f, fp, fpp, 2)
+x, f(x), sign(f(prevfloat(x)) * f(nextfloat(x)))
 ```
 
 
-For many function, the derivatives can be computed automatically. The
-`ForwardDiff` package provides a means. This package wraps the
-process into an operator, `D` which returns the derivative of a
-function `f` (for simple-enough functions):
+For many functions, the derivatives can be computed automatically. The
+`ForwardDiff` package provides a means. Here we define an operator `D`
+to compute a derivative:
 
 ```
-newton(f, D(f), 2)    # just newton(f, 2) works here
+using FowardDiff
+D(f) = x -> ForwardDiff.derivative(f, float(x))
+D(f, n) = n > 1 ? D(D(f),n-1) : D(f)
+```
+
+
+```
+Roots.newton(f, D(f), 2)    
 ```
 
 Or for Halley's method
 
 ```
-halley(f, D(f), D(f,2), 2)  # just halley(f, 2) works here
+Roots.halley(f, D(f), D(f,2), 2)  
 ```
 
-Specifying the derivative(s) can be skipped, the functions will
-default to the above calls.
 
 ## Finding critical points
 
-The `D` function makes it straightforward to find critical points
-(where the derivative is $0$ or undefined). For example, the critical
-point of the function $f(x) = 1/x^2 + x^3, x > 0$ near $1.0$ can be found with:
+The `D` function, defined above, makes it straightforward to find critical points
+(typically where the derivative is $0$ but also where it is undefined). For example, the critical
+point of the function $f(x) = 1/x^2 + x^3, x > 0$ near $1.0$ is where
+the derivative is $0$ and can be found through:
 
 ```
 f(x) = 1/x^2 + x^3
 find_zero(D(f), 1)
 ```
 
-For more complicated expressions, `D` will not work. In this example,
-we have a function $f(x, \theta)$ that models the flight of an arrow
-on a windy day:
+For more complicated expressions, `D` will not work, and other means
+of finding a derivative can be empoloyed. In
+
+this example, we have a function $f(x, \theta)$ that models the flight
+of an arrow on a windy day:
 
 ```
 function flight(x, theta)
@@ -377,7 +415,7 @@ end
 
 
 The total distance flown is when `flight(x) == 0.0` for some `x > 0`:
-This can be solved for different `theta` with `fzero`. In the
+This can be solved for different `theta` with `find_zero`. In the
 following, we note that `log(a/(a-x))` will have an asymptote at `a`,
 so we start our search at `a-5`:
 
@@ -409,11 +447,11 @@ howfarp(theta) = (howfar(theta+h) - howfar(theta-h)) / (2h)
 tstar = find_zero(howfarp, 45)
 ```
 
-This shows the differences in the trajectories:
+This graph shows the differences in the trajectories:
 
 ```figure
-plot(x -> flight(x, tstar), 0, howfar(tstar))
-plot!(x -> flight(x, 45), 0, howfar(45))
+plot(x -> flight(x, 45), 0, howfar(45))  
+plot!(x -> flight(x, tstar), 0, howfar(tstar))
 ```
 
 
@@ -446,6 +484,7 @@ a = find_zero(y, 1s, Order2())
 a
 ```
 
+
 Automatic derivatives don't propogate through `Unitful`, so we define
 the approximate derivative--paying attention to units--with:
 
@@ -456,7 +495,7 @@ Df(f, h=1e-6) = x -> (f(x + h*oneunit(x)) - f(x)) / (h*oneunit(x))
 And then the fact the peak is the only local maximum, it can be found from:
 
 ```
-find_zero(Df(y), (0s, a), Bisection())
+find_zero(Df(y), a/2, Order2())
 ```
 
 ----
@@ -476,6 +515,12 @@ a = find_zero(yt, 1, Order2())
 a
 ```
 
+```
+plot(yt, 0, a)
+```
+
+
+
 And the peak is determined to be at:
 
 ```
@@ -484,3 +529,167 @@ find_zero(diff(yt, t), (0, a), Bisection())
 
 (This also illustrates that symbolic values can be passed to describe
 the `x`-axis values.)
+
+Similarly, the `SymPy` package could be used in an identical way.
+
+
+
+## Searching for all zeros in an interval
+
+The methods described above are used to identify one of possible
+several zeros.  The `find_zeros` function searches interval $(a,b)$
+for all zeros of a function $f$. It is straightforward to use:
+
+```
+f(x) = exp(x) - x^4
+a, b = -10, 10
+zs = find_zeros(f, a, b)
+```
+
+The  search interval $(a,b)$ is specified through two arguments. It is
+assumed that neither endpoint is a zero. Here we see the result of the
+search graphically:
+
+```
+plot(f, a, b)
+scatter!(zs, f.(zs))
+```
+
+We can identify points where the first and second derivative is
+zero. We use `D` from above
+
+
+```
+f(x) = cos(x) + cos(2x)
+a, b = -10, 10
+cps = find_zeros(D(f), a, b)
+ips = find_zeros(D(f,2), a, b)
+plot(f, a, b)
+scatter!(cps, f.(cps))
+scatter!(ips, f.(ips), markercolor = :yellow)
+```
+
+The `find_zeros` algorithm will use bisection when a bracket is
+identified. This method will identify jumps, so areas where the
+derivative changes sign (and not necessarily a zero of the derivative)
+will typically be identified:
+
+```
+f(x) = abs(cbrt(x^2-1))
+a, b = -5, 5
+cps = find_zeros(D(f), a, b)
+plot(f, a, b)
+scatter!(cps, f.(cps))
+```
+
+In this example, the derivative has vertical asymptotes at $x=1$ and
+$x=-1$ so is not continuous there. The bisection method identifies the
+zero crossing, not a zero.
+
+----
+
+Leveraging the zero-finding tools available in `Roots`, the task of finding all zeros in an interval $(a,b)$ can be approached by a naive method:
+
+* split the interval into $n$ points $a=x_1 < x_2 < \dots < x_n=b$.
+
+* There are $n-1$ subintervals made from adjacent pairs. Each subinterval, $(x_i, x_{i+1})$, is considered: if it is a bracketing interval, *bisection* is used to find a guaranteed zero; if not, `find_zero` is used to search for a zero in $(x_i, x_{i+1})$.
+
+* collect the zeros found
+
+Bisection is guaranteed to find a zero, so the cost of many function calls is worth paying. But calls to  `find_zero` for non-bracketing intervals have no guarantee and may be foolish. Though the cost (in function calls) is not generally as high as bisection, it is best to avoid excessive calls. As such, the `find_zeros` implementation oversamples the subintervals checking for bracketing intervals. This reduces the amount of resources `find_zeros` needs.
+Still, when a function is "expensive" to compute the approach can use too many function calls. (The above two examples use between 1000 and 6000 function calls.)
+
+
+This approach can be useful, but certain scenarios will be problematic:
+
+
+* Bisection will only find one answer in a bracketing interval, but a continuous function can have one, three, five, $\dots$ zeros.
+
+* A non bracketing interval may contain  zeros (even an even number crossing the $x$ axis) but `find_zero` may fail to find any, as convergence can be very dependent on the initial starting point.
+
+* Nearby zeros can cause issues. For example with $f(x) = (x-0.5)^3 \cdot (x - 0.499)^3$ the function looks a lot like $f(x) = (x-0.5)^6$ and the algorithm might just find one zero. (In fact, `find_zeros` fails on this problem, but will have luck with $f(x) = (x-0.5)^2 \cdot (x - 0.499)^2$.)
+
+* A highly oscillatory function may have many more zeros than the initally specified number of subintervals
+
+
+For example, consider the cosine curve with period $1$:
+
+```
+f(x) = cos(2*pi*x)  # is 1.0 at 0,1,2,3,....
+```
+
+
+This function has a zero at $1/4, 3/4, 5/4, \dots$; altogether there
+are $32$ zeros in $(0,16)$. However, if we break the interval $(0,16)$
+into 4 subintervals, and oversample each using $4$ subintervals, we
+will be looking at the function at $0,1,2,\dots, 16$ where it is
+always $1$. So despite the many oscillations, no bracketing intervals
+will be found. Furthermore if we start the derivative free search at
+the midpoint of the `no_pts-1` intervals, it will start at $2$, $6$,
+$10$, and $14$. For these values, again the function is always at its
+maximum of $1$. Relative extrema are especially poor choices of
+starting point, as the tangent lines have $0$ slope. So we expect the
+algorithm might have issues, and it does:
+
+```
+find_zeros(f, 0, 16, no_pts=5, k=4)  # no pts - 1 = no subintervals
+```
+
+We see the algorithm missed many of the answers. The default values won't miss, but a similar, systematically bad example could be constructed for them. So users must be wary and may need to modify the interval selection as above (where the number of initial subintervals is specified through `no_pts`, it being `no_pts-1`, and the number of oversampled intervals considered for bracketing is specified by $k$.
+
+Consider this choice, with just one additional subinterval for the
+bisection check. Now all $32$ answers are found:
+
+```
+pts = find_zeros(f, 0, 16, no_pts=5, k=5)
+plot(f, 0, 16)
+scatter!(pts, f.(pts))
+```
+
+
+
+An analysis shows that now the initial points considered for brackets
+are $0$ through $16$ with a step size of $0.8$ (and not $1.0$). This
+step size avoids the aliasing and the algorithm is successful.
+
+Generally though, if it is suspected that the number of zeros
+identified is too few, increasing `no_pts` from its default of 11 will
+increase the chance of finding more zeros. 
+
+The above uses only 20 intervals initially, yet $32$ answers are
+found. How? When zeros are found, after stepping away from the zeros,
+the algorithm will recursively try again on the subintervals between
+the zeros found, though using a reduced number of points. This allows
+reasonably nearby points to be identified in a subsequent pass and can
+find additional zeros when at least one is found using the initial
+intervals.
+
+Of course, this recursive calling doesn't go for ever. For example,
+the function $f(x) = \sin(1/x)$ has inifinitely many zeros near
+$0$. The algorithm identifies many, but could never find all:
+
+```
+f(x) = iszero(x) ? NaN : sin(1/x)  # redefine to avoid an error with `sin(Inf)`
+rts = find_zeros(f, -1, 1)
+length(rts)
+```
+
+What is found are zeros (with maximum function value around `1e-13`):
+
+```
+maximum(abs.(f.(rts)))
+```
+
+The resolution does get fairly small:
+
+```
+minimum(diff(rts))  # smallest gap 
+```
+
+
+The closest nearby roots are on the scale of $10^{-4}$, which is greater than the resolution of the graph, when zoomed in:
+
+```
+plot(f, -1, 1)
+scatter!(rts, f.(rts))
+```
