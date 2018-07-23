@@ -21,7 +21,7 @@ quadratic step is used up to 3 times.
 """
 mutable struct Order0 <: AbstractSecant end
 
-"""
+""" find_zero(y, 1.8s, order) 
     Order1()
 
 The `Order1()` method is an alias for `Secant` and performs a secant
@@ -161,7 +161,7 @@ function update_state(method::Secant, fs, o::UnivariateZeroState{T,S}, options) 
 
     incsteps(o)
 
-    fp::S, issue = _fbracket(o.xn0, o.xn1, o.fxn0, o.fxn1)
+    fp, issue = _fbracket(o.xn0, o.xn1, o.fxn0, o.fxn1)
     if issue
         o.stopped = true
         o.message = "Derivative approximation had issues"
@@ -308,8 +308,8 @@ function update_state(method::Order5, fs, o::UnivariateZeroState{T,S}, options) 
         return
     end
 
-    yn::S = o.xn1 - o.fxn1 / fp
-    fyn::T = fs(yn)
+    yn::T = o.xn1 - o.fxn1 / fp
+    fyn::S = fs(yn)
     incfn(o)
 
 

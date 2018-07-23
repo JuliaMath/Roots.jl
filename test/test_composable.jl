@@ -47,14 +47,14 @@ using SymEngine
         
         @vars x
         for order in orders
-            @test find_zero(y(x), 1.8s, order) ≈  1.886053370668014s
+            @test find_zero(y(x), 1.8s, order) ≈  1.886053370668014
         end
         
-        @test find_zero(y(x), (1.8s, 1.9s), Bisection()) ≈ 1.886053370668014s
+        @test find_zero(y(x), (1.8, 1.9), Bisection()) ≈ 1.886053370668014
         
-        xrts = find_zeros(y(x), 0s, 10s)
+        xrts = find_zeros(y(x), 0, 10)
         @test length(xrts) == 1
-        @test xrts[1] ≈  1.886053370668014s
+        @test xrts[1] ≈  1.886053370668014
     end
 
 

@@ -113,11 +113,21 @@ an issue, a value of `NaN` is returned
 The `Order1` method for `find_zero` also implements the secant
 method. This one will be faster, as there are fewer setup costs.
 
-Examples
+Examples:
+    
 ```julia
 Roots.secant_method(sin, (3,4))
 Roots.secant_method(x -> x^5 -x - 1, 1.1)
 ```
+
+Note:
+    
+This function will specialize on the function `f`, so that the inital
+call can take more time than a call to the `Order1()` method, though
+subsequent calls will be much faster.  Using `FunctionWrappers.jl` can
+ensure that the initial call is also equally as fast as subsequent
+ones.
+    
 """
 function secant_method(f, xs; atol=zero(float(real(first(xs)))), rtol=8eps(one(float(real(first(xs))))), maxevals=100)
 

@@ -95,7 +95,7 @@ function _bisection64(T, S, f, a, b)
 
         sfm = sign(f(m))
         iszero(sfm) && return m
-        isnan(sfm) && return nan   ## ?? seems right
+        isnan(sfm) && return m
 
         if sfa * sfm < 0
             b, bi = m,  mi
@@ -152,7 +152,7 @@ mutable struct A42 <: AbstractBisection end
 
 
 function init_options(::M,
-                      state;
+                      state::UnivariateZeroState{T,S};
                       xatol=missing,
                       xrtol=missing,
                       atol=missing,
@@ -160,7 +160,7 @@ function init_options(::M,
                       maxevals::Int=typemax(Int),
                       maxfnevals::Int=typemax(Int),
                       verbose::Bool=false,
-                      kwargs...) where {M <: Union{Bisection64, A42}}
+                      kwargs...) where {M <: Union{Bisection64, A42}, T, S}
 
     ## Where we set defaults
     x1 = real(oneunit(state.xn1))
@@ -168,8 +168,8 @@ function init_options(::M,
 
     ## map old tol names to new
     ## deprecate in future
-    xatol, xrtol, atol, rtol = _map_tolerance_arguments(Dict(kwargs), xatol, xrtol, atol, rtol)
-    
+    #xatol, xrtol, atol, rtol = _map_tolerance_arguments(Dict(kwargs), xatol, xrtol, atol, rtol)
+
     # all are 0 by default
     options = UnivariateZeroOptions(ismissing(xatol) ? zero(x1) : xatol,       # unit of x
                                     ismissing(xrtol) ?  zero(x1/oneunit(x1)) : xrtol,               # unitless
@@ -184,7 +184,7 @@ end
 ## we dispatch to either floating-point-bisection or A42 here.
 function find_zero(fs, x0, method::AbstractBisection; kwargs...)
     
-    x = float.(x0)
+    x = adjust_bracket(x0)
     F = callable_function(fs)
     state = init_state(method, F, x)
     
@@ -284,12 +284,10 @@ end
 ##
 ## This terminates when there is no more subdivision or function is zero
 
-function _middle(x::T, y::T) where {T <: FloatNN}
-    T == Float64 && return _middle(T, UInt64, x, y)
-    T == Float32 && return _middle(T, UInt32, x, y)
-    T == Float16 && return _middle(T, UInt16, x, y)
-    _middle(T, UInt64, x, y)
-end
+_middle(x::Float64, y::Float64) = _middle(Float64, UInt64, x, y)
+_middle(x::Float32, y::Float32) = _middle(Float32, UInt32, x, y)
+_middle(x::Float16, y::Float16) = _middle(Float16, UInt16, x, y)
+_middle(x::Number, y::Number) = x + 0.5 * (y-x) # fall back or non Floats
 
 function _middle(T, S, x, y)
     # Use the usual float rules for combining non-finite numbers
@@ -300,7 +298,7 @@ function _middle(T, S, x, y)
     if sign(x) != sign(y) && !iszero(x) && !iszero(y)
         return zero(T)
     end
-    
+  
     negate = sign(x) < 0 || sign(y) < 0
 
     # do division over unsigned integers with bit shift
@@ -313,18 +311,13 @@ function _middle(T, S, x, y)
 
     negate ? -unsigned : unsigned
 end
-
-## fall back or non Floats
-function _middle(x::Number, y::Number)
-    x + (y-x)/2
-end
 function update_state(method::Union{Bisection,Bisection64}, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T<:Number,S<:Number} 
     x0, x2 = o.xn0, o.xn1
     y0, y2 = o.fxn0, o.fxn1
 
     x1 = _middle(x0, x2)
 
-    y1 = fs(x1)
+    y1::S = fs(x1)
     incfn(o)
 
     if sign(y0) * sign(y1) > 0
@@ -350,17 +343,19 @@ function assess_convergence(method::Union{Bisection64,Bisection}, state::Univari
         x0, x2 = x2, x0
     end
 
-    x1 = _middle(x0, x2) ## awkward, two calls to _middle
     if iszero(state.fxn1)
         state.message = ""
         state.stopped = state.f_converged = true
         return true
     end
 
-    x0 == x1 || x1 == x2 && return true
-    d1 = isapprox(x0, x1, atol=options.xabstol, rtol=options.xreltol)
-    d2 = isapprox(x1, x2, atol=options.xabstol, rtol=options.xreltol)
-    !d1 && !d2 && return false
+    x1 = x0 + 0.5*(x2-x0) 
+
+    x1 <= x0 || x2 <= x1 && return true
+    !isapprox(x0, x2,  atol=options.xabstol, rtol=options.xreltol) && return false
+#    d1 = isapprox(x0, x1, atol=options.xabstol, rtol=options.xreltol)
+#    d2 = isapprox(x1, x2, atol=options.xabstol, rtol=options.xreltol)
+#    !d1 && !d2 && return false
     
 #    x0 < x1 && x1 < x2 && return false
      
@@ -678,26 +673,27 @@ Examples
 ```
 find_zero(x -> x^5 - x - 1, [-2, 2], FalsePosition())
 ```
-"""    
-struct FalsePosition <: AbstractBisection
-    reduction_factor::Union{Int, Symbol}
-    FalsePosition(x=:anderson_bjork) = new(x)
-end
+    """
+struct FalsePosition{R} <: AbstractBisection end
+FalsePosition(x=:anderson_bjork) = FalsePosition{x}()
+#struct FalsePosition <: AbstractBisection
+#    reduction_factor::Union{Int, Symbol}
+#    FalsePosition(x=:anderson_bjork) = new(x)
+#end
 
-function update_state(method::FalsePosition, fs, o, options)
+function update_state(method::FalsePosition, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
 
-    fs
-    a, b =  o.xn0, o.xn1
+    a::T, b::T =  o.xn0, o.xn1
 
-    fa, fb = o.fxn0, o.fxn1
+    fa::S, fb::S = o.fxn0, o.fxn1
 
     lambda = fb / (fb - fa)
     tau = 1e-10                   # some engineering to avoid short moves
     if !(tau < abs(lambda) < 1-tau)
         lambda = 1/2
     end
-    x = b - lambda * (b-a)        
-    fx = fs(x)
+    x::T = b - lambda * (b-a)        
+    fx::S = fs(x)
     incfn(o)
     incsteps(o)
 
@@ -710,11 +706,10 @@ function update_state(method::FalsePosition, fs, o, options)
     if sign(fx)*sign(fb) < 0
         a, fa = b, fb
     else
-        fa = galdino[method.reduction_factor](fa, fb, fx)
+        fa = galdino_reduction(method, fa, fb, fx) #galdino[method.reduction_factor](fa, fb, fx)
     end
     b, fb = x, fx
 
-    
     o.xn0, o.xn1 = a, b 
     o.fxn0, o.fxn1 = fa, fb
     
@@ -735,7 +730,18 @@ galdino = Dict{Union{Int,Symbol},Function}(:1 => (fa, fb, fx) -> fa*fb/(fb+fx),
                                            :11 => (fa, fb, fx) -> fx*fa/(fb+fx),
                                            :12 => (fa, fb, fx) -> (fa * (1-fx/fb > 0 ? 1-fx/fb : 1/2))  
 )
+
+
 # give common names
 for (nm, i) in [(:pegasus, 1), (:illinois, 8), (:anderson_bjork, 12)]
     galdino[nm] = galdino[i]
+end
+
+# from Chris Elrod; https://raw.githubusercontent.com/chriselrod/AsymptoticPosteriors.jl/master/src/false_position.jl
+@generated function galdino_reduction(methods::FalsePosition{R}, fa, fb, fx) where {R}
+    f = galdino[R]
+    quote
+        $Expr(:meta, :inline)
+        $f(fa, fb, fx)
+    end
 end

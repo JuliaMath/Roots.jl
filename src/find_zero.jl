@@ -37,9 +37,9 @@ abstract type AbstractSecant <: AbstractUnivariateZeroMethod end
 abstract type  AbstractUnivariateZeroState end
 mutable struct UnivariateZeroState{T,S} <: AbstractUnivariateZeroState where {T,S}
     xn1::T
-    xn0::Union{Missing, T}
+    xn0::T
     fxn1::S
-    fxn0::Union{Missing, S}
+    fxn0::S
     steps::Int
     fnevals::Int
     stopped::Bool             # stopped, butmay not have converged
@@ -59,8 +59,8 @@ function init_state(method::Any, fs, x)
     fx1 = fs(x1); fnevals = 1
 
     
-    state = UnivariateZeroState(x1, missing, 
-                                fx1, missing, 
+    state = UnivariateZeroState(x1, oneunit(x1) * (0*x1)/(0*x1), 
+                                fx1, oneunit(fx1) * (0*fx1)/(0*fx1), 
                                 0, fnevals,
                                 false, false, false, false,
                                 "")
@@ -91,7 +91,7 @@ function _map_tolerance_arguments(d, xatol, xrtol, atol, rtol)
 end
 
 function init_options(::Any,
-                      state;
+                      state::UnivariateZeroState{T,S};
                       xatol=missing,
                       xrtol=missing,
                       atol=missing,
@@ -100,7 +100,7 @@ function init_options(::Any,
                       maxfnevals::Int=typemax(Int),
                       strict::Bool=false,
                       verbose::Bool=false,
-                      kwargs...)
+                      kwargs...) where {T, S}
 
     ## Where we set defaults
     x1 = real(oneunit(float(state.xn1)))
@@ -108,9 +108,10 @@ function init_options(::Any,
 
     ## map old tol names to new
     ## deprecate in future
-    ##    xatol, xrtol, atol, rtol = _map_tolerancearguments(Dict(kwargs), xatol, xrtol, atol, rtol)
+#    xatol::T1, xrtol::S1, atol::T1, rtol::S1 = _map_tolerancearguments(Dict(kwargs), xatol, xrtol, atol, rtol)
     
     # assign defaults when missing
+#    T1, S1 = real(T), real(S)
     options = UnivariateZeroOptions(ismissing(xatol) ? zero(x1) : xatol, # units of x
                                     ismissing(xrtol) ?  eps(x1/oneunit(x1)) : xrtol,  # unitless
                                     ismissing(atol)  ?  4.0 * eps(fx1) : atol,  # units of f(x)
@@ -216,11 +217,12 @@ end
 # assume f(x+h) = f(x) + f(x) * h, so f(x(1+h)) =f(x) + f'(x)(xh) = xf'(x)h
 function _is_f_approx_0(fa, a, atol, rtol, relaxed=false)
     aa, afa = abs(a), abs(fa)
-    tol = max(_unitless(atol), _unitless(aa) * rtol)
-
     if relaxed
-        tol = abs(_unitless(tol))^(1/3)  # relax test
+        atol = cbrt(_unitless(atol)) * oneunit(atol)
+        rtol = cbrt(rtol)
     end
+        
+    tol = max(_unitless(atol), _unitless(aa) * rtol)
     afa < tol * oneunit(afa)
 end
 

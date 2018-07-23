@@ -13,26 +13,26 @@ function _fz(f, a, b, no_pts, k=4)
     zs
 end
 
-function _fz!(zs, f, a, b, no_pts, k=4)
+function _fz!(zs, f, a::T, b, no_pts, k=4) where {T}
     
     pts = range(a, stop=b, length=(no_pts-1)*k+1)
-    n = length(pts)
+    n::Int = length(pts)
 
     fs = f.(pts)
     sfs = sign.(fs)
 
-    u = first(pts)  # keep track of bigger interval
+    u::T = first(pts)  # keep track of bigger interval
     found_bisection_zero = false
 
     for (i,x) in enumerate(pts[1:end])
         q,r = divrem(i-1, k)
         
         if i > 1 && iszero(r)
-            v = x
+            v::T = x
             if !found_bisection_zero
                 try
-                    p1 = identify_starting_point(u, v, sfs[(i-k):i])
-                    rt = dfree(f, p1)
+                    p1::T = identify_starting_point(u, v, sfs[(i-k):i])
+                    rt::T = dfree(f, p1)
                     if !isnan(rt) && u < rt <= v
                         push!(zs, rt)
                     end
@@ -49,8 +49,8 @@ function _fz!(zs, f, a, b, no_pts, k=4)
                 push!(zs, pts[i+1])
             elseif  sfs[i] * sfs[i+1] < 0
                 found_bisection_zero = true
-                rt = find_zero(f, (x, pts[i+1]), Bisection())
-                !isnan(rt) && push!(zs, rt)
+                rt = bisection(f, x, pts[i+1])
+                push!(zs, rt)
             end
         end
     end
@@ -81,7 +81,7 @@ function find_non_zero(f, a::T, barrier, xatol, xrtol, atol, rtol) where {T}
     sgn = barrier > a ? 1 : -1 
     ctr = 0
     x = a + 2^ctr*sgn*xtol
-    while !_non_zero(f(x),x, atol, rtol)
+    while !_non_zero(float(f(x)), x, atol, rtol)
         ctr += 1
         x += 2^ctr*sgn*xtol
         ((sgn > 0 && x > barrier) || (sgn < 0 && x < barrier)) && return nan
@@ -216,7 +216,7 @@ function find_zeros(f, a, b; no_pts = 12, k=8,
     # set tolerances if not specified
     fa0 = f(a0)
     d = Dict(kwargs)
-    xatol = get(d, :xatol, oneunit(a) * eps(one(a0))^(4/5))
+    xatol = get(d, :xatol, oneunit(a0) * eps(one(a0))^(4/5))
     xrtol = get(d, :xrtol, eps(one(a0)))
     atol  = get(d, :atol,  eps((fa0)))
     rtol  = get(d, :rtol,  eps(one(fa0)))

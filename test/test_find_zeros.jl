@@ -61,11 +61,11 @@ end
     @test all(azero.((F,), xrts))
     @test F.n <= 20_000
 
-    F = CallableFunction(Wi(10), 0)
-    xrts = find_zeros(F, -1, 11)
-    @test length(xrts) == 10
+    F = CallableFunction(Wi(6), 0)
+    xrts = find_zeros(F, -1, 7)
+    @test length(xrts) == 6
     @test all(azero.((F,), xrts))
-    @test F.n <= 20_000
+    @test F.n <= 10_000
 
 
 
