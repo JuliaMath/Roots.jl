@@ -151,6 +151,7 @@ function secant(f, a::T, b::T, atol=zero(T), rtol=8eps(T), maxevals=100) where {
         fm = f(m)
 
         iszero(fm) && return m
+        isnan(fm) && return nan
         abs(fm) <= adjustunit * max(uatol, abs(m) * rtol) && return m
         if fm == fb
             sign(fm) * sign(f(nextfloat(m))) <= 0 && return m

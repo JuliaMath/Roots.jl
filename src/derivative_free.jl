@@ -161,7 +161,7 @@ function update_state(method::Secant, fs, o::UnivariateZeroState{T,S}, options) 
 
     incsteps(o)
 
-    fp, issue = _fbracket(o.xn0, o.xn1, o.fxn0, o.fxn1)
+    fp::S, issue = _fbracket(o.xn0, o.xn1, o.fxn0, o.fxn1)
     if issue
         o.stopped = true
         o.message = "Derivative approximation had issues"
@@ -205,7 +205,7 @@ function update_state(method::Steffensen, fs, o::UnivariateZeroState{T,S}, optio
     
     incsteps(o)
 
-    wn = o.xn1 + steff_step(o.xn1, o.fxn1)
+    wn::T = o.xn1 + steff_step(o.xn1, o.fxn1)
     fwn::S = fs(wn)
     incfn(o)
 

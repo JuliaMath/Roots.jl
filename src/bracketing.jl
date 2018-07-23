@@ -95,7 +95,7 @@ function _bisection64(T, S, f, a, b)
 
         sfm = sign(f(m))
         iszero(sfm) && return m
-        isnan(sfm) && return nan
+        isnan(sfm) && return nan   ## ?? seems right
 
         if sfa * sfm < 0
             b, bi = m,  mi

@@ -50,7 +50,7 @@ function _fz!(zs, f, a, b, no_pts, k=4)
             elseif  sfs[i] * sfs[i+1] < 0
                 found_bisection_zero = true
                 rt = find_zero(f, (x, pts[i+1]), Bisection())
-                push!(zs, rt)
+                !isnan(rt) && push!(zs, rt)
             end
         end
     end
