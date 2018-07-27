@@ -107,8 +107,10 @@ The inital values can be specified as a pair of 2, as in `(a,b)` or
 `[a,b]`, or as a single value, in which case a value of `b` is chosen.
 
 The algorithm returns m when `abs(fm) <= max(atol, abs(m) * rtol)`.
-If this doesn't occur before `maxevals` steps or the algorithm encounters
-an issue, a value of `NaN` is returned
+If this doesn't occur before `maxevals` steps or the algorithm
+encounters an issue, a value of `NaN` is returned. If too many steps
+are taken, the current value is checked to see if there is a sign
+change for neighboring floating point values.
 
 The `Order1` method for `find_zero` also implements the secant
 method. This one will be faster, as there are fewer setup costs.

@@ -26,11 +26,12 @@ specification of a method. These include:
 * Several derivative-free methods are implemented. These are specified
   through the methods `Order0`, `Order1` (the secant method), `Order2`
   (the Steffensen method), `Order5`, `Order8`, and `Order16`. The
-  number indicates roughly the order of convergence. The `Order0`
+  number indicates, roughly, the order of convergence. The `Order0`
   method is the default, and the most robust, but may take many more
-  function calls to converge. The higher order methods promise higer order
-  convergence, though don't always yield results with fewer function
-  calls than `Order1` or `Order2`.
+  function calls to converge. The higher order methods promise higher
+  order (faster) convergence, though don't always yield results with
+  fewer function calls than `Order1` or `Order2`.
+
 
 * There are two historic methods that require a derivative or two:
   `Roots.Newton` and `Roots.Halley`. (Neither is exported.)
@@ -101,7 +102,8 @@ find_zero(y, 1s)      # 1.886053370668014 s
 ```
 
 Newton's method can be used without taking derivatives, if the
-`ForwardDiff` packages is available:
+`ForwardDiff` package is available:
+
 
 
 ```julia
@@ -139,8 +141,8 @@ fzero(D(m), 0, 1)  - median(as)	# 0.0
 ### Multiple zeros
 
 The `find_zeros` function can be used to search for all zeros in a
-specified interval. The basic algorithm splits the interval into many
-subintervals. For each, if there is a bracket a bracketing algorithm
+specified interval. The basic algorithm essentially splits the interval into many
+subintervals. For each, if there is a bracket, a bracketing algorithm
 is used to identify a zero, otherwise a derivative free method is used
 to search for zeros. This algorithm can miss zeros for various reasons, so the
 results should be confirmed by other means.
@@ -153,36 +155,32 @@ find_zeros(f, -10, 10)
 
 ### Convergence
 
-For most algorithms convergence is decided when
+For most algorithms, convergence is decided when
 
-* The value f(x_n) ≈ 0 with tolerance `max(atol, abs(x_n)*rtol)`
+* The value |f(x_n)| < tol with `tol = max(atol, abs(x_n)*rtol)`, or
 
 * the values x_n ≈ x_{n-1} with tolerances `xatol` and `xrtol` *and*
-f(x_n) ≈ 0 with a *relaxed* tolerance based on `atol` and `rtol`.
+  f(x_n) ≈ 0 with a *relaxed* tolerance based on `atol` and `rtol`.
 
-* an algorithm encounters an `NaN` or `Inf` and yet f(x_n) ≈ 0 with a *relaxed* tolerance based on `atol` and `rtol`.
+The algorithm stops if
 
-There is no convergence if the number of iterations exceed `maxevals`,
-or the number of function calls exceeds `maxfnevals`.
+* it encounters an `NaN` or an `Inf`, or
 
-The tolerances may need to be adjusted. Determining whether f(x_n) ≈ 0
-is not done with `isapprox`, as this will not make use of a relative
-tolerance. Further, it is necessary to consider that even if `xstar`
-is the correct answer mathematically, due to floating point roundoff
-it is expected that f(xstar) ≈ f'(xstar) ⋅ xstar ⋅ ϵ. The relative
-error used accounts for the value of `x`, but the default tolerance
-may need adjustment if the derivative is large near the zero. On the
-other hand, the absolute tolerance might seem too relaxed for
-non-simple zeros.
+* the number of iterations exceed `maxevals`, or
 
-To determine if x_n ≈ x_{n-1} implies convergence, a check
-on f(x_n) ≈ 0 is done, as algorithms can be fooled by asymptotes, or
-other areas where the tangent lines have large slopes.
+* the number of function calls exceeds `maxfnevals`.
+
+If the algorithm stops and the relaxed convergence criteria is met,
+the suspected zero is returned. Otherwise an error is thrown
+indicating no convergence. To adjust the tolerances, `find_zero`
+accepts keyword arguments `atol`, `rtol`, `xatol`, and `xrtol`.
+
 
 The `Bisection` and `Roots.A42` methods are guaranteed to converge
-even if the tolerance are set to zero, so these are the
+even if the tolerances are set to zero, so these are the
 defaults. Non-zero values for `xatol` and `xrtol` can be specified to
-reduce the number of function calls when lower precision is required.
+reduce the number of function calls when lower precision is required. 
+
 
 ## An alternate interface
 
@@ -200,8 +198,6 @@ function. `Roots` also provides this alternative interface:
   
 * `fzeros(f, a::Real, b::Real)` will call `find_zeros`.
 
-* The function `secant_method`, `newton`, and `halley` provide direct
-  access to those methods.
 
 
 ## Usage examples

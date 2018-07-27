@@ -17,21 +17,22 @@ The basic idea is to use a secant step. If along the way a bracket is
 found, switch to bisection, using `Bisection` if possible, else
 `A42`.  If the secant step fails to decrease the function value, a
 quadratic step is used up to 3 times.
-    
+
 """
-mutable struct Order0 <: AbstractSecant end
+struct Order0 <: AbstractSecant end
 
 """ find_zero(y, 1.8s, order) 
     Order1()
 
-The `Order1()` method is an alias for `Secant` and performs a secant
-step. This method keeps two values in its state, `x_n` and `x_n1`. The
+The `Order1()` method is an alias for `Secant`. It specifies the
+[secant method](https://en.wikipedia.org/wiki/Secant_method).
+This method keeps two values in its state, `x_n` and `x_n1`. The
 updated point is the intersection point of x axis with the secant line
 formed from the two points. The secant method uses 1 function
-evaluation and has order `(1+sqrt(5))/2`.
+evaluation per step and has order `(1+sqrt(5))/2`.
 
 """
-mutable struct Secant <: AbstractSecant end
+struct Secant <: AbstractSecant end
 const Order1 = Secant
 
 
@@ -163,11 +164,12 @@ function update_state(method::Secant, fs, o::UnivariateZeroState{T,S}, options) 
 
     fp, issue = _fbracket(o.xn0, o.xn1, o.fxn0, o.fxn1)
     if issue
-        o.stopped = true
-        o.message = "Derivative approximation had issues"
-        return
-    end
+         o.stopped = true
+         o.message = "Derivative approximation had issues"
+         return
+     end
 
+    x0 = o.xn0
     o.xn0 = o.xn1
     o.fxn0 = o.fxn1
 
@@ -176,6 +178,7 @@ function update_state(method::Secant, fs, o::UnivariateZeroState{T,S}, options) 
     incfn(o)
 
     nothing
+
 end
 
 
@@ -184,7 +187,7 @@ end
 
 ### Steffensen
 ## https://en.wikipedia.org/wiki/Steffensen's_method#Simple_description
-mutable struct Steffensen <: AbstractUnivariateZeroMethod
+struct Steffensen <: AbstractUnivariateZeroMethod
 end
 
 """
@@ -192,7 +195,7 @@ end
 
 The quadratically converging
 [Steffensen](https://en.wikipedia.org/wiki/Steffensen's_method#Simple_description)
-method is used for the derivative free `Order2()` algorithm. Unlike
+method is used for the derivative-free `Order2()` algorithm. Unlike
 the quadratically converging Newton's method, no derivative is
 necessary, though like Newton's method, two function calls per step
 are. This algorithm is more sensitive than Newton's method to poor
@@ -206,6 +209,7 @@ function update_state(method::Steffensen, fs, o::UnivariateZeroState{T,S}, optio
     incsteps(o)
 
     wn::T = o.xn1 + steff_step(o.xn1, o.fxn1)
+
     fwn::S = fs(wn)
     incfn(o)
 
@@ -235,13 +239,15 @@ steffenson(f, x0; kwargs...) = find_zero(f, x0, Steffensen(); kwargs...)
 """
     Order5()
 
-Implements an algorithm
-from *A New Fifth Order Derivative Free Newton-Type Method for Solving Nonlinear Equations*
-by Manoj Kumar, Akhilesh Kumar Singh, and Akanksha,
-Appl. Math. Inf. Sci. 9, No. 3, 1507-1513 (2015). Four function calls per step are needed.
+Implements an order 5 algorithm from *A New Fifth Order Derivative
+Free Newton-Type Method for Solving Nonlinear Equations* by Manoj
+Kumar, Akhilesh Kumar Singh, and Akanksha, Appl. Math. Inf. Sci. 9,
+No. 3, 1507-1513 (2015), DOI: 10.12785/amis/090346. Four function
+calls per step are needed.
 
 """    
-mutable struct Order5 <: AbstractUnivariateZeroMethod end
+struct Order5 <: AbstractUnivariateZeroMethod end
+
 
 ## If we have a derivative, we have this
 function update_state(method::Order5, fs::Union{FirstDerivative,SecondDerivative},
@@ -338,17 +344,18 @@ end
 ##################################################
 
 
-
+## cf also: https://doi.org/10.1515/tmj-2017-0049
 """
     Order8()
 
-Implements an algorithm from 
-*New Eighth-Order Derivative-Free Methods for Solving Nonlinear Equations*
-by Rajinder Thukral,
-International Journal of Mathematics and Mathematical Sciences
-Volume 2012 (2012), Article ID 493456, 12 pages. Four function calls per step are required.
+Implements an eighth-order algorithm from *New Eighth-Order
+Derivative-Free Methods for Solving Nonlinear Equations* by Rajinder
+Thukral, International Journal of Mathematics and Mathematical
+Sciences Volume 2012 (2012), Article ID 493456, 12 pages DOI:
+10.1155/2012/493456. Four function calls per step are required.
+    
 """
-mutable struct Order8 <: AbstractUnivariateZeroMethod
+struct Order8 <: AbstractUnivariateZeroMethod
 end
 
 function update_state(method::Order8, fs, o::UnivariateZeroState{T,S}, options) where {T, S}
@@ -440,7 +447,7 @@ other methods when using `Float64` values, but may be useful for
 solving over `BigFloat`.
 
 """
-mutable struct Order16 <: AbstractUnivariateZeroMethod
+struct Order16 <: AbstractUnivariateZeroMethod
 end
 
 function update_state(method::Order16, fs, o::UnivariateZeroState{T,S}, options) where {T, S}

@@ -108,7 +108,8 @@ function init_options(::Any,
 
     ## map old tol names to new
     ## deprecate in future
-#    xatol::T1, xrtol::S1, atol::T1, rtol::S1 = _map_tolerancearguments(Dict(kwargs), xatol, xrtol, atol, rtol)
+    ##    xatol, xrtol, atol, rtol = _map_tolerancearguments(Dict(kwargs), xatol, xrtol, atol, rtol)
+
     
     # assign defaults when missing
 #    T1, S1 = real(T), real(S)
@@ -135,7 +136,8 @@ abstract type CallableFunction end
 ##     state = Roots.init_state(method, f, float.(x0))
 ##     options = Roots.init_options(method, state; kwargs...)
 ##     find_zero(method, f, options, state)
-##  end    
+##  end
+##
 struct DerivativeFree <: CallableFunction 
     f
 end
@@ -190,42 +192,40 @@ end
 
 
    
-    
-## has UnivariateZeroProblem converged?
-## allow missing values in isapprox
-function _isapprox(a, b, rtol, atol, lambda=missing, relaxed=false)
-    _isapprox(Val{ismissing(a) || ismissing(b)}, float(a), float(b), rtol, atol,
-              float(lambda),relaxed)
-end
-### missing data so not approx
-_isapprox(::Type{Val{true}}, a, b, rtol, atol,lambda, relaxed) = false
-
-function _isapprox(::Type{Val{false}}, a, b, rtol, atol, lambda, relaxed)
-
-    if !ismissing(lambda)
-        rtol *= max(one(lambda), abs(lambda/oneunit(lambda))) 
-    end
-
-    if relaxed
-        tol = cbrt(max(atol/oneunit(atol), rtol))
-        abs(a - b)/oneunit(a) <= tol
-    else
-        isapprox(a, b, rtol=rtol, atol=atol)
-    end
-end
 
 # assume f(x+h) = f(x) + f(x) * h, so f(x(1+h)) =f(x) + f'(x)(xh) = xf'(x)h
 function _is_f_approx_0(fa, a, atol, rtol, relaxed=false)
     aa, afa = abs(a), abs(fa)
-    if relaxed
-        atol = cbrt(_unitless(atol)) * oneunit(atol)
-        rtol = cbrt(rtol)
-    end
-        
     tol = max(_unitless(atol), _unitless(aa) * rtol)
+
+    if relaxed
+        tol = abs(_unitless(tol))^(1/3)  # relax test
+    end
     afa < tol * oneunit(afa)
 end
 
+
+"""
+   Roots.assess_convergence(method, state, options)
+
+Assess if algorithm has converged.
+
+If alogrithm hasn't converged returns `false`.
+    
+If algorithm has stopped or converged, return `true` and sets one of `state.stopped`, `state.x_converged`,  `state.f_converged`, or `state.convergence_failed`; as well, a message may be set.
+
+* `state.x_converged = true` if `abs(xn1 - xn0) < max(xatol, max(abs(xn1), abs(xn0)) * xrtol)`
+
+* `state.f_converged = true` if  `|f(xn1)| < max(atol, |xn1|*rtol)` 
+
+* `state.convergence_failed = true` if xn1 or fxn1 is `NaN` or an infinity
+
+* `state.stopped = true` if the number of steps exceed `maxevals` or the number of function calls exceeds `maxfnevals`.
+
+In `find_zero`, stopped values (and x_converged) are checked for convergence with a relaxed tolerance.
+    
+
+"""    
 function assess_convergence(method::Any, state::UnivariateZeroState{T,S}, options) where {T,S}
 
     xn0::T = ismissing(state.xn0) ? -Inf*oneunit(state.xn1) : state.xn0
@@ -314,72 +314,57 @@ end
 
 Interface to one of several methods for find zeros of a univariate function.
 
-
-
 # Initial starting value
 
-For most methods, `x0` is a scalar value indicating the initial value in the iterative procedure. Values must be a subtype of `Number` and have methods for `float`, `real`, and `oneunit` defined. 
+For most methods, `x0` is a scalar value indicating the initial value
+in the iterative procedure. (Secant methods can have a tuple specify
+their initial values.) Values must be a subtype of `Number` and have
+methods for `float`, `real`, and `oneunit` defined.
 
-May also be a bracketing interval, specified as a tuple or a vector. A bracketing interval, (a,b), is one where f(a) and f(b) have different signs.
+For bracketing intervals, `x0` is specified as a tuple or a vector. A bracketing interval, (a,b), is one where f(a) and f(b) have different signs.
 
 # Specifying a method
 
 A method is specified to indicate which algorithm to employ:
 
-* There are methods for bisection where a bracket is specified: `Bisection`
-
-* There are methods for guarded bisection where a bracket is specified: `FalsePosition`
+* There are methods for bisection where a bracket is specified: `Bisection`, `Roots.A42`, `FalsePosition`
 
 * There are several derivative-free methods: cf. `Order0`, `Order1` (secant method), `Order2` (Steffensen), `Order5`, `Order8`, and `Order16`, where the number indicates the order of the convergence.
 
-* There are some classical methods where a derivative is assumed: `Newton`, `Halley`. (The are not exported, so they need qualification, e.g., `Roots.Newton()`.
+* There are some classical methods where derivatives are required: `Roots.Newton`, `Roots.Halley`. (The are not exported.)
 
-For more detail, see the help page for each method (e.g., `?Order5`).
+
+For more detail, see the help page for each method (e.g., `?Order1`).
 
 If no method is specified, the default method depends on `x0`:
 
 * If `x0` is a scalar, the default is the slower, but more robust `Order0` method.
 
-* If `x0` is a tuple or vector indicating a *bracketing* interval, the `Bisection` method is use. (this method specializes on floating point values, but otherwise uses an algorithm of Alefeld, Potra, and Shi.)
+* If `x0` is a tuple or vector indicating a *bracketing* interval, the `Bisection` method is used. (The exact algorithm depends on the number type, the tolerances, and `verbose`.)
 
 # Specifying the function 
 
 The function(s) are passed as the first argument. 
 
 For the few methods that use a derivative (`Newton`, `Halley`, and
-optionally `Order5`) a tuple of functions is used. For methods
-requiring a derivative and second derivative, a tuple of three
-functions is used. Automatic differentiation is encouraged, but is not
-done by default.
+optionally `Order5`) a tuple of functions is used. 
 
 # Optional arguments (tolerances, limit evaluations, tracing)
 
 * `xatol` - absolute tolerance for `x` values. Passed to `isapprox(x_n, x_{n-1})`
 * `xrtol` - relative tolerance for `x` values. Passed to `isapprox(x_n, x_{n-1})`
-* `atol`  - absolute tolerance for `f(x)` values. Passed to `isapprox(f(x_n), zero(f(x_n))`
-* `rtol`  - relative tolerance for `f(x)` values. Passed to `isapprox(f(x_n), zero(f(x_n))`
+* `atol`  - absolute tolerance for `f(x)` values. 
+* `rtol`  - relative tolerance for `f(x)` values. 
 * `maxevals`   - limit on maximum number of iterations 
 * `maxfnevals` - limit on maximum number of function evaluations
-* `verbose` - if  `true` a trace of the algorithm will be shown on successful completion.
+* `strict` - if `false` (the default), when the algorithm stops, possible zeros are checked with a relaxed tolerance    
+* `verbose` - if `true` a trace of the algorithm will be shown on successful completion.
 
-# Convergence
-
-For most methods there are several heuristics used for convergence:
-
-* if f(x_n) ≈ 0, using the tolerances `atol` and `rtol`, convergence is declared
-
-* if x_n ≈ x_{n-1}, using the tolerances `xatol` and `xrtol`, *and* f(x_n) ≈ 0 with a relaxed tolerance then convergence is declared.
-
-* if the algorithm has an issue (say a value of NaN appears) *and* f(x_n) ≈ 0 with a relaxed tolerance then convergence is declared, otherwise a failure to converge is declared
-
-* if the number of iterations exceeds `maxevals` or the number of function evaluations exceeds `maxfnevals` a failure to converge is declared
-
-* if x_n is `NaN` or f(x_n) is infinite  a failure to converge is declared
-
+See the help string for `Roots.assess_convergence` for details on convergence.
 
 In general, with floating point numbers, convergence must be
 understood as not an absolute statement. Even if mathematically x is
-an answer the floating point realization, say xstar, may have
+an answer the floating point realization, say xstar, it may be that
 f(xstar) - f(x) = f(xstar) ≈ f'(x) ⋅ eps(x), so tolerances must be
 appreciated, and at times specified.
 
@@ -403,17 +388,15 @@ find_zero((sin, cos, x->-sin(x)), 3.0, Roots.Halley())  # use Halley's method
 
 # changing tolerances
 fn, x0, xstar = (x -> (2x*cos(x) + x^2 - 3)^10/(x^2 + 1), 3.0,  2.9806452794385368)
-find_zero(fn, x0, Order2()) - xstar        # 0.011550654688925466
+find_zero(fn, x0, Order2()) - xstar        # 0.014079847201995843
 find_zero(fn, x0, Order2(), atol=0.0, rtol=0.0) # error: x_n ≉ x_{n-1}; just f(x_n) ≈ 0
 fn, x0, xstar = (x -> (sin(x)*cos(x) - x^3 + 1)^9,        1.0,  1.117078770687451)
 find_zero(fn, x0, Order2())                # 1.1122461983100858
-find_zero(fn, x0, Order2(), maxevals=10)   # Roots.ConvergenceFailed: 26 iterations needed
+find_zero(fn, x0, Order2(), maxevals=3)    # Roots.ConvergenceFailed: 26 iterations needed
 
 # tracing output
 find_zero(x->sin(x), 3.0, Order2(), verbose=true)   # 3 iterations
-find_zero(x->sin(x)^5, 3.0, Order2(), verbose=true) # 23 iterations
-
-
+find_zero(x->sin(x)^5, 3.0, Order2(), verbose=true) # 22 iterations
 ```
 """
 function find_zero(fs, x0, method::AbstractUnivariateZeroMethod; kwargs...)
@@ -454,7 +437,6 @@ function find_zero(M::AbstractUnivariateZeroMethod,
         
         val = assess_convergence(M, state, options)
         if val
-
             if (state.stopped || state.x_converged) && !(state.f_converged)
                 ## stopped is a heuristic, x_converged can mask issues
                 ## if strict == false, this will also check f(xn) ~ - with a relaxed
@@ -477,7 +459,6 @@ function find_zero(M::AbstractUnivariateZeroMethod,
                 end
             end
 
-            
             if state.f_converged
                 options.verbose && show_trace(state, xns, fxns, M)
                 return state.xn1

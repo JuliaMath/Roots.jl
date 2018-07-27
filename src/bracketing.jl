@@ -146,7 +146,7 @@ Bracketing method which finds the root of a continuous function within
 a provided interval [a, b], without requiring derivatives. It is based
 on algorithm 4.2 described in: 1. G. E. Alefeld, F. A. Potra, and
 Y. Shi, "Algorithm 748: enclosing zeros of continuous functions," ACM
-Trans. Math. Softw. 21, 327–344 (1995).
+Trans. Math. Softw. 21, 327–344 (1995), DOI: 10.1145/210089.210111 .
 """
 mutable struct A42 <: AbstractBisection end
 
@@ -203,7 +203,6 @@ function find_zero(fs, x0, method::AbstractBisection; kwargs...)
             x0, x1 = state.xn0, state.xn1
             state.xn1 = bisection64(F, x0, x1)
             state.message = "Used bisection to find the zero, steps not counted."
-            state.stopped = state.x_converged = true
             return state.xn1
         end
     else
