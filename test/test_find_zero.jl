@@ -121,6 +121,7 @@ end
 @test (find_zero(x -> sin(x), [big(3), 4], Bisection()) |> sin) < 1e-70
 @test find_zero(x -> sin(x), [4,3], Bisection()) ≈ pi
 @test find_zero(x -> sin(x), [big(4),3], Bisection()) ≈ pi
+@test find_zero(x -> Inf*sign(x-1.0), (-Inf, Inf)) ≈ 1
 #@test_throws ArgumentError  find_zero(x -> sin(x), 3.0, Bisection())
 
 @test find_zero(x -> cos(x) - x, [0, pi], FalsePosition()) ≈ 0.7390851332151607

@@ -196,7 +196,7 @@ function find_zero(fs, x0, method::AbstractBisection; kwargs...)
     T = eltype(state.xn1)
     if T <: FloatNN
         options = init_options(Bisection64(), state; kwargs...)
-        tol = max(options.xabstol, maximum(abs.(x0)) * options.xreltol)
+        tol = max(options.xabstol, maximum(abs.(x)) * options.xreltol)
         if options.verbose || !iszero(tol)
             find_zero(Bisection64(), F, options, state)
         else
@@ -348,15 +348,15 @@ function assess_convergence(method::Union{Bisection64,Bisection}, state::Univari
         return true
     end
 
-    x1 = x0 + 0.5*(x2-x0) 
-
-    x1 <= x0 || x2 <= x1 && return true
-    !isapprox(x0, x2,  atol=options.xabstol, rtol=options.xreltol) && return false
-#    d1 = isapprox(x0, x1, atol=options.xabstol, rtol=options.xreltol)
-#    d2 = isapprox(x1, x2, atol=options.xabstol, rtol=options.xreltol)
-#    !d1 && !d2 && return false
+    x1 = x0 + 0.5 * (x2-x0) # faster, but has floating point oddities (e.g. middle of nextfloat(-Inf), prevfloat(Inf))
+    if (x1 <= x0 || x2 <= x1)
+        x1 = _middle(x0, x2) 
+    end
+    d1 = isapprox(x0, x1, atol=options.xabstol, rtol=options.xreltol)
+    !d1 && return false
+    d2 = isapprox(x1, x2, atol=options.xabstol, rtol=options.xreltol)
+    !d2 && return false
     
-#    x0 < x1 && x1 < x2 && return false
      
 
     state.message = ""

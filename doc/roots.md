@@ -29,7 +29,6 @@ roundoff. That is, given `f(a) * f(b) < 0`, a value `c` with `a < c < b` can be
 found where either `f(c) == 0.0` or  `f(prevfloat(c)) * f(c) < 0` or
 `f(c) * f(nextfloat(c)) < 0`.
 
-
 To illustrate, consider the function $f(x) = \cos(x) - x$. From the
 graph we see readily that $[0,1]$ is a bracket (which we emphasize
 with an overlay):
@@ -75,8 +74,7 @@ That is, at `x` the function is changing sign.
 From a mathematical perspective, a zero is guaranteed for a
 *continuous* function. However, the computer algorithm doesn't assume
 continuity, it just looks for changes of sign. As such, the algorithm
-will  identify discontinuities, not just zeros. For example, here we
-see the vertical asymptote identified:
+will  identify discontinuities, not just zeros. For example:
 
 ```
 find_zero(x -> 1/x, (-1, 1))
@@ -110,20 +108,12 @@ rt - pi
 ```
 
 
+## Non-bracketing problems
 
-```
-rt =find_zero(sin, (3.0, 4), xatol=1e-6)
-rt - pi
-```
-
-
-## Non-bracketing algorithms
-
-Bracketing methods have guaranteed convergence, but in general
-identifying a bracket can take  more effort and the algorithms may require
+Bracketing methods have guaranteed convergence, but in general require
 many more function calls than are needed to produce an answer.  If a
 good initial guess is known, then the `find_zero` function provides an
-interface to some different iterative algorithms that are usually more
+interface to some different iterative algorithms that are more
 efficient. Unlike bracketing methods, these algorithms may not
 converge to the desired root if the initial guess is not well chosen.
 
@@ -133,7 +123,6 @@ algorithm is designed to be more forgiving of the quality of the
 initial guess at the cost of possibly performing many more steps than
 other algorithms, as if the algorithm encounters a bracket, bisection
 will be used.
-
 
 For example, the answer to our initial problem is visibly seen from a
 graph to be near 1. Given this,
@@ -200,7 +189,6 @@ expected to take many more function calls, as the methods are no
 longer super-linear. This is the case here, where `Order2` uses $55$
 function calls, `Order8` uses $41$, and `Order0` takes, a comparable, $42$.)
 
-
 To investigate an algorithm and its convergence, the argument
 `verbose=true` may be specified.
 
@@ -249,19 +237,6 @@ x, f(x)
 
 Starting with a single point is also supported:
 
-Relative tolerances are important when answers could possible be quite
-large. Just evaluating a floating point approximation to a zero can
-produce a value on the size of $f'(x) x \epsilon$. If it is known that
-large $x$ values are not sought, then setting the relative tolerance
-to zero will avoid the issue of marching off towards infinity and
-returning what appears to be a valid zero:
-
-```
-find_zero(f, 1, Order8(), rtol=0.0)
-```
-
-----
-=======
 ```
 Roots.secant_method(f, 2)
 ```
@@ -346,6 +321,7 @@ end
 
 To visualize the trajectory if shot at 45 degrees, we have:
 
+
 ```figure
 theta = 45
 plot(x -> flight(x,  theta), 0, howfar(theta))
@@ -370,6 +346,11 @@ This graph shows the differences in the trajectories:
 plot(x -> flight(x, 45), 0, howfar(45))  
 plot!(x -> flight(x, tstar), 0, howfar(tstar))
 ```
+
+
+
+
+
 
 
 ## Potential issues
@@ -452,6 +433,82 @@ relative minimum--nearer the zero--would avoid this trap. The default
 method employs a trick to bounce out of such traps, though it doesn't
 always work.
 
+###  Tolerances
+
+Mathematically solving for a zero of a nonlinear function may be
+impossible, so numeric methods are utilized. However, using floating
+point numbers to approximate the real numbers leads to some nuances.
+
+
+For example, consider the polynomial $f(x) = (3x-1)^5$ with one zero
+at $1/3$ and its equivalent expression $f1(x) = -1 + 15\cdot x - 90\cdot
+x^2 + 270\cdot x^3 - 405\cdot x^4 + 243\cdot x^5$. Mathematically
+these are the same, however not so when evaluated in floating
+point. Here we look at the 21 floating point numbers near $1/3$:
+
+```
+f(x) = (3x-1)^5
+f1(x) =  -1 + 15*x - 90*x^2 + 270*x^3 - 405*x^4 + 243*x^5
+ns = [1/3];
+u=1/3; for i in 1:10 (u=nextfloat(u);push!(ns, u)) end
+u=1/3; for i in 1:10 (u=prevfloat(u);push!(ns, u)) end
+sort!(ns)
+
+maximum(abs.(f.(ns) - f1.(ns)))
+```
+
+We see the function values are close for each point, as the maximum difference
+is like $10^{15}$. This is roughly as expected, where even one
+addition may introduce a relative error as big as $2\cdot 10^{-16}$ and here
+there are several such.
+
+Generally this is not even a thought, as the differences are generally
+negligible, but when we want to identify if a value is zero, these
+small differences might matter. Here we look at the signs of the
+function values:
+
+
+```
+fs = sign.(f.(ns))
+f1s = sign.(f1.(ns))
+[ns-1/3 fs f1s]
+```
+
+Parsing this shows a few surprises. First, there are two zeros of
+`f(x)` identified--not just one as expected mathematically--the
+floating point value of `1/3` and the next largest floating point
+number. For `f1(x)` there is only one zero, but it isn't the floating
+point value for `1/3` but rather 10 floating point numbers
+away. Further, there are 5 sign changes of the function values. There
+is no guarantee that a zero will be present, but for a mathematical
+function that changes sign, there will be at least one sign change.
+
+With this in mind, an exact zero of `f` would be either where `iszero(f(x))` is true *or* where the function has a sign change (either `f(x)*f(prevfloat(x))<0` or `f(x)*f(nextfloat(x)) < 0`).
+
+As mentioned, the default `Bisection()` method of `find_zero`
+identifies such zeros for `f` provided an initial bracketing interval
+is specified when `Float64` numbers are used.  However, if a
+mathematical function does not cross the $x$ axis at a zero, then
+there is no guarantee the floating point values will satisfy either of
+these conditions.
+
+
+Now consider the function `f(x) = exp(x)-x^4`. The value`x=8.613169456441398` is a zero in this sense, as there is a change of sign:
+
+```
+f(x) = exp(x) - x^4
+F(x) = sign(f(x))
+x=8.613169456441398
+F(prevfloat(x)), F(x), F(nextfloat(x))
+```
+
+However, the value of `f(x)` is not as small as one might initially
+expect for a zero:
+
+```
+f(x)
+```
+
 The value `x` is an approximation to the actual mathematical zero,
 call it $x$. There is a difference between $f(x)$ (the mathematical answer) and `f(x)` (the floating point answer). Roughly speaking we expect `f(x)` to be about $f(x) + f'(x)\cdot \delta$, where $\delta$ is the difference between `x` and $x$. This will be on the scale of `abs(x) * eps()`, so all told we expect an answer to be in the range of $0$ plus or minus this value:
 
@@ -462,14 +519,12 @@ fp(x) * abs(x) * eps()
 
 which is about what we see.
 
-
 Bisection can be a slower method than others. For floating point values, `Bisection()` takes no more than 64 steps, but other methods may be able to converge to a zero in 4-5 steps (assuming good starting values are specified).
 
 When fewer function calls are desirable, then checking for an
 *approximate* zero may be preferred over assessing if a sign change
 occurs, as generally that will take two additional function calls per
 step. Besides, a sign change isn't guaranteed for all zeros. An approximate zero would be one where $f(x) \approx 0$.
-
 
 By the above, we see that we must consider an appropriate
 tolerance. The first example shows differences in floating point
@@ -491,7 +546,6 @@ One issue with relative tolerances is that for functions with
 sublinear growth, extremely large values will be considered zeros.
 Returning to an earlier example, we have a misidentified zero:
 
-
 ```
 find_zero(cbrt, 1, Order8())
 ```
@@ -511,7 +565,6 @@ produce zeros as exact as possible, and the fact that the error in
 function evaluation, $f'(x)|x|\epsilon$, is not typically on the scale
 of `1e-8`, leads to a desire for more precision, if available.
 
-
 In `Roots`, the faster algorithms use a check on both the size of
 `f(xn)` and the size of the difference between the last two `xn` values. The check on `f(xn)`
 is done with a tight tolerance, as is the check on $x_n \approx
@@ -521,6 +574,7 @@ approximate zero is declared. Further, if the $x$ values get close to each other
 then an approximate zero is declared. In practice this seems to work
 reasonably well. The relaxed tolerance uses the cube root of the
 absolute and relative tolerances.
+
 
 
 
@@ -581,6 +635,7 @@ zero crossing, not a zero.
 
 
 
+
 The search for all zeros in an interval is confounded by a few things:
 
 * too many zeros in the interval $(a,b)$
@@ -634,177 +689,9 @@ find_zeros(f, 0, 1)
 
 It can have success for closer pairs of zeros:
 
-
 ```
 f(x) = (x-0.5) * (x - 0.49999)
 find_zeros(f, 0, 1)
-```
-
-(This also illustrates that symbolic values can be passed to describe
-the `x`-axis values.)
-
-Similarly, the `SymPy` package could be used in an identical way.
-
-
-
-## Searching for all zeros in an interval
-
-The methods described above are used to identify one of possible
-several zeros.  The `find_zeros` function searches interval $(a,b)$
-for all zeros of a function $f$. It is straightforward to use:
-
-```
-f(x) = exp(x) - x^4
-a, b = -10, 10
-zs = find_zeros(f, a, b)
-```
-
-The  search interval $(a,b)$ is specified through two arguments. It is
-assumed that neither endpoint is a zero. Here we see the result of the
-search graphically:
-
-```
-plot(f, a, b)
-scatter!(zs, f.(zs))
-```
-
-We can identify points where the first and second derivative is
-zero. We use `D` from above
-
-
-```
-f(x) = cos(x) + cos(2x)
-a, b = -10, 10
-cps = find_zeros(D(f), a, b)
-ips = find_zeros(D(f,2), a, b)
-plot(f, a, b)
-scatter!(cps, f.(cps))
-scatter!(ips, f.(ips), markercolor = :yellow)
-```
-
-The `find_zeros` algorithm will use bisection when a bracket is
-identified. This method will identify jumps, so areas where the
-derivative changes sign (and not necessarily a zero of the derivative)
-will typically be identified:
-
-```
-f(x) = abs(cbrt(x^2-1))
-a, b = -5, 5
-cps = find_zeros(D(f), a, b)
-plot(f, a, b)
-scatter!(cps, f.(cps))
-```
-
-In this example, the derivative has vertical asymptotes at $x=1$ and
-$x=-1$ so is not continuous there. The bisection method identifies the
-zero crossing, not a zero.
-
-----
-
-Leveraging the zero-finding tools available in `Roots`, the task of finding all zeros in an interval $(a,b)$ can be approached by a naive method:
-
-* split the interval into $n$ points $a=x_1 < x_2 < \dots < x_n=b$.
-
-* There are $n-1$ subintervals made from adjacent pairs. Each subinterval, $(x_i, x_{i+1})$, is considered: if it is a bracketing interval, *bisection* is used to find a guaranteed zero; if not, `find_zero` is used to search for a zero in $(x_i, x_{i+1})$.
-
-* collect the zeros found
-
-Bisection is guaranteed to find a zero, so the cost of many function calls is worth paying. But calls to  `find_zero` for non-bracketing intervals have no guarantee and may be foolish. Though the cost (in function calls) is not generally as high as bisection, it is best to avoid excessive calls. As such, the `find_zeros` implementation oversamples the subintervals checking for bracketing intervals. This reduces the amount of resources `find_zeros` needs.
-Still, when a function is "expensive" to compute the approach can use too many function calls. (The above two examples use between 1000 and 6000 function calls.)
-
-
-This approach can be useful, but certain scenarios will be problematic:
-
-
-* Bisection will only find one answer in a bracketing interval, but a continuous function can have one, three, five, $\dots$ zeros.
-
-* A non bracketing interval may contain  zeros (even an even number crossing the $x$ axis) but `find_zero` may fail to find any, as convergence can be very dependent on the initial starting point.
-
-* Nearby zeros can cause issues. For example with $f(x) = (x-0.5)^3 \cdot (x - 0.499)^3$ the function looks a lot like $f(x) = (x-0.5)^6$ and the algorithm might just find one zero. (In fact, `find_zeros` fails on this problem, but will have luck with $f(x) = (x-0.5)^2 \cdot (x - 0.499)^2$.)
-
-* A highly oscillatory function may have many more zeros than the initally specified number of subintervals
-
-
-For example, consider the cosine curve with period $1$:
-
-```
-f(x) = cos(2*pi*x)  # is 1.0 at 0,1,2,3,....
-```
-
-
-This function has a zero at $1/4, 3/4, 5/4, \dots$; altogether there
-are $32$ zeros in $(0,16)$. However, if we break the interval $(0,16)$
-into 4 subintervals, and oversample each using $4$ subintervals, we
-will be looking at the function at $0,1,2,\dots, 16$ where it is
-always $1$. So despite the many oscillations, no bracketing intervals
-will be found. Furthermore if we start the derivative free search at
-the midpoint of the `no_pts-1` intervals, it will start at $2$, $6$,
-$10$, and $14$. For these values, again the function is always at its
-maximum of $1$. Relative extrema are especially poor choices of
-starting point, as the tangent lines have $0$ slope. So we expect the
-algorithm might have issues, and it does:
-
-```
-find_zeros(f, 0, 16, no_pts=5, k=4)  # no pts - 1 = no subintervals
-```
-
-We see the algorithm missed many of the answers. The default values won't miss, but a similar, systematically bad example could be constructed for them. So users must be wary and may need to modify the interval selection as above (where the number of initial subintervals is specified through `no_pts`, it being `no_pts-1`, and the number of oversampled intervals considered for bracketing is specified by $k$.
-
-Consider this choice, with just one additional subinterval for the
-bisection check. Now all $32$ answers are found:
-
-```
-pts = find_zeros(f, 0, 16, no_pts=5, k=5)
-plot(f, 0, 16)
-scatter!(pts, f.(pts))
-```
-
-
-
-An analysis shows that now the initial points considered for brackets
-are $0$ through $16$ with a step size of $0.8$ (and not $1.0$). This
-step size avoids the aliasing and the algorithm is successful.
-
-Generally though, if it is suspected that the number of zeros
-identified is too few, increasing `no_pts` from its default of 11 will
-increase the chance of finding more zeros. 
-
-The above uses only 20 intervals initially, yet $32$ answers are
-found. How? When zeros are found, after stepping away from the zeros,
-the algorithm will recursively try again on the subintervals between
-the zeros found, though using a reduced number of points. This allows
-reasonably nearby points to be identified in a subsequent pass and can
-find additional zeros when at least one is found using the initial
-intervals.
-
-Of course, this recursive calling doesn't go for ever. For example,
-the function $f(x) = \sin(1/x)$ has inifinitely many zeros near
-$0$. The algorithm identifies many, but could never find all:
-
-```
-f(x) = iszero(x) ? NaN : sin(1/x)  # redefine to avoid an error with `sin(Inf)`
-rts = find_zeros(f, -1, 1)
-length(rts)
-```
-
-What is found are zeros (with maximum function value around `1e-13`):
-
-```
-maximum(abs.(f.(rts)))
-```
-
-The resolution does get fairly small:
-
-```
-minimum(diff(rts))  # smallest gap 
-```
-
-
-The closest nearby roots are on the scale of $10^{-4}$, which is greater than the resolution of the graph, when zoomed in:
-
-```
-plot(f, -1, 1)
-scatter!(rts, f.(rts))
 ```
 
 Combinations of large (even) multiplicity zeros or very nearby
