@@ -14,6 +14,19 @@ function _fz(f, a, b, no_pts, k=4)
 end
 
 function _fz!(zs, f, a::T, b, no_pts, k=4) where {T}
+
+    ## we have `dfree` and `Order0` doing basically
+    ## the same thing once these tolerances are chosen
+    ## `dfree` provides more accuracy, but 6% more function calls..
+    state = init_state(Order0(), f, a)
+    options = init_options(Order0(), state,
+                           xatol=oneunit(a)*zero(a),
+                           xrtol=zero(a),
+                           atol = 0.0,
+                           xrtol = 8 * eps()^2,
+                           maxevals = 100,
+                           strict=false)
+    tracks = NullTracks()
     
     pts = range(a, stop=b, length=(no_pts-1)*k+1)
     n::Int = length(pts)
@@ -32,7 +45,9 @@ function _fz!(zs, f, a::T, b, no_pts, k=4) where {T}
             if !found_bisection_zero
                 try
                     p1::T = identify_starting_point(u, v, sfs[(i-k):i])
-                    rt::T = dfree(f, p1)
+                    init_state!(state, Order0(), f, p1)
+                    rt::T = find_zero(Order0(), f, options, state, tracks)
+#                    rt::T = dfree(f, p1)
                     if !isnan(rt) && u < rt <= v
                         push!(zs, rt)
                     end
@@ -108,7 +123,10 @@ end
 
 
 # adjust what we mean by x1 ~ x2 for purposes of adding a new zero
-approx_close(z1, z2, xatol, xrtol) = isapprox(z1, z2, atol=oneunit(xatol) * (_unitless(xatol))^(1/2), rtol=sqrt(xrtol))
+function approx_close(z1, z2, xatol, xrtol)
+    tol = max(sqrt(xatol), max(abs(z1), abs(z2)) * sqrt(xrtol))
+    abs(z1 - z2) < tol
+end
 
 # is proposed not near xs? (false and we add proposed)
 function not_near(proposed, xs, xatol, xrtol)

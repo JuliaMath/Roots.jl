@@ -204,8 +204,8 @@ end
 ## test tolerance arguments
 fn, xstar = x -> sin(x) - x + 1, 1.9345632107520243
 @test find_zero(fn, 20.0, Order2())  ≈ xstar   # needs 16 iterations, 33 fn evaluations
-@test abs(fn(find_zero(fn, 20.0, Order2(), abstol=1e-2)) - xstar) > 1e-12
-@test abs(fn(find_zero(fn, 20.0, Order2(), reltol=1e-2)) - xstar) > 1e-12
+@test abs(fn(find_zero(fn, 20.0, Order2(), atol=1e-2)) - xstar) > 1e-12
+@test abs(fn(find_zero(fn, 20.0, Order2(), rtol=1e-2)) - xstar) > 1e-12
 @test_throws Roots.ConvergenceFailed find_zero(fn, 20.0, Order2(), maxevals=5) 
 @test_throws Roots.ConvergenceFailed find_zero(fn, 20.0, Order2(), maxfnevals=10) 
 

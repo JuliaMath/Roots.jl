@@ -33,8 +33,8 @@ function update_state(method::Newton, fs, o, options)
     o.fxn0, o.fxn1 = fxn, fxn1
 
 
-    incsteps(o)
-    
+
+
 end
 
 """
@@ -86,7 +86,6 @@ function update_state(method::Halley, fs, o::UnivariateZeroState{T,S}, options::
 
     o.xn0, o.xn1 = xn, xn1
     o.fxn0, o.fxn1 = fxn, fxn1
-    incsteps(o)
 end
 
 """

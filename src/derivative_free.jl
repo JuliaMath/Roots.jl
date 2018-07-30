@@ -39,25 +39,46 @@ const Order1 = Secant
 function init_state(method::AbstractSecant, fs, x::Union{Tuple, Vector})
     x0, x1 = promote(float(x[1]), float(x[2]))
     fx0, fx1 = fs(x0), fs(x1)        
-    UnivariateZeroState(x1, x0, fx1, fx0, 0, 2,
+    UnivariateZeroState(x1, x0,
+                        missing, #oneunit(x1) * (0*x1)/(0*x1),
+                        
+                        fx1, fx0, 0, 2,
                         false, false, false, false, "")
 end
 
 function init_state(method::AbstractSecant, fs, x::Number)
 
     # need an initial x0,x1 if two not specified
-    x0 = float(x)
+    x1 = float(x)
+    fx1 = fs(x1)
+
+    h = eps(one(real(x1)))^(1/3)
+    dx = h*oneunit(x1) + abs(x1)*h^2 # adjust for if eps(x1) > h
+    x0 = x1 + dx
     fx0 = fs(x0)
-
-    h = eps(one(real(x0)))^(1/3)
-    dx = h*oneunit(x0) + abs(x0)*h^2 # adjust for if eps(x0) > h
-    x1 = x0 + dx
-
-    UnivariateZeroState(x0, x1, fx0, fs(x1), 0, 2,
+    
+    UnivariateZeroState(x1, x0,
+                        missing, #oneunit(x1) * (0*x1)/(0*x1),
+                        fx1, fx0, 0, 2,
                         false, false, false, false, "")
 
 end
 
+function init_state!(state::UnivariateZeroState{T, S}, ::AbstractSecant, f, x::Union{Tuple, Vector}) where {T, S}
+    x0,x1 = promote(float.(x))
+    fx0, fx1 = promote(f(x0), f(x1))
+    init_state!(state, x0, x1, missing, fx0, fx1)
+end
+
+function init_state!(state::UnivariateZeroState{T, S}, ::AbstractSecant, fs, x::Number) where {T, S}
+    x1 = float(x)
+    h = eps(one(real(x1)))^(1/3)
+    dx = h*oneunit(x1) + abs(x1)*h^2 # adjust for if eps(x1) > h
+    x0 = x1 + dx
+    fx0, fx1 = promote(fs(x0), fs(x1))
+    
+    init_state!(state, x0, x1, missing, fx0, fx1)
+end
 ##################################################
 
 
@@ -73,21 +94,32 @@ end
 # * `f(x) == 0.0` or
 # * `f(prevfloat(x)) * f(nextfloat(x)) < 0`.
 # if a bracket is found that can be done, otherwise secant step is used
+
+## in Order0, we run bisection if a bracketing interval is found
+## this is meant to be as speedy as possible
+function _run_bisection(fs, options, state)
+    ## could do hybrid method here, where we update state and options, but
+    ## that proves slower, as bisection64 is more efficient.
+    xn0, xn1 = state.xn0, state.xn1
+    state.xn1 = bisection(fs, xn0, xn1)
+    state.x_converged = true
+    options.strict = true # prevent check on f(xn)
+    state.message *= "Used bisection for last step, evaluation counts are not accurate. "
+end
+
 function update_state(method::Order0, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
 
     alpha, beta = o.xn0, o.xn1
     falpha, fbeta = o.fxn0, o.fxn1
-
-    incsteps(o)
 
     if sign(falpha) * sign(fbeta) < 0.0
         _run_bisection(fs, options, o)
         return nothing
     end
 
-    gamma, issue = guarded_secant_step(alpha, beta, falpha, fbeta)
+    gamma::T, issue = guarded_secant_step(alpha, beta, falpha, fbeta)
 
-    fgamma = fs(gamma); incfn(o)
+    fgamma::S = fs(gamma); incfn(o)
 
     if sign(fgamma)*sign(fbeta) < 0.0
         o.xn0, o.xn1 = gamma, beta
@@ -134,9 +166,9 @@ function update_state(method::Order0, fs, o::UnivariateZeroState{T,S}, options::
             return nothing
         end
 
-        theta, issue = guarded_secant_step(beta, gamma, fbeta, fgamma)
+        theta::T, issue = guarded_secant_step(beta, gamma, fbeta, fgamma)
         
-        ftheta = fs(theta); incfn(o)
+        ftheta::S = fs(theta); incfn(o)
 
         if sign(ftheta) * sign(fbeta) < 0
             o.xn0, o.xn1 = beta, theta
@@ -153,6 +185,11 @@ function update_state(method::Order0, fs, o::UnivariateZeroState{T,S}, options::
     return nothing
 end
 
+function show_tracks(l::Tracks, M::Order0)
+    println("Tracks not recorded for Order0()")
+    println("")
+end
+
 ##################################################
 
 ## Secant
@@ -160,23 +197,17 @@ end
 
 function update_state(method::Secant, fs, o::UnivariateZeroState{T,S}, options)  where {T, S}
 
-    incsteps(o)
-
-    fp, issue = _fbracket(o.xn0, o.xn1, o.fxn0, o.fxn1)
-    if issue
+    if (o.fxn0 == o.fxn1) || (o.xn0 == o.xn1) 
          o.stopped = true
          o.message = "Derivative approximation had issues"
          return
      end
 
-    x0 = o.xn0
-    o.xn0 = o.xn1
-    o.fxn0 = o.fxn1
-
-    o.xn1 = o.xn1 -  o.fxn1 / fp
-    o.fxn1 = fs(o.xn1)    
+    dx = o.fxn1 * (o.xn1 - o.xn0) / (o.fxn1 - o.fxn0)
+    o.xn0, o.xn1 = o.xn1, o.xn1 - dx
+    o.fxn0, o.fxn1 = o.fxn1, fs(o.xn1)
     incfn(o)
-
+    
     nothing
 
 end
@@ -206,8 +237,6 @@ const Order2 = Steffensen
 
 function update_state(method::Steffensen, fs, o::UnivariateZeroState{T,S}, options) where {T, S}
     
-    incsteps(o)
-
     wn::T = o.xn1 + steff_step(o.xn1, o.fxn1)
 
     fwn::S = fs(wn)
@@ -256,8 +285,6 @@ function update_state(method::Order5, fs::Union{FirstDerivative,SecondDerivative
 
     xn, fxn = o.xn1, o.fxn1
 
-    incsteps(o)
-
     fpxn::S = fs(xn, 1)
     incfn(o)
 
@@ -297,8 +324,6 @@ function update_state(method::Order5, fs, o::UnivariateZeroState{T,S}, options) 
 
     xn = o.xn1
     fxn = o.fxn1
-
-    incsteps(o)
 
     wn::T = o.xn1 + steff_step(o.xn1, o.fxn1)
 
@@ -362,7 +387,6 @@ function update_state(method::Order8, fs, o::UnivariateZeroState{T,S}, options) 
 
     xn = o.xn1
     fxn = o.fxn1
-    incsteps(o)
 
     wn::T = xn + steff_step(xn, fxn)
     fwn::S = fs(wn)
@@ -373,18 +397,17 @@ function update_state(method::Order8, fs, o::UnivariateZeroState{T,S}, options) 
         o.fxn0,o.fxn1 = fxn, fwn
         o.stopped = true
         o.message = "issue with Steffensen step fwn"
-        return
+        return 
     end
 
 
 
     fp, issue = _fbracket(xn, wn, fxn, fwn)
-    issue && return (xn, true)
 
     if issue
         o.stopped = true
         o.message = "issue with divided difference f[xn, wn]"
-        return
+        return 
     end
 
     yn::T = xn - fxn / fp
@@ -453,8 +476,6 @@ end
 function update_state(method::Order16, fs, o::UnivariateZeroState{T,S}, options) where {T, S}
     xn = o.xn1
     fxn = o.fxn1
-
-    incsteps(o)
 
     wn::T = xn + steff_step(xn, fxn)
     fwn::S = fs(wn)
