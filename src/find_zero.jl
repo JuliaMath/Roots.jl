@@ -510,7 +510,7 @@ function find_zero(M::AbstractUnivariateZeroMethod,
         ## seems worth a check for 2 fn evals.
         for u in (prevfloat(xn1), nextfloat(xn1))
             fu = F(u)
-            if iszero(fu) || fu * fxn1 < 0
+            if iszero(fu) || _unitless(fu * fxn1) < 0
                 state.message *= "Change of sign at xn1 identified. "
                 state.f_converged = true
             end
