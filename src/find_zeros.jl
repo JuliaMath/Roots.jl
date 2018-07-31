@@ -15,19 +15,6 @@ end
 
 function _fz!(zs, f, a::T, b, no_pts, k=4) where {T}
 
-    ## we have `dfree` and `Order0` doing basically
-    ## the same thing once these tolerances are chosen
-    ## `dfree` provides more accuracy, but 6% more function calls..
-    state = init_state(Order0(), f, a)
-    options = init_options(Order0(), state,
-                           xatol=oneunit(a)*zero(a),
-                           xrtol=zero(a),
-                           atol = 0.0,
-                           xrtol = 8 * eps()^2,
-                           maxevals = 100,
-                           strict=false)
-    tracks = NullTracks()
-    
     pts = range(a, stop=b, length=(no_pts-1)*k+1)
     n::Int = length(pts)
 
@@ -45,9 +32,7 @@ function _fz!(zs, f, a::T, b, no_pts, k=4) where {T}
             if !found_bisection_zero
                 try
                     p1::T = identify_starting_point(u, v, sfs[(i-k):i])
-                    init_state!(state, Order0(), f, p1)
-                    rt::T = find_zero(Order0(), f, options, state, tracks)
-#                    rt::T = dfree(f, p1)
+                    rt::T = dfree(f, p1)
                     if !isnan(rt) && u < rt <= v
                         push!(zs, rt)
                     end
