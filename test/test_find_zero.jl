@@ -278,3 +278,34 @@ test_94 = function(;kwargs...)
     @test state.steps <= 15
 end
 test_94()
+
+@testset "init_state!" begin
+    ## add init_state! method
+    g1(x) = x^5 - x - 1
+    x0_, xstar_ = (1.0, 2.0), 1.1673039782614187
+    M = Roots.A42()
+    state = Roots.init_state(M, g1, x0_)
+    options = Roots.init_options(M, state)
+    for M in (Roots.A42(), Roots.Bisection(), Roots.FalsePosition())
+        Roots.init_state!(state, M, g1, x0_)
+        @test find_zero(M, g1, options, state) ≈ xstar_
+    end
+
+
+    ## hybrid
+    g1(x) = exp(x) - x^4
+    x0_, xstar_ = (5.0, 20.0), 8.613169456441398
+    M = Roots.Bisection()
+    state = Roots.init_state(M, g1, x0_)
+    options = Roots.init_options(M, state, xatol=1/2)
+    find_zero(M, g1, options, state)
+    M = Roots.Order1()
+    Roots.init_state!(state, M, g1, state.m)
+    Roots.init_options!(options, M)
+    @test find_zero(M, g1, options, state) ≈ xstar_
+end
+    
+    
+    
+    
+

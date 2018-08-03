@@ -147,6 +147,13 @@ a provided interval [a, b], without requiring derivatives. It is based
 on algorithm 4.2 described in: 1. G. E. Alefeld, F. A. Potra, and
 Y. Shi, "Algorithm 748: enclosing zeros of continuous functions," ACM
 Trans. Math. Softw. 21, 327–344 (1995), DOI: 10.1145/210089.210111 .
+[link](http://www.ams.org/journals/mcom/1993-61-204/S0025-5718-1993-1192965-2/S0025-5718-1993-1192965-2.pdf)
+
+
+The default tolerances are: `xatol=zero(T)`, `xrtol=eps(T)`,
+`maxevals=15`, and `maxfnevals=typemax(Int)`. There is no check made
+using `atol`, `rtol` (for convergence in the `f(x)` direction.
+
 """
 mutable struct A42 <: AbstractBisection end
 
@@ -181,13 +188,14 @@ function init_state(method::AbstractBisection, fs, x)
     length(x) > 1 || throw(ArgumentError(bracketing_error))
 
     x0, x1 = adjust_bracket(x)
-    y0, y1 = sign.(promote(fs(x0), fs(x1)))
-    y0 * y1 > 0 && throw(ArgumentError("bracketing_error"))
     m = _middle(x0, x1)
+
+    y0, y1, fm = sign.(promote(fs(x0), fs(x1), fs(m)))
+    y0 * y1 > 0 && throw(ArgumentError("bracketing_error"))
     
     state = UnivariateZeroState(x1, x0, m,
-                                y1, y0,
-                                0, 2,
+                                y1, y0, fm,
+                                0, 3,
                                 false, false, false, false,
                                 "")
     state
@@ -196,9 +204,9 @@ end
 
 function init_state!(state::UnivariateZeroState{T,S}, ::AbstractBisection, fs, x::Union{Tuple, Vector}) where {T, S}
     x0, x1 = adjust_bracket(x)
-    fx0::S, fx1::S = sign(fs(x0)), sign(fs(x1))
-    m = _middle(x0, x1)
-    init_state!(state, x1, x0, m, fx1, fx0)
+    m::T = _middle(x0, x1)
+    fx0::S, fx1::S, fm::S = sign(fs(x0)), sign(fs(x1)), sign(fs(m))
+    init_state!(state, x1, x0, m, fx1, fx0, fm)
 end
 
 # for Bisection, the defaults are zero tolerances and strict=true
@@ -246,7 +254,7 @@ end
 _middle(x::Float64, y::Float64) = _middle(Float64, UInt64, x, y)
 _middle(x::Float32, y::Float32) = _middle(Float32, UInt32, x, y)
 _middle(x::Float16, y::Float16) = _middle(Float16, UInt16, x, y)
-_middle(x::Number, y::Number) = x + 0.5 * (y-x) # fall back or non Floats
+_middle(x::Number, y::Number) = 0.5*x + 0.5 * y # fall back or non Floats
 
 function _middle(T, S, x, y)
     # Use the usual float rules for combining non-finite numbers
@@ -276,12 +284,13 @@ function update_state(method::Union{Bisection,BisectionExact}, fs, o::Univariate
 
     y0 = o.fxn0
     m::T = o.m  
-    ym::S = sign(fs(m))
+    ym::S = o.fm #sign(fs(m))
     incfn(o)
 
     if iszero(ym)
         o.message = "Exact zero found"
-        o.xn1 = m 
+        o.xn1 = m
+        o.fxn1= m
         o.x_converged = true
         return nothing
     end
@@ -292,7 +301,8 @@ function update_state(method::Union{Bisection,BisectionExact}, fs, o::Univariate
         o.xn0, o.fxn0 = m, ym
     end
 
-    o.m = _middle(o.xn0, o.xn1)            
+    o.m = _middle(o.xn0, o.xn1)
+    o.fm = sign(fs(o.m))
     return nothing
 
 end
@@ -345,7 +355,7 @@ end
 function find_zero(fs, x0, method::M;
                    tracks = NullTracks(),
                    verbose=false,
-                   kwargs...) where {M <: Union{Bisection, A42}}
+                   kwargs...) where {M <: Union{Bisection}}
     
     x = adjust_bracket(x0)
     T = eltype(x[1])
@@ -361,7 +371,7 @@ function find_zero(fs, x0, method::M;
             !verbose && return bisection64(F, state.xn0, state.xn1) # speedier
             find_zero(BisectionExact(), F, options, state, l)
         else
-            return a42(F, state.xn0, state.xn1, xtol=zero(T), verbose=verbose)
+            return find_zero(F, x, A42())
         end
     else
         find_zero(method, F, options, state, l)
@@ -375,290 +385,309 @@ function find_zero(fs, x0, method::M;
     
 end
 
-## The Roots.A42() method is not implemented within the frame work
-function find_zero(method::A42, F, options::UnivariateZeroOptions, state::UnivariateZeroState{T,S}, tracks) where {T<:Number, S<:Number}
-    x0, x1 = state.xn0, state.xn1
-    tol = max(options.xabstol, max(abs(x0), abs(x1)) * options.xreltol)
-    state.xn1 = a42(F, x0, x1; xtol=tol, maxeval=options.maxevals),
-    state.message = "Used Alefeld-Potra-Shi method, `Roots.a42`, to find the zero. Iterations and function evaluations are not counted properly."
-    state.stopped = state.x_converged  = true
-    
-    return state.xn1
+
+###################################################
+#
+## A42
+#
+# Finds the root of a continuous function within a provided
+# interval [a, b], without requiring derivatives. It is based on algorithm 4.2
+# described in: 1. G. E. Alefeld, F. A. Potra, and Y. Shi, "Algorithm 748:
+# enclosing zeros of continuous functions," ACM Trans. Math. Softw. 21,
+# 327–344 (1995).
+#
+# Originally by John Travers
+
+## put in utils?
+@inline isbracket(fa,fb) = sign(fa) * sign(fb) < 0
+
+# f[b,a]
+@inline f_ab(a,b,fa,fb) = (fb - fa) / (b-a)
+
+# f[a,b,d]
+@inline function f_abd(a,b,d,fa,fb,fd)
+    fab, fbd = f_ab(a,b,fa,fb), f_ab(b,d,fb,fd)
+    (fbd - fab)/(d-a)
 end
 
+# a bit better than a - fa/f_ab
+@inline secant_step(a, b, fa, fb) =  a - fa * (b - a) / (fb - fa)
 
 
-##################################################
+# of (a,fa), (b,fb) choose pair where |f| is smallest
+@inline choose_smallest(a, b, fa, fb) = abs(fa) < abs(fb) ? (a,fa) : (b,fb)
 
-"""
-
-    Roots.a42(f, a, b; kwargs...)
-
-(not exported)
-
-Finds the root of a continuous function within a provided
-interval [a, b], without requiring derivatives. It is based on algorithm 4.2
-described in: 1. G. E. Alefeld, F. A. Potra, and Y. Shi, "Algorithm 748:
-enclosing zeros of continuous functions," ACM Trans. Math. Softw. 21,
-327–344 (1995).
-
-
-input:
-    `f`: function to find the root of
-    `a`, `b`: the initial bracket, with: a < b, f(a)*f(b) < 0
-    `xtol`: acceptable error (it's safe to set zero for machine precision)
-    `maxeval`:  maximum number of iterations
-
-output:
-    an estimate of the zero of f
-
-By John Travers
-
-"""
-function a42(f, a, b;
-      xtol=zero(float(a)),
-      maxeval::Int=15,
-      verbose::Bool=false)
-
-    u, v = adjust_bracket((a,b))
-    fu, fv = f(u), f(v)
-
-    if sign(fu)*sign(fv) >= 0
-        error("on input a < b and f(a)f(b) < 0 must both hold")
+# assume fc != 0
+## return a1,b1,d with a < a1 <  < b1 < b, d not there
+## 
+@inline function bracket!(state) #a,b,c, fa, fb, fc)
+    if isbracket(state.fxn0, state.fm)
+        # switch b, c
+        state.xn1, state.m = state.m, state.xn1
+        state.fxn1, state.fm = state.fm, state.fxn1
+    else
+        # switch a, c
+        state.xn0,  state.m = state.m, state.xn0
+        state.fxn0, state.fm = state.fm, state.fxn0
     end
-    
-    if xtol/oneunit(xtol) < 0.0
-        error("tolerance must be >= 0.0")
-    end
-    
-    c, fc = secant_step(f, u, fu, v, fv)
-    a42a(f, u, fu, v, fv, float(c), fc,
-         xtol=xtol, maxeval=maxeval, verbose=verbose)
 end
 
-"""
+@inline function bracket(a,b,c, fa, fb, fc)
 
-Split Alefeld, F. A. Potra, and Y. Shi algorithm 4.2 into a function
-where `c` is passed in.
+    if isbracket(fa, fc)
+        # switch b,c
+        return (a,c,b, fa, fc, fb)
+    else
+        # switch a,c
+        return (c,b,a, fc, fb, fa)
+    end
+end
 
-Solve f(x) = 0 over bracketing interval [a,b] starting at c, with a < c < b
+# return c in (a+delta, b-delta)
+# adds part of `bracket` from paper with `delta`
+function newton_quadratic(a::T, b, d, fa, fb, fd, k::Int, delta=zero(T)) where {T}
 
-"""
-a42a(f, a, b, c=(a+b)/2; args...) = a42a(f, a, f(a), b, f(b), c, f(c); args...)
+    A = f_abd(a,b,d,fa,fb,fd)
+    r = isbracket(A,fa) ? b : a
+    
+    # use quadratic step; if that fails, use secant step; if that fails, bisection
+    if !(isnan(A) || isinf(A)) || !iszero(A)
+        B = f_ab(a,b,fa,fb)
 
-function a42a(f, a, fa, b, fb, c, fc;
-       xtol=zero(float(a)),
-       maxeval::Int=15,
-       verbose::Bool=false)
-
-    try
-        # re-bracket and check termination
-        a, fa, b, fb, d, fd = bracket(f, a, fa, b, fb, c, fc, xtol)
-        ee, fee = d, fd
-        for n = 2:maxeval
-            # use either a cubic (if possible) or quadratic interpolation
-            if n > 2 && distinct(a, fa, b, fb, d, fd, ee, fee)
-                c, fc = ipzero(f, a, fa, b, fb, d, fd, ee, fee)
-            else
-                c, fc = newton_quadratic(f, a, fa, b, fb, d, fd, 2)
-            end
-            # re-bracket and check termination
-            ab, fab, bb, fbb, db, fdb = bracket(f, a, fa, b, fb, c, fc, xtol)
-            eb, feb = d, fd
-            # use another cubic (if possible) or quadratic interpolation
-            if distinct(ab, fab, bb, fbb, db, fdb, eb, feb)
-                cb, fcb = ipzero(f, ab, fab, bb, fbb, db, fdb, eb, feb)
-            else
-                cb, fcb = newton_quadratic(f, ab, fab, bb, fbb, db, fdb, 3)
-            end
-            # re-bracket and check termination
-            ab, fab, bb, fbb, db, fdb = bracket(f, ab, fab, bb, fbb, cb, fcb, xtol)
-            # double length secant step; if we fail, use bisection
-            if abs(fab) < abs(fbb)
-                u, fu = ab, fab
-            else
-                u, fu = bb, fbb
-            end
-            # u = abs(fab) < abs(fbb) ? ab : bb
-#            cb = u - 2*fu/(fbb - fab)*(bb - ab)
-            del =  2*fu/(fbb - fab)*(bb - ab)
-            if !isnan(del) # add check on NaN
-                cb = u - del
-            end
-            fcb = f(cb)
-            if abs(cb - u) > (bb - ab)/2
-                ch, fch = ab+(bb-ab)/2, f(ab+(bb-ab)/2)
-            else
-                ch, fch = cb, fcb
-            end
-            # ch = abs(cb - u) > (bb - ab)/2 ? ab + (bb - ab)/2 : cb
-            # re-bracket and check termination
-            ah, fah, bh, fbh, dh, fdh = bracket(f, ab, fab, bb, fbb, ch, fch, xtol)
-            # if not converging fast enough bracket again on a bisection
-            if bh - ah < 0.5*(b - a)
-                a, fa = ah, fah
-                b, fb = bh, fbh
-                d, fd = dh, fdh
-                ee, fee = db, fdb
-            else
-                ee, fee = dh, fdh
-                a, fa, b, fb, d, fd = bracket(f, ah, fah, bh, fbh, ah + (bh - ah)/2, f(ah+(bh-ah)/2), xtol)
-            end
-
-            verbose && println(@sprintf("a=%18.15f, n=%s", float(a), n))
-
-            if nextfloat(float(ch)) * prevfloat(float(ch)) <= 0 * oneunit(ch)^2
-                throw(StateConverged(ch))
-            end
-            if nextfloat(float(a)) >= b
-                throw(StateConverged(a))
-            end
+        dr = zero(r)
+        for i in 1:k
+            Pr = fa + B * (r-a) +  A * (r-a)*(r-b)
+            Prp = (B + A*(2r - a - b))
+            r -= Pr / Prp
         end
-        throw(ConvergenceFailed("More than $maxeval iterations before convergence"))
-    catch ex
-        if isa(ex, StateConverged)
-            return ex.x0
-        else
-            rethrow(ex)
+        if a+2delta < r < b - 2delta
+            return r
         end
     end
-    throw(ConvergenceFailed("More than $maxeval iterations before convergence"))
-end
 
+    # try secant step
+    r =  secant_step(a, b, fa, fb)
 
-
-# calculate a scaled tolerance
-# based on algorithm on page 340 of [1]
-function tole(a::S, b::R, fa, fb, tol) where {S,R}
-    u = abs(fa) < abs(fb) ? abs(a) : abs(b)
-    T = promote_type(S,R)
-    2u*eps(one(T)) + tol
-end
-
-
-# bracket the root
-# inputs:
-#     - f: the function
-#     - a, b: the current bracket with a < b, f(a)f(b) < 0
-#     - c within (a,b): current best guess of the root
-#     - tol: desired accuracy
-#
-# if root is not yet found, return
-#     ab, bb, d
-# with:
-#     - [ab, bb] a new interval within [a, b] with f(ab)f(bb) < 0
-#     - d a point not inside [ab, bb]; if d < ab, then f(ab)f(d) > 0,
-#       and f(d)f(bb) > 0 otherwise
-#
-# if the root is found, throws a StateConverged instance with x0 set to the
-# root.
-#
-# based on algorithm on page 341 of [1]
-function bracket(f, a, fa, b, fb, c, fc, tol)
-    
-    if !(a <= c <= b)
-        error("c must be in (a,b)")
-    end
-    delta = 0.7*tole(a, b, fa, fb, tol)
-    if b - a <= 4delta
-        c = (a + b)/2
-        fc = f(c)
-    elseif c <= a + 2delta
-        c = a + 2delta
-        fc = f(c)
-    elseif c >= b - 2delta
-        c = b - 2delta
-        fc = f(c)
-    end
-    if iszero(fc)
-        throw(Roots.StateConverged(c))
-    elseif sign(fa)*sign(fc) < 0 
-        aa, faa = a, fa
-        bb, fbb = c, fc
-        db, fdb = b, fb
-    else
-        aa, faa = c, fc
-        bb, fbb = b, fb
-        db, fdb = a, fa
-    end
-    if bb - aa < 2*tole(aa, bb, faa, fbb, tol)
-        x0 = abs(faa) < abs(fbb) ? aa : bb
-        throw(Roots.StateConverged(x0))
-    end
-    aa, faa, bb, fbb, db, fdb
-end
-
-
-# take a secant step, if the resulting guess is very close to a or b, then
-# use bisection instead
-function secant_step(f, a::T, fa, b, fb) where {T}
-
-    c = a - fa/(fb - fa)*(b - a)
-    tol = 5*eps(one(a))
-    if isnan(c) || c <= a + abs(a)*tol || c >= b - abs(b)*tol
-        return a + (b - a)/2, f(a+(b-a)/2)
-    end
-    return c, f(c)
-end
-
-
-# approximate zero of f using quadratic interpolation
-# if the new guess is outside [a, b] we use a secant step instead
-# based on algorithm on page 330 of [1]
-function newton_quadratic(f, a, fa, b, fb, d, fd, k::Int)
-    B = (fb - fa)/(b - a)
-    A = ((fd - fb)/(d - b) - B)/(d - a)
-    if iszero(A)
-        return secant_step(f, a, fa, b, fb)
+    if a + 2delta < r < b - 2delta
+        return r 
     end
     
-    r = A*fa/oneunit(A*fa) > 0 ? a : b
-    for i = 1:k
-        r -= (fa + (B + A*(r - b))*(r - a))/(B + A*(2*r - a - b))
+    return _middle(a, b) # is in paper r + sgn * 2 * delta
+    
+end
+
+# state
+function init_state(M::A42, f, xs) 
+    u, v = promote(float(xs[1]), float(xs[2]))
+    if u > v
+        u, v = v, u
     end
-    if isnan(r) || (r <= a || r >= b)
-        r, fr = secant_step(f, a, fa, b, fb)
+    fu, fv = promote(f(u), f(v))
+
+    state = UnivariateZeroState(v, u, v, ## x1, x0, m 
+                                fv, fu, fv,
+                                0, 2,
+                                false, false, false, false,
+                                "")
+    
+    init_state!(state, M, f, (u,v), false)
+    state
+end
+
+# secant step, then bracket for initial setup
+function init_state!(state::UnivariateZeroState{T,S}, ::A42, f, xs::Union{Tuple, Vector}, compute_fx=true) where {T, S}
+
+    if !compute_fx
+        u, v = state.xn0, state.xn1
+        fu, fv = state.fxn0, state.fxn1
     else
-        fr = f(r)
+        u, v = promote(float(xs[1]), float(xs[2]))
+        if u > v
+            u, v = v, u
+        end
+        fu, fv = f(u), f(v)
+        state.fnevals = 2
+        isbracket(fu, fv) || throw(ArgumentError(bracketing_error))
     end
-    return r, fr
+
+    c::T = secant_step(u, v, fu, fv)
+    fc::S = f(c)
+    incfn(state)
+
+    init_state!(state, v, u, c, fv, fu, fc)
+    bracket!(state)
+
+    return nothing
 end
 
+# for A42, the defaults are reltol=eps(), atol=0; 20 evals and strict=true
+# this *basically* follows the tol in the paper (2|u|*rtol + atol)
+function init_options(::A42,
+                      state::UnivariateZeroState{T,S};
+                      xatol=missing,
+                      xrtol=missing,
+                      atol=missing,
+                      rtol=missing,
+                      maxevals::Int=15,
+                      maxfnevals::Int=typemax(Int)) where {T,S}
 
-# approximate zero of f using inverse cubic interpolation
-# if the new guess is outside [a, b] we use a quadratic step instead
-# based on algorithm on page 333 of [1]
-function ipzero(f, a, fa, b, fb, c, fc, d, fd)
+    strict=true
+    options = UnivariateZeroOptions(ismissing(xatol) ? zero(T) : xatol,       # unit of x
+                                    ismissing(xrtol) ? eps(one(T)) : xrtol,   # unitless
+                                    ismissing(atol)  ? zero(S) : atol,  # units of f(x)
+                                    ismissing(rtol)  ? zero(one(S)) : rtol,   # unitless
+                                    maxevals, maxfnevals, strict)
 
-    Q11 = (c - d)*fc/(fd - fc)
-    Q21 = (b - c)*fb/(fc - fb)
-    Q31 = (a - b)*fa/(fb - fa)
-    D21 = (b - c)*fc/(fc - fb)
-    D31 = (a - b)*fb/(fb - fa)
-    Q22 = (D21 - Q11)*fb/(fd - fb)
-    Q32 = (D31 - Q21)*fa/(fc - fa)
-    D32 = (D31 - Q21)*fc/(fc - fa)
-    Q33 = (D32 - Q22)*fa/(fd - fa)
-    c = a + (Q31 + Q32 + Q33)
-    if (c <= a) || (c >= b)
-        return newton_quadratic(f, a, fa, b, fb, d, fd, 3)
+    options
+end
+
+function init_options!(options::UnivariateZeroOptions{Q,R,S,T}, ::A42) where {Q, R, S, T}
+    options.xabstol = zero(Q)
+    options.xreltol = zero(one(R))
+    options.abstol = zero(S)
+    options.reltol = eps(one(T))
+    options.maxevals = 15
+    options.strict = true
+end
+
+function assess_convergence(method::A42, state::UnivariateZeroState{T,S}, options) where {T,S}
+
+    (state.stopped || state.x_converged || state.f_converged) && return true
+    if state.steps > options.maxevals
+        state.stopped = true
+        state.message *= "Too many steps taken. "
+        return true
     end
-    return c, f(c)
+
+    if state.fnevals > options.maxfnevals
+        state.stopped=true
+        state.message *= "Too many function evaluations taken. "
+        return true
+    end
+
+    for (x,fx) in ((state.xn0, state.fxn0), (state.xn1, state.fxn1), (state.m, state.fm))
+        if iszero(fx)
+            state.f_converged = true
+            state.xn1=x
+            state.fxn1=fx
+            state.message *= "Exact zero found. "
+            return true
+        end
+    end
+
+    a,b = state.xn0, state.xn1
+    tol = max(options.xabstol, max(abs(a),abs(b)) * options.xreltol)
+
+    if abs(b-a) <= 2tol
+        # pick smallest of a,b,m
+        u::T, fu::S = choose_smallest(a,b, state.fxn0, state.fxn1)
+        x, fx = choose_smallest(u, state.m, fu, state.fm)
+        state.xn1 = x
+        state.fxn1 = fx
+        state.x_converged = true
+        return true
+    end
+
+    return false
+end
+    
+function check_zero(::A42, state, c, fc)
+    if isnan(c)
+        state.stopped = true
+        state.xn1 = c
+        state.message *= "NaN encountered. "
+        return true
+    elseif isinf(c)
+        state.stopped = true
+        state.xn1 = c
+        state.message *= "Inf encountered. "
+        return true
+    elseif iszero(fc)
+        state.f_converged=true
+        state.message *= "Exact zero found. "
+        state.xn1 = c
+        state.fxn1 = fc
+        return true
+    end
+    return false
+end
+
+## 3, maybe 4, functions calls per step
+function update_state(M::A42, f, state::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
+    
+    a::T,b::T,d::T = state.xn0, state.xn1, state.m
+    fa::S,fb::S,fd::S = state.fxn0, state.fxn1, state.fm
+
+    mu = 0.5
+    an, bn = a, b
+    lambda = 0.7
+    tole = max(options.xabstol, max(abs(a),abs(b)) * options.xreltol)
+    delta = lambda * tole
+    
+    c::T = newton_quadratic(a, b, d, fa, fb, fd, 2, delta)
+    fc::S = f(c)
+    incfn(state)
+    check_zero(M, state, c, fc) && return nothing
+
+    a,b,d,fa,fb,fd = bracket(a,b,c,fa,fb,fc)
+    
+    c = newton_quadratic(a,b,d,fa,fb,fd, 3, delta)
+    fc = f(c)
+    incfn(state)    
+    check_zero(M, state, c, fc) && return nothing
+    
+    a, b, d, fa, fb, fd = bracket(a, b, c, fa, fb,fc)
+    
+    u::T, fu::S = choose_smallest(a, b, fa, fb)
+    c = u - 2 * fu * (b - a) / (fb - fa)
+    if abs(c - u) > 0.5 * (b - a)
+        c = _middle(a, b) 
+    end
+    fc = f(c)
+    incfn(state)    
+    check_zero(M, state, c, fc) && return nothing
+
+    ahat::T, bhat::T, dhat::T, fahat::S, fbhat::S, fdhat::S = bracket(a, b, c, fa, fb, fc)
+    if bhat - ahat < mu * (b - a) 
+        #a, b, d, fa, fb, fd = ahat, b, dhat, fahat, fb, fdhat
+        a, b, d, fa, fb, fd = ahat, bhat, dhat, fahat, fbhat, fdhat
+    else
+        m::T = _middle(ahat, bhat)
+        fm::S = f(m)
+        incfn(state)
+        a, b, d, fa, fb, fd = bracket(ahat, bhat, m, fahat, fbhat, fm)
+    end
+    state.xn0, state.xn1, state.m = a, b, d
+    state.fxn0, state.fxn1, state.fm = fa, fb, fd
+
+    return nothing
 end
 
 
-# floating point comparison function
-function almost_equal(x::T, y::T) where {T}
-    min_diff = oneunit(x) * realmin(float(x/oneunit(x)))*32
-    abs(x - y) < min_diff
-end
 
 
-# check that all interpolation values are distinct
-function distinct(a, f1, b, f2, d, f3, e, f4)
-    !(almost_equal(f1, f2) || almost_equal(f1, f3) || almost_equal(f1, f4) ||
-      almost_equal(f2, f3) || almost_equal(f2, f4) || almost_equal(f3, f4))
-end
+# original used this, when possible. Possible speed up
+# # approximate zero of f using inverse cubic interpolation
+# # if the new guess is outside [a, b] we use a quadratic step instead
+# # based on algorithm on page 333 of [1]
+# function ipzero(f, a, fa, b, fb, c, fc, d, fd)
+
+#     Q11 = (c - d)*fc/(fd - fc)
+#     Q21 = (b - c)*fb/(fc - fb)
+#     Q31 = (a - b)*fa/(fb - fa)
+#     D21 = (b - c)*fc/(fc - fb)
+#     D31 = (a - b)*fb/(fb - fa)
+#     Q22 = (D21 - Q11)*fb/(fd - fb)
+#     Q32 = (D31 - Q21)*fa/(fc - fa)
+#     D32 = (D31 - Q21)*fc/(fc - fa)
+#     Q33 = (D32 - Q22)*fa/(fd - fa)
+#     c = a + (Q31 + Q32 + Q33)
+#     if (c <= a) || (c >= b)
+#         return newton_quadratic(f, a, fa, b, fb, d, fd, 3)
+#     end
+#     return c, f(c)
+# end
+
 
 ## ----------------------------
 
