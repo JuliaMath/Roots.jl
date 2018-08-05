@@ -1,4 +1,5 @@
-__precompile__(true)
+VERSION < v"0.7.0-beta2.199" && __precompile__()
+
 module Roots
 
 
