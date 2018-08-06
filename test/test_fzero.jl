@@ -24,7 +24,7 @@ fn, xstar, x0, br = x -> x^5 - x - 1, 1.1673039782614187, 1.0, [1.0, 2.0]
 #@test abs(fzero(fn, x0, order=1, ftol=1e-2) - xstar) > 1e-5
 #@test abs(fzero(fn, x0, order=1, xtol=1e-2) - xstar) > 1e-10
 
-@test abs(Roots.a42(fn, br[1], br[2], xatol=1e-1) - xstar) > 1e-5
+@test abs(find_zero(fn, br, Roots.A42(), xatol=1e-1) - xstar) > 1e-5
 
 
 ## various tests

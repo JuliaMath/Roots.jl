@@ -133,7 +133,7 @@ is approximately equal to an endpoint using absolute tolerance `xatol`
 and relative tolerance `xrtol`. 
 
 When a zero tolerance is given and the values are not `Float64`
-values, this will call the `A42` method which has guaranteed convergence.
+values, this will call the `A42` method.
     
 """
 struct Bisection <: AbstractBisection end  # either solvable or A42
@@ -150,10 +150,8 @@ Trans. Math. Softw. 21, 327–344 (1995), DOI: 10.1145/210089.210111 .
 [link](http://www.ams.org/journals/mcom/1993-61-204/S0025-5718-1993-1192965-2/S0025-5718-1993-1192965-2.pdf)
 
 
-The default tolerances are: `xatol=zero(T)`, `xrtol=eps(T)`,
-`maxevals=15`, and `maxfnevals=typemax(Int)`. There is no check made
-using `atol`, `rtol` (for convergence in the `f(x)` direction.
-
+The default tolerances are: `xatol=zero(T)`, `xrtol=eps(T)`, `atol=zero(S)`, `rtol=eps(S)`,
+`maxevals=15`, and `maxfnevals=typemax(Int)`. 
 """
 mutable struct A42 <: AbstractBisection end
 
@@ -535,7 +533,7 @@ function init_options(::A42,
     options = UnivariateZeroOptions(ismissing(xatol) ? zero(T) : xatol,       # unit of x
                                     ismissing(xrtol) ? eps(one(T)) : xrtol,   # unitless
                                     ismissing(atol)  ? zero(S) : atol,  # units of f(x)
-                                    ismissing(rtol)  ? zero(one(S)) : rtol,   # unitless
+                                    ismissing(rtol)  ? eps(one(S)) : rtol,   # unitless
                                     maxevals, maxfnevals, strict)
 
     options
@@ -543,7 +541,7 @@ end
 
 function init_options!(options::UnivariateZeroOptions{Q,R,S,T}, ::A42) where {Q, R, S, T}
     options.xabstol = zero(Q)
-    options.xreltol = zero(one(R))
+    options.xreltol = eps(one(R))
     options.abstol = zero(S)
     options.reltol = eps(one(T))
     options.maxevals = 15
@@ -565,15 +563,30 @@ function assess_convergence(method::A42, state::UnivariateZeroState{T,S}, option
         return true
     end
 
-    for (x,fx) in ((state.xn0, state.fxn0), (state.xn1, state.fxn1), (state.m, state.fm))
-        if iszero(fx)
-            state.f_converged = true
-            state.xn1=x
-            state.fxn1=fx
+    # check f
+    u,fu = choose_smallest(state.xn0, state.xn1, state.fxn0, state.fxn1)
+    u, fu = choose_smallest(u, state.m, fu, state.fm)
+
+    if abs(fu) <= max(options.abstol, abs(u) * options.reltol)
+        state.f_converged = true
+        state.xn1=u
+        state.fxn1=fu
+        if iszero(fu)
             state.message *= "Exact zero found. "
-            return true
         end
+        return true
     end
+
+    
+    # for (x,fx) in ((state.xn0, state.fxn0), (state.xn1, state.fxn1), (state.m, state.fm))
+    #     if iszero(fx)
+    #         state.f_converged = true
+    #         state.xn1=x
+    #         state.fxn1=fx
+    #         state.message *= "Exact zero found. "
+    #         return true
+    #     end
+    # end
 
     a,b = state.xn0, state.xn1
     tol = max(options.xabstol, max(abs(a),abs(b)) * options.xreltol)
@@ -588,6 +601,8 @@ function assess_convergence(method::A42, state::UnivariateZeroState{T,S}, option
         return true
     end
 
+    
+    
     return false
 end
     

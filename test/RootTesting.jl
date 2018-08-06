@@ -201,7 +201,7 @@ end
 
 
 function run_benchmark_tests()
-    @printf "%s\n" run_tests((f,b) -> Roots.a42(f, b...), name="a42")
+    @printf "%s\n" run_tests((f,b) -> find_zero(f, b, Roots.A42()), name="a42")
     @printf "%s\n" run_tests((f,b) -> find_zero(f, b, Bisection()), name="Bisection")
     @printf "%s\n" run_tests((f,b) -> find_zero(f, b, FalsePosition()), name="FalsePosition")
 
