@@ -121,7 +121,8 @@ end
 @test (find_zero(x -> sin(x), [big(3), 4], Bisection()) |> sin) < 1e-70
 @test find_zero(x -> sin(x), [4,3], Bisection()) ≈ pi
 @test find_zero(x -> sin(x), [big(4),3], Bisection()) ≈ pi
-@test_throws ArgumentError  find_zero(x -> sin(x), 3.0, Bisection())
+@test find_zero(x -> Inf*sign(x-1.0), (-Inf, Inf)) ≈ 1
+#@test_throws ArgumentError  find_zero(x -> sin(x), 3.0, Bisection())
 
 @test find_zero(x -> cos(x) - x, [0, pi], FalsePosition()) ≈ 0.7390851332151607
 @test (find_zero(x -> sin(x), [big(3), 4], FalsePosition(), maxevals=100) |> sin) < 1e-70
@@ -203,8 +204,8 @@ end
 ## test tolerance arguments
 fn, xstar = x -> sin(x) - x + 1, 1.9345632107520243
 @test find_zero(fn, 20.0, Order2())  ≈ xstar   # needs 16 iterations, 33 fn evaluations
-@test abs(fn(find_zero(fn, 20.0, Order2(), abstol=1e-2)) - xstar) > 1e-12
-@test abs(fn(find_zero(fn, 20.0, Order2(), reltol=1e-2)) - xstar) > 1e-12
+@test abs(fn(find_zero(fn, 20.0, Order2(), atol=1e-2)) - xstar) > 1e-12
+@test abs(fn(find_zero(fn, 20.0, Order2(), rtol=1e-2)) - xstar) > 1e-12
 @test_throws Roots.ConvergenceFailed find_zero(fn, 20.0, Order2(), maxevals=5) 
 @test_throws Roots.ConvergenceFailed find_zero(fn, 20.0, Order2(), maxfnevals=10) 
 

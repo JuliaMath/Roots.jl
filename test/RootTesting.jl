@@ -1,6 +1,6 @@
 using Roots
 using ForwardDiff
-#D(f,n=1) = n > 1 ? D(D(f), n-1) : x -> ForwardDiff.derivative(f, float(x))
+D(f,n=1) = n > 1 ? D(D(f), n-1) : x -> ForwardDiff.derivative(f, float(x))
 import Base: show
 
 ## This set of tests is useful for benchmarking the number of function calls, failures, and max errors
@@ -209,12 +209,6 @@ function run_benchmark_tests()
     for m in [Order0(), Order1(), Order2(), Order5(), Order8(), Order16()]
         @printf "%s\n" run_tests((f, b) -> find_zero(f, mean(b), m), name="$m")
     end
-    
-    @printf "%s\n" run_tests((f, b) -> find_zero(f, D(f), mean(b), Order5()), name="Order5/D")
-    @printf "%s\n" run_tests((f, b) -> Roots.secant_method(f, b), name="secant_method")
-    @printf "%s\n" run_tests((f, b) -> Roots.dfree(f, mean(b)), name="dfree")    
-    @printf "%s\n" run_tests((f, b) -> newton(f, D(f), mean(b)), name="newton")
-    @printf "%s\n" run_tests((f, b) -> halley(f, D(f), D(f,2), mean(b)), name="halley")
 
     println("---- using BigFloat ----")
 

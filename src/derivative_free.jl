@@ -17,46 +17,68 @@ The basic idea is to use a secant step. If along the way a bracket is
 found, switch to bisection, using `Bisection` if possible, else
 `A42`.  If the secant step fails to decrease the function value, a
 quadratic step is used up to 3 times.
-    
-"""
-mutable struct Order0 <: AbstractSecant end
 
 """
+struct Order0 <: AbstractSecant end
+
+""" find_zero(y, 1.8s, order) 
     Order1()
 
-The `Order1()` method is an alias for `Secant` and performs a secant
-step. This method keeps two values in its state, `x_n` and `x_n1`. The
+The `Order1()` method is an alias for `Secant`. It specifies the
+[secant method](https://en.wikipedia.org/wiki/Secant_method).
+This method keeps two values in its state, `x_n` and `x_n1`. The
 updated point is the intersection point of x axis with the secant line
 formed from the two points. The secant method uses 1 function
-evaluation and has order `(1+sqrt(5))/2`.
+evaluation per step and has order `(1+sqrt(5))/2`.
 
 """
-mutable struct Secant <: AbstractSecant end
+struct Secant <: AbstractSecant end
 const Order1 = Secant
 
-function init_state(method::AbstractSecant, fs, x)
 
-    if isa(x, Vector) || isa(x, Tuple)
-        x0, x1 = x[1], x[2]
-        fx0, fx1 = fs(x0), fs(x1)        
-    else
-        # need an initial x0,x1 if two not specified
-        x0 = x
-        fx0 = fs(x0)        
-        stepsize = max(1/100, min(abs(fx0/oneunit(fx0)), abs(x0/oneunit(x0)/100)))
-        x1 = x0 + stepsize*oneunit(x0)
-        x0, x1, fx0, fx1  = x1, x0, fs(x1), fx0 # switch        
-    end
+function init_state(method::AbstractSecant, fs, x::Union{Tuple, Vector})
+    x0, x1 = promote(float(x[1]), float(x[2]))
+    fx0, fx1 = fs(x0), fs(x1)        
+    UnivariateZeroState(x1, x0,
+                        missing, #oneunit(x1) * (0*x1)/(0*x1),
+                        
+                        fx1, fx0, 0, 2,
+                        false, false, false, false, "")
+end
 
-    state = UnivariateZeroState( promote(x1, x0)...,
-                                 promote(fx1, fx0)...,
-                                 0, 2,
-                                 false, false, false, false,
-                                 "")
-    state
+function init_state(method::AbstractSecant, fs, x::Number)
+
+    # need an initial x0,x1 if two not specified
+    x1 = float(x)
+    fx1 = fs(x1)
+
+    h = eps(one(real(x1)))^(1/3)
+    dx = h*oneunit(x1) + abs(x1)*h^2 # adjust for if eps(x1) > h
+    x0 = x1 + dx
+    fx0 = fs(x0)
+    
+    UnivariateZeroState(x1, x0,
+                        missing, #oneunit(x1) * (0*x1)/(0*x1),
+                        fx1, fx0, 0, 2,
+                        false, false, false, false, "")
 
 end
 
+function init_state!(state::UnivariateZeroState{T, S}, ::AbstractSecant, f, x::Union{Tuple, Vector}) where {T, S}
+    x0,x1 = promote(float.(x))
+    fx0, fx1 = promote(f(x0), f(x1))
+    init_state!(state, x0, x1, missing, fx0, fx1)
+end
+
+function init_state!(state::UnivariateZeroState{T, S}, ::AbstractSecant, fs, x::Number) where {T, S}
+    x1 = float(x)
+    h = eps(one(real(x1)))^(1/3)
+    dx = h*oneunit(x1) + abs(x1)*h^2 # adjust for if eps(x1) > h
+    x0 = x1 + dx
+    fx0, fx1 = promote(fs(x0), fs(x1))
+    
+    init_state!(state, x0, x1, missing, fx0, fx1)
+end
 ##################################################
 
 
@@ -72,21 +94,32 @@ end
 # * `f(x) == 0.0` or
 # * `f(prevfloat(x)) * f(nextfloat(x)) < 0`.
 # if a bracket is found that can be done, otherwise secant step is used
+
+## in Order0, we run bisection if a bracketing interval is found
+## this is meant to be as speedy as possible
+function _run_bisection(fs, options, state)
+    ## could do hybrid method here, where we update state and options, but
+    ## that proves slower, as bisection64 is more efficient.
+    xn0, xn1 = state.xn0, state.xn1
+    state.xn1 = bisection(fs, xn0, xn1)
+    state.x_converged = true
+    options.strict = true # prevent check on f(xn)
+    state.message *= "Used bisection for last step, evaluation counts are not accurate. "
+end
+
 function update_state(method::Order0, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
 
     alpha, beta = o.xn0, o.xn1
     falpha, fbeta = o.fxn0, o.fxn1
-
-    incsteps(o)
 
     if sign(falpha) * sign(fbeta) < 0.0
         _run_bisection(fs, options, o)
         return nothing
     end
 
-    gamma, issue = guarded_secant_step(alpha, beta, falpha, fbeta)
+    gamma::T, issue = guarded_secant_step(alpha, beta, falpha, fbeta)
 
-    fgamma = fs(gamma); incfn(o)
+    fgamma::S = fs(gamma); incfn(o)
 
     if sign(fgamma)*sign(fbeta) < 0.0
         o.xn0, o.xn1 = gamma, beta
@@ -133,9 +166,9 @@ function update_state(method::Order0, fs, o::UnivariateZeroState{T,S}, options::
             return nothing
         end
 
-        theta, issue = guarded_secant_step(beta, gamma, fbeta, fgamma)
+        theta::T, issue = guarded_secant_step(beta, gamma, fbeta, fgamma)
         
-        ftheta = fs(theta); incfn(o)
+        ftheta::S = fs(theta); incfn(o)
 
         if sign(ftheta) * sign(fbeta) < 0
             o.xn0, o.xn1 = beta, theta
@@ -152,29 +185,31 @@ function update_state(method::Order0, fs, o::UnivariateZeroState{T,S}, options::
     return nothing
 end
 
+function show_tracks(l::Tracks, M::Order0)
+    println("Tracks not recorded for Order0()")
+    println("")
+end
+
 ##################################################
 
 ## Secant
 ## https://en.wikipedia.org/wiki/Secant_method
-function update_state(method::Secant, fs, o, options) 
 
-    incsteps(o)
+function update_state(method::Secant, fs, o::UnivariateZeroState{T,S}, options)  where {T, S}
 
-    fp, issue = _fbracket(o.xn0, o.xn1, o.fxn0, o.fxn1)
-    if issue
-        o.stopped = true
-        o.message = "Derivative approximation had issues"
-        return
-    end
+    if (o.fxn0 == o.fxn1) || (o.xn0 == o.xn1) 
+         o.stopped = true
+         o.message = "Derivative approximation had issues"
+         return
+     end
 
-    o.xn0 = o.xn1
-    o.fxn0 = o.fxn1
-
-    o.xn1 = o.xn1 -  o.fxn1 / fp
-    o.fxn1 = fs(o.xn1)    
+    dx = o.fxn1 * (o.xn1 - o.xn0) / (o.fxn1 - o.fxn0)
+    o.xn0, o.xn1 = o.xn1, o.xn1 - dx
+    o.fxn0, o.fxn1 = o.fxn1, fs(o.xn1)
     incfn(o)
-
+    
     nothing
+
 end
 
 
@@ -183,7 +218,7 @@ end
 
 ### Steffensen
 ## https://en.wikipedia.org/wiki/Steffensen's_method#Simple_description
-mutable struct Steffensen <: AbstractUnivariateZeroMethod
+struct Steffensen <: AbstractUnivariateZeroMethod
 end
 
 """
@@ -191,7 +226,7 @@ end
 
 The quadratically converging
 [Steffensen](https://en.wikipedia.org/wiki/Steffensen's_method#Simple_description)
-method is used for the derivative free `Order2()` algorithm. Unlike
+method is used for the derivative-free `Order2()` algorithm. Unlike
 the quadratically converging Newton's method, no derivative is
 necessary, though like Newton's method, two function calls per step
 are. This algorithm is more sensitive than Newton's method to poor
@@ -200,12 +235,11 @@ initial guesses.
 """    
 const Order2 = Steffensen
 
-function update_state(method::Steffensen, fs, o, options) 
+function update_state(method::Steffensen, fs, o::UnivariateZeroState{T,S}, options) where {T, S}
+    
+    wn::T = o.xn1 + steff_step(o.xn1, o.fxn1)
 
-    incsteps(o)
-
-    wn = o.xn1 + steff_step(o.xn1, o.fxn1)
-    fwn = fs(wn)
+    fwn::S = fs(wn)
     incfn(o)
 
     fp, issue = _fbracket(o.xn1, wn, o.fxn1, fwn)
@@ -234,23 +268,24 @@ steffenson(f, x0; kwargs...) = find_zero(f, x0, Steffensen(); kwargs...)
 """
     Order5()
 
-Implements an algorithm
-from *A New Fifth Order Derivative Free Newton-Type Method for Solving Nonlinear Equations*
-by Manoj Kumar, Akhilesh Kumar Singh, and Akanksha,
-Appl. Math. Inf. Sci. 9, No. 3, 1507-1513 (2015). Four function calls per step are needed.
+Implements an order 5 algorithm from *A New Fifth Order Derivative
+Free Newton-Type Method for Solving Nonlinear Equations* by Manoj
+Kumar, Akhilesh Kumar Singh, and Akanksha, Appl. Math. Inf. Sci. 9,
+No. 3, 1507-1513 (2015), DOI: 10.12785/amis/090346. Four function
+calls per step are needed.
 
 """    
-mutable struct Order5 <: AbstractUnivariateZeroMethod end
+struct Order5 <: AbstractUnivariateZeroMethod end
+
 
 ## If we have a derivative, we have this
-function update_state(method::Order5, fs::Union{FirstDerivative,SecondDerivative}, o, options) 
+function update_state(method::Order5, fs::Union{FirstDerivative,SecondDerivative},
+                      o::UnivariateZeroState{T,S}, options)  where {T, S}
 
 
     xn, fxn = o.xn1, o.fxn1
 
-    incsteps(o)
-
-    fpxn = fs(xn, 1)
+    fpxn::S = fs(xn, 1)
     incfn(o)
 
     if isissue(fpxn)
@@ -258,8 +293,8 @@ function update_state(method::Order5, fs::Union{FirstDerivative,SecondDerivative
         return
     end
 
-    yn = xn - fxn / fpxn
-    fyn, fpyn = fs(yn), fs(yn, 1)
+    yn::T = xn - fxn / fpxn
+    fyn::S, fpyn::S = fs(yn), fs(yn, 1)
     incfn(o, 2)
 
     if isissue(fpyn)
@@ -270,8 +305,8 @@ function update_state(method::Order5, fs::Union{FirstDerivative,SecondDerivative
     end
 
 
-    zn = xn  - (fxn + fyn) / fpxn
-    fzn = fs(zn)
+    zn::T = xn  - (fxn + fyn) / fpxn
+    fzn::S = fs(zn)
     incfn(o, 1)
 
     xn1 = zn - fzn / fpyn
@@ -285,16 +320,14 @@ function update_state(method::Order5, fs::Union{FirstDerivative,SecondDerivative
 end
 
 
-function update_state(method::Order5, fs, o, options)
+function update_state(method::Order5, fs, o::UnivariateZeroState{T,S}, options) where {T, S}
 
     xn = o.xn1
     fxn = o.fxn1
 
-    incsteps(o)
+    wn::T = o.xn1 + steff_step(o.xn1, o.fxn1)
 
-    wn = o.xn1 + steff_step(o.xn1, o.fxn1)
-
-    fwn = fs(wn)
+    fwn::S = fs(wn)
     incfn(o)
 
     fp, issue = _fbracket(o.xn1, wn, o.fxn1, fwn)
@@ -306,13 +339,13 @@ function update_state(method::Order5, fs, o, options)
         return
     end
 
-    yn = o.xn1 - o.fxn1 / fp
-    fyn = fs(yn)
+    yn::T = o.xn1 - o.fxn1 / fp
+    fyn::S = fs(yn)
     incfn(o)
 
 
-    zn = xn - (fxn + fyn) / fp
-    fzn = fs(zn)
+    zn::T = xn - (fxn + fyn) / fp
+    fzn::S = fs(zn)
     incfn(o)
 
     fp, issue = _fbracket_ratio(yn, o.xn1, wn, fyn, o.fxn1, fwn)
@@ -336,27 +369,26 @@ end
 ##################################################
 
 
-
+## cf also: https://doi.org/10.1515/tmj-2017-0049
 """
     Order8()
 
-Implements an algorithm from 
-*New Eighth-Order Derivative-Free Methods for Solving Nonlinear Equations*
-by Rajinder Thukral,
-International Journal of Mathematics and Mathematical Sciences
-Volume 2012 (2012), Article ID 493456, 12 pages. Four function calls per step are required.
+Implements an eighth-order algorithm from *New Eighth-Order
+Derivative-Free Methods for Solving Nonlinear Equations* by Rajinder
+Thukral, International Journal of Mathematics and Mathematical
+Sciences Volume 2012 (2012), Article ID 493456, 12 pages DOI:
+10.1155/2012/493456. Four function calls per step are required.
+    
 """
-mutable struct Order8 <: AbstractUnivariateZeroMethod
+struct Order8 <: AbstractUnivariateZeroMethod
 end
 
-function update_state(method::Order8, fs, o, options) 
+function update_state(method::Order8, fs, o::UnivariateZeroState{T,S}, options) where {T, S}
 
     xn = o.xn1
     fxn = o.fxn1
-    incsteps(o)
-    S = eltype(fxn)
 
-    wn = xn + steff_step(xn, fxn)
+    wn::T = xn + steff_step(xn, fxn)
     fwn::S = fs(wn)
     incfn(o)
 
@@ -365,21 +397,20 @@ function update_state(method::Order8, fs, o, options)
         o.fxn0,o.fxn1 = fxn, fwn
         o.stopped = true
         o.message = "issue with Steffensen step fwn"
-        return
+        return 
     end
 
 
 
     fp, issue = _fbracket(xn, wn, fxn, fwn)
-    issue && return (xn, true)
 
     if issue
         o.stopped = true
         o.message = "issue with divided difference f[xn, wn]"
-        return
+        return 
     end
 
-    yn = xn - fxn / fp
+    yn::T = xn - fxn / fp
     fyn::S = fs(yn)
     incfn(o)
 
@@ -439,17 +470,14 @@ other methods when using `Float64` values, but may be useful for
 solving over `BigFloat`.
 
 """
-mutable struct Order16 <: AbstractUnivariateZeroMethod
+struct Order16 <: AbstractUnivariateZeroMethod
 end
 
-function update_state(method::Order16, fs, o, options) 
+function update_state(method::Order16, fs, o::UnivariateZeroState{T,S}, options) where {T, S}
     xn = o.xn1
     fxn = o.fxn1
-    S = eltype(fxn)
 
-    incsteps(o)
-
-    wn = xn + steff_step(xn, fxn)
+    wn::T = xn + steff_step(xn, fxn)
     fwn::S = fs(wn)
     incfn(o)
 
@@ -464,7 +492,7 @@ function update_state(method::Order16, fs, o, options)
         return
     end
 
-    yn = xn - fxn / fp
+    yn::T = xn - fxn / fp
     fyn::S = fs(yn)
     incfn(o)
 

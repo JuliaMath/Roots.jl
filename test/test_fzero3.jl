@@ -68,7 +68,7 @@ end
 
 ## make a graphic comparing values
 function run_robustness_test(bigfloats=false)
-    orders = [0,1,2,5,8,16]
+    orders = [Order0(),Order1(),Order2(),Order5(),Order8(),Order16()]
     N = length(orders) + 1
     k,n = length(pathological), 50
     m = ["" for i=1:(N + 2)*k, j=1:n]
@@ -112,16 +112,16 @@ function run_robustness_test(bigfloats=false)
             hits = 0
             print(io, marks[j], " ")
             for k in 1:n
-                try
-                    F = CallableFunction(f1, 0)
-                    xstar = fzero(F, xs[k], order=orders[j-1], maxeval=100)
-                    push!(calls, F.n)
-                    val = howgood(f1, xstar)
-                    val in [".", "~"] && (hits += 1)
-                    print(io, val)
-                catch e
-                    print(io, howgood(f1, NaN))
-                end
+                M = orders[j-1]
+                F = CallableFunction(f1, 0)
+                state = Roots.init_state(M, F, xs[k])
+                options = Roots.init_options(M, state)
+                tracks = Roots.NullTracks()
+                xstar = find_zero(M, F, options, state, tracks)
+                push!(calls, F.n)
+                val = howgood(f1, xstar)
+                val in [".", "~"] && (hits += 1)
+                print(io, val)
             end
             print(String(take!(io)))
             print(" h=$hits n = $(sum(calls)) max=$(maximum(calls))")

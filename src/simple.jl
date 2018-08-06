@@ -12,7 +12,7 @@
 #
 
 """
-    bisection(f, a, b, [xatol, xrtol])
+    bisection(f, a, b; [xatol, xrtol])
 
 Performs bisection method to find a zero of a continuous
 function. 
@@ -47,7 +47,7 @@ function bisection(f, a, b; xatol=zero(float(a)), xrtol=zero(one(float(a))))
     
     sign(f(u)) * sign(f(v)) < 0 || throw(ArgumentError("Interval [a,b] is not a bracket. f(a) and f(b) must have opposite signs"))
 
-    zero_tolerance =  (xatol <= oneunit(a) * eps(one(u))^2 && xrtol <= eps(one(u)))
+    zero_tolerance =  iszero(max(xatol, oneunit(a) * xrtol))
     _bisect(Val{zero_tolerance},  f, u, v, xatol, xrtol)
 end
 
@@ -107,55 +107,75 @@ The inital values can be specified as a pair of 2, as in `(a,b)` or
 `[a,b]`, or as a single value, in which case a value of `b` is chosen.
 
 The algorithm returns m when `abs(fm) <= max(atol, abs(m) * rtol)`.
-If this doesn't occur before `maxevals` steps or the algorithm encounters
-an issue, a value of `NaN` is returned
+If this doesn't occur before `maxevals` steps or the algorithm
+encounters an issue, a value of `NaN` is returned. If too many steps
+are taken, the current value is checked to see if there is a sign
+change for neighboring floating point values.
 
 The `Order1` method for `find_zero` also implements the secant
 method. This one will be faster, as there are fewer setup costs.
 
-Examples
+Examples:
+    
 ```julia
 Roots.secant_method(sin, (3,4))
 Roots.secant_method(x -> x^5 -x - 1, 1.1)
 ```
+
+Note:
+    
+This function will specialize on the function `f`, so that the inital
+call can take more time than a call to the `Order1()` method, though
+subsequent calls will be much faster.  Using `FunctionWrappers.jl` can
+ensure that the initial call is also equally as fast as subsequent
+ones.
+    
 """
-function secant_method(f, xs; atol=0.0, rtol=8eps(), maxevals=100)
+function secant_method(f, xs; atol=zero(float(real(first(xs)))), rtol=8eps(one(float(real(first(xs))))), maxevals=100)
 
     if length(xs) == 1 # secant needs x0, x1; only x0 given
         a = float(xs[1])
         fa = f(a)
-        db = min(abs(fa/oneunit(fa)), sqrt(eps(one(a))))
-        b = float(a + db * oneunit(a))
+
+        h = eps(one(real(a)))^(1/3)
+        da = h*oneunit(a) + abs(a)*h^2 # adjust for if eps(a) > h
+        b = a + da
+        
     else
         a, b = promote(float(xs[1]), float(xs[2]))
     end
-
     secant(f, a, b, atol, rtol, maxevals)
 end
 
 
-function secant(f, a::T, b::T, atol=zero(T), rtol=8eps(T), maxevals=100) where {T <: AbstractFloat}
+function secant(f, a::T, b::T, atol=zero(T), rtol=8eps(T), maxevals=100) where {T}
     nan = (0a)/(0a)
     cnt = 0
 
     fa, fb = f(a), f(b)
     fb == fa && return nan
 
-    uatol = atol / oneunit(atol) * oneunit(a)
-    adjustunit = oneunit(fb)/oneunit(b)
-    
+    uatol = atol / oneunit(atol) * oneunit(real(a))
+    adjustunit = oneunit(real(fb))/oneunit(real(b))
+
     while cnt < maxevals
         m = b - (b-a)*fb/(fb - fa)
         fm = f(m)
 
         iszero(fm) && return m
+        isnan(fm) && return nan
         abs(fm) <= adjustunit * max(uatol, abs(m) * rtol) && return m
-        fm == fb && return nan
+        if fm == fb
+            sign(fm) * sign(f(nextfloat(m))) <= 0 && return m
+            sign(fm) * sign(f(prevfloat(m))) <= 0 && return m            
+            return nan
+        end
         
         a,b,fa,fb = b,m,fb,fm
 
         cnt += 1
     end
+
     return nan
 end 
 
@@ -204,8 +224,10 @@ function dfree(f, xs)
     if length(xs) == 1
         a = float(xs[1])
         fa = f(a)
-        db = min(abs(fa/oneunit(fa)), sqrt(eps(one(a))))
-        b = float(a + db * oneunit(a))
+
+        h = eps(one(a))^(1/3)
+        da = h*oneunit(a) + abs(a)*h^2 # adjust for if eps(a) > h
+        b = float(a + da)
         fb = f(b)
     else
         a, b = promote(float(xs[1]), float(xs[2]))
@@ -239,7 +261,7 @@ function dfree(f, xs)
             gamma = b + sign(gamma-b) * 100 * abs(b-a)  ## too big
         end
         fgamma = f(gamma)
-
+        
         # change sign
         if sign(fgamma) * sign(fb) < 0
             return bisection(f, gamma, b)

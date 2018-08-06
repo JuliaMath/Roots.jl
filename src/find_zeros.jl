@@ -13,26 +13,30 @@ function _fz(f, a, b, no_pts, k=4)
     zs
 end
 
-function _fz!(zs, f, a, b, no_pts, k=4)
-    
+function _fz!(zs, f, a::T, b, no_pts, k=4) where {T}
+
     pts = range(a, stop=b, length=(no_pts-1)*k+1)
-    n = length(pts)
+    n::Int = length(pts)
 
     fs = f.(pts)
     sfs = sign.(fs)
 
-    u = first(pts)  # keep track of bigger interval
+    u::T = first(pts)  # keep track of bigger interval
     found_bisection_zero = false
 
     for (i,x) in enumerate(pts[1:end])
         q,r = divrem(i-1, k)
         
         if i > 1 && iszero(r)
-            v = x
+            v::T = x
             if !found_bisection_zero
-                rt = dfree(f, u+(v-u)/2)
-                if !isnan(rt) && u < rt <= v
-                    push!(zs, rt)
+                try
+                    p1::T = identify_starting_point(u, v, sfs[(i-k):i])
+                    rt::T = dfree(f, p1)
+                    if !isnan(rt) && u < rt <= v
+                        push!(zs, rt)
+                    end
+                catch err
                 end
             end
             u = v
@@ -45,7 +49,7 @@ function _fz!(zs, f, a, b, no_pts, k=4)
                 push!(zs, pts[i+1])
             elseif  sfs[i] * sfs[i+1] < 0
                 found_bisection_zero = true
-                rt = find_zero(f, (x, pts[i+1]), Bisection())
+                rt = bisection(f, x, pts[i+1])
                 push!(zs, rt)
             end
         end
@@ -77,7 +81,7 @@ function find_non_zero(f, a::T, barrier, xatol, xrtol, atol, rtol) where {T}
     sgn = barrier > a ? 1 : -1 
     ctr = 0
     x = a + 2^ctr*sgn*xtol
-    while !_non_zero(f(x),x, atol, rtol)
+    while !_non_zero(float(f(x)), x, atol, rtol)
         ctr += 1
         x += 2^ctr*sgn*xtol
         ((sgn > 0 && x > barrier) || (sgn < 0 && x < barrier)) && return nan
@@ -104,7 +108,10 @@ end
 
 
 # adjust what we mean by x1 ~ x2 for purposes of adding a new zero
-approx_close(z1, z2, xatol, xrtol) = isapprox(z1, z2, atol=oneunit(xatol) * (_unitless(xatol))^(1/2), rtol=sqrt(xrtol))
+function approx_close(z1, z2, xatol, xrtol)
+    tol = max(sqrt(xatol), max(abs(z1), abs(z2)) * sqrt(xrtol))
+    abs(z1 - z2) < tol
+end
 
 # is proposed not near xs? (false and we add proposed)
 function not_near(proposed, xs, xatol, xrtol)
@@ -142,7 +149,7 @@ find_zeros(x -> exp(x) - x^4, -5, 20)        # a few well-spaced zeros
 find_zeros(x -> sin(x^2) + cos(x)^2, 0, 10)  # many zeros
 find_zeros(x -> cos(x) + cos(2x), 0, 4pi)    # mix of simple, non-simple zeros
 f(x) = (x-0.5) * (x-0.5001) * (x-1)          # nearby zeros
-find_zeros(f, 0,2)
+find_zeros(f, 0, 2)
 f(x) = (x-0.5) * (x-0.5001) * (x-4) * (x-4.001) * (x-4.2) 
 find_zeros(f, 0, 10)    
 f(x) = (x-0.5)^2 * (x-0.5001)^3 * (x-4) * (x-4.001) * (x-4.2)^2  # hard to identify    
@@ -212,7 +219,7 @@ function find_zeros(f, a, b; no_pts = 12, k=8,
     # set tolerances if not specified
     fa0 = f(a0)
     d = Dict(kwargs)
-    xatol = get(d, :xatol, oneunit(a) * eps(one(a0))^(4/5))
+    xatol = get(d, :xatol, oneunit(a0) * eps(one(a0))^(4/5))
     xrtol = get(d, :xrtol, eps(one(a0)))
     atol  = get(d, :atol,  eps((fa0)))
     rtol  = get(d, :rtol,  eps(one(fa0)))
