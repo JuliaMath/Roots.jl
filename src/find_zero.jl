@@ -38,10 +38,10 @@ abstract type  AbstractUnivariateZeroState end
 mutable struct UnivariateZeroState{T,S} <: AbstractUnivariateZeroState where {T,S}
     xn1::T
     xn0::T
-    m::T # Union{T, Missing}?
+    m::T
     fxn1::S
     fxn0::S
-    fm::S  # Union{S, Missing}?
+    fm::S
     steps::Int
     fnevals::Int
     stopped::Bool             # stopped, butmay not have converged
@@ -50,8 +50,8 @@ mutable struct UnivariateZeroState{T,S} <: AbstractUnivariateZeroState where {T,
     convergence_failed::Bool
     message::String
 end
-incfn(o::UnivariateZeroState, k=1)    = o.fnevals += k
-incsteps(o::UnivariateZeroState, k=1) = o.steps += k
+incfn(o::AbstractUnivariateZeroState, k=1)    = o.fnevals += k
+incsteps(o::AbstractUnivariateZeroState, k=1) = o.steps += k
 
 # initialize state for most methods
 function init_state(method::Any, fs, x)
@@ -498,9 +498,9 @@ find_zero(f, x0::Tuple; kwargs...) = find_zero(f, x0, Bisection(); kwargs...)
 function find_zero(M::AbstractUnivariateZeroMethod,
                    F,
                    options::UnivariateZeroOptions,
-                   state::UnivariateZeroState{T,S},
+                   state::AbstractUnivariateZeroState,
                    l::AbstractTracks=NullTracks()
-                   )  where {T<:Number, S<:Number}
+                   )  #where {T<:Number, S<:Number}
 
 
     log_step(l, M, state, :init)

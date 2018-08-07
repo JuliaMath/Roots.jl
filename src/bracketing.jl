@@ -138,6 +138,7 @@ values, this will call the `A42` method.
 """
 struct Bisection <: AbstractBisection end  # either solvable or A42
 struct BisectionExact <: AbstractBisection end
+abstract type AbstractAlefeldPotraShi <: AbstractBisection end
 
 """
     Roots.A42()
@@ -147,13 +148,13 @@ a provided interval [a, b], without requiring derivatives. It is based
 on algorithm 4.2 described in: 1. G. E. Alefeld, F. A. Potra, and
 Y. Shi, "Algorithm 748: enclosing zeros of continuous functions," ACM
 Trans. Math. Softw. 21, 327–344 (1995), DOI: 10.1145/210089.210111 .
-[link](http://www.ams.org/journals/mcom/1993-61-204/S0025-5718-1993-1192965-2/S0025-5718-1993-1192965-2.pdf)
 
 
-The default tolerances are: `xatol=zero(T)`, `xrtol=eps(T)`, `atol=zero(S)`, `rtol=eps(S)`,
-`maxevals=15`, and `maxfnevals=typemax(Int)`. 
+The default tolerances are: `xatol=zero(T)`, `xrtol=2eps(one(T))`,
+`atol=zero(S)`, `rtol=zero(one(S))`, `maxevals=45`, and
+
 """
-mutable struct A42 <: AbstractBisection end
+struct A42 <: AbstractAlefeldPotraShi end
 
 ## tracks for bisection, different, we show bracketing interval
 function log_step(l::Tracks, M::AbstractBisection, state)
@@ -215,7 +216,7 @@ function init_options(::M,
                       atol=missing,
                       rtol=missing,
                       maxevals::Int=typemax(Int),
-                      maxfnevals::Int=typemax(Int)) where {M <: Union{Bisection, BisectionExact,  A42}, T, S}
+                      maxfnevals::Int=typemax(Int)) where {M <: Union{Bisection, BisectionExact}, T, S}
 
     ## Where we set defaults
     x1 = real(oneunit(state.xn1))
@@ -313,7 +314,7 @@ function assess_convergence(method::Union{Bisection}, state::UnivariateZeroState
    
     state.x_converged && return true
 
-    x0, x1, m::T = state.xn0, state.xn1, state.m
+    x0, x1, m::T = state.xn0, state.xn1, state.m[1]
 
     if !(x0 < m < x1)
         state.x_converged = true
@@ -336,7 +337,7 @@ function assess_convergence(method::BisectionExact, state::UnivariateZeroState{T
 
     state.x_converged && return true
     
-    x0, m::T, x1 = state.xn0, state.m, state.xn1
+    x0, m::T, x1 = state.xn0, state.m[1], state.xn1
 
     x0 < m < x1 && return false
 
@@ -418,17 +419,6 @@ end
 # assume fc != 0
 ## return a1,b1,d with a < a1 <  < b1 < b, d not there
 ## 
-@inline function bracket!(state) #a,b,c, fa, fb, fc)
-    if isbracket(state.fxn0, state.fm)
-        # switch b, c
-        state.xn1, state.m = state.m, state.xn1
-        state.fxn1, state.fm = state.fm, state.fxn1
-    else
-        # switch a, c
-        state.xn0,  state.m = state.m, state.xn0
-        state.fxn0, state.fm = state.fm, state.fxn0
-    end
-end
 
 @inline function bracket(a,b,c, fa, fb, fc)
 
@@ -441,10 +431,43 @@ end
     end
 end
 
+#
+function take_step(a::T, b, d, ee, fa, fb, fd, fe, k, delta=zero(T)) where {T}
+
+    fs = (fa, fb, fd, fe)
+
+    r = Inf*a
+
+    if !any.(fs[i] == fs[j] for i in 1:4, j in 1:4 if i < j)
+        r = ipzero(a,b,d,ee, fa, fb,fd,fe, delta)
+        (a + 2delta < r < b - 2delta) && return r
+    end
+
+    r = newton_quadratic(a,b,d,fa,fb,fd, 3, delta)
+end
+
+function ipzero(a::T, b, c, d, fa, fb, fc, fd, delta=zero(T)) where {T}
+    Q11 = (c - d)*fc/(fd - fc)
+    Q21 = (b - c)*fb/(fc - fb)
+    Q31 = (a - b)*fa/(fb - fa)
+    D21 = (b - c)*fc/(fc - fb)
+    D31 = (a - b)*fb/(fb - fa)
+    Q22 = (D21 - Q11)*fb/(fd - fb)
+    Q32 = (D31 - Q21)*fa/(fc - fa)
+    D32 = (D31 - Q21)*fc/(fc - fa)
+    Q33 = (D32 - Q22)*fa/(fd - fa)
+    c = a + (Q31 + Q32 + Q33)
+
+    (a + 2delta < c < b - 2delta) && return c
+    
+    newton_quadratic(a,b,d,fa,fb,fd, 3, delta)
+    
+end
+
 # return c in (a+delta, b-delta)
 # adds part of `bracket` from paper with `delta`
 function newton_quadratic(a::T, b, d, fa, fb, fd, k::Int, delta=zero(T)) where {T}
-
+    
     A = f_abd(a,b,d,fa,fb,fd)
     r = isbracket(A,fa) ? b : a
     
@@ -462,28 +485,44 @@ function newton_quadratic(a::T, b, d, fa, fb, fd, k::Int, delta=zero(T)) where {
             return r
         end
     end
-
     # try secant step
     r =  secant_step(a, b, fa, fb)
 
     if a + 2delta < r < b - 2delta
         return r 
     end
-    
+
     return _middle(a, b) # is in paper r + sgn * 2 * delta
     
 end
 
-# state
-function init_state(M::A42, f, xs) 
+# # state need a,b,c,d,fa, fb,fc,fd
+ mutable struct APSZeroState{T,S} <: AbstractUnivariateZeroState where {T,S}
+    xn1::T
+    xn0::T
+    m::Vector{T}
+    fxn1::S
+    fxn0::S
+    fm::Vector{S}
+    steps::Int
+    fnevals::Int
+    stopped::Bool             # stopped, butmay not have converged
+    x_converged::Bool         # converged via |x_n - x_{n-1}| < ϵ
+    f_converged::Bool         # converged via |f(x_n)| < ϵ
+    convergence_failed::Bool
+    message::String
+end
+
+
+function init_state(M::AbstractAlefeldPotraShi, f, xs) 
     u, v = promote(float(xs[1]), float(xs[2]))
     if u > v
         u, v = v, u
     end
     fu, fv = promote(f(u), f(v))
-
-    state = UnivariateZeroState(v, u, v, ## x1, x0, m 
-                                fv, fu, fv,
+    isbracket(fu, fv) || throw(ArgumentError(bracketing_error))
+    state = APSZeroState(v, u, [v, v], ## x1, x0, d, [ee]
+                                fv, fu, [fv,fv], ## fx1, fx0, d, [fe]
                                 0, 2,
                                 false, false, false, false,
                                 "")
@@ -493,62 +532,67 @@ function init_state(M::A42, f, xs)
 end
 
 # secant step, then bracket for initial setup
-function init_state!(state::UnivariateZeroState{T,S}, ::A42, f, xs::Union{Tuple, Vector}, compute_fx=true) where {T, S}
+function init_state!(state::APSZeroState{T,S}, ::AbstractAlefeldPotraShi, f, xs::Union{Tuple, Vector}, compute_fx=true) where {T, S}
 
     if !compute_fx
-        u, v = state.xn0, state.xn1
-        fu, fv = state.fxn0, state.fxn1
+        a, b = state.xn0, state.xn1
+        fa, fb = state.fxn0, state.fxn1
     else
-        u, v = promote(float(xs[1]), float(xs[2]))
-        if u > v
-            u, v = v, u
+        a, b = promote(float(xs[1]), float(xs[2]))
+        if a > b
+            a, b = b, a
         end
-        fu, fv = f(u), f(v)
+        fa, fb = f(a), f(b)
         state.fnevals = 2
-        isbracket(fu, fv) || throw(ArgumentError(bracketing_error))
+        isbracket(fa, fb) || throw(ArgumentError(bracketing_error))
     end
 
-    c::T = secant_step(u, v, fu, fv)
+    c::T = _middle(a, b)
     fc::S = f(c)
     incfn(state)
 
-    init_state!(state, v, u, c, fv, fu, fc)
-    bracket!(state)
+    a,b,d,fa,fb,fd = bracket(a,b,c,fa,fb,fc)
+    ee, fe = d, fd
+    
+    state.xn0, state.xn1, state.m[1], state.m[2] = a, b, d, ee
+    state.fxn0, state.fxn1, state.fm[1], state.fm[2] = fa, fb, fd, fe
+    state.steps = 0
+    state.stopped = state.x_converged = state.f_converged = state.convergence_failed = false
 
     return nothing
 end
 
-# for A42, the defaults are reltol=eps(), atol=0; 20 evals and strict=true
+# for A42, the defaults are reltol=eps(), atol=0; 45 evals and strict=true
 # this *basically* follows the tol in the paper (2|u|*rtol + atol)
-function init_options(::A42,
-                      state::UnivariateZeroState{T,S};
+function init_options(::AbstractAlefeldPotraShi,
+                      state::APSZeroState{T,S};
                       xatol=missing,
                       xrtol=missing,
                       atol=missing,
                       rtol=missing,
-                      maxevals::Int=15,
+                      maxevals::Int=45,
                       maxfnevals::Int=typemax(Int)) where {T,S}
 
     strict=true
     options = UnivariateZeroOptions(ismissing(xatol) ? zero(T) : xatol,       # unit of x
-                                    ismissing(xrtol) ? eps(one(T)) : xrtol,   # unitless
+                                    ismissing(xrtol) ? 2eps(one(T)) : xrtol,   # unitless
                                     ismissing(atol)  ? zero(S) : atol,  # units of f(x)
-                                    ismissing(rtol)  ? eps(one(S)) : rtol,   # unitless
+                                    ismissing(rtol)  ? zero(one(S)) : rtol,   # unitless
                                     maxevals, maxfnevals, strict)
 
     options
 end
 
-function init_options!(options::UnivariateZeroOptions{Q,R,S,T}, ::A42) where {Q, R, S, T}
+function init_options!(options::UnivariateZeroOptions{Q,R,S,T}, ::AbstractAlefeldPotraShi) where {Q, R, S, T}
     options.xabstol = zero(Q)
-    options.xreltol = eps(one(R))
+    options.xreltol = 2eps(one(R))
     options.abstol = zero(S)
-    options.reltol = eps(one(T))
-    options.maxevals = 15
+    options.reltol = zero(one(T))
+    options.maxevals = 45
     options.strict = true
 end
 
-function assess_convergence(method::A42, state::UnivariateZeroState{T,S}, options) where {T,S}
+function assess_convergence(method::AbstractAlefeldPotraShi, state::APSZeroState{T,S}, options) where {T,S}
 
     (state.stopped || state.x_converged || state.f_converged) && return true
     if state.steps > options.maxevals
@@ -565,7 +609,7 @@ function assess_convergence(method::A42, state::UnivariateZeroState{T,S}, option
 
     # check f
     u,fu = choose_smallest(state.xn0, state.xn1, state.fxn0, state.fxn1)
-    u, fu = choose_smallest(u, state.m, fu, state.fm)
+    u, fu = choose_smallest(u, state.m[1], fu, state.fm[1])
 
     if abs(fu) <= max(options.abstol, abs(u) * options.reltol)
         state.f_converged = true
@@ -594,7 +638,7 @@ function assess_convergence(method::A42, state::UnivariateZeroState{T,S}, option
     if abs(b-a) <= 2tol
         # pick smallest of a,b,m
         u::T, fu::S = choose_smallest(a,b, state.fxn0, state.fxn1)
-        x, fx = choose_smallest(u, state.m, fu, state.fm)
+        x, fx = choose_smallest(u, state.m[1], fu, state.fm[1])
         state.xn1 = x
         state.fxn1 = fx
         state.x_converged = true
@@ -605,8 +649,18 @@ function assess_convergence(method::A42, state::UnivariateZeroState{T,S}, option
     
     return false
 end
+
+## initial step, needs to log a,b,d
+function log_step(l::Tracks, M::AbstractAlefeldPotraShi, state, ::Any)
+    a, b, c = state.xn0, state.xn1, state.m[1]
+    append!(l.xs, extrema((a,b,c)))
+    push!(l.xs, a)
+    push!(l.xs, b) # we store [ai,bi, ai+1, bi+1, ...]
+end
+
+
     
-function check_zero(::A42, state, c, fc)
+function check_zero(::AbstractAlefeldPotraShi, state, c, fc)
     if isnan(c)
         state.stopped = true
         state.xn1 = c
@@ -627,32 +681,105 @@ function check_zero(::A42, state, c, fc)
     return false
 end
 
-## 3, maybe 4, functions calls per step
-function update_state(M::A42, f, state::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
-    
-    a::T,b::T,d::T = state.xn0, state.xn1, state.m
-    fa::S,fb::S,fd::S = state.fxn0, state.fxn1, state.fm
 
-    mu = 0.5
+
+function update_state(M::A42, f, state::APSZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
+
+    a::T,b::T,d::T, ee::T = state.xn0, state.xn1, state.m[1], state.m[2]
+    fa::S,fb::S,fd::S,fe::S = state.fxn0, state.fxn1, state.fm[1], state.fm[2]
+
     an, bn = a, b
-    lambda = 0.7
-    tole = max(options.xabstol, max(abs(a),abs(b)) * options.xreltol)
-    delta = lambda * tole
+    μ, λ = 0.5, 0.7
+    tole = max(options.xabstol, max(abs(a),abs(b)) * options.xreltol) # paper uses 2|u|*rtol + atol
+    delta = λ * tole
     
+    if state.steps < 1
+        c = newton_quadratic(a, b, d, fa, fb, fd, 2)
+    else
+        c = ipzero(a, b, d, ee, fa, fb, fd, fe)
+    end
+    fc::S = f(c)
+    incfn(state)
+    check_zero(M, state, c, fc) && return nothing
+    
+    ab::T, bb::T, db::T, fab::S, fbb::S, fdb::S = bracket(a,b,c,fa,fb,fc)
+    eb::T, feb::S = d, fd
+
+    cb::T = take_step(ab, bb, db, eb, fab, fbb, fdb, feb, delta)
+    fcb::S = f(cb)
+    incfn(state)
+    check_zero(M, state, cb, fcb) && return nothing
+
+    ab,bb,db,fab,fbb,fdb = bracket(ab,bb,cb,fab,fbb,fcb)
+    
+    
+    u::T, fu::S = choose_smallest(ab, bb, fab, fbb)
+    cb = u - 2 * fu * (bb - ab) / (fbb - fab)
+    ch::T = cb
+    if abs(cb - u) > 0.5 * (b-a) 
+        ch = _middle(an, bn)
+    end
+    fch::S = f(cb)
+    incfn(state)    
+    check_zero(M, state, ch, fch) && return nothing
+
+    ah::T, bh::T, dh::T, fah::S, fbh::S, fdh::S = bracket(ab, bb, ch, fab, fbb, fch)
+
+    if bh - ah < μ * (b - a) 
+        #a, b, d, fa, fb, fd = ahat, b, dhat, fahat, fb, fdhat # typo in paper
+        a, b, d, ee =  ah, bh, dh, db
+        fa, fb, fd, fe = fah, fbh, fdh, fdb
+    else
+        m::T = _middle(ah, bh)
+        fm::S = f(m)
+        incfn(state)
+        ee, fe = dh, fdh
+        a, b, d, fa, fb, fd = bracket(ah, bh, m, fah, fbh, fm)
+    end
+    state.xn0, state.xn1, state.m[1], state.m[2],  = a, b, d, ee
+    state.fxn0, state.fxn1, state.fm[1], state.fm[2] = fa, fb, fd, fe
+
+    return nothing
+end
+
+
+####
+"""
+    Roots.AlefeldPotraShi()
+
+Follows algorithm in "ON ENCLOSING SIMPLE ROOTS OF NONLINEAR
+EQUATIONS", by Alefeld, Potra, Shi; DOI:
+10.1090/S0025-5718-1993-1192965-2
+[link](http://www.ams.org/journals/mcom/1993-61-204/S0025-5718-1993-1192965-2/S0025-5718-1993-1192965-2.pdf). Efficiency
+is 1.618. Less efficient, but can be faster than A42() method.
+
+"""
+struct AlefeldPotraShi <: AbstractAlefeldPotraShi end
+
+# ## 3, maybe 4, functions calls per step
+function update_state(M::AlefeldPotraShi, f, state::APSZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
+  
+    a::T,b::T,d::T = state.xn0, state.xn1, state.m[1]
+    fa::S,fb::S,fd::S = state.fxn0, state.fxn1, state.fm[1]
+
+    μ, λ = 0.5, 0.7
+    tole = max(options.xabstol, max(abs(a),abs(b)) * options.xreltol) # paper uses 2|u|*rtol + atol
+    delta = λ * tole
+  
     c::T = newton_quadratic(a, b, d, fa, fb, fd, 2, delta)
     fc::S = f(c)
     incfn(state)
     check_zero(M, state, c, fc) && return nothing
 
     a,b,d,fa,fb,fd = bracket(a,b,c,fa,fb,fc)
-    
+  
     c = newton_quadratic(a,b,d,fa,fb,fd, 3, delta)
     fc = f(c)
     incfn(state)    
     check_zero(M, state, c, fc) && return nothing
-    
+  
     a, b, d, fa, fb, fd = bracket(a, b, c, fa, fb,fc)
-    
+  
     u::T, fu::S = choose_smallest(a, b, fa, fb)
     c = u - 2 * fu * (b - a) / (fb - fa)
     if abs(c - u) > 0.5 * (b - a)
@@ -663,8 +790,8 @@ function update_state(M::A42, f, state::UnivariateZeroState{T,S}, options::Univa
     check_zero(M, state, c, fc) && return nothing
 
     ahat::T, bhat::T, dhat::T, fahat::S, fbhat::S, fdhat::S = bracket(a, b, c, fa, fb, fc)
-    if bhat - ahat < mu * (b - a) 
-        #a, b, d, fa, fb, fd = ahat, b, dhat, fahat, fb, fdhat
+    if bhat - ahat < μ * (b - a) 
+        #a, b, d, fa, fb, fd = ahat, b, dhat, fahat, fb, fdhat # typo in paper
         a, b, d, fa, fb, fd = ahat, bhat, dhat, fahat, fbhat, fdhat
     else
         m::T = _middle(ahat, bhat)
@@ -672,36 +799,12 @@ function update_state(M::A42, f, state::UnivariateZeroState{T,S}, options::Univa
         incfn(state)
         a, b, d, fa, fb, fd = bracket(ahat, bhat, m, fahat, fbhat, fm)
     end
-    state.xn0, state.xn1, state.m = a, b, d
-    state.fxn0, state.fxn1, state.fm = fa, fb, fd
+    state.xn0, state.xn1, state.m[1] = a, b, d
+    state.fxn0, state.fxn1, state.fm[1] = fa, fb, fd
 
     return nothing
 end
 
-
-
-
-# original used this, when possible. Possible speed up
-# # approximate zero of f using inverse cubic interpolation
-# # if the new guess is outside [a, b] we use a quadratic step instead
-# # based on algorithm on page 333 of [1]
-# function ipzero(f, a, fa, b, fb, c, fc, d, fd)
-
-#     Q11 = (c - d)*fc/(fd - fc)
-#     Q21 = (b - c)*fb/(fc - fb)
-#     Q31 = (a - b)*fa/(fb - fa)
-#     D21 = (b - c)*fc/(fc - fb)
-#     D31 = (a - b)*fb/(fb - fa)
-#     Q22 = (D21 - Q11)*fb/(fd - fb)
-#     Q32 = (D31 - Q21)*fa/(fc - fa)
-#     D32 = (D31 - Q21)*fc/(fc - fa)
-#     Q33 = (D32 - Q22)*fa/(fd - fa)
-#     c = a + (Q31 + Q32 + Q33)
-#     if (c <= a) || (c >= b)
-#         return newton_quadratic(f, a, fa, b, fb, d, fd, 3)
-#     end
-#     return c, f(c)
-# end
 
 
 ## ----------------------------
