@@ -29,8 +29,9 @@
 
 ### Methods
 abstract type AbstractUnivariateZeroMethod end
-abstract type AbstractBisection <: AbstractUnivariateZeroMethod end
-abstract type AbstractSecant <: AbstractUnivariateZeroMethod end
+abstract type AbstractBracketing <: AbstractUnivariateZeroMethod end
+abstract type AbstractNonBracketing <: AbstractUnivariateZeroMethod end
+abstract type AbstractSecant <: AbstractNonBracketing end
 
 
 ### States    

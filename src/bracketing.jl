@@ -113,6 +113,10 @@ end
 
 ####
 ## find_zero interface.
+
+
+abstract type AbstractBisection <: AbstractBracketing end
+
 """
 
     Bisection()
@@ -140,11 +144,11 @@ struct Bisection <: AbstractBisection end  # either solvable or A42
 struct BisectionExact <: AbstractBisection end
 
 ## tracks for bisection, different, we show bracketing interval
-function log_step(l::Tracks, M::AbstractBisection, state)
+function log_step(l::Tracks, M::AbstractBracketing, state)
     push!(l.xs, state.xn0)
     push!(l.xs, state.xn1) # we store [ai,bi, ai+1, bi+1, ...]
 end
-function show_tracks(l::Tracks, M::AbstractBisection)
+function show_tracks(l::Tracks, M::AbstractBracketing)
     xs = l.xs
     n = length(xs)
     for (i,j) in enumerate(1:2:(n-1))
@@ -372,7 +376,7 @@ end
 #
 ## Alefeld, Potra, Shi have two algorithms below, one is most efficient, but
 ## slightly slower than other.
-abstract type AbstractAlefeldPotraShi <: AbstractBisection end
+abstract type AbstractAlefeldPotraShi <: AbstractBracketing end
 
 """
     Roots.A42()
@@ -625,7 +629,7 @@ end
 
 
     
-function check_zero(::AbstractBisection, state, c, fc)
+function check_zero(::AbstractBracketing, state, c, fc)
     if isnan(c)
         state.stopped = true
         state.xn1 = c
@@ -773,7 +777,7 @@ end
 
 ### Brent
 
-struct Brent <: AbstractBisection end
+struct Brent <: AbstractBracketing end
 
 function log_step(l::Tracks, M::Brent, state)
     a,b = state.xn0, state.xn1
