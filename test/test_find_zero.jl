@@ -286,7 +286,7 @@ test_94()
     M = Roots.A42()
     state = Roots.init_state(M, g1, x0_)
     options = Roots.init_options(M, state)
-    for M in (Roots.Bisection(), Roots.FalsePosition())
+    for M in (Roots.A42(), Roots.Bisection(), Roots.FalsePosition())
         Roots.init_state!(state, M, g1, x0_)
         @test find_zero(M, g1, options, state) ≈ xstar_
     end
@@ -300,7 +300,7 @@ test_94()
     options = Roots.init_options(M, state, xatol=1/2)
     find_zero(M, g1, options, state)
     M = Roots.Order1()
-    Roots.init_state!(state, M, g1, state.m)
+    Roots.init_state!(state, M, g1, state.m[1])
     Roots.init_options!(options, M)
     @test find_zero(M, g1, options, state) ≈ xstar_
 end

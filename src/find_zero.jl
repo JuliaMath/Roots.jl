@@ -38,10 +38,10 @@ abstract type  AbstractUnivariateZeroState end
 mutable struct UnivariateZeroState{T,S} <: AbstractUnivariateZeroState where {T,S}
     xn1::T
     xn0::T
-    m::T
+    m::Vector{T}
     fxn1::S
     fxn0::S
-    fm::S
+    fm::Vector{S}
     steps::Int
     fnevals::Int
     stopped::Bool             # stopped, butmay not have converged
@@ -58,10 +58,10 @@ function init_state(method::Any, fs, x)
 
     x1 = float(x)
     fx1 = fs(x1); fnevals = 1
-
+    T, S = eltype(x1), eltype(fx1)
     
-    state = UnivariateZeroState(x1, oneunit(x1) * (0*x1)/(0*x1), x1,
-                                fx1, oneunit(fx1) * (0*fx1)/(0*fx1), fx1,
+    state = UnivariateZeroState(x1, oneunit(x1) * (0*x1)/(0*x1), T[],
+                                fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[],
                                 0, fnevals,
                                 false, false, false, false,
                                 "")
@@ -81,7 +81,7 @@ end
 #    out[i] = find_zero(M, f1, options, state)
 # end
 # init_state has a method call variant
-function init_state!(state::UnivariateZeroState{T,S}, x1::T, x0::T, m::T, y1::S, y0::S, fm::S) where {T,S}
+function init_state!(state::UnivariateZeroState{T,S}, x1::T, x0::T, m::Vector{T}, y1::S, y0::S, fm::Vector{S}) where {T,S}
     state.xn1 = x1
     state.xn0 = x0
     state.m = m
@@ -101,8 +101,8 @@ end
 function init_state!(state::UnivariateZeroState{T,S}, ::AbstractUnivariateZeroMethod, fs, x) where {T, S}
     x1 = float(x)
     fx1 = fs(x1)
-    init_state!(state, x1, oneunit(x1) * (0*x1)/(0*x1), x1,
-                fx1, oneunit(fx1) * (0*fx1)/(0*fx1), fx1)
+    init_state!(state, x1, oneunit(x1) * (0*x1)/(0*x1), T[],
+                fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[])
 end
 
 ### Options

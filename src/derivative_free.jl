@@ -39,8 +39,8 @@ const Order1 = Secant
 function init_state(method::AbstractSecant, fs, x::Union{Tuple, Vector})
     x0, x1 = promote(float(x[1]), float(x[2]))
     fx0, fx1 = fs(x0), fs(x1)        
-    UnivariateZeroState(x1, x0, x1,
-                        fx1, fx0, fx1,
+    UnivariateZeroState(x1, x0, eltype(x1)[],
+                        fx1, fx0, eltype(fx1)[],
                         0, 2,
                         false, false, false, false, "")
 end
@@ -56,8 +56,8 @@ function init_state(method::AbstractSecant, fs, x::Number)
     x0 = x1 + dx
     fx0 = fs(x0)
     
-    UnivariateZeroState(x1, x0, x1,
-                        fx1, fx0, fx1,
+    UnivariateZeroState(x1, x0, eltype(x1)[],
+                        fx1, fx0, eltype(fx1)[],
                         0, 2,
                         false, false, false, false, "")
 
@@ -66,7 +66,7 @@ end
 function init_state!(state::UnivariateZeroState{T, S}, ::AbstractSecant, f, x::Union{Tuple, Vector}) where {T, S}
     x0,x1 = promote(float.(x))
     fx0, fx1 = promote(f(x0), f(x1))
-    init_state!(state, x1, x0, x1, fx1, fx0, fx1)
+    init_state!(state, x1, x0, T[], fx1, fx0, S[])
 end
 
 function init_state!(state::UnivariateZeroState{T, S}, ::AbstractSecant, fs, x::Number) where {T, S}
@@ -76,7 +76,7 @@ function init_state!(state::UnivariateZeroState{T, S}, ::AbstractSecant, fs, x::
     x0 = x1 + dx
     fx0, fx1 = promote(fs(x0), fs(x1))
     
-    init_state!(state, x1, x0, x1, fx1, fx0, fx1)
+    init_state!(state, x1, x0, T[], fx1, fx0, S[])
 end
 ##################################################
 

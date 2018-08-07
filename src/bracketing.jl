@@ -138,23 +138,6 @@ values, this will call the `A42` method.
 """
 struct Bisection <: AbstractBisection end  # either solvable or A42
 struct BisectionExact <: AbstractBisection end
-abstract type AbstractAlefeldPotraShi <: AbstractBisection end
-
-"""
-    Roots.A42()
-
-Bracketing method which finds the root of a continuous function within
-a provided interval [a, b], without requiring derivatives. It is based
-on algorithm 4.2 described in: 1. G. E. Alefeld, F. A. Potra, and
-Y. Shi, "Algorithm 748: enclosing zeros of continuous functions," ACM
-Trans. Math. Softw. 21, 327–344 (1995), DOI: 10.1145/210089.210111 .
-
-
-The default tolerances are: `xatol=zero(T)`, `xrtol=2eps(one(T))`,
-`atol=zero(S)`, `rtol=zero(one(S))`, `maxevals=45`, and
-
-"""
-struct A42 <: AbstractAlefeldPotraShi end
 
 ## tracks for bisection, different, we show bracketing interval
 function log_step(l::Tracks, M::AbstractBisection, state)
@@ -192,8 +175,8 @@ function init_state(method::AbstractBisection, fs, x)
     y0, y1, fm = sign.(promote(fs(x0), fs(x1), fs(m)))
     y0 * y1 > 0 && throw(ArgumentError("bracketing_error"))
     
-    state = UnivariateZeroState(x1, x0, m,
-                                y1, y0, fm,
+    state = UnivariateZeroState(x1, x0, [m],
+                                y1, y0, [fm],
                                 0, 3,
                                 false, false, false, false,
                                 "")
@@ -205,7 +188,7 @@ function init_state!(state::UnivariateZeroState{T,S}, ::AbstractBisection, fs, x
     x0, x1 = adjust_bracket(x)
     m::T = _middle(x0, x1)
     fx0::S, fx1::S, fm::S = sign(fs(x0)), sign(fs(x1)), sign(fs(m))
-    init_state!(state, x1, x0, m, fx1, fx0, fm)
+    init_state!(state, x1, x0, [m], fx1, fx0, [fm])
 end
 
 # for Bisection, the defaults are zero tolerances and strict=true
@@ -282,8 +265,8 @@ function update_state(method::Union{Bisection,BisectionExact}, fs, o::Univariate
 
 
     y0 = o.fxn0
-    m::T = o.m  
-    ym::S = o.fm #sign(fs(m))
+    m::T = o.m[1]
+    ym::S = o.fm[1] #sign(fs(m))
     incfn(o)
 
     if iszero(ym)
@@ -300,8 +283,8 @@ function update_state(method::Union{Bisection,BisectionExact}, fs, o::Univariate
         o.xn0, o.fxn0 = m, ym
     end
 
-    o.m = _middle(o.xn0, o.xn1)
-    o.fm = sign(fs(o.m))
+    o.m[1] = _middle(o.xn0, o.xn1)
+    o.fm[1] = sign(fs(o.m[1]))
     return nothing
 
 end
@@ -387,20 +370,32 @@ end
 
 ###################################################
 #
-## A42
-#
-# Finds the root of a continuous function within a provided
-# interval [a, b], without requiring derivatives. It is based on algorithm 4.2
-# described in: 1. G. E. Alefeld, F. A. Potra, and Y. Shi, "Algorithm 748:
-# enclosing zeros of continuous functions," ACM Trans. Math. Softw. 21,
-# 327–344 (1995).
-#
-# Originally by John Travers
+## Alefeld, Potra, Shi have two algorithms below, one is most efficient, but
+## slightly slower than other.
+abstract type AbstractAlefeldPotraShi <: AbstractBisection end
+
+"""
+    Roots.A42()
+
+Bracketing method which finds the root of a continuous function within
+a provided interval [a, b], without requiring derivatives. It is based
+on algorithm 4.2 described in: 1. G. E. Alefeld, F. A. Potra, and
+Y. Shi, "Algorithm 748: enclosing zeros of continuous functions," ACM
+Trans. Math. Softw. 21, 327–344 (1995), DOI: 10.1145/210089.210111.
+Originally by John Travers
+
+
+
+The default tolerances are: `xatol=zero(T)`, `xrtol=2eps(one(T))`,
+`atol=zero(S)`, `rtol=zero(one(S))`, `maxevals=45`, and
+
+"""
+struct A42 <: AbstractAlefeldPotraShi end
 
 ## put in utils?
 @inline isbracket(fa,fb) = sign(fa) * sign(fb) < 0
 
-# f[b,a]
+# f[a, b]
 @inline f_ab(a,b,fa,fb) = (fb - fa) / (b-a)
 
 # f[a,b,d]
@@ -431,12 +426,10 @@ end
     end
 end
 
-#
+# Cubic if possible, if not, quadratic(3)
 function take_step(a::T, b, d, ee, fa, fb, fd, fe, k, delta=zero(T)) where {T}
 
     fs = (fa, fb, fd, fe)
-
-    r = Inf*a
 
     if !any.(fs[i] == fs[j] for i in 1:4, j in 1:4 if i < j)
         r = ipzero(a,b,d,ee, fa, fb,fd,fe, delta)
@@ -496,24 +489,7 @@ function newton_quadratic(a::T, b, d, fa, fb, fd, k::Int, delta=zero(T)) where {
     
 end
 
-# # state need a,b,c,d,fa, fb,fc,fd
- mutable struct APSZeroState{T,S} <: AbstractUnivariateZeroState where {T,S}
-    xn1::T
-    xn0::T
-    m::Vector{T}
-    fxn1::S
-    fxn0::S
-    fm::Vector{S}
-    steps::Int
-    fnevals::Int
-    stopped::Bool             # stopped, butmay not have converged
-    x_converged::Bool         # converged via |x_n - x_{n-1}| < ϵ
-    f_converged::Bool         # converged via |f(x_n)| < ϵ
-    convergence_failed::Bool
-    message::String
-end
-
-
+#
 function init_state(M::AbstractAlefeldPotraShi, f, xs) 
     u, v = promote(float(xs[1]), float(xs[2]))
     if u > v
@@ -521,7 +497,7 @@ function init_state(M::AbstractAlefeldPotraShi, f, xs)
     end
     fu, fv = promote(f(u), f(v))
     isbracket(fu, fv) || throw(ArgumentError(bracketing_error))
-    state = APSZeroState(v, u, [v, v], ## x1, x0, d, [ee]
+    state = UnivariateZeroState(v, u, [v, v], ## x1, x0, d, [ee]
                                 fv, fu, [fv,fv], ## fx1, fx0, d, [fe]
                                 0, 2,
                                 false, false, false, false,
@@ -532,7 +508,7 @@ function init_state(M::AbstractAlefeldPotraShi, f, xs)
 end
 
 # secant step, then bracket for initial setup
-function init_state!(state::APSZeroState{T,S}, ::AbstractAlefeldPotraShi, f, xs::Union{Tuple, Vector}, compute_fx=true) where {T, S}
+function init_state!(state::UnivariateZeroState{T,S}, ::AbstractAlefeldPotraShi, f, xs::Union{Tuple, Vector}, compute_fx=true) where {T, S}
 
     if !compute_fx
         a, b = state.xn0, state.xn1
@@ -565,7 +541,7 @@ end
 # for A42, the defaults are reltol=eps(), atol=0; 45 evals and strict=true
 # this *basically* follows the tol in the paper (2|u|*rtol + atol)
 function init_options(::AbstractAlefeldPotraShi,
-                      state::APSZeroState{T,S};
+                      state::UnivariateZeroState{T,S};
                       xatol=missing,
                       xrtol=missing,
                       atol=missing,
@@ -592,7 +568,7 @@ function init_options!(options::UnivariateZeroOptions{Q,R,S,T}, ::AbstractAlefel
     options.strict = true
 end
 
-function assess_convergence(method::AbstractAlefeldPotraShi, state::APSZeroState{T,S}, options) where {T,S}
+function assess_convergence(method::AbstractAlefeldPotraShi, state::UnivariateZeroState{T,S}, options) where {T,S}
 
     (state.stopped || state.x_converged || state.f_converged) && return true
     if state.steps > options.maxevals
@@ -620,17 +596,6 @@ function assess_convergence(method::AbstractAlefeldPotraShi, state::APSZeroState
         end
         return true
     end
-
-    
-    # for (x,fx) in ((state.xn0, state.fxn0), (state.xn1, state.fxn1), (state.m, state.fm))
-    #     if iszero(fx)
-    #         state.f_converged = true
-    #         state.xn1=x
-    #         state.fxn1=fx
-    #         state.message *= "Exact zero found. "
-    #         return true
-    #     end
-    # end
 
     a,b = state.xn0, state.xn1
     tol = max(options.xabstol, max(abs(a),abs(b)) * options.xreltol)
@@ -660,7 +625,7 @@ end
 
 
     
-function check_zero(::AbstractAlefeldPotraShi, state, c, fc)
+function check_zero(::AbstractBisection, state, c, fc)
     if isnan(c)
         state.stopped = true
         state.xn1 = c
@@ -683,7 +648,7 @@ end
 
 
 
-function update_state(M::A42, f, state::APSZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
+function update_state(M::A42, f, state::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
 
     a::T,b::T,d::T, ee::T = state.xn0, state.xn1, state.m[1], state.m[2]
     fa::S,fb::S,fd::S,fe::S = state.fxn0, state.fxn1, state.fm[1], state.fm[2]
@@ -757,7 +722,7 @@ is 1.618. Less efficient, but can be faster than A42() method.
 struct AlefeldPotraShi <: AbstractAlefeldPotraShi end
 
 # ## 3, maybe 4, functions calls per step
-function update_state(M::AlefeldPotraShi, f, state::APSZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
+function update_state(M::AlefeldPotraShi, f, state::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
   
     a::T,b::T,d::T = state.xn0, state.xn1, state.m[1]
     fa::S,fb::S,fd::S = state.fxn0, state.fxn1, state.fm[1]
@@ -806,7 +771,120 @@ function update_state(M::AlefeldPotraShi, f, state::APSZeroState{T,S}, options::
 end
 
 
+### Brent
 
+struct Brent <: AbstractBisection end
+
+function log_step(l::Tracks, M::Brent, state)
+    a,b = state.xn0, state.xn1
+    u,v = a < b ? (a,b) : (b,a)
+    push!(l.xs, a)
+    push!(l.xs, b) # we store [ai,bi, ai+1, bi+1, ...]
+end
+
+#
+function init_state(M::Brent, f, xs) 
+    u, v = promote(float(xs[1]), float(xs[2]))
+    fu, fv = promote(f(u), f(v))
+    isbracket(fu, fv) || throw(ArgumentError(bracketing_error))
+    
+    # brent store b as smaller of |fa|, |fb|
+    if abs(fu) > abs(fv)
+        a, b, fa, fb = u, v, fu, fv
+    else
+        a, b, fa, fb = v, u, fv, fu
+    end
+          
+
+
+    state = UnivariateZeroState(b, a, [a, a], ## x1, x0, c, d
+                                fb, fa, [fa, one(fa)], ## fx1, fx0, fc, mflag
+                                0, 2,
+                                false, false, false, false,
+                                "")
+    state
+end
+
+# we store mflag as -1, or +1 in state.m[2]
+function init_state!(state::UnivariateZeroState{T,S}, ::Brent, f, xs::Union{Tuple, Vector}) where {T, S}
+    u::T, v::T = promote(float(xs[1]), float(xs[2]))
+    fu::S, fv::S = promote(f(u), f(v))
+    isbracket(fu, fv) || throw(ArgumentError(bracketing_error))
+ 
+    # brent store b as smaller of |fa|, |fb|
+    if abs(fu) > abs(fv)
+        a, b, fa, fb = u, v, fu, fv
+    else
+        a, b, fa, fb = v, u, fv, fu
+    end
+    
+    state.xn0, state.xn1, state.m[1], state.m[2] = a, b, a, a
+    state.fxn0, state.fxn1, state.fm[1] = fa, fb, fd, one(fa)
+    state.steps = 0
+    state.stopped = state.x_converged = state.f_converged = state.convergence_failed = false
+
+    return nothing
+end
+
+function update_state(M::Brent, f, state::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
+    mflag = state.fm[2] > 0
+    a, b, c, d = state.xn0, state.xn1, state.m[1], state.m[2]
+    fa, fb, fc = state.fxn0, state.fxn1, state.fm[1]
+
+    # next setp
+    s::T = zero(a)
+    if  !iszero(fa-fc) && !iszero(fb-fc)
+        s =  a * fb * fc / (fa - fb) / (fa - fc) # quad step
+        s += b * fa * fc / (fb - fa) / (fb - fc)
+        s += c * fa * fb / (fc - fa) / (fc - fb)
+        s
+    else
+        s = secant_step(a,b,fa,fb)
+    end
+    fs::T = f(s)
+    incfn(state)
+    check_zero(M, state, s, fs) && return nothing
+
+    # guard step
+    u,v = (3a+b)/4, b
+    if u > v
+        u,v = v, u
+    end
+
+    tol = max(options.xabstol, max(abs(b), abs(c), abs(d)) * options.xreltol)
+    if !(u < s < v) || 
+        (mflag && abs(s - b) >= abs(b-c)/2) ||
+        (!mflag && abs(s - b) >= abs(b-c)/2) ||
+        (mflag && abs(b-c) <= tol) ||
+        (!mflag && abs(c-d) <= tol)
+        s = _middle(a, b)
+        fs = f(s)
+        incfn(state)
+        check_zero(M, state, s, fs) && return nothing
+        mflag = true
+    else
+        mflag = false
+    end
+
+     d = c
+    c,fc = b,fb
+
+    if sign(fa) * sign(fs) < 0
+        b, fb = s, fs
+    else
+        a, fa = s, fs
+    end
+    
+    if abs(fa) < abs(fb)
+        a, b, fa, fb = b, a, fb, fa
+    end
+
+    state.xn0, state.xn1, state.m[1], state.m[2] = a, b, c, d
+    state.fxn0, state.fxn1, state.fm[1] = fa, fb, fc
+    state.fm[2] = mflag ? one(fa) : -one(fa)
+    
+    return nothing
+end
 ## ----------------------------
 
 """
