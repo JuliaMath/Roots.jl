@@ -85,10 +85,11 @@ end
 function init_state!(state::UnivariateZeroState{T,S}, x1::T, x0::T, m::Vector{T}, y1::S, y0::S, fm::Vector{S}) where {T,S}
     state.xn1 = x1
     state.xn0 = x0
+    empty!(state.m); append!(state.m,  m)
     state.m = m
     state.fxn1 = y1
     state.fxn0 = y0
-    state.fm = fm
+    empty!(state.fm); append!(state.fm,fm)
     state.steps = 0
     state.fnevals = 2
     state.stopped = false
@@ -96,7 +97,7 @@ function init_state!(state::UnivariateZeroState{T,S}, x1::T, x0::T, m::Vector{T}
     state.f_converged = false
     state.convergence_failed = false
     state.message = ""
-    state
+    nothing
 end
 
 function init_state!(state::UnivariateZeroState{T,S}, ::AbstractUnivariateZeroMethod, fs, x) where {T, S}
@@ -148,6 +149,7 @@ function init_options!(options::UnivariateZeroOptions{Q,R,S,T}, ::AbstractUnivar
     options.abstol = 4 * eps(S)
     options.reltol = 4 * eps(T)
     options.strict = false
+    nothing
 end
 
 

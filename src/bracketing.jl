@@ -178,6 +178,11 @@ function init_state(method::AbstractBisection, fs, x)
 
     y0, y1, fm = sign.(promote(fs(x0), fs(x1), fs(m)))
     y0 * y1 > 0 && throw(ArgumentError("bracketing_error"))
+
+    if x0 > x1
+        x0,x1 = x1, x0
+        y0,y1 = y1, y0
+    end
     
     state = UnivariateZeroState(x1, x0, [m],
                                 y1, y0, [fm],
@@ -192,6 +197,13 @@ function init_state!(state::UnivariateZeroState{T,S}, ::AbstractBisection, fs, x
     x0, x1 = adjust_bracket(x)
     m::T = _middle(x0, x1)
     fx0::S, fx1::S, fm::S = sign(fs(x0)), sign(fs(x1)), sign(fs(m))
+
+    isbracket(fx0, fx1) ||  throw(ArgumentError(bracketing_error))
+    if x0 > x1
+        x0,x1 = x1, x0
+        y0,y1 = y1, y0
+    end
+    
     init_state!(state, x1, x0, [m], fx1, fx0, [fm])
 end
 
@@ -227,13 +239,14 @@ function init_options!(options::UnivariateZeroOptions{Q,R,S,T}, ::Bisection) whe
     options.reltol = zero(T)
     options.maxevals = typemax(Int)
     options.strict = true
+    nothing
 end
 
 ## This uses _middle bisection Find zero using modified bisection
 ## method for FloatXX arguments.  This is guaranteed to take no more
-## steps the bits of the type. The `a42` alternative usually has fewer
-## iterations, but this seems to find the value with fewer function
-## evaluations.
+## steps the bits of the type. The `A42` alternative usually has fewer
+## iterations and function calls, but this has a guarantee of producing
+## a number which is a zero or a signchange.
 ##
 ## This terminates when there is no more subdivision or function is zero
 
@@ -325,7 +338,6 @@ function assess_convergence(method::BisectionExact, state::UnivariateZeroState{T
     state.x_converged && return true
     
     x0, m::T, x1 = state.xn0, state.m[1], state.xn1
-
     x0 < m < x1 && return false
 
     state.x_converged = true
@@ -374,7 +386,7 @@ end
 
 ###################################################
 #
-## Alefeld, Potra, Shi have two algorithms below, one is most efficient, but
+## Alefeld, Potra, Shi have two algorithms belosw, one is most efficient, but
 ## slightly slower than other.
 abstract type AbstractAlefeldPotraShi <: AbstractBracketing end
 
@@ -391,7 +403,7 @@ Originally by John Travers
 
 
 The default tolerances are: `xatol=zero(T)`, `xrtol=2eps(one(T))`,
-`atol=zero(S)`, `rtol=zero(one(S))`, `maxevals=45`, and
+`atol=zero(S)`, `rtol=zero(one(S))`, `maxevals=45`.
 
 """
 struct A42 <: AbstractAlefeldPotraShi end
@@ -411,16 +423,9 @@ end
 # a bit better than a - fa/f_ab
 @inline secant_step(a, b, fa, fb) =  a - fa * (b - a) / (fb - fa)
 
-
-# of (a,fa), (b,fb) choose pair where |f| is smallest
-@inline choose_smallest(a, b, fa, fb) = abs(fa) < abs(fb) ? (a,fa) : (b,fb)
-
 # assume fc != 0
 ## return a1,b1,d with a < a1 <  < b1 < b, d not there
-## 
-
 @inline function bracket(a,b,c, fa, fb, fc)
-
     if isbracket(fa, fc)
         # switch b,c
         return (a,c,b, fa, fc, fb)
@@ -431,15 +436,13 @@ end
 end
 
 # Cubic if possible, if not, quadratic(3)
-function take_step(a::T, b, d, ee, fa, fb, fd, fe, k, delta=zero(T)) where {T}
+function take_a42_step(a::T, b, d, ee, fa, fb, fd, fe, k, delta=zero(T)) where {T}
 
     fs = (fa, fb, fd, fe)
-
-    if !any.(fs[i] == fs[j] for i in 1:4, j in 1:4 if i < j)
-        r = ipzero(a,b,d,ee, fa, fb,fd,fe, delta)
-        (a + 2delta < r < b - 2delta) && return r
-    end
-
+    # if r is NaN or Inf we move on by condition. Faster than checking ahead of time for
+    # distinctness
+    r = ipzero(a,b,d,ee, fa, fb,fd,fe, delta) # let error and see difference in allcoation?
+    (a + 2delta < r < b - 2delta) && return r
     r = newton_quadratic(a,b,d,fa,fb,fd, 3, delta)
 end
 
@@ -493,7 +496,7 @@ function newton_quadratic(a::T, b, d, fa, fb, fd, k::Int, delta=zero(T)) where {
     
 end
 
-#
+# (todo: DRY up?)
 function init_state(M::AbstractAlefeldPotraShi, f, xs) 
     u, v = promote(float(xs[1]), float(xs[2]))
     if u > v
@@ -533,9 +536,8 @@ function init_state!(state::UnivariateZeroState{T,S}, ::AbstractAlefeldPotraShi,
 
     a,b,d,fa,fb,fd = bracket(a,b,c,fa,fb,fc)
     ee, fe = d, fd
-    
-    state.xn0, state.xn1, state.m[1], state.m[2] = a, b, d, ee
-    state.fxn0, state.fxn1, state.fm[1], state.fm[2] = fa, fb, fd, fe
+
+    init_state!(state, b, a, [d,ee], fb, fa, [fd,fe])
     state.steps = 0
     state.stopped = state.x_converged = state.f_converged = state.convergence_failed = false
 
@@ -570,11 +572,35 @@ function init_options!(options::UnivariateZeroOptions{Q,R,S,T}, ::AbstractAlefel
     options.reltol = zero(one(T))
     options.maxevals = 45
     options.strict = true
+    nothing
+end
+
+    
+function check_zero(::AbstractBracketing, state, c, fc)
+    if isnan(c)
+        state.stopped = true
+        state.xn1 = c
+        state.message *= "NaN encountered. "
+        return true
+    elseif isinf(c)
+        state.stopped = true
+        state.xn1 = c
+        state.message *= "Inf encountered. "
+        return true
+    elseif iszero(fc)
+        state.f_converged=true
+        state.message *= "Exact zero found. "
+        state.xn1 = c
+        state.fxn1 = fc
+        return true
+    end
+    return false
 end
 
 function assess_convergence(method::AbstractAlefeldPotraShi, state::UnivariateZeroState{T,S}, options) where {T,S}
 
     (state.stopped || state.x_converged || state.f_converged) && return true
+
     if state.steps > options.maxevals
         state.stopped = true
         state.message *= "Too many steps taken. "
@@ -605,11 +631,9 @@ function assess_convergence(method::AbstractAlefeldPotraShi, state::UnivariateZe
     tol = max(options.xabstol, max(abs(a),abs(b)) * options.xreltol)
 
     if abs(b-a) <= 2tol
-        # pick smallest of a,b,m
-        u::T, fu::S = choose_smallest(a,b, state.fxn0, state.fxn1)
-        x, fx = choose_smallest(u, state.m[1], fu, state.fm[1])
-        state.xn1 = x
-        state.fxn1 = fx
+        # use smallest of a,b,m
+        state.xn1 = u
+        state.fxn1 = fu
         state.x_converged = true
         return true
     end
@@ -624,34 +648,10 @@ function log_step(l::Tracks, M::AbstractAlefeldPotraShi, state, ::Any)
     a, b, c = state.xn0, state.xn1, state.m[1]
     append!(l.xs, extrema((a,b,c)))
     push!(l.xs, a)
-    push!(l.xs, b) # we store [ai,bi, ai+1, bi+1, ...]
+    push!(l.xs, b) # we store [ai,bi, ai+1, bi+1, ...] for brackecting methods
 end
 
-
-    
-function check_zero(::AbstractBracketing, state, c, fc)
-    if isnan(c)
-        state.stopped = true
-        state.xn1 = c
-        state.message *= "NaN encountered. "
-        return true
-    elseif isinf(c)
-        state.stopped = true
-        state.xn1 = c
-        state.message *= "Inf encountered. "
-        return true
-    elseif iszero(fc)
-        state.f_converged=true
-        state.message *= "Exact zero found. "
-        state.xn1 = c
-        state.fxn1 = fc
-        return true
-    end
-    return false
-end
-
-
-
+# Main algorithm for A42 method
 function update_state(M::A42, f, state::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
 
     a::T,b::T,d::T, ee::T = state.xn0, state.xn1, state.m[1], state.m[2]
@@ -674,7 +674,7 @@ function update_state(M::A42, f, state::UnivariateZeroState{T,S}, options::Univa
     ab::T, bb::T, db::T, fab::S, fbb::S, fdb::S = bracket(a,b,c,fa,fb,fc)
     eb::T, feb::S = d, fd
 
-    cb::T = take_step(ab, bb, db, eb, fab, fbb, fdb, feb, delta)
+    cb::T = take_a42_step(ab, bb, db, eb, fab, fbb, fdb, feb, delta)
     fcb::S = f(cb)
     incfn(state)
     check_zero(M, state, cb, fcb) && return nothing
@@ -776,7 +776,15 @@ end
 
 
 ### Brent
+"""
+    Roots.Brent()
 
+An implementation of
+[Brent's](https://en.wikipedia.org/wiki/Brent%27s_method) (or Brent-Dekker) method.
+This method uses a choice of inverse quadratic interpolation or a secant
+step, falling back on bisection if necessary.
+
+"""
 struct Brent <: AbstractBracketing end
 
 function log_step(l::Tracks, M::Brent, state)
@@ -821,9 +829,8 @@ function init_state!(state::UnivariateZeroState{T,S}, ::Brent, f, xs::Union{Tupl
     else
         a, b, fa, fb = v, u, fv, fu
     end
-    
-    state.xn0, state.xn1, state.m[1], state.m[2] = a, b, a, a
-    state.fxn0, state.fxn1, state.fm[1] = fa, fb, fd, one(fa)
+
+    init_state!(state, b,a,[a,a], fb,fa, [fa, one(fa)])
     state.steps = 0
     state.stopped = state.x_converged = state.f_converged = state.convergence_failed = false
 
@@ -889,6 +896,8 @@ function update_state(M::Brent, f, state::UnivariateZeroState{T,S}, options::Uni
     
     return nothing
 end
+
+
 ## ----------------------------
 
 """
@@ -932,7 +941,7 @@ function update_state(method::FalsePosition, fs, o::UnivariateZeroState{T,S}, op
     fa::S, fb::S = o.fxn0, o.fxn1
 
     lambda = fb / (fb - fa)
-    tau = 1e-10                   # some engineering to avoid short moves
+    tau = eps(T)^(2/3)                   # some engineering to avoid short moves
     if !(tau < abs(lambda) < 1-tau)
         lambda = 1/2
     end
@@ -960,6 +969,7 @@ function update_state(method::FalsePosition, fs, o::UnivariateZeroState{T,S}, op
 end
 
 # the 12 reduction factors offered by Galadino
+# In RootsTesting.jl, we can see :12 has many more failures.
 galdino = Dict{Union{Int,Symbol},Function}(:1 => (fa, fb, fx) -> fa*fb/(fb+fx),
                                            :2 => (fa, fb, fx) -> (fa - fb)/2,
                                            :3 => (fa, fb, fx) -> (fa - fx)/(2 + fx/fb),
