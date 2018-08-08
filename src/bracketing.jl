@@ -649,7 +649,11 @@ end
 
 # floating point comparison function
 function almost_equal(x::T, y::T) where {T}
-    min_diff = oneunit(x) * realmin(float(x/oneunit(x)))*32
+    if VERSION < v"0.7.0-beta2.169"
+        min_diff = oneunit(x) * realmin(float(x/oneunit(x)))*32
+    else
+        min_diff = oneunit(x) * floatmin(float(x/oneunit(x)))*32
+    end
     abs(x - y) < min_diff
 end
 
