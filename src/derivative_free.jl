@@ -64,23 +64,6 @@ to 3 times.
 """
 struct Order0 <: AbstractSecant end
 
-
-
-function init_state!(state::UnivariateZeroState{T, S}, ::AbstractSecant, f, x::Union{Tuple, Vector}) where {T, S}
-    x0,x1 = promote(float.(x))
-    fx0, fx1 = promote(f(x0), f(x1))
-    init_state!(state, x0, x1, missing, fx0, fx1)
-end
-
-function init_state!(state::UnivariateZeroState{T, S}, ::AbstractSecant, fs, x::Number) where {T, S}
-    x1 = float(x)
-    h = eps(one(real(x1)))^(1/3)
-    dx = h*oneunit(x1) + abs(x1)*h^2 # adjust for if eps(x1) > h
-    x0 = x1 + dx
-    fx0, fx1 = promote(fs(x0), fs(x1))
-    
-    init_state!(state, x0, x1, missing, fx0, fx1)
-end
 ##################################################
 
 
