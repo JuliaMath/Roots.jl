@@ -18,6 +18,19 @@ _unitless(x) = x / oneunit(x)
 ## issue with approx derivative
 isissue(x) = iszero(x) || isnan(x) || isinf(x)
 
+# of (a,fa), (b,fb) choose pair where |f| is smallest
+@inline choose_smallest(a, b, fa, fb) = abs(fa) < abs(fb) ? (a,fa) : (b,fb)
+@inline sort_smallest(a, b, fa, fb) = abs(fa) < abs(fb) ? (a, b, fa, fb) : (b, a, fb, fa)
+
+
+## find a default secant step
+function _default_secant_step(x1)  
+    h = eps(one(real(x1)))^(1/3)
+    dx = h*oneunit(x1) + abs(x1)*h^2 # adjust for if eps(x1) > h
+    x0 = x1 + dx
+    x0
+end
+
 
 """
 heuristic to get a decent first step with Steffensen steps

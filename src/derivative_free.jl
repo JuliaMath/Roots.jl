@@ -1,4 +1,47 @@
 # Many derivative free methods of different orders
+#
+# TODO: rework Order5 #https://pdfs.semanticscholar.org/ce50/3210d96f653a14b28da96600d5990d2abe97.pdf
+# https://content.sciendo.com/view/journals/tmj/10/4/article-p103.xml 7 and 8
+# order8: https://www.hindawi.com/journals/ijmms/2012/493456/ref/
+
+
+
+
+## Order0 and 1 are secant type
+function init_state(method::AbstractSecant, fs, x::Number)
+    x1 = float(x)
+    x0 = _default_secant_step(x1)
+    init_state(method, fs, (x0, x1))
+end
+
+
+function init_state(method::AbstractSecant, fs, x::Union{Tuple, Vector})
+    x0, x1 = promote(float(x[1]), float(x[2]))
+    fx0, fx1 = fs(x0), fs(x1)        
+    state = UnivariateZeroState(x1, x0, eltype(x1)[],
+                                fx1, fx0, eltype(fx1)[],
+                                0, 2,
+                                false, false, false, false, "")
+
+    state
+end
+
+
+
+function init_state!(state::UnivariateZeroState{T, S}, method::AbstractSecant, fs, x::Number) where {T, S}
+    x1::T = float(x)
+    x0::T = _default_secant_step(x1)
+    init_state!(state, method, fs, (x0, x1))
+end
+
+
+function init_state!(state::UnivariateZeroState{T, S}, ::AbstractSecant, f, x::Union{Tuple, Vector}) where {T, S}
+    x0,x1 = promote(float.(x)...)
+    fx0, fx1 = promote(f(x0), f(x1))
+    init_state!(state, x1, x0, T[], fx1, fx0, S[])
+    state.fnevals = 2
+    nothing
+end
 
 ##################################################
 
@@ -14,55 +57,13 @@ methods. The implementation roughly follows the algorithm described in
 SOLVE button from the
 [HP-34C](http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1979-12.pdf).
 The basic idea is to use a secant step. If along the way a bracket is
-found, switch to bisection, using `Bisection` if possible, else
-`A42`.  If the secant step fails to decrease the function value, a
-quadratic step is used up to 3 times.
+found, switch to bisection, using `AlefeldPotraShi`.  If the secant
+step fails to decrease the function value, a quadratic step is used up
+to 3 times.
 
 """
 struct Order0 <: AbstractSecant end
 
-""" find_zero(y, 1.8s, order) 
-    Order1()
-
-The `Order1()` method is an alias for `Secant`. It specifies the
-[secant method](https://en.wikipedia.org/wiki/Secant_method).
-This method keeps two values in its state, `x_n` and `x_n1`. The
-updated point is the intersection point of x axis with the secant line
-formed from the two points. The secant method uses 1 function
-evaluation per step and has order `(1+sqrt(5))/2`.
-
-"""
-struct Secant <: AbstractSecant end
-const Order1 = Secant
-
-
-function init_state(method::AbstractSecant, fs, x::Union{Tuple, Vector})
-    x0, x1 = promote(float(x[1]), float(x[2]))
-    fx0, fx1 = fs(x0), fs(x1)        
-    UnivariateZeroState(x1, x0,
-                        missing, #oneunit(x1) * (0*x1)/(0*x1),
-                        
-                        fx1, fx0, 0, 2,
-                        false, false, false, false, "")
-end
-
-function init_state(method::AbstractSecant, fs, x::Number)
-
-    # need an initial x0,x1 if two not specified
-    x1 = float(x)
-    fx1 = fs(x1)
-
-    h = eps(one(real(x1)))^(1/3)
-    dx = h*oneunit(x1) + abs(x1)*h^2 # adjust for if eps(x1) > h
-    x0 = x1 + dx
-    fx0 = fs(x0)
-    
-    UnivariateZeroState(x1, x0,
-                        missing, #oneunit(x1) * (0*x1)/(0*x1),
-                        fx1, fx0, 0, 2,
-                        false, false, false, false, "")
-
-end
 
 function init_state!(state::UnivariateZeroState{T, S}, ::AbstractSecant, f, x::Union{Tuple, Vector}) where {T, S}
     x0,x1 = promote(float.(x))
@@ -87,113 +88,154 @@ end
 # follows roughly algorithm described http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1979-12.pdf, the SOLVE button from the HP-34C
 # though some modifications were made.
 # * use secant step
-# * if along the way a bracket is found, switch to bisection. (We use float64 bisection not a42 if available)
+# * if along the way a bracket is found, switch to bracketing method.
 # * if secant step fails to decrease, we use quadratic step up to 3 times
 #
-# Goal is to return a value `x` with either:
+# Goal *was* to return a value `x` with either. This can be done if `Bisection` is used
+# but for now we opt for a bit speedier using AlefeldPotraShi
 # * `f(x) == 0.0` or
 # * `f(prevfloat(x)) * f(nextfloat(x)) < 0`.
 # if a bracket is found that can be done, otherwise secant step is used
+# init_state/init_options try to call Order1 (AbstractSecant) methods with modifications
+# we slip in quad_ctr into a value and keep xn1 with smaller norm
+function init_state(M::Order0, f, x::Union{Tuple, Vector})
+    x0, x1 = promote(float.(x)...)
+    fx0, fx1 = promote(f(x0), f(x1))
+    
+    # we keep xn1, fxn1 smallest
+    a,b,fa, fb = sort_smallest(x0, x1, fx0, fx1)
 
-## in Order0, we run bisection if a bracketing interval is found
-## this is meant to be as speedy as possible
-function _run_bisection(fs, options, state)
-    ## could do hybrid method here, where we update state and options, but
-    ## that proves slower, as bisection64 is more efficient.
-    xn0, xn1 = state.xn0, state.xn1
-    state.xn1 = bisection(fs, xn0, xn1)
-    state.x_converged = true
-    options.strict = true # prevent check on f(xn)
-    state.message *= "Used bisection for last step, evaluation counts are not accurate. "
+    T, S = eltype(x1), eltype(fx1)
+    quad_ctr = one(x1)
+
+
+    state = UnivariateZeroState(b, a, [one(T)], ## x1, x0, quad_ctr
+                                fb, fa, S[], ## fx1, fx0, fc, mflag
+                                0, 2,
+                                false, false, false, false,
+                                "")
+    state
 end
 
-function update_state(method::Order0, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
+function init_state!(state::UnivariateZeroState{T,S}, M::Order0, f, x::Union{Tuple,Vector}) where {T,S}
+    x0::T, x1::T = x
+    fx0::S, fx1::S = promote(f(x0), f(x1))
+    a,b,fa, fb = sort_smallest(x0, x1, fx0, fx1)
+    quad_ctr = one(x1)
+    init_state!(state, b, a, T[quad_ctr], fb, fa, S[])
+    state.fnevals = 2
+    nothing
+end
 
-    alpha, beta = o.xn0, o.xn1
-    falpha, fbeta = o.fxn0, o.fxn1
+function init_options(::Order0,
+                      state::UnivariateZeroState{T,S};
+                      maxevals = nothing,
+                      kwargs...) where {T, S}
 
-    if sign(falpha) * sign(fbeta) < 0.0
-        _run_bisection(fs, options, o)
-        return nothing
+    # same as order 1 save maxevals
+    options = init_options(Order1(), state; kwargs...)
+    options.maxevals = maxevals == nothing ? 5 * ceil(Int, -log(eps(T))) : maxevals
+    options
+end
+
+
+function assess_convergence(method::Order0, state::UnivariateZeroState{T,S}, options) where {T,S}
+
+    quad_ctr = state.m[1] #add in test on quad qtr
+    if quad_ctr > 3
+        state.stopped = true
+        return true
     end
 
-    gamma::T, issue = guarded_secant_step(alpha, beta, falpha, fbeta)
+    # how to call super?
+    assess_convergence(Order1(), state, options)
 
-    fgamma::S = fs(gamma); incfn(o)
-
-    if sign(fgamma)*sign(fbeta) < 0.0
-        o.xn0, o.xn1 = gamma, beta
-        o.fxn0, o.fxn1 = fgamma, fbeta
-        _run_bisection(fs, options, o)
-        return nothing
-    end
-
-    if abs(fgamma) <= abs(fbeta)
-        o.xn0, o.xn1 = beta, gamma
-        o.fxn0, o.fxn1 = fbeta, fgamma
-        return nothing
-    end
-
-    ctr = 0
-    while true
-        ## quadratic step
-        ctr += 1
-        if ctr >= 3
-            o.stopped = true
-            o.message = "dithering, algorithm failed to improve using quadratic steps"
-            return nothing
-        end
-
-        # quadratic_step. Put new gamma at vertex of parabola through alpha, beta, (old) gamma
-        gamma = quad_vertex(alpha, falpha, beta, fbeta, gamma, fgamma)
-#        denom = (beta - alpha) * (fbeta - fgamma)  - (beta - fgamma) * (fbeta - falpha)
-#        if isissue(denom)
-        if isissue(gamma)            
-            o.stopped
-            o.message = "dithering, algorithm failed to improve using quadratic steps"
-            return nothing
-        end
-        #        gamma = beta -  ((beta - alpha)^2 * (fbeta - fgamma) - (beta - gamma)^2 * (fbeta - falpha))/denom/2
+end
 
 
-
-        fgamma = fs(gamma); incfn(o)
-        incfn(o)
-
-        if abs(fgamma) < abs(fbeta)
-            o.xn0, o.xn1 = beta, gamma
-            o.fxn0, o.fxn1 = fbeta, fgamma
-            return nothing
-        end
-
-        theta::T, issue = guarded_secant_step(beta, gamma, fbeta, fgamma)
-        
-        ftheta::S = fs(theta); incfn(o)
-
-        if sign(ftheta) * sign(fbeta) < 0
-            o.xn0, o.xn1 = beta, theta
-            o.fxn0, o.fxn1 = fbeta, ftheta
-
-            _run_bisection(fs, options, o)
-            return nothing
-        end
-    end
-
-    # failed to improve
-    o.stopped = true
-    o.message = "failure to improve"
+function run_bisection(f, xs, state, options)
+    #M = Bisection()  # exact for floating point
+    M = AlefeldPotraShi() # *usually* exact
+    #M = Brent()          # a bit faster, but not always convergent, as implemented (cf. RootTesting)
+    steps = state.steps
+    init_state!(state, M, f, xs); state.steps += steps
+    init_options!(options, M)
+    find_zero(M, f, options, state)
+    a, b = xs
+    u,v = a > b ? (b, a) : (a, b)
+    state.message = "Bisection used over ($u, $v), steps not shown"
     return nothing
 end
 
-function show_tracks(l::Tracks, M::Order0)
-    println("Tracks not recorded for Order0()")
-    println("")
+# main algorithm
+function update_state(method::Order0, f, state::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
+
+    a::T, b::T, quad_ctr = state.xn0, state.xn1, state.m[1]
+    fa::S, fb::S = state.fxn0, state.fxn1
+
+    ## we keep fb < fa Could do in init_state to save a conditional XXX
+    if abs(fa) < abs(fb)
+        a, b= b, a
+        fa,fb = fb, fa
+    end
+
+    isbracket(fa, fb) && return run_bisection(f, (a, b), state, options)
+    
+    gamma::T = secant_step(a,b,fa,fb)
+    # modify if gamma is too small or too big
+        if isinf(gamma) || isnan(gamma) || iszero(abs(gamma-b))
+            gamma = b + sign(gamma-b) * 1/1000 * abs(b-a)  # too small
+        elseif abs(gamma-b)  >= 100 * abs(b-a)
+            gamma = b + sign(gamma-b) * 100 * abs(b-a)  ## too big
+        end
+    fgamma::T = f(gamma)
+    incfn(state)
+
+    isbracket(fgamma, fb) && return run_bisection(f, (gamma, b), state, options)
+
+    # decreasing is good
+    if abs(fgamma) < abs(fb)
+        state.xn0, state.xn1 = b, gamma
+        state.fxn0, state.fxn1 = fb, fgamma
+        return nothing
+    end
+
+    
+    # try quad step
+    gamma = quad_vertex(a,fa,b, fb, gamma, fgamma)
+    fgamma = f(gamma)
+    incfn(state)
+    state.m[1] += 1 # increment quad_ctr
+
+    if abs(fgamma) < abs(fb)
+        state.xn0, state.xn1 = b, gamma
+        state.fxn0, state.fxn1 = fb, fgamma
+    else
+        state.xn0 = gamma
+        state.fxn0 = fgamma
+    end
+
+    return nothing    
 end
+
 
 ##################################################
 
 ## Secant
 ## https://en.wikipedia.org/wiki/Secant_method
+""" 
+    Order1()
+
+The `Order1()` method is an alias for `Secant`. It specifies the
+[secant method](https://en.wikipedia.org/wiki/Secant_method).
+This method keeps two values in its state, `x_n` and `x_n1`. The
+updated point is the intersection point of x axis with the secant line
+formed from the two points. The secant method uses 1 function
+evaluation per step and has order `(1+sqrt(5))/2`.
+
+"""
+struct Secant <: AbstractSecant end
+const Order1 = Secant
 
 function update_state(method::Secant, fs, o::UnivariateZeroState{T,S}, options)  where {T, S}
 

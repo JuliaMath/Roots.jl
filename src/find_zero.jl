@@ -29,8 +29,9 @@
 
 ### Methods
 abstract type AbstractUnivariateZeroMethod end
-abstract type AbstractBisection <: AbstractUnivariateZeroMethod end
-abstract type AbstractSecant <: AbstractUnivariateZeroMethod end
+abstract type AbstractBracketing <: AbstractUnivariateZeroMethod end
+abstract type AbstractNonBracketing <: AbstractUnivariateZeroMethod end
+abstract type AbstractSecant <: AbstractNonBracketing end
 
 
 ### States    
@@ -38,30 +39,30 @@ abstract type  AbstractUnivariateZeroState end
 mutable struct UnivariateZeroState{T,S} <: AbstractUnivariateZeroState where {T,S}
     xn1::T
     xn0::T
-    m::Union{T, Missing}
+    m::Vector{T}
     fxn1::S
     fxn0::S
+    fm::Vector{S}
     steps::Int
     fnevals::Int
     stopped::Bool             # stopped, butmay not have converged
     x_converged::Bool         # converged via |x_n - x_{n-1}| < ϵ
     f_converged::Bool         # converged via |f(x_n)| < ϵ
     convergence_failed::Bool
-    message::AbstractString
+    message::String
 end
-incfn(o::UnivariateZeroState, k=1)    = o.fnevals += k
-incsteps(o::UnivariateZeroState, k=1) = o.steps += k
+incfn(o::AbstractUnivariateZeroState, k=1)    = o.fnevals += k
+incsteps(o::AbstractUnivariateZeroState, k=1) = o.steps += k
 
 # initialize state for most methods
 function init_state(method::Any, fs, x)
 
     x1 = float(x)
     fx1 = fs(x1); fnevals = 1
-
+    T, S = eltype(x1), eltype(fx1)
     
-    state = UnivariateZeroState(x1, oneunit(x1) * (0*x1)/(0*x1), 
-                                missing, #oneunit(x1) * (0*x1)/(0*x1), 
-                                fx1, oneunit(fx1) * (0*fx1)/(0*fx1), 
+    state = UnivariateZeroState(x1, oneunit(x1) * (0*x1)/(0*x1), T[],
+                                fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[],
                                 0, fnevals,
                                 false, false, false, false,
                                 "")
@@ -81,12 +82,14 @@ end
 #    out[i] = find_zero(M, f1, options, state)
 # end
 # init_state has a method call variant
-function init_state!(state::UnivariateZeroState{T,S}, x1::T, x0::T, m::Union{T, Missing}, y1::S, y0::S) where {T,S}
+function init_state!(state::UnivariateZeroState{T,S}, x1::T, x0::T, m::Vector{T}, y1::S, y0::S, fm::Vector{S}) where {T,S}
     state.xn1 = x1
     state.xn0 = x0
+    empty!(state.m); append!(state.m,  m)
     state.m = m
     state.fxn1 = y1
     state.fxn0 = y0
+    empty!(state.fm); append!(state.fm,fm)
     state.steps = 0
     state.fnevals = 2
     state.stopped = false
@@ -94,13 +97,14 @@ function init_state!(state::UnivariateZeroState{T,S}, x1::T, x0::T, m::Union{T, 
     state.f_converged = false
     state.convergence_failed = false
     state.message = ""
-    state
+    nothing
 end
 
 function init_state!(state::UnivariateZeroState{T,S}, ::AbstractUnivariateZeroMethod, fs, x) where {T, S}
     x1 = float(x)
     fx1 = fs(x1)
-    init_state!(state, x1, oneunit(x1) * (0*x1)/(0*x1), missing, fx1, oneunit(fx1) * (0*fx1)/(0*fx1))
+    init_state!(state, x1, oneunit(x1) * (0*x1)/(0*x1), T[],
+                fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[])
 end
 
 ### Options
@@ -145,6 +149,7 @@ function init_options!(options::UnivariateZeroOptions{Q,R,S,T}, ::AbstractUnivar
     options.abstol = 4 * eps(S)
     options.reltol = 4 * eps(T)
     options.strict = false
+    nothing
 end
 
 
@@ -381,7 +386,6 @@ A method is specified to indicate which algorithm to employ:
 
 * There are some classical methods where derivatives are required: `Roots.Newton`, `Roots.Halley`. (The are not exported.)
 
-
 For more detail, see the help page for each method (e.g., `?Order1`).
 
 If no method is specified, the default method depends on `x0`:
@@ -453,6 +457,20 @@ function find_zero(fs, x0, method::AbstractUnivariateZeroMethod;
                    kwargs...)
 
     F = callable_function(fs)
+    _find_zero(F, x0, method; tracks=tracks, verbose=verbose, kwargs...)
+end
+
+## This allows for bypassing of `callable_function`.  With
+## callable_function there is no specialization on the function. This
+## makes the first call faster, but subsequent calls slower, due to
+## type instability. Without callable_function the first usage is
+## slower, though this can be effectively reduced using
+## `FunctionWrappers`.
+function _find_zero(F, x0, method::AbstractUnivariateZeroMethod;
+                   tracks::AbstractTracks=NullTracks(),
+                   verbose=false,
+                   kwargs...)    
+
     state = init_state(method, F, x0)
     options = init_options(method, state; kwargs...)
 
@@ -482,10 +500,9 @@ find_zero(f, x0::Tuple; kwargs...) = find_zero(f, x0, Bisection(); kwargs...)
 function find_zero(M::AbstractUnivariateZeroMethod,
                    F,
                    options::UnivariateZeroOptions,
-                   state::UnivariateZeroState{T,S},
+                   state::AbstractUnivariateZeroState,
                    l::AbstractTracks=NullTracks()
-                   )  where {T<:Number, S<:Number}
-
+                   )  #where {T<:Number, S<:Number}
 
     log_step(l, M, state, :init)
     

@@ -24,16 +24,16 @@ fn, xstar, x0, br = x -> x^5 - x - 1, 1.1673039782614187, 1.0, [1.0, 2.0]
 #@test abs(fzero(fn, x0, order=1, ftol=1e-2) - xstar) > 1e-5
 #@test abs(fzero(fn, x0, order=1, xtol=1e-2) - xstar) > 1e-10
 
-@test abs(Roots.a42(fn, br[1], br[2], xtol=1e-2) - xstar) > 1e-5
+@test abs(find_zero(fn, br, Roots.A42(), xatol=1e-1) - xstar) > 1e-5
 
 
 ## various tests
 ## issue #29, basically f(a) or f(b) so big we get NaN for guess from bracket.
 f =  x -> x + exp(x)
-@test fzero(f, 0, [-1e6, 1e6])  ≈ -0.5671432904097838
+@test fzero(f, [-1e6, 1e6])  ≈ -0.5671432904097838
 
 f =  x -> 1/x - 1
-@test fzero(f, [BigFloat(0), 2])  ≈ 1.0
+@test fzero(f, [0, 2])  ≈ 1.0
 
 ## test infinite range
 @test fzero(x -> x, [-Inf, Inf])  ≈ 0.0
