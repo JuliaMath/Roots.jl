@@ -32,7 +32,6 @@ specification of a method. These include:
   order (faster) convergence, though don't always yield results with
   fewer function calls than `Order1` or `Order2`.
 
-
 * There are two historic methods that require a derivative or two:
   `Roots.Newton` and `Roots.Halley`. (Neither is exported.)
 
@@ -56,6 +55,7 @@ julia> find_zero(f, (-10, 0))  # Bisection if x is a tuple and no method
 
 julia> find_zero(f,  (-10, 0), Roots.A42()) # 14 function evaluations
 -0.8155534188089607
+```
 
 julia> find_zero(f, (-10, 0), Roots.FalsePosition())  # 13 function evaluations
 -0.8155534188089607

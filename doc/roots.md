@@ -388,7 +388,12 @@ is sufficiently close to point towards $\pi$--will find convergence at $\pi$.)
 For a classic example where a large second derivative is
 the issue, we have $f(x) = x^{1/3}$:
 
+
+```figure
+plot(x -> flight(x, 45), 0, howfar(45))  
+plot!(x -> flight(x, tstar), 0, howfar(tstar))
 ```
+
 f(x) = cbrt(x)
 x = find_zero(f, 1, Order2())	# all of 2, 5, 8, and 16 fail or diverge towards infinity
 ```
@@ -459,7 +464,6 @@ ns = [1/3];
 u=1/3; for i in 1:10 (u=nextfloat(u);push!(ns, u)) end
 u=1/3; for i in 1:10 (u=prevfloat(u);push!(ns, u)) end
 sort!(ns)
-
 maximum(abs.(f.(ns) - f1.(ns)))
 ```
 

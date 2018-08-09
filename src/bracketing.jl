@@ -310,7 +310,6 @@ end
 ## the method converges,
 ## as we bound between x0, nextfloat(x0) is not measured by eps(), but eps(x0)
 function assess_convergence(method::Union{Bisection}, state::UnivariateZeroState{T,S}, options) where {T, S}
-
    
     state.x_converged && return true
 

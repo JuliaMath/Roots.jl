@@ -386,7 +386,6 @@ A method is specified to indicate which algorithm to employ:
 
 * There are some classical methods where derivatives are required: `Roots.Newton`, `Roots.Halley`. (The are not exported.)
 
-
 For more detail, see the help page for each method (e.g., `?Order1`).
 
 If no method is specified, the default method depends on `x0`:
@@ -504,7 +503,6 @@ function find_zero(M::AbstractUnivariateZeroMethod,
                    state::AbstractUnivariateZeroState,
                    l::AbstractTracks=NullTracks()
                    )  #where {T<:Number, S<:Number}
-
 
     log_step(l, M, state, :init)
     

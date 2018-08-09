@@ -65,6 +65,21 @@ to 3 times.
 struct Order0 <: AbstractSecant end
 
 
+function init_state!(state::UnivariateZeroState{T, S}, ::AbstractSecant, f, x::Union{Tuple, Vector}) where {T, S}
+    x0,x1 = promote(float.(x))
+    fx0, fx1 = promote(f(x0), f(x1))
+    init_state!(state, x0, x1, missing, fx0, fx1)
+end
+
+function init_state!(state::UnivariateZeroState{T, S}, ::AbstractSecant, fs, x::Number) where {T, S}
+    x1 = float(x)
+    h = eps(one(real(x1)))^(1/3)
+    dx = h*oneunit(x1) + abs(x1)*h^2 # adjust for if eps(x1) > h
+    x0 = x1 + dx
+    fx0, fx1 = promote(fs(x0), fs(x1))
+    
+    init_state!(state, x0, x1, missing, fx0, fx1)
+end
 ##################################################
 
 
@@ -81,7 +96,6 @@ struct Order0 <: AbstractSecant end
 # * `f(x) == 0.0` or
 # * `f(prevfloat(x)) * f(nextfloat(x)) < 0`.
 # if a bracket is found that can be done, otherwise secant step is used
-
 # init_state/init_options try to call Order1 (AbstractSecant) methods with modifications
 # we slip in quad_ctr into a value and keep xn1 with smaller norm
 function init_state(M::Order0, f, x::Union{Tuple, Vector})
@@ -112,7 +126,6 @@ function init_state!(state::UnivariateZeroState{T,S}, M::Order0, f, x::Union{Tup
     state.fnevals = 2
     nothing
 end
-
 
 function init_options(::Order0,
                       state::UnivariateZeroState{T,S};
@@ -178,7 +191,6 @@ function update_state(method::Order0, f, state::UnivariateZeroState{T,S}, option
     fgamma::T = f(gamma)
     incfn(state)
 
-    
     isbracket(fgamma, fb) && return run_bisection(f, (gamma, b), state, options)
 
     # decreasing is good
