@@ -6,7 +6,6 @@
 # though they will take similar number of function calls.
 #
 # `Roots.bisection(f, a, b)`  (Bisection). 
-# `Roots.a42(f, a, b)` (Roots.A42) Alefeld, Potra & Shi algorithm, like Brent's 
 # `Roots.secant_method(f, xs)` (Order1) secant method
 # `Roots.dfree(f, xs)`  (Order0) more robust secant method
 #
@@ -56,7 +55,7 @@ function _bisect(::Type{Val{true}}, f, a::T, b::T, xatol, xrtol) where {T <: Flo
     bisection64(f, a, b)
 end
 function _bisect(::Type{Val{true}}, f, a::T, b::T, xatol, xrtol) where {T}
-    a42(f, a, b)
+    _find_zero(f, (a, b), A42())
 end
 # if non zero tolerance, use faster middle.
 function _bisect(::Type{Val{false}},  f, a::T, b::T, xatol, xrtol) where {T}

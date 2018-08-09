@@ -88,29 +88,19 @@ fzero(f::Function, fp::Function, x0::Real; kwargs...) = newton(f, fp, float(x0);
     find_zero(f, x0, method; d...)
 end
 
-## 
-"""
-    fzero(f, x0, bracket; kwargs...)
-    
-Find a zero within a bracket with an initial guess to *possibly* speed things along.
 
-Dispatches to the `A42` method.
-    
-"""
-function fzero(f, x0::Real, bracket::Vector{T}; kwargs...)  where {T <: Number}
+# ## 
+# """
+#     fzero(f, x0, bracket; kwargs...)
+#    
+# Find a zero within a bracket with an initial guess to *possibly* speed things along.
+#
+# Dispatches to the `A42` method.
+#    
+#"""
+@deprecate fzero(f, x0::Real, bracket::Vector; kwargs...)  fzero(f, bracket)
 
-    a, b = adjust_bracket(bracket)
 
-    try
-        ex = a42a(f, a, b, float(x0); kwargs...)
-    catch ex
-        if isa(ex, StateConverged) 
-            return(ex.x0)
-        else
-            rethrow(ex)
-        end
-    end
-end
 
 
 ## fzeros

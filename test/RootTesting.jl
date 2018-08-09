@@ -1,15 +1,11 @@
 using Roots
-using ForwardDiff
-D(f,n=1) = n > 1 ? D(D(f), n-1) : x -> ForwardDiff.derivative(f, float(x))
+
 import Base: show
+if VERSION >= v"0.7.0-"
+    using Printf
+end
 
-## This set of tests is useful for benchmarking the number of function calls, failures, and max errors
-## for the various methods.
-
-
-## Table 1 from TOMS748 by Alefeld, Potra, Shi
-
-type Func
+mutable struct Func
     name :: Symbol
     val :: Function
     bracket :: Function
@@ -18,7 +14,6 @@ end
 function show(io::IO, f::Func)
     @printf io "Func(%s)" f.name
 end
-known_functions = Func[]
 
 ## Construct a function object, and check root brackets
 macro Func(name)
@@ -33,6 +28,14 @@ macro Func(name)
         $f
     end)
 end
+
+known_functions = Func[]
+
+## This set of tests is very useful for benchmarking the number of function
+## calls, failures, and max errors for the various bracketing methods.
+
+
+## Table 1 from TOMS748 by Alefeld, Potra, Shi
 
 func1 = let
     val = (_, x) -> sin(x) - x/2
@@ -59,8 +62,8 @@ func4 = let
     val = (p, x) -> x^p[2] - p[1]
     bracket(p) = p[3]
     params = Tuple{Float64, Float64, Vector{Float64}}[]
-    for a in [0.2, 1.], n in 4:2:12
-        push!(params, (a, n, [0., 5.]))
+    for a_ in [0.2, 1.], n in 4:2:12
+        push!(params, (a_, n, [0., 5.]))
     end
     for n in 8:2:14
         push!(params, (1., n, [-0.95, 4.05]))
@@ -141,7 +144,7 @@ end
 func15 = let
     val = (n, x) -> begin
         if x > 2e-3/(1+n)
-            e - 1.859
+            exp(1) - 1.859
         elseif x < 0
             -0.859
         else
@@ -153,7 +156,7 @@ func15 = let
     @Func :func15
 end
 
-type MethodResults
+mutable struct MethodResults
     name
     evalcount :: Int
     maxresidual :: Float64
@@ -198,10 +201,20 @@ function run_tests(method; verbose=false, trace=false, name=nothing, abandon=fal
     results
 end
 
+Ms = vcat([Roots.FalsePosition(i) for i in 1:12], Roots.A42(), Roots.AlefeldPotraShi(), Roots.Brent(), Roots.Bisection())
+results = [run_tests((f,b) -> find_zero(f, b, M), name="$M") for M in Ms]
+@test all([length(result.failures) <= 10 for result in results])
+
+results = [run_tests((f,b) -> find_zero(f, big.(b), M), name="$M") for M in Ms]
+@test all([length(result.failures) == 0 for result in results[13:end]])
+
+          
 
 
+## run but not in general testing suite
 function run_benchmark_tests()
-    @printf "%s\n" run_tests((f,b) -> Roots.a42(f, b...), name="a42")
+
+    @printf "%s\n" run_tests((f,b) -> find_zero(f, b, Roots.A42()), name="a42")
     @printf "%s\n" run_tests((f,b) -> find_zero(f, b, Bisection()), name="Bisection")
     @printf "%s\n" run_tests((f,b) -> find_zero(f, b, FalsePosition()), name="FalsePosition")
 
@@ -219,12 +232,15 @@ function run_benchmark_tests()
         @printf "%s\n" run_tests((f, b) -> find_zero(f, mean(big.(b)), m), name="$m/BigFloat")
     end
 
-    @printf "%s\n" run_tests((f, b) -> find_zero(f, D(f), mean(big.(b)), Order5()), name="Order5/D;BigFloat")
     @printf "%s\n" run_tests((f, b) -> Roots.secant_method(f, big.(b)), name="secant_method")
     @printf "%s\n" run_tests((f, b) -> Roots.dfree(f, mean(big.(b))), name="dfree")
-    @printf "%s\n" run_tests((f, b) -> newton(f, D(f), mean(big.(b))), name="newton/BigFloat")
-    @printf "%s\n" run_tests((f, b) -> halley(f, D(f), D(f,2), mean(big.(b))), name="halley/BigFloat")
+#    using ForwardDiff
+#    D(f,n=1) = n > 1 ? D(D(f), n-1) : x -> ForwardDiff.derivative(f, float(x))
+#    @printf "%s\n" run_tests((f, b) -> find_zero(f, D(f), mean(big.(b)), Order5()), name="Order5/D;BigFloat")
+#    @printf "%s\n" run_tests((f, b) -> newton(f, D(f), mean(big.(b))), name="newton/BigFloat")
+#    @printf "%s\n" run_tests((f, b) -> halley(f, D(f), D(f,2), mean(big.(b))), name="halley/BigFloat")
 end
 
 
 nothing
+

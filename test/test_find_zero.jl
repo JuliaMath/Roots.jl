@@ -125,7 +125,7 @@ end
 #@test_throws ArgumentError  find_zero(x -> sin(x), 3.0, Bisection())
 
 @test find_zero(x -> cos(x) - x, [0, pi], FalsePosition()) ≈ 0.7390851332151607
-@test (find_zero(x -> sin(x), [big(3), 4], FalsePosition(), maxevals=100) |> sin) < 1e-70
+@test (find_zero(x -> sin(x), [big(3), 4], FalsePosition(), maxevals=1000) |> sin) < 1e-70
 @test find_zero(x -> sin(x), [4,3], FalsePosition()) ≈ pi
 
 galadino_probs = [(x -> x^3 - 1, [.5, 1.5]),
@@ -224,8 +224,8 @@ end
 pathological = [
                 (x ->sin( x ) - x / 2, .1),
                 (x-> 2 * x - exp( - x ), 1),
-                (x -> x * exp( - x ), 1),
-                (x -> exp( x ) - 1 / ( 10 * x )^2, 1),
+                (x -> x * exp( - x ), 0.99),
+                (x -> exp( x ) - 1 / ( 10 * x )^2, .1),
                 (x -> ( x + 3 ) * ( x - 1 )^2, 1),
                 
                 (x -> exp( x ) - 2 - 1 / ( 10 * x )^2 + 2 / ( 100 * x )^3, 1),
@@ -278,3 +278,61 @@ test_94 = function(;kwargs...)
     @test state.steps <= 15
 end
 test_94()
+
+@testset "init_state!" begin
+    ## add init_state! method
+    g1(x) = x^5 - x - 1
+    x0_, xstar_ = (1.0, 2.0), 1.1673039782614187
+    M = Roots.A42()
+    state = Roots.init_state(M, g1, x0_)
+    options = Roots.init_options(M, state)
+    for M in (Roots.A42(), Roots.Bisection(), Roots.FalsePosition())
+        Roots.init_state!(state, M, g1, x0_)
+        @test find_zero(M, g1, options, state) ≈ xstar_
+    end
+
+
+    ## hybrid
+    g1(x) = exp(x) - x^4
+    x0_, xstar_ = (5.0, 20.0), 8.613169456441398
+    M = Roots.Bisection()
+    state = Roots.init_state(M, g1, x0_)
+    options = Roots.init_options(M, state, xatol=1/2)
+    find_zero(M, g1, options, state)
+    M = Roots.Order1()
+    Roots.init_state!(state, M, g1, state.m[1])
+    Roots.init_options!(options, M)
+    @test find_zero(M, g1, options, state) ≈ xstar_
+
+
+    # test conversion between states/options
+    Ms = vcat([Roots.FalsePosition(i) for i in 1:12], Roots.A42(), Roots.AlefeldPotraShi(), Roots.Brent(), Roots.Bisection())
+    Ns = [Roots.Order0(), Roots.Order1(), Roots.Order2(), Roots.Order5(), Roots.Order8(), Roots.Order16()]
+
+    g1(x) = exp(x) - x^4
+    x0_, xstar_ = (5.0, 20.0), 8.613169456441398
+    M = Ms[1]
+    state = Roots.init_state(M, g1, x0_)
+    options = Roots.init_options(M, state)
+
+    for M in Ms
+        @test Roots.init_state!(state, M, g1, x0_) == nothing
+        @test Roots.init_options!(options, M) == nothing
+        @test Roots.update_state(M, g1, state, options) == nothing
+        @test Roots.assess_convergence(M, state, options) == false # none in just 1 step
+    end
+
+    x0_ = 8.0
+    for M in Ns
+        @test Roots.init_state!(state, M, g1, x0_) == nothing
+        @test Roots.init_options!(options, M) == nothing
+        @test Roots.update_state(M, g1, state, options)  == nothing
+        @test Roots.assess_convergence(M, state, options) == false  # none in 1 step
+    end  
+    
+end
+    
+    
+    
+    
+
