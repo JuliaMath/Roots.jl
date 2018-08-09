@@ -51,6 +51,7 @@ mutable struct UnivariateZeroState{T,S} <: AbstractUnivariateZeroState where {T,
     convergence_failed::Bool
     message::String
 end
+
 incfn(o::AbstractUnivariateZeroState, k=1)    = o.fnevals += k
 incsteps(o::AbstractUnivariateZeroState, k=1) = o.steps += k
 
@@ -97,12 +98,14 @@ function init_state!(state::UnivariateZeroState{T,S}, x1::T, x0::T, m::Vector{T}
     state.f_converged = false
     state.convergence_failed = false
     state.message = ""
+
     nothing
 end
 
 function init_state!(state::UnivariateZeroState{T,S}, ::AbstractUnivariateZeroMethod, fs, x) where {T, S}
     x1 = float(x)
     fx1 = fs(x1)
+
     init_state!(state, x1, oneunit(x1) * (0*x1)/(0*x1), T[],
                 fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[])
 end
@@ -149,6 +152,7 @@ function init_options!(options::UnivariateZeroOptions{Q,R,S,T}, ::AbstractUnivar
     options.abstol = 4 * eps(S)
     options.reltol = 4 * eps(T)
     options.strict = false
+
     nothing
 end
 
@@ -386,7 +390,6 @@ A method is specified to indicate which algorithm to employ:
 
 * There are some classical methods where derivatives are required: `Roots.Newton`, `Roots.Halley`. (The are not exported.)
 
-
 For more detail, see the help page for each method (e.g., `?Order1`).
 
 If no method is specified, the default method depends on `x0`:
@@ -458,6 +461,7 @@ function find_zero(fs, x0, method::AbstractUnivariateZeroMethod;
                    kwargs...)
 
     F = callable_function(fs)
+
     _find_zero(F, x0, method; tracks=tracks, verbose=verbose, kwargs...)
 end
 
@@ -471,6 +475,7 @@ function _find_zero(F, x0, method::AbstractUnivariateZeroMethod;
                    tracks::AbstractTracks=NullTracks(),
                    verbose=false,
                    kwargs...)    
+
 
     state = init_state(method, F, x0)
     options = init_options(method, state; kwargs...)
@@ -504,7 +509,6 @@ function find_zero(M::AbstractUnivariateZeroMethod,
                    state::AbstractUnivariateZeroState,
                    l::AbstractTracks=NullTracks()
                    )  #where {T<:Number, S<:Number}
-
 
     log_step(l, M, state, :init)
     

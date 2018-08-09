@@ -88,6 +88,7 @@ fzero(f::Function, fp::Function, x0::Real; kwargs...) = newton(f, fp, float(x0);
     find_zero(f, x0, method; d...)
 end
 
+
 # ## 
 # """
 #     fzero(f, x0, bracket; kwargs...)
@@ -98,6 +99,8 @@ end
 #    
 #"""
 @deprecate fzero(f, x0::Real, bracket::Vector; kwargs...)  fzero(f, bracket)
+
+
 
 
 ## fzeros

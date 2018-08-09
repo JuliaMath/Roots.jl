@@ -65,6 +65,22 @@ to 3 times.
 struct Order0 <: AbstractSecant end
 
 
+
+function init_state!(state::UnivariateZeroState{T, S}, ::AbstractSecant, f, x::Union{Tuple, Vector}) where {T, S}
+    x0,x1 = promote(float.(x))
+    fx0, fx1 = promote(f(x0), f(x1))
+    init_state!(state, x0, x1, missing, fx0, fx1)
+end
+
+function init_state!(state::UnivariateZeroState{T, S}, ::AbstractSecant, fs, x::Number) where {T, S}
+    x1 = float(x)
+    h = eps(one(real(x1)))^(1/3)
+    dx = h*oneunit(x1) + abs(x1)*h^2 # adjust for if eps(x1) > h
+    x0 = x1 + dx
+    fx0, fx1 = promote(fs(x0), fs(x1))
+    
+    init_state!(state, x0, x1, missing, fx0, fx1)
+end
 ##################################################
 
 
@@ -81,7 +97,6 @@ struct Order0 <: AbstractSecant end
 # * `f(x) == 0.0` or
 # * `f(prevfloat(x)) * f(nextfloat(x)) < 0`.
 # if a bracket is found that can be done, otherwise secant step is used
-
 # init_state/init_options try to call Order1 (AbstractSecant) methods with modifications
 # we slip in quad_ctr into a value and keep xn1 with smaller norm
 function init_state(M::Order0, f, x::Union{Tuple, Vector})
@@ -90,6 +105,7 @@ function init_state(M::Order0, f, x::Union{Tuple, Vector})
     
     # we keep xn1, fxn1 smallest
     a,b,fa, fb = sort_smallest(x0, x1, fx0, fx1)
+
 
     T, S = eltype(x1), eltype(fx1)
     quad_ctr = one(x1)
@@ -112,6 +128,7 @@ function init_state!(state::UnivariateZeroState{T,S}, M::Order0, f, x::Union{Tup
     state.fnevals = 2
     nothing
 end
+
 
 
 function init_options(::Order0,
@@ -181,6 +198,7 @@ function update_state(method::Order0, f, state::UnivariateZeroState{T,S}, option
     
     isbracket(fgamma, fb) && return run_bisection(f, (gamma, b), state, options)
 
+
     # decreasing is good
     if abs(fgamma) < abs(fb)
         state.xn0, state.xn1 = b, gamma
@@ -232,7 +250,7 @@ function update_state(method::Secant, fs, o::UnivariateZeroState{T,S}, options) 
          o.message = "Derivative approximation had issues"
          return
      end
-
+  
     dx = o.fxn1 * (o.xn1 - o.xn0) / (o.fxn1 - o.fxn0)
     o.xn0, o.xn1 = o.xn1, o.xn1 - dx
     o.fxn0, o.fxn1 = o.fxn1, fs(o.xn1)

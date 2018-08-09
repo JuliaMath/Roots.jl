@@ -139,6 +139,7 @@ and relative tolerance `xrtol`.
 When a zero tolerance is given and the values are not `Float64`
 values, this will call the `A42` method.
     
+
 """
 struct Bisection <: AbstractBisection end  # either solvable or A42
 struct BisectionExact <: AbstractBisection end
@@ -149,6 +150,7 @@ function log_step(l::Tracks, M::AbstractBracketing, state)
     push!(l.xs, state.xn1) # we store [ai,bi, ai+1, bi+1, ...]
 end
 function show_tracks(l::Tracks, M::AbstractBracketing)
+
     xs = l.xs
     n = length(xs)
     for (i,j) in enumerate(1:2:(n-1))
@@ -195,6 +197,7 @@ end
 
 function init_state!(state::UnivariateZeroState{T,S}, ::AbstractBisection, fs, x::Union{Tuple, Vector}) where {T, S}
     x0, x1 = adjust_bracket(x)
+
     m::T = _middle(x0, x1)
     fx0::S, fx1::S, fm::S = sign(fs(x0)), sign(fs(x1)), sign(fs(m))
 
@@ -216,6 +219,7 @@ function init_options(::M,
                       rtol=missing,
                       maxevals::Int=typemax(Int),
                       maxfnevals::Int=typemax(Int)) where {M <: Union{Bisection, BisectionExact}, T, S}
+
 
     ## Where we set defaults
     x1 = real(oneunit(state.xn1))
@@ -239,7 +243,9 @@ function init_options!(options::UnivariateZeroOptions{Q,R,S,T}, ::Bisection) whe
     options.reltol = zero(T)
     options.maxevals = typemax(Int)
     options.strict = true
+
     nothing
+
 end
 
 ## This uses _middle bisection Find zero using modified bisection
@@ -254,6 +260,7 @@ _middle(x::Float64, y::Float64) = _middle(Float64, UInt64, x, y)
 _middle(x::Float32, y::Float32) = _middle(Float32, UInt32, x, y)
 _middle(x::Float16, y::Float16) = _middle(Float16, UInt16, x, y)
 _middle(x::Number, y::Number) = 0.5*x + 0.5 * y # fall back or non Floats
+
 
 function _middle(T, S, x, y)
     # Use the usual float rules for combining non-finite numbers
@@ -310,7 +317,6 @@ end
 ## the method converges,
 ## as we bound between x0, nextfloat(x0) is not measured by eps(), but eps(x0)
 function assess_convergence(method::Union{Bisection}, state::UnivariateZeroState{T,S}, options) where {T, S}
-
    
     state.x_converged && return true
 
