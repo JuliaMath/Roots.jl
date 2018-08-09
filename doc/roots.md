@@ -24,7 +24,7 @@ there will be a zero in the interval $[a,b]$.  If $f$ is not
 continuous, then there must be a point $c$ in $[a,b]$ where the function
 "jumps" over $0$.
 
-Such values can be found, up to floating point
+Using bisection, such values can be found, up to floating point
 roundoff. That is, given `f(a) * f(b) < 0`, a value `c` with `a < c < b` can be
 found where either `f(c) == 0.0` or  `f(prevfloat(c)) * f(c) < 0` or
 `f(c) * f(nextfloat(c)) < 0`.
@@ -44,7 +44,7 @@ The `Roots` package includes the bisection algorithm through
 and `Bisection()` to specify the algorithm:
 
 ```
-x = find_zero(f, (0, 1), Bisection())    # alternatively fzero(f, [0, 1])
+x = find_zero(f, (0, 1), Bisection())   
 x, f(x)
 ```
 
@@ -65,9 +65,7 @@ x, f(x)
 
 This value of `x` does not exactly produce a zero, however, it is as close as can be:
 
-```
-f(prevfloat(x)) * f(x) < 0.0 || f(x) * f(nextfloat(x)) < 0.0
-```
+``` f(prevfloat(x)) * f(x) < 0.0 || f(x) * f(nextfloat(x)) < 0.0 ```
 
 That is, at `x` the function is changing sign.
 
@@ -107,22 +105,30 @@ rt = find_zero(sin, (3.0, 4.0), xatol=1e-6)
 rt - pi
 ```
 
+There are more efficient algorithms than `Bisection` implemented:
+`Roots.A42()`, `Roots.AlefeldPotraShi()`, `Roots.Brent()`, and 12
+flavors of `Roots.FalsePosition()`. The first few have guaranteed
+convergence and use, generally, fewer function calls than bisection
+(for sufficiently smooth functions). The false position methods are
+also faster, though may fail to converge on certain problems.
+
 
 ## Non-bracketing problems
 
-Bracketing methods have guaranteed convergence, but in general require
-many more function calls than are needed to produce an answer.  If a
-good initial guess is known, then the `find_zero` function provides an
-interface to some different iterative algorithms that are more
-efficient. Unlike bracketing methods, these algorithms may not
-converge to the desired root if the initial guess is not well chosen.
+Bracketing methods may have guaranteed convergence, but in general may
+require more function calls than are needed to produce an answer.  If
+a good initial guess is known, then the `find_zero` function provides
+an interface to some different iterative algorithms that are more
+efficient for good initial guesses. Unlike bracketing methods, these
+algorithms may not converge to the desired root if the initial guess
+is not well chosen.
 
 The default algorithm is modeled after an algorithm used for
 [HP-34 calculators](http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1979-12.pdf). This
 algorithm is designed to be more forgiving of the quality of the
 initial guess at the cost of possibly performing many more steps than
-other algorithms, as if the algorithm encounters a bracket, bisection
-will be used.
+other algorithms, as if the algorithm encounters a bracket, a
+bracketing algorithm with guaranteed convergence will be used.
 
 For example, the answer to our initial problem is visibly seen from a
 graph to be near 1. Given this,
@@ -151,8 +157,8 @@ x, sin(x), x - pi
 
 ### Higher order methods
 
-The default call to `fzero` uses a first order method and then
-possibly bracketing, which involves potentially many more function
+The default call to `find_zero` uses the first order secant method and then
+possibly a bracketing method, which involves potentially many more function
 calls. There may be times where a more efficient algorithm is
 sought.  For such, a higher-order method might be better suited. There
 are algorithms `Order1` (secant method), `Order2`
@@ -164,11 +170,10 @@ specifying the method after the initial starting point:
 
 ```
 f(x) = 2x - exp(-x)
-x = find_zero(f, 1, Order1())      # also fzero(f, 1, order=1)
+x = find_zero(f, 1, Order1())      
 x, f(x)
 ```
 
-The above makes $8$ function calls, to the $57$ made with `Order0`.
 
 ```
 f(x) = (x + 3) * (x - 1)^2
@@ -187,7 +192,8 @@ A simple zero, $c$,has $f(x) = (x-c) \cdot g(x)$ where $g(c) \neq 0$.
 Generally speaking, non-simple zeros are
 expected to take many more function calls, as the methods are no
 longer super-linear. This is the case here, where `Order2` uses $55$
-function calls, `Order8` uses $41$, and `Order0` takes, a comparable, $42$.)
+function calls, `Order8` uses $41$, and `Order0` takes, a comparable,
+$42$, as it does not identify a bracketing interval.
 
 To investigate an algorithm and its convergence, the argument
 `verbose=true` may be specified.
@@ -402,7 +408,7 @@ happen, but it isn't guaranteed:
 ```
 f(x) = x^5 - x - 1
 x0 = 0.1
-find_zero(f, x0)
+find_zero(f, x0) 
 ```
 
 Whereas, 
@@ -427,11 +433,11 @@ plot!(zero, -1.25, 1.5, linewidth=3)
 plot!(xs, ys)
 ```
 
-Though 15 steps are shown, only a few are discernible, as the function's relative maximum
-causes a trap for this algorithm. Starting to the right of the
-relative minimum--nearer the zero--would avoid this trap. The default
-method employs a trick to bounce out of such traps, though it doesn't
-always work.
+Though 15 steps are shown, only a few are discernible, as the
+function's relative maximum causes a trap for this algorithm. Starting
+to the right of the relative minimum--nearer the zero--would avoid
+this trap. The default method employs a trick to bounce out of such
+traps, though it doesn't always work.
 
 ###  Tolerances
 
@@ -475,7 +481,7 @@ f1s = sign.(f1.(ns))
 ```
 
 Parsing this shows a few surprises. First, there are two zeros of
-`f(x)` identified--not just one as expected mathematically--the
+`f(x)` identified--not just one, as expected mathematically--the
 floating point value of `1/3` and the next largest floating point
 number. For `f1(x)` there is only one zero, but it isn't the floating
 point value for `1/3` but rather 10 floating point numbers
@@ -483,7 +489,10 @@ away. Further, there are 5 sign changes of the function values. There
 is no guarantee that a zero will be present, but for a mathematical
 function that changes sign, there will be at least one sign change.
 
-With this in mind, an exact zero of `f` would be either where `iszero(f(x))` is true *or* where the function has a sign change (either `f(x)*f(prevfloat(x))<0` or `f(x)*f(nextfloat(x)) < 0`).
+With this in mind, an "exact" zero of `f` would be either where
+`iszero(f(x))` is true *or* where the function has a sign change at an
+adjacent floating point value (either `f(x)*f(prevfloat(x))<0` or
+`f(x)*f(nextfloat(x)) < 0`).
 
 As mentioned, the default `Bisection()` method of `find_zero`
 identifies such zeros for `f` provided an initial bracketing interval
@@ -563,7 +572,7 @@ essentially the one made in SciPy.
 This is not the choice made in `Roots`. The fact that bisection can
 produce zeros as exact as possible, and the fact that the error in
 function evaluation, $f'(x)|x|\epsilon$, is not typically on the scale
-of `1e-8`, leads to a desire for more precision, if available.
+of `1e-8`, leads to a desire for smaller residual values of `f(x)` when possible.
 
 In `Roots`, the faster algorithms use a check on both the size of
 `f(xn)` and the size of the difference between the last two `xn` values. The check on `f(xn)`

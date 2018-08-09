@@ -1,5 +1,5 @@
 [![Roots](http://pkg.julialang.org/badges/Roots_0.6.svg)](http://pkg.julialang.org/?pkg=Roots&ver=0.6)
-[![Roots](http://pkg.julialang.org/badges/Roots_0.7.svg)](http://pkg.julialang.org/?pkg=Roots&ver=0.7)  
+[![Roots](http://pkg.julialang.org/badges/Roots_0.7.svg)](http://pkg.julialang.org/?pkg=Roots&ver=0.7)
 Linux: [![Build Status](https://travis-ci.org/JuliaMath/Roots.jl.svg?branch=master)](https://travis-ci.org/JuliaMath/Roots.jl)
 Windows: [![Build status](https://ci.appveyor.com/api/projects/status/goteuptn5kypafyl?svg=true)](https://ci.appveyor.com/project/jverzani/roots-jl)
 
@@ -11,17 +11,17 @@ scalar functions of a single real variable. The `find_zero`function provides the
 primary interface. It supports various algorithms through the
 specification of a method. These include:
 
-* Bisection-like algorithms. For functions where a bracketing interval
-  is known (one where `f(a)` and `f(b)` have alternate signs), the
-  `Bisection` method can be specified. For most floating point number types, bisection occurs
-  in a manner exploiting floating point storage conventions. For
-  others, an algorithm of Alefeld, Potra, and Shi is used. These
-  methods are guaranteed to converge.
-
-  For typically faster convergence -- though not guaranteed -- the
-  `FalsePosition` method can be specified. This method has one of 12
-  implementations for a modified secant method to potentially
-  accelerate convergence.
+* Bracketing algorithms. For functions where a bracketing interval is
+  known (one where `f(a)` and `f(b)` have alternate signs), the
+  `Bisection` method can be specified. For most floating point number
+  types, bisection occurs in a manner exploiting floating point
+  storage conventions for robustness. For others, an algorithm of Alefeld, Potra, and
+  Shi is used. These methods are guaranteed to converge. There are a few
+  similar algorithms (`Roots.A42()`, `Roots.AlefeldPotraShi()`, and `Roots.Brent()`).
+  Additionally, there are 12 `Roots.FalsePosition()` methods which
+  assume a bracketing interval. `Bisection` is the slowest, but for
+  typical values will return an exact zero or a value where there is a
+  sign change between adjacent floating point values.
 
 * Several derivative-free methods are implemented. These are specified
   through the methods `Order0`, `Order1` (the secant method), `Order2`
@@ -46,14 +46,18 @@ using Roots
 f(x) = exp(x) - x^4
 
 # a bisection method has the bracket specified with a tuple or vector
+# the calling pattern is `find_zero(f, x0, [Method]; keywords...)`:
 julia> find_zero(f, (8,9), Bisection())
 8.613169456441398
 
 julia> find_zero(f, (-10, 0))  # Bisection if x is a tuple and no method
--0.8155534188089606
+-0.8155534188089606            # 64 function evaluations
 
 
-julia> find_zero(f, (-10, 0), FalsePosition())  # just 11 function evaluations
+julia> find_zero(f,  (-10, 0), Roots.A42()) # 14 function evaluations
+-0.8155534188089607
+
+julia> find_zero(f, (-10, 0), Roots.FalsePosition())  # 13 function evaluations
 -0.8155534188089607
 ```
 
@@ -65,7 +69,7 @@ scalar:
 julia> find_zero(f, 3)         # default is Order0()
 1.4296118247255556
 
-julia> find_zero(f, 3, Order1()) # same answer, different method
+julia> find_zero(f, 3, Order1()) # same answer, faster method
 1.4296118247255556
 
 julia> find_zero(sin, BigFloat(3.0), Order16())
@@ -155,7 +159,7 @@ find_zeros(f, -10, 10)
 
 ### Convergence
 
-For most algorithms, convergence is decided when
+For most algorithms, convergence is decided when:
 
 * The value |f(x_n)| < tol with `tol = max(atol, abs(x_n)*rtol)`, or
 
@@ -170,10 +174,11 @@ The algorithm stops if
 
 * the number of function calls exceeds `maxfnevals`.
 
-If the algorithm stops and the relaxed convergence criteria is met,
-the suspected zero is returned. Otherwise an error is thrown
-indicating no convergence. To adjust the tolerances, `find_zero`
-accepts keyword arguments `atol`, `rtol`, `xatol`, and `xrtol`.
+If the algorithm stops and the relaxed convergence criteria is met
+(this can be turned off), the suspected zero is returned. Otherwise an
+error is thrown indicating no convergence. To adjust the tolerances,
+`find_zero` accepts keyword arguments `atol`, `rtol`, `xatol`, and
+`xrtol`.
 
 
 The `Bisection` and `Roots.A42` methods are guaranteed to converge
