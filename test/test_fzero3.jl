@@ -1,4 +1,5 @@
-import Roots.fzero
+using Roots
+using Test
 
 # test robustness of derivative free algorithms
 

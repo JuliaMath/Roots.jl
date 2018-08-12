@@ -1,6 +1,6 @@
 ## tests of find_zero interface
 using Roots
-using Compat.Test
+using Test
 import SpecialFunctions.erf
 
 

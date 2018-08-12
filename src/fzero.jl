@@ -1,3 +1,9 @@
+
+
+module MatlabCompat
+using Roots
+#export fzero, fzeros until we remove deprecation
+
 ## MATLAB interfcae to find_zero
 ## Main functions are
 ## * fzero(f, ...) to find _a_ zero of f
@@ -89,18 +95,6 @@ fzero(f::Function, fp::Function, x0::Real; kwargs...) = newton(f, fp, float(x0);
 end
 
 
-# ## 
-# """
-#     fzero(f, x0, bracket; kwargs...)
-#    
-# Find a zero within a bracket with an initial guess to *possibly* speed things along.
-#
-# Dispatches to the `A42` method.
-#    
-#"""
-@deprecate fzero(f, x0::Real, bracket::Vector; kwargs...)  fzero(f, bracket)
-
-
 
 
 ## fzeros
@@ -118,3 +112,6 @@ end
 fzeros(f, bracket::Vector{T}; kwargs...) where {T <: Number} = fzeros(f, a, b; kwargs...)
 fzeros(f, bracket::Tuple{T,S}; kwargs...) where {T <: Number, S<:Number} = fzeros(f, a, b; kwargs...) 
 
+
+
+end

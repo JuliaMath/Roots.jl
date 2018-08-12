@@ -3,7 +3,8 @@
 
 const bracketing_error = """The interval [a,b] is not a bracketing interval.
 You need f(a) and f(b) to have different signs (f(a) * f(b) < 0).
-Consider a different bracket or try fzero(f, c) with an initial guess c.
+Consider a different bracket, or try find_zeros(f,a,b) or find_zero(f, c)
+with an initial guess c.
 
 """
 

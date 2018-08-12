@@ -44,7 +44,7 @@ The `Roots` package includes the bisection algorithm through
 and `Bisection()` to specify the algorithm:
 
 ```
-x = find_zero(f, (0, 1), Bisection())    # alternatively fzero(f, [0, 1])
+x = find_zero(f, (0, 1), Bisection())  
 x, f(x)
 ```
 
@@ -151,7 +151,7 @@ x, sin(x), x - pi
 
 ### Higher order methods
 
-The default call to `fzero` uses a first order method and then
+The default call to `find_zero` uses a first order method and then
 possibly bracketing, which involves potentially many more function
 calls. There may be times where a more efficient algorithm is
 sought.  For such, a higher-order method might be better suited. There
@@ -164,7 +164,7 @@ specifying the method after the initial starting point:
 
 ```
 f(x) = 2x - exp(-x)
-x = find_zero(f, 1, Order1())      # also fzero(f, 1, order=1)
+x = find_zero(f, 1, Order1())      
 x, f(x)
 ```
 

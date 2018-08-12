@@ -1,7 +1,7 @@
 # tests for find_zeros
 
 using Roots
-using Compat.Test
+using Test
 
 
 mutable struct CallableFunction

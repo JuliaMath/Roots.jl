@@ -3,7 +3,7 @@
 # that CI should run these
 
 using Roots
-using Compat.Test
+using Test
 using Unitful
 using SymEngine
 
