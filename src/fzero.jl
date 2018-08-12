@@ -2,7 +2,7 @@
 
 module MatlabCompat
 using Roots
-#export fzero, fzeros until we remove deprecation
+export fzero, fzeros
 
 ## MATLAB interfcae to find_zero
 ## Main functions are

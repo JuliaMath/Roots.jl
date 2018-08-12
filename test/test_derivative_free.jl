@@ -7,8 +7,8 @@ orders = [1,2,5,8,16]
 
 fn, x0, alpha = x -> cos(x) - x , 1.0, 0.7390851332151607
 for order in orders
-    @test Roots.MatlabCompat.fzero(fn, x0, order=order)  ≈ alpha
-    @test Roots.MatlabCompat.fzero(fn, big(x0), order=order)  ≈ alpha
+    @test fzero(fn, x0, order=order)  ≈ alpha
+    @test fzero(fn, big(x0), order=order)  ≈ alpha
 end
 
 
@@ -18,14 +18,14 @@ x0 = -1.0
 alpha = -1.1673039782614187
 
 for order in orders
-    @test Roots.MatlabCompat.fzero(fn, x0, order=order)  ≈ alpha
+    @test fzero(fn, x0, order=order)  ≈ alpha
 end
 
 ## failures
 fn = x -> x^20 - 1
 x0, alpha = 0.5, 1.0
 for order in orders[3:end]
-    @test_throws Roots.ConvergenceFailed Roots.MatlabCompat.fzero(fn, x0, order=order)
+    @test_throws Roots.ConvergenceFailed fzero(fn, x0, order=order)
 end
 
 
@@ -34,15 +34,15 @@ fn = x -> cos(x) - 1
 x0, alpha = 0.1, 0.0
 for order in orders[end]
     ## test that these do not throw
-    fn(Roots.MatlabCompat.fzero(fn, x0, order=order, ftol=1e-10))
+    fn(fzero(fn, x0, order=order, ftol=1e-10))
 end
 
-#@test_throws Roots.ConvergenceFailed Roots.MatlabCompat.fzero(fn, x0, order=1)
-@test fn(Roots.MatlabCompat.fzero(fn, x0, order=1, maxsteps = 300))+1 ≈ 1.0
+#@test_throws Roots.ConvergenceFailed fzero(fn, x0, order=1)
+@test fn(fzero(fn, x0, order=1, maxsteps = 300))+1 ≈ 1.0
 
 ## trivial
 for order in orders
-    @test Roots.MatlabCompat.fzero(x -> 0.0, 1, order=order) ≈ 1.0
-    @test Roots.MatlabCompat.fzero(x -> x, 0.0, order=order) ≈ 0.0
+    @test fzero(x -> 0.0, 1, order=order) ≈ 1.0
+    @test fzero(x -> x, 0.0, order=order) ≈ 0.0
 end
 

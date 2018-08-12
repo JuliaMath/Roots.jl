@@ -185,39 +185,37 @@ reduce the number of function calls when lower precision is required.
 ## An alternate interface
 
 For MATLAB users, this functionality is provided by the `fzero`
-function. `Roots` also provides this alternative interface:
+function. `Roots` also provides this alternative interface, after
+loading `Roots.MatlabCompat`:
 
 
-* `Roots.MatlabCompat.fzero(f, a::Real, b::Real)` and `Roots.MatlabCompat.fzero(f,
+* `fzero(f, a::Real, b::Real)` and `fzero(f,
   bracket::Vector)` call the `find_zero` algorithm with the
   `Bisection` method.
   
-* `Roots.MatlabCompat.fzero(f, x0::Real; order::Int=0)` calls a
+* `fzero(f, x0::Real; order::Int=0)` calls a
   derivative-free method. with the order specified matching one of
   `Order0`, `Order1`, etc.
   
-* `Roots.MatlabCompat.fzeros(f, a::Real, b::Real)` will call
+* `fzeros(f, a::Real, b::Real)` will call
 `find_zeros`.
-
-[In the next release, after calling `using Roots.MatlabCompat`, the
-prefixes will be unnecessary.]
-
 
 
 ## Usage examples
 
 ```julia
+using Roots.MatlabCompat      # bring in fzero, fzeros
 f(x) = exp(x) - x^4
 ## bracketing
-Roots.MatlabCompat.fzero(f, 8, 9)		          # 8.613169456441398
-Roots.MatlabCompat.fzero(f, -10, 0)		          # -0.8155534188089606
-Roots.MatlabCompat.fzeros(f, -10, 10)             # -0.815553, 1.42961  and 8.61317 
+fzero(f, 8, 9)		          # 8.613169456441398
+fzero(f, -10, 0)		      # -0.8155534188089606
+fzeros(f, -10, 10)            # -0.815553, 1.42961  and 8.61317 
 
 ## use a derivative free method
-Roots.MatlabCompat.fzero(f, 3)			          # 1.4296118247255558
+fzero(f, 3)			          # 1.4296118247255558
 
 ## use a different order
-Roots.MatlabCompat.fzero(sin, 3, order=16)		  # 3.141592653589793
+fzero(sin, 3, order=16)		  # 3.141592653589793
 ```
 
 
