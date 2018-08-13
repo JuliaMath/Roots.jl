@@ -307,7 +307,7 @@ test_94()
 
     # test conversion between states/options
     Ms = vcat([Roots.FalsePosition(i) for i in 1:12], Roots.A42(), Roots.AlefeldPotraShi(), Roots.Brent(), Roots.Bisection())
-    Ns = [Roots.Order0(), Roots.Order1(), Roots.Order2(), Roots.Order5(), Roots.Order8(), Roots.Order16()]
+    Ns = [Roots.Order1(), Roots.Order2(), Roots.Order5(), Roots.Order8(), Roots.Order16()]
 
     g1(x) = exp(x) - x^4
     x0_, xstar_ = (5.0, 20.0), 8.613169456441398
