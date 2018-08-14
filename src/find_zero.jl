@@ -619,13 +619,13 @@ end
 #M = AlefeldPotraShi() # *usually* exact
 #M = Brent()          # a bit faster, but not always convergent, as implemented (cf. RootTesting)
 run_bisection(f, xs, state, options) = run_bisection(AlefeldPotraShi(), f, xs, state, options)
-function run_bisection(M::AbstractBracketing, f, xs, state, options)
+function run_bisection(N::AbstractBracketing, f, xs, state, options)
     steps, fnevals = state.steps, state.fnevals
-    init_state!(state, M, f, xs)
+    init_state!(state, N, f, xs)
     state.steps += steps
     state.fnevals += fnevals # could avoid 2 fn calls, with fxs
-    init_options!(options, M)
-    find_zero(M, f, options, state)
+    init_options!(options, N)
+    find_zero(N, f, options, state)
     a, b = xs
     u,v = a > b ? (b, a) : (a, b)
     state.message *= "Bracketing used over ($u, $v), those steps not shown. "
@@ -717,11 +717,14 @@ function find_zero(M::AbstractUnivariateZeroMethod,
                 copy!(state, state0)
             else
                 state0.xn1 = r
-                    state0.fxn1 = F(r)
+                state0.fxn1 = F(r)
                 incfn(state)
                 copy!(state, state0)
             end
         end
+
+        log_step(l, M, state)
+        incsteps(state)
     end
     
     decide_convergence(M, F, state, options)

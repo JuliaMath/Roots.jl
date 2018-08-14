@@ -623,7 +623,7 @@ function assess_convergence(method::AbstractAlefeldPotraShi, state::UnivariateZe
     u,fu = choose_smallest(state.xn0, state.xn1, state.fxn0, state.fxn1)
     u, fu = choose_smallest(u, state.m[1], fu, state.fm[1])
 
-    if abs(fu) <= max(options.abstol, abs(u) * options.reltol)
+    if abs(fu) <= maximum(promote(options.abstol, abs(u) * oneunit(fu) / oneunit(u) * options.reltol))
         state.f_converged = true
         state.xn1=u
         state.fxn1=fu
@@ -634,7 +634,7 @@ function assess_convergence(method::AbstractAlefeldPotraShi, state::UnivariateZe
     end
 
     a,b = state.xn0, state.xn1
-    tol = max(options.xabstol, max(abs(a),abs(b)) * options.xreltol)
+    tol = maximum(promote(options.xabstol, max(abs(a),abs(b)) * options.xreltol))
 
     if abs(b-a) <= 2tol
         # use smallest of a,b,m
