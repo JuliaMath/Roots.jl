@@ -459,6 +459,8 @@ appreciated, and at times specified.
 For the `Bisection` methods, convergence is guaranteed, so the tolerances are set to be 0 by default.
 
 
+If a bracketing method is passed in after the method specification if a bracket is found, the method will switch. This is what `Order0` does by default, with a secant step initially.
+    
 # Examples:
 
 ```
@@ -603,7 +605,7 @@ function decide_convergence(M::AbstractUnivariateZeroMethod,  F, state, options)
         return state.xn1
     end
 
-    nan = oneunit(state.xn1) * (0 * state.xn1) / (0*state.xn1)
+    nan = NaN * state.xn1
     if state.convergence_failed
         return nan        
     end
@@ -631,14 +633,13 @@ function run_bisection(M::AbstractBracketing, f, xs, state, options)
 end
 
 
-# Robust version using some tricks: idea from roughly algorithm
-# described
-# http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1979-12.pdf, the
-# SOLVE button from the HP-34C:
+# Robust version using some tricks: idea from algorithm described in
+# [The SOLVE button from the
+# HP-34]C(http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1979-12.pdf).
 # * use bracketing method if one identifed
 # * limit steps so as not too far or too near the previous one
 # * if not decreasing, use a quad step upto 4 times to bounce out of trap, if possible
-
+# First uses M, then N if bracket is identified
 function find_zero(M::AbstractUnivariateZeroMethod,
                    N::AbstractBracketing,
                    F,
@@ -661,7 +662,7 @@ function find_zero(M::AbstractUnivariateZeroMethod,
         copy!(state0, state)
         update_state(M, F, state0, options) # state0 is proposed step
 
-        ## did we find a zero
+        ## did we find a zero or a bracketing interval?
         if iszero(state0.fxn1)
             copy!(state, state0)
             state.f_converged = true
@@ -691,7 +692,7 @@ function find_zero(M::AbstractUnivariateZeroMethod,
             incfn(state)
         end
 
-        ## did we improve
+        ## did we improve?
         if abs(state0.fxn1) < abs(state.fxn1)
             # check
             if isnan(state0.xn1) || isnan(state0.fxn1) || isinf(state0.xn1) || isinf(state0.fxn1)
@@ -703,7 +704,8 @@ function find_zero(M::AbstractUnivariateZeroMethod,
             quad_ctr = 0
             continue
         end
-        
+
+        ## try quad_vertex, unless that has gotten old
         if quad_ctr > 4
             copy!(state, state0)
             state.stopped = true

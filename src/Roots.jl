@@ -8,7 +8,7 @@ else
     using Missings
 end
 
-#using Compat: @nospecialize, lastindex, range
+using Compat: @nospecialize, lastindex, range
 
 
 export fzero,
