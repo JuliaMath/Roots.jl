@@ -943,14 +943,14 @@ FalsePosition(x=:anderson_bjork) = FalsePosition{x}()
 function update_state(method::FalsePosition, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
 
     a::T, b::T =  o.xn0, o.xn1
-
     fa::S, fb::S = o.fxn0, o.fxn1
 
     lambda = fb / (fb - fa)
-    tau = eps(T)^(2/3)                   # some engineering to avoid short moves
+    tau = 1e-10                   # some engineering to avoid short moves; still fails on some
     if !(tau < abs(lambda) < 1-tau)
         lambda = 1/2
     end
+
     x::T = b - lambda * (b-a)        
     fx::S = fs(x)
     incfn(o)
@@ -958,13 +958,14 @@ function update_state(method::FalsePosition, fs, o::UnivariateZeroState{T,S}, op
     if iszero(fx)
         o.xn1 = x
         o.fxn1 = fx
+        o.f_converged = true
         return
     end
 
     if sign(fx)*sign(fb) < 0
         a, fa = b, fb
     else
-        fa = galdino_reduction(method, fa, fb, fx) #galdino[method.reduction_factor](fa, fb, fx)
+        fa = galdino_reduction(method, fa, fb, fx) 
     end
     b, fb = x, fx
 
