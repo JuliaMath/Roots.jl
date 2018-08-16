@@ -623,7 +623,7 @@ function assess_convergence(method::AbstractAlefeldPotraShi, state::UnivariateZe
     u,fu = choose_smallest(state.xn0, state.xn1, state.fxn0, state.fxn1)
     u, fu = choose_smallest(u, state.m[1], fu, state.fm[1])
 
-    if abs(fu) <= max(options.abstol, abs(u) * options.reltol)
+    if abs(fu) <= maximum(promote(options.abstol, abs(u) * oneunit(fu) / oneunit(u) * options.reltol))
         state.f_converged = true
         state.xn1=u
         state.fxn1=fu
@@ -634,7 +634,7 @@ function assess_convergence(method::AbstractAlefeldPotraShi, state::UnivariateZe
     end
 
     a,b = state.xn0, state.xn1
-    tol = max(options.xabstol, max(abs(a),abs(b)) * options.xreltol)
+    tol = maximum(promote(options.xabstol, max(abs(a),abs(b)) * options.xreltol))
 
     if abs(b-a) <= 2tol
         # use smallest of a,b,m
@@ -943,14 +943,14 @@ FalsePosition(x=:anderson_bjork) = FalsePosition{x}()
 function update_state(method::FalsePosition, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
 
     a::T, b::T =  o.xn0, o.xn1
-
     fa::S, fb::S = o.fxn0, o.fxn1
 
     lambda = fb / (fb - fa)
-    tau = eps(T)^(2/3)                   # some engineering to avoid short moves
+    tau = 1e-10                   # some engineering to avoid short moves; still fails on some
     if !(tau < abs(lambda) < 1-tau)
         lambda = 1/2
     end
+
     x::T = b - lambda * (b-a)        
     fx::S = fs(x)
     incfn(o)
@@ -958,13 +958,14 @@ function update_state(method::FalsePosition, fs, o::UnivariateZeroState{T,S}, op
     if iszero(fx)
         o.xn1 = x
         o.fxn1 = fx
+        o.f_converged = true
         return
     end
 
     if sign(fx)*sign(fb) < 0
         a, fa = b, fb
     else
-        fa = galdino_reduction(method, fa, fb, fx) #galdino[method.reduction_factor](fa, fb, fx)
+        fa = galdino_reduction(method, fa, fb, fx) 
     end
     b, fb = x, fx
 

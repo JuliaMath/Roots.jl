@@ -221,7 +221,7 @@ function find_zeros(f, a, b; no_pts = 12, k=8,
     d = Dict(kwargs)
     xatol = get(d, :xatol, oneunit(a0) * eps(one(a0))^(4/5))
     xrtol = get(d, :xrtol, eps(one(a0)))
-    atol  = get(d, :atol,  eps((fa0)))
+    atol  = get(d, :atol,  eps(oneunit(fa0)))
     rtol  = get(d, :rtol,  eps(one(fa0)))
     
     T = eltype(a0)
