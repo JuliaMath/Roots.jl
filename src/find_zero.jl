@@ -149,37 +149,63 @@ mutable struct UnivariateZeroOptions{Q,R,S,T}
     strict::Bool
 end
 
+"""
+    default_tolerances(Method, [T], [S])
 
-function init_options(::AbstractUnivariateZeroMethod,
+The default tolerances for most methods are `xatol=zero(T)`,
+`xrtol=eps(T)`, `atol=4eps(S)`, and `rtol=4eps(S)`, with the proper
+units (absolute tolerances have the units of `x` and `f(x)`; relative
+tolerances are unitless). For `Complex{T}` values, `T` is used.
+
+The number of iterations is limited by `maxevals=40`, the number of
+function evaluations is not capped, due to `maxfnevals=typemax(Int)`,
+and `strict=false`.
+
+"""
+default_tolerances(M::AbstractUnivariateZeroMethod) = default_tolerances(M, Float64, Float64)
+function default_tolerances(::AbstractUnivariateZeroMethod, ::Type{T}, ::Type{S}) where {T, S}
+    xatol = zero(real(T))
+    xrtol = eps(real(T))  # unitless
+    atol = 4.0 * eps(real(float(S))) * oneunit(real(S))
+    rtol = 4.0 * eps(real(float(S))) * one(real(S))
+    maxevals = 40
+    maxfnevals = typemax(Int)
+    strict = false
+    (xatol, xrtol, atol, rtol, maxevals, maxfnevals, strict)
+end
+                         
+function init_options(M::AbstractUnivariateZeroMethod,
                       state::UnivariateZeroState{T,S};
-                      xatol=missing,
-                      xrtol=missing,
-                      atol=missing,
-                      rtol=missing,
-                      maxevals::Int=40,
-                      maxfnevals::Int=typemax(Int),
-                      strict::Bool=false
+                      kwargs...
                       ) where {T, S}
 
-    ## Where we set defaults
-    x1 = real(oneunit(float(state.xn1)))
-    fx1 = real(oneunit(float(state.fxn1)))
-
-    options = UnivariateZeroOptions(ismissing(xatol) ? zero(x1) : xatol, # units of x
-                                    ismissing(xrtol) ?  eps(x1/oneunit(x1)) : xrtol,  # unitless
-                                    ismissing(atol)  ?  4.0 * eps(fx1) : atol,  # units of f(x)
-                                    ismissing(rtol)  ?  4.0 * eps(fx1/oneunit(fx1)) : rtol, # unitless
-                                    maxevals, maxfnevals, strict)
+    if VERSION < v"0.7.0"
+        d = Dict(kwargs)
+    else
+        d = kwargs
+    end
+    defs = default_tolerances(M, T, S)
+    options = UnivariateZeroOptions(get(d, :xatol, get(d, :xabstol, defs[1])),
+                                    get(d, :xrtol, get(d, :xreltol, defs[2])),
+                                    get(d, :atol,  get(d, :abstol,  defs[3])),
+                                    get(d, :rtol,  get(d, :reltol,  defs[4])),
+                                    get(d, :maxevals,   get(d, :maxsteps, defs[5])),
+                                    get(d, :maxfnevals, defs[6]),
+                                    get(d, :strict,     defs[7]))
     options
 end
 
 # reset options to default values
-function init_options!(options::UnivariateZeroOptions{Q,R,S,T}, ::AbstractUnivariateZeroMethod) where {Q, R, S, T}
-    options.xabstol = zero(Q)
-    options.xreltol = eps(R)
-    options.abstol = 4 * eps(S)
-    options.reltol = 4 * eps(T)
-    options.strict = false
+function init_options!(options::UnivariateZeroOptions{Q,R,S,T}, M::AbstractUnivariateZeroMethod) where {Q, R, S, T}
+
+    defs = default_tolerances(M, Q, S)
+    options.xabstol = defs[1]
+    options.xreltol = defs[2]
+    options.abstol = defs[3]
+    options.reltol = defs[4]
+    options.maxevals = defs[5]
+    options.maxfnevals = defs[6]
+    options.strict = defs[7]
 
     nothing
 end
@@ -448,7 +474,9 @@ optionally `Order5`) a tuple of functions is used.
 * `strict` - if `false` (the default), when the algorithm stops, possible zeros are checked with a relaxed tolerance    
 * `verbose` - if `true` a trace of the algorithm will be shown on successful completion.
 
-See the help string for `Roots.assess_convergence` for details on convergence.
+See the help string for `Roots.assess_convergence` for details on
+convergence. See the help page for `Roots.default_tolerances(method)`
+for details on the default tolerances.
 
 In general, with floating point numbers, convergence must be
 understood as not an absolute statement. Even if mathematically x is

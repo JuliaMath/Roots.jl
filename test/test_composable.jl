@@ -26,8 +26,10 @@ using SymEngine
         for order in orders
             @test find_zero(y, 1.8s, order) ≈  1.886053370668014s
         end
-        
-        @test find_zero(y, (1.8s, 1.9s), Bisection()) ≈ 1.886053370668014s
+
+        for M in [Roots.Bisection(), Roots.A42(), Roots.AlefeldPotraShi()]
+            @test find_zero(y, (1.8s, 1.9s), M) ≈ 1.886053370668014s
+        end
         
         xrts = find_zeros(y, 0s, 10s)
         @test length(xrts) == 1
@@ -47,14 +49,16 @@ using SymEngine
         
         @vars x
         for order in orders
-            @test find_zero(y(x), 1.8s, order) ≈  1.886053370668014
+            @test find_zero(y(x), 1.8, order) ≈  1.8860533706680143
         end
-        
-        @test find_zero(y(x), (1.8, 1.9), Bisection()) ≈ 1.886053370668014
+
+        for M in [Roots.Bisection(), Roots.A42(), Roots.AlefeldPotraShi()]
+            @test find_zero(y(x), (1.8, 1.9), M) ≈ 1.8860533706680143
+        end
         
         xrts = find_zeros(y(x), 0, 10)
         @test length(xrts) == 1
-        @test xrts[1] ≈  1.886053370668014
+        @test xrts[1] ≈  1.8860533706680143
     end
 
 

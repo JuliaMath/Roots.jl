@@ -81,7 +81,7 @@ function find_non_zero(f, a::T, barrier, xatol, xrtol, atol, rtol) where {T}
     sgn = barrier > a ? 1 : -1 
     ctr = 0
     x = a + 2^ctr*sgn*xtol
-    while !_non_zero(float(f(x)), x, atol, rtol)
+    while !_non_zero(f(x), x, atol, rtol)
         ctr += 1
         x += 2^ctr*sgn*xtol
         ((sgn > 0 && x > barrier) || (sgn < 0 && x < barrier)) && return nan
@@ -219,10 +219,11 @@ function find_zeros(f, a, b; no_pts = 12, k=8,
     # set tolerances if not specified
     fa0 = f(a0)
     d = Dict(kwargs)
-    xatol = get(d, :xatol, oneunit(a0) * eps(one(a0))^(4/5))
-    xrtol = get(d, :xrtol, eps(one(a0)))
-    atol  = get(d, :atol,  eps(oneunit(fa0)))
-    rtol  = get(d, :rtol,  eps(one(fa0)))
+    T, S = eltype(a0), eltype(fa0)
+    xatol = get(d, :xatol, eps(one(T))^(4/5) * oneunit(T))
+    xrtol = get(d, :xrtol, eps(one(T)) * one(T))
+    atol  = get(d, :atol,  eps(float(S)) * oneunit(S))
+    rtol  = get(d, :rtol,  eps(float(S)) * one(S))
     
     T = eltype(a0)
 
