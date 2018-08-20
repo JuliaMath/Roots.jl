@@ -211,41 +211,30 @@ function init_state!(state::UnivariateZeroState{T,S}, ::AbstractBisection, fs, x
 end
 
 # for Bisection, the defaults are zero tolerances and strict=true
-function init_options(::M,
-                      state::UnivariateZeroState{T,S};
-                      xatol=missing,
-                      xrtol=missing,
-                      atol=missing,
-                      rtol=missing,
-                      maxevals::Int=typemax(Int),
-                      maxfnevals::Int=typemax(Int)) where {M <: Union{Bisection, BisectionExact}, T, S}
+"""
+    default_tolerances(M, [T], [S])
 
 
-    ## Where we set defaults
-    x1 = real(oneunit(state.xn1))
-    fx1 = real(oneunit(float(state.fxn1)))
+For `Bisection` (or `BisectionExact`), when the `x` values are of type `Float64`, `Float32`,
+or `Float16`, the default tolerances are zero and there is no limit on
+the number of iterations or function evalutions. In this case, the
+algorithm is guaranteed to converge to an exact zero, or a point where
+the function changes sign at one of the answer's adjacent floating
+point values.
+
+For other types, the the `A42` method (with its tolerances) is used.
+    
+"""    
+default_tolerances(M::Union{Bisection, BisectionExact}) = default_tolerances(M,Float64, Float64)
+function default_tolerances(::M, ::Type{T}, ::Type{S}) where {M<:Union{Bisection, BisectionExact},T,S}
+    xatol = zero(T)
+    xrtol = zero(one(T))
+    atol = zero(float(one(S))) * oneunit(S)
+    rtol = zero(float(one(S))) * one(S)
+    maxevals = typemax(Int)
+    maxfnevals = typemax(Int)
     strict = true
-
-    # all are 0 by default
-    options = UnivariateZeroOptions(ismissing(xatol) ? zero(x1) : xatol,       # unit of x
-                                    ismissing(xrtol) ? zero(x1/oneunit(x1)) : xrtol,               # unitless
-                                    ismissing(atol)  ? zero(fx1) : atol,  # units of f(x)
-                                    ismissing(rtol)  ? zero(fx1/oneunit(fx1)) : rtol,            # unitless
-                                    maxevals, maxfnevals, strict)
-
-    options
-end
-
-function init_options!(options::UnivariateZeroOptions{Q,R,S,T}, ::Bisection) where {Q, R, S, T}
-    options.xabstol = zero(Q)
-    options.xreltol = zero(R)
-    options.abstol = zero(S)
-    options.reltol = zero(T)
-    options.maxevals = typemax(Int)
-    options.strict = true
-
-    nothing
-
+    (xatol, xrtol, atol, rtol, maxevals, maxfnevals, strict)
 end
 
 ## This uses _middle bisection Find zero using modified bisection
@@ -406,11 +395,6 @@ Y. Shi, "Algorithm 748: enclosing zeros of continuous functions," ACM
 Trans. Math. Softw. 21, 327–344 (1995), DOI: 10.1145/210089.210111.
 Originally by John Travers
 
-
-
-The default tolerances are: `xatol=zero(T)`, `xrtol=2eps(one(T))`,
-`atol=zero(S)`, `rtol=zero(one(S))`, `maxevals=45`.
-
 """
 struct A42 <: AbstractAlefeldPotraShi end
 
@@ -552,33 +536,24 @@ end
 
 # for A42, the defaults are reltol=eps(), atol=0; 45 evals and strict=true
 # this *basically* follows the tol in the paper (2|u|*rtol + atol)
-function init_options(::AbstractAlefeldPotraShi,
-                      state::UnivariateZeroState{T,S};
-                      xatol=missing,
-                      xrtol=missing,
-                      atol=missing,
-                      rtol=missing,
-                      maxevals::Int=45,
-                      maxfnevals::Int=typemax(Int)) where {T,S}
+"""
+    default_tolerances(::AbstractAlefeldPotraShi, T, S)
 
-    strict=true
-    options = UnivariateZeroOptions(ismissing(xatol) ? zero(T) : xatol,       # unit of x
-                                    ismissing(xrtol) ? 2eps(one(T)) : xrtol,   # unitless
-                                    ismissing(atol)  ? zero(S) : atol,  # units of f(x)
-                                    ismissing(rtol)  ? zero(one(S)) : rtol,   # unitless
-                                    maxevals, maxfnevals, strict)
+The default tolerances for Alefeld, Potra, and Shi methods are
+`xatol=zero(T)`, `xrtol=2eps(T)`, `atol= zero(S), and rtol=zero(S)`, with
+appropriate units; `maxevals=45`, `maxfnevals = Inf`; and `strict=true`.
 
-    options
-end
-
-function init_options!(options::UnivariateZeroOptions{Q,R,S,T}, ::AbstractAlefeldPotraShi) where {Q, R, S, T}
-    options.xabstol = zero(Q)
-    options.xreltol = 2eps(one(R))
-    options.abstol = zero(S)
-    options.reltol = zero(one(T))
-    options.maxevals = 45
-    options.strict = true
-    nothing
+"""
+default_tolerances(M::AbstractAlefeldPotraShi) = default_tolerances(M, Float64, Float64)
+function default_tolerances(::AbstractAlefeldPotraShi, ::Type{T}, ::Type{S}) where {T,S}
+    xatol = zero(T)
+    xrtol = 2 * eps(one(T))
+    atol = zero(float(one(S))) * oneunit(S)
+    rtol = zero(float(one(S))) * one(S)
+    maxevals = 45
+    maxfnevals = typemax(Int)
+    strict = true
+    (xatol, xrtol, atol, rtol, maxevals, maxfnevals, strict)
 end
 
     
