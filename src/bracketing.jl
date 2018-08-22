@@ -174,40 +174,56 @@ end
 
 function init_state(method::AbstractBisection, fs, x)
     length(x) > 1 || throw(ArgumentError(bracketing_error))
-
-    x0, x1 = adjust_bracket(x)
-    m = _middle(x0, x1)
-
-    y0, y1, fm = sign.(promote(fs(x0), fs(x1), fs(m)))
-    y0 * y1 > 0 && throw(ArgumentError("bracketing_error"))
-
-    if x0 > x1
-        x0,x1 = x1, x0
-        y0,y1 = y1, y0
-    end
     
-    state = UnivariateZeroState(x1, x0, [m],
-                                y1, y0, [fm],
-                                0, 3,
+    x0, x1 = adjust_bracket(x) # now finite, right order
+    fx0, fx1 = promote(sign(fs(x0)), sign(fs(x1)))
+    fx0 * fx1 > 0 && throw(ArgumentError(bracketing_error))
+
+    state = UnivariateZeroState(x1, x0, [x1],
+                                fx1, fx0, [fx1],
+                                0, 2,
                                 false, false, false, false,
                                 "")
+
+    init_state!(state, method, fs, (x0, x1), (fx0, fx1))
     state
+end
+
+
+function init_state!(state::UnivariateZeroState{T,S}, M::AbstractBisection, fs,
+                     xs::Union{Tuple, Vector}) where {T, S}
+
+    x0::T, x1::T = adjust_bracket(xs) # now finite, right order
+    fx0::S, fx1::S = promote(sign(fs(x0)), sign(fs(x1)))
+    init_state!(state, M, fs, (x0,x1), (fx0, fx1))
 
 end
 
-function init_state!(state::UnivariateZeroState{T,S}, ::AbstractBisection, fs, x::Union{Tuple, Vector}) where {T, S}
-    x0, x1 = adjust_bracket(x)
+function init_state!(state::UnivariateZeroState{T,S}, M::AbstractBisection, fs,
+                     xs::Union{Tuple, Vector}, fxs::Union{Tuple, Vector}) where {T, S}
+    x0, x1 = xs
+    fx0, fx1 = fxs
+    fx0 * fx1 > 0 && throw(ArgumentError(bracketing_error))
 
-    m::T = _middle(x0, x1)
-    fx0::S, fx1::S, fm::S = sign(fs(x0)), sign(fs(x1)), sign(fs(m))
-
-    isbracket(fx0, fx1) ||  throw(ArgumentError(bracketing_error))
-    if x0 > x1
-        x0,x1 = x1, x0
-        y0,y1 = y1, y0
+    # we need a,b to be same sign, finite
+    if sign(x0) * sign(x1) < 0
+        m = zero(x1)
+        fm::S = sign(fs(m)) # iszero(fm) caught in assess_convergence
+        incfn(state)
+        if fx0 * fm < 0
+            x1, fx1 = m, fm
+        else
+            x0, fx0 = m, fm
+        end
     end
-    
-    init_state!(state, x1, x0, [m], fx1, fx0, [fm])
+
+    m = __middle(x0, x1)
+    fm = sign(fs(m))
+    incfn(state)
+
+    y0, y1, ym = promote(fx0, fx1, fm)
+
+    init_state!(state, x1, x0, [m], y1, y0, [ym])
 end
 
 # for Bisection, the defaults are zero tolerances and strict=true
@@ -244,65 +260,82 @@ end
 ## a number which is a zero or a signchange.
 ##
 ## This terminates when there is no more subdivision or function is zero
+function _middle(x, y)
+    a = isinf(x) ? nextfloat(x) : x
+    b = isinf(y) ? prevfloat(y) : y
+    if sign(a) * sign(b) < 0
+        return zero(a)
+    else
+        __middle(a, b)
+    end
+end
 
-_middle(x::Float64, y::Float64) = _middle(Float64, UInt64, x, y)
-_middle(x::Float32, y::Float32) = _middle(Float32, UInt32, x, y)
-_middle(x::Float16, y::Float16) = _middle(Float16, UInt16, x, y)
-_middle(x::Number, y::Number) = 0.5*x + 0.5 * y # fall back or non Floats
+## find middle assuming a,b same sign, finite
+__middle(x::Float64, y::Float64) = __middle(Float64, UInt64, x, y)
+__middle(x::Float32, y::Float32) = __middle(Float32, UInt32, x, y)
+__middle(x::Float16, y::Float16) = __middle(Float16, UInt16, x, y)
+__middle(x::Number, y::Number) = 0.5*x + 0.5*y # fall back or non Floats
 
 
-function _middle(T, S, x, y)
+function __middle(T, S, x, y)
     # Use the usual float rules for combining non-finite numbers
-    if !isfinite(x) || !isfinite(y)
-        return x + y
-    end
-    # Always return 0.0 when inputs have opposite sign
-    if sign(x) != sign(y) && !iszero(x) && !iszero(y)
-        return zero(T)
-    end
-  
-    negate = sign(x) < 0 || sign(y) < 0
-
     # do division over unsigned integers with bit shift
     xint = reinterpret(S, abs(x))
     yint = reinterpret(S, abs(y))
     mid = (xint + yint) >> 1
 
     # reinterpret in original floating point
-    unsigned = reinterpret(T, mid)
-
-    negate ? -unsigned : unsigned
+    sign(x+y) * reinterpret(T, mid)
 end
 
-function update_state(method::Union{Bisection,BisectionExact}, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T<:Number,S<:Number}
 
+
+
+function update_state(method::Union{Bisection, BisectionExact}, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T<:Number,S<:Number}
 
     y0 = o.fxn0
     m::T = o.m[1]
     ym::S = o.fm[1] #sign(fs(m))
-    incfn(o)
 
-    if iszero(ym)
-        o.message = "Exact zero found"
-        o.xn1 = m
-        o.fxn1= m
-        o.x_converged = true
-        return nothing
-    end
-    
     if y0 * ym < 0
         o.xn1, o.fxn1 = m, ym
     else
         o.xn0, o.fxn0 = m, ym
     end
 
-    o.m[1] = _middle(o.xn0, o.xn1)
-    o.fm[1] = sign(fs(o.m[1]))
+
+    m  = __middle(o.xn0, o.xn1)
+    fm = fs(m)
+    o.m[1], o.fm[1] = m, sign(fm)
+    incfn(o)
+
     return nothing
 
 end
 
 ## convergence is much different here
+function check_zero(::AbstractBracketing, state, c, fc)
+    if isnan(c)
+        state.stopped = true
+        state.xn1 = c
+        state.message *= "NaN encountered. "
+        return true
+    elseif isinf(c)
+        state.stopped = true
+        state.xn1 = c
+        state.message *= "Inf encountered. "
+        return true
+    elseif iszero(fc)
+        state.f_converged=true
+        state.message *= "Exact zero found. "
+        state.xn1 = c
+        state.fxn1 = fc
+        return true
+    end
+    return false
+end
+
+
 ## the method converges,
 ## as we bound between x0, nextfloat(x0) is not measured by eps(), but eps(x0)
 function assess_convergence(method::Union{Bisection}, state::UnivariateZeroState{T,S}, options) where {T, S}
@@ -320,31 +353,65 @@ function assess_convergence(method::Union{Bisection}, state::UnivariateZeroState
     if x1 - x0 > tol 
         return false
     end
-    
-    
+ 
     state.message = ""
     state.x_converged = true
     return true
 end
 
 # for exact convergence, we can skip some steps
-function assess_convergence(method::BisectionExact, state::UnivariateZeroState{T,S}, options) where {T, S}
+function assess_convergence(M::BisectionExact, state::UnivariateZeroState{T,S}, options) where {T, S}
 
     state.x_converged && return true
+
+    x0, xm::T, x1 = state.xn0, state.m[1], state.xn1
+    y0, ym, y1 = state.fxn0, state.fm[1], state.fxn1
+
+    check_zero(M, state, x0, y0) && return true
+    check_zero(M, state, x1, y1) && return true
+    check_zero(M, state, xm, ym) && return true
     
-    x0, m::T, x1 = state.xn0, state.m[1], state.xn1
-    x0 < m < x1 && return false
+
+    x0 < xm < x1 && return false
 
     state.x_converged = true
     return true
 end
 
 
+##################################################
+
+
+function update_state(method::BisectionExact, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T<:Number,S<:Number}
+
+    y0 = o.fxn0
+    m::T = o.m[1]
+    ym::S = o.fm[1] #sign(fs(m))
+
+    if y0 * ym < 0
+        o.xn1, o.fxn1 = m, ym
+    else
+        o.xn0, o.fxn0 = m, ym
+    end
+
+
+    m = __middle(o.xn0, o.xn1)
+    fm = fs(m)
+
+    o.m[1], o.fm[1] = m, sign(fm)
+    incfn(o)
+    
+    return nothing
+
+end
+
+##################################################
+
+
 
 ## Bisection has special cases
-## for FloatNN types, we have a slightly faster `bisection64` method
 ## for zero tolerance, we have either BisectionExact or A42 methods
-## for non-zero tolerances, we have either a general Bisection or an A42
+## for non-zero tolerances, we have use thegeneral Bisection method
 function find_zero(fs, x0, method::M;
                    tracks = NullTracks(),
                    verbose=false,
@@ -358,10 +425,10 @@ function find_zero(fs, x0, method::M;
     tol = max(options.xabstol, maximum(abs.(x)) * options.xreltol)
 
     l = (verbose && isa(tracks, NullTracks)) ? Tracks(eltype(state.xn1)[], eltype(state.fxn1)[]) : tracks
+
     
     if iszero(tol)
         if T <: FloatNN
-            !verbose && return bisection64(F, state.xn0, state.xn1) # speedier
             find_zero(BisectionExact(), F, options, state, l)
         else
             return find_zero(F, x, A42())
@@ -370,10 +437,6 @@ function find_zero(fs, x0, method::M;
         find_zero(method, F, options, state, l)
     end
 
-    if verbose
-        show_trace(method, state, l)
-    end
-    
     state.xn1
     
 end
@@ -557,26 +620,6 @@ function default_tolerances(::AbstractAlefeldPotraShi, ::Type{T}, ::Type{S}) whe
 end
 
     
-function check_zero(::AbstractBracketing, state, c, fc)
-    if isnan(c)
-        state.stopped = true
-        state.xn1 = c
-        state.message *= "NaN encountered. "
-        return true
-    elseif isinf(c)
-        state.stopped = true
-        state.xn1 = c
-        state.message *= "Inf encountered. "
-        return true
-    elseif iszero(fc)
-        state.f_converged=true
-        state.message *= "Exact zero found. "
-        state.xn1 = c
-        state.fxn1 = fc
-        return true
-    end
-    return false
-end
 
 function assess_convergence(method::AbstractAlefeldPotraShi, state::UnivariateZeroState{T,S}, options) where {T,S}
 
