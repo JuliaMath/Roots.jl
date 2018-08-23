@@ -47,18 +47,18 @@ function bisection(f, a, b; xatol=zero(float(a)), xrtol=zero(one(float(a))))
     sign(f(u)) * sign(f(v)) < 0 || throw(ArgumentError("Interval [a,b] is not a bracket. f(a) and f(b) must have opposite signs"))
 
     zero_tolerance =  iszero(max(xatol, oneunit(a) * xrtol))
-    _bisect(Val{zero_tolerance},  f, u, v, xatol, xrtol)
+    _bisect(Val{zero_tolerance}(),  f, u, v, xatol, xrtol)
 end
 
 # if zero tolerance send to bisection64 or a42
-function _bisect(::Type{Val{true}}, f, a::T, b::T, xatol, xrtol) where {T <: FloatNN}
-    bisection64(f, a, b)
+function _bisect(::Val{true}, f, a::T, b::T, xatol, xrtol) where {T <: FloatNN}
+    _find_zero(f, (a, b), BisectionExact())
 end
-function _bisect(::Type{Val{true}}, f, a::T, b::T, xatol, xrtol) where {T}
+function _bisect(::Val{true}, f, a::T, b::T, xatol, xrtol) where {T}
     _find_zero(f, (a, b), A42())
 end
 # if non zero tolerance, use faster middle.
-function _bisect(::Type{Val{false}},  f, a::T, b::T, xatol, xrtol) where {T}
+function _bisect(::Val{false},  f, a::T, b::T, xatol, xrtol) where {T}
     
     fa, fb = sign(f(a)), sign(f(b))
     

@@ -7,19 +7,15 @@ Consider a different bracket or try fzero(f, c) with an initial guess c.
 
 """
 
-## Methods for root finding which use a bracket
+
+
+
+const FloatNN = Union{Float64, Float32, Float16}
 
 ## Bisection for FLoat64 values.
 ##
 ## From Jason Merrill https://gist.github.com/jwmerrill/9012954
 ## cf. http://squishythinking.com/2014/02/22/bisecting-floats/
-# Alternative "mean" definition that operates on the binary representation
-# of a float. Using this definition, bisection will never take more than
-# 64 steps (over Float64)
-const FloatNN = Union{Float64, Float32, Float16}
-
-
-
 """
     Roots.bisection64(f, a, b)
 
@@ -47,72 +43,40 @@ This function is a bit faster than the slightly more general
 Due to Jason Merrill.
 
 """
-function bisection64(f, a::T, b::T) where {T <: Union{Float64, Float32, Float16}}
-    u, v = promote(float(a), float(b))
-    if v < u
-        u,v = v,u
-    end
-
-    isinf(u) && (u = nextfloat(u))
-    isinf(v) && (u = prevfloat(u))
-
-    su, sv = sign(u), sign(v)
+function bisection64(fn, a::T, b::T) where {T <: FloatNN}
     
-    if su * sv < 0
-        # move to 0
-        c = zero(u)
-        sfu, sfc = sign(f(u)), sign(f(c))
-        if sfu == sfc
-            u =  c
+    x1, x2 = adjust_bracket(float.((a,b)))
+    s1 = sign(fn(x1))
+    s2 = sign(fn(x2))
+
+    xm = _middle(x1, x2)
+    if iszero(xm)
+        sm = sign(fn(xm))
+        if s1 * sm < 0
+            x2, s2 = xm, sm
         else
-            v = c
+            x1, x1 = xm, sm
         end
+        m = __middle(x1, x2)
     end
-    
-    T == Float64 && return _bisection64(T, UInt64, f, u, v)
-    T == Float32 && return _bisection64(T, UInt32, f, u, v)
-    return _bisection64(T, UInt16, f, u, v)
+
+    while x1 < xm < x2
+        sm = sign(fn(xm))
+        
+        if s1 != sm
+            x2 = xm
+            s2 = sm
+        else
+            x1 = xm
+            s1 = sm
+        end
+        
+        xm = __middle(x1, x2)
+    end
+
+  return x1
 end
 
-## a,b same sign or zero, sfa * sfb < 0 is assumed
-function _bisection64(T, S, f, a, b)
-    nan = (0*a)/(0*a)
-    negate = sign(a) < 0 ? -one(T) : one(T)
-
-    ai, bi = reinterpret(S, abs(a)), reinterpret(S, abs(b))
-    
-    fa = f(a)
-    iszero(fa) && return a
-    sfa = sign(f(a))
-    iszero(f(b)) && return b
-    ai == bi && return nan
-    
-    mi = (ai + bi ) >> 1
-    m = negate * reinterpret(T, mi)
-
-    while a < m < b
-        
-
-        sfm = sign(f(m))
-        iszero(sfm) && return m
-        isnan(sfm) && return m
-
-        if sfa * sfm < 0
-            b, bi = m,  mi
-        else
-            a, sfa, ai = m, sfm, mi
-        end
-
-        mi = (ai + bi) >> 1
-        m = negate * reinterpret(T, mi)
-    end
-    return m
-end
-        
-
-
-####
-## find_zero interface.
 
 
 abstract type AbstractBisection <: AbstractBracketing end
@@ -172,42 +136,60 @@ function adjust_bracket(x0)
     u, v
 end
 
+# In init_state the bracketing interval is left as (a,b) with
+# a,b both finite and of the same sign
 function init_state(method::AbstractBisection, fs, x)
     length(x) > 1 || throw(ArgumentError(bracketing_error))
-
-    x0, x1 = adjust_bracket(x)
-    m = _middle(x0, x1)
-
-    y0, y1, fm = sign.(promote(fs(x0), fs(x1), fs(m)))
-    y0 * y1 > 0 && throw(ArgumentError("bracketing_error"))
-
-    if x0 > x1
-        x0,x1 = x1, x0
-        y0,y1 = y1, y0
-    end
     
-    state = UnivariateZeroState(x1, x0, [m],
-                                y1, y0, [fm],
-                                0, 3,
+    x0, x1 = adjust_bracket(x) # now finite, right order
+    fx0, fx1 = promote(sign(fs(x0)), sign(fs(x1)))
+    fx0 * fx1 > 0 && throw(ArgumentError(bracketing_error))
+
+    state = UnivariateZeroState(x1, x0, [x1],
+                                fx1, fx0, [fx1],
+                                0, 2,
                                 false, false, false, false,
                                 "")
+
+    init_state!(state, method, fs, (x0, x1), (fx0, fx1))
     state
+end
+
+
+function init_state!(state::UnivariateZeroState{T,S}, M::AbstractBisection, fs,
+                     xs::Union{Tuple, Vector}) where {T, S}
+
+    x0::T, x1::T = adjust_bracket(xs) # now finite, right order
+    fx0::S, fx1::S = promote(sign(fs(x0)), sign(fs(x1)))
+    init_state!(state, M, fs, (x0,x1), (fx0, fx1))
 
 end
 
-function init_state!(state::UnivariateZeroState{T,S}, ::AbstractBisection, fs, x::Union{Tuple, Vector}) where {T, S}
-    x0, x1 = adjust_bracket(x)
+function init_state!(state::UnivariateZeroState{T,S}, M::AbstractBisection, fs,
+                     xs::Union{Tuple, Vector}, fxs::Union{Tuple, Vector}) where {T, S}
+    x0, x1 = xs
+    fx0, fx1 = fxs
+    fx0 * fx1 > 0 && throw(ArgumentError(bracketing_error))
 
-    m::T = _middle(x0, x1)
-    fx0::S, fx1::S, fm::S = sign(fs(x0)), sign(fs(x1)), sign(fs(m))
-
-    isbracket(fx0, fx1) ||  throw(ArgumentError(bracketing_error))
-    if x0 > x1
-        x0,x1 = x1, x0
-        y0,y1 = y1, y0
+    # we need a,b to be same sign, finite
+    if sign(x0) * sign(x1) < 0
+        m = zero(x1)
+        fm::S = sign(fs(m)) # iszero(fm) caught in assess_convergence
+        incfn(state)
+        if fx0 * fm < 0
+            x1, fx1 = m, fm
+        else
+            x0, fx0 = m, fm
+        end
     end
-    
-    init_state!(state, x1, x0, [m], fx1, fx0, [fm])
+
+    m = __middle(x0, x1)
+    fm = sign(fs(m))
+    incfn(state)
+
+    y0, y1, ym = promote(fx0, fx1, fm)
+
+    init_state!(state, x1, x0, [m], y1, y0, [ym])
 end
 
 # for Bisection, the defaults are zero tolerances and strict=true
@@ -237,114 +219,121 @@ function default_tolerances(::M, ::Type{T}, ::Type{S}) where {M<:Union{Bisection
     (xatol, xrtol, atol, rtol, maxevals, maxfnevals, strict)
 end
 
-## This uses _middle bisection Find zero using modified bisection
-## method for FloatXX arguments.  This is guaranteed to take no more
-## steps the bits of the type. The `A42` alternative usually has fewer
-## iterations and function calls, but this has a guarantee of producing
-## a number which is a zero or a signchange.
-##
-## This terminates when there is no more subdivision or function is zero
+# find middle of (a,b) with convention that
+# * if a, b finite, they are made non-finite
+# if a,b of different signs, middle is 0
+# middle falls back to a/2 + b/2, but
+# for Float64 values, middle is over the
+# reinterpreted unsigned integer.
+function _middle(x, y)
+    a = isinf(x) ? nextfloat(x) : x
+    b = isinf(y) ? prevfloat(y) : y
+    if sign(a) * sign(b) < 0
+        return zero(a)
+    else
+        __middle(a, b)
+    end
+end
 
-_middle(x::Float64, y::Float64) = _middle(Float64, UInt64, x, y)
-_middle(x::Float32, y::Float32) = _middle(Float32, UInt32, x, y)
-_middle(x::Float16, y::Float16) = _middle(Float16, UInt16, x, y)
-_middle(x::Number, y::Number) = 0.5*x + 0.5 * y # fall back or non Floats
+
+## find middle assuming a,b same sign, finite
+## Alternative "mean" definition that operates on the binary representation
+## of a float. Using this definition, bisection will never take more than
+## 64 steps (over Float64)
+__middle(x::Float64, y::Float64) = __middle(Float64, UInt64, x, y)
+__middle(x::Float32, y::Float32) = __middle(Float32, UInt32, x, y)
+__middle(x::Float16, y::Float16) = __middle(Float16, UInt16, x, y)
+## fallback for non FloatNN number types
+__middle(x::Number, y::Number) = 0.5*x + 0.5*y 
 
 
-function _middle(T, S, x, y)
+function __middle(T, S, x, y)
     # Use the usual float rules for combining non-finite numbers
-    if !isfinite(x) || !isfinite(y)
-        return x + y
-    end
-    # Always return 0.0 when inputs have opposite sign
-    if sign(x) != sign(y) && !iszero(x) && !iszero(y)
-        return zero(T)
-    end
-  
-    negate = sign(x) < 0 || sign(y) < 0
-
     # do division over unsigned integers with bit shift
     xint = reinterpret(S, abs(x))
     yint = reinterpret(S, abs(y))
     mid = (xint + yint) >> 1
 
     # reinterpret in original floating point
-    unsigned = reinterpret(T, mid)
-
-    negate ? -unsigned : unsigned
+    sign(x+y) * reinterpret(T, mid)
 end
 
-function update_state(method::Union{Bisection,BisectionExact}, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T<:Number,S<:Number}
 
 
-    y0 = o.fxn0
-    m::T = o.m[1]
-    ym::S = o.fm[1] #sign(fs(m))
-    incfn(o)
 
-    if iszero(ym)
-        o.message = "Exact zero found"
-        o.xn1 = m
-        o.fxn1= m
-        o.x_converged = true
-        return nothing
-    end
-    
-    if y0 * ym < 0
-        o.xn1, o.fxn1 = m, ym
-    else
-        o.xn0, o.fxn0 = m, ym
-    end
-
-    o.m[1] = _middle(o.xn0, o.xn1)
-    o.fm[1] = sign(fs(o.m[1]))
-    return nothing
-
-end
-
-## convergence is much different here
 ## the method converges,
 ## as we bound between x0, nextfloat(x0) is not measured by eps(), but eps(x0)
-function assess_convergence(method::Union{Bisection}, state::UnivariateZeroState{T,S}, options) where {T, S}
-   
-    state.x_converged && return true
+function assess_convergence(M::Bisection, state::UnivariateZeroState{T,S}, options) where {T, S}
 
-    x0, x1, m::T = state.xn0, state.xn1, state.m[1]
 
-    if !(x0 < m < x1)
-        state.x_converged = true
-        return true
-    end
+    assess_convergence(BisectionExact(), state, options) && return true
 
+    x0, x1 = state.xn0, state.xn1
+    
     tol = max(options.xabstol, max(abs(x0), abs(x1)) * options.xreltol)
     if x1 - x0 > tol 
         return false
     end
-    
-    
+ 
     state.message = ""
     state.x_converged = true
     return true
 end
 
 # for exact convergence, we can skip some steps
-function assess_convergence(method::BisectionExact, state::UnivariateZeroState{T,S}, options) where {T, S}
+function assess_convergence(M::BisectionExact, state::UnivariateZeroState{T,S}, options) where {T, S}
 
     state.x_converged && return true
-    
-    x0, m::T, x1 = state.xn0, state.m[1], state.xn1
-    x0 < m < x1 && return false
+
+    x0, xm::T, x1 = state.xn0, state.m[1], state.xn1
+    y0, ym, y1 = state.fxn0, state.fm[1], state.fxn1
+
+    for (c,fc) in ((x0,y0), (xm,ym), (x1, y1))
+        if iszero(fc) || isinf(fc) || isnan(fc)
+            state.f_converged = true
+            state.xn1 = c
+            state.fxn1 = fc
+            return true
+        end
+    end
+
+    x0 < xm < x1 && return false
 
     state.x_converged = true
     return true
 end
 
 
+##################################################
+
+
+function update_state(method::Union{Bisection, BisectionExact}, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T<:Number,S<:Number}
+
+    y0 = o.fxn0
+    m::T = o.m[1]
+    ym::S = o.fm[1] #sign(fs(m))
+
+    if y0 * ym < 0
+        o.xn1, o.fxn1 = m, ym
+    else
+        o.xn0, o.fxn0 = m, ym
+    end
+
+
+    m  = __middle(o.xn0, o.xn1) # assume a,b have same sign
+    fm = fs(m)
+    o.m[1], o.fm[1] = m, sign(fm)
+    incfn(o)
+
+    return nothing
+
+end
+
+##################################################
 
 ## Bisection has special cases
-## for FloatNN types, we have a slightly faster `bisection64` method
 ## for zero tolerance, we have either BisectionExact or A42 methods
-## for non-zero tolerances, we have either a general Bisection or an A42
+## for non-zero tolerances, we have use thegeneral Bisection method
 function find_zero(fs, x0, method::M;
                    tracks = NullTracks(),
                    verbose=false,
@@ -358,10 +347,10 @@ function find_zero(fs, x0, method::M;
     tol = max(options.xabstol, maximum(abs.(x)) * options.xreltol)
 
     l = (verbose && isa(tracks, NullTracks)) ? Tracks(eltype(state.xn1)[], eltype(state.fxn1)[]) : tracks
+
     
     if iszero(tol)
         if T <: FloatNN
-            !verbose && return bisection64(F, state.xn0, state.xn1) # speedier
             find_zero(BisectionExact(), F, options, state, l)
         else
             return find_zero(F, x, A42())
@@ -370,10 +359,6 @@ function find_zero(fs, x0, method::M;
         find_zero(method, F, options, state, l)
     end
 
-    if verbose
-        show_trace(method, state, l)
-    end
-    
     state.xn1
     
 end
@@ -556,7 +541,10 @@ function default_tolerances(::AbstractAlefeldPotraShi, ::Type{T}, ::Type{S}) whe
     (xatol, xrtol, atol, rtol, maxevals, maxfnevals, strict)
 end
 
-    
+
+
+
+## convergence is much different here
 function check_zero(::AbstractBracketing, state, c, fc)
     if isnan(c)
         state.stopped = true
