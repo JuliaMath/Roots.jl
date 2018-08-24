@@ -8,74 +8,9 @@ Consider a different bracket or try fzero(f, c) with an initial guess c.
 """
 
 
+# pushed this into both __middle and bisection(f,a,b)
+@deprecate bisection64(f, a, b) Roots.bisection(f, a, b)
 
-
-const FloatNN = Union{Float64, Float32, Float16}
-
-## Bisection for FLoat64 values.
-##
-## From Jason Merrill https://gist.github.com/jwmerrill/9012954
-## cf. http://squishythinking.com/2014/02/22/bisecting-floats/
-"""
-    Roots.bisection64(f, a, b)
-
-(unexported)
-
-* `f`: a callable object, like a function
-
-* `a`, `b`: Real values specifying a *bracketing* interval (one with
-`f(a) * f(b) < 0`). These will be converted to `Float64` values.
-
-Runs the bisection method using midpoints determined by a trick
-leveraging 64-bit floating point numbers. After ensuring the
-intermediate bracketing interval does not straddle 0, the "midpoint"
-is half way between the two values onces converted to unsigned 64-bit
-integers. This means no more than 64 steps will be taken, fewer if `a`
-and `b` already share some bits.
-
-The process is guaranteed to return a value `c` with `f(c)` one of
-`0`, `Inf`, or `NaN`; *or* one of `f(prevfloat(c))*f(c) < 0` or
-`f(c)*f(nextfloat(c)) > 0` holding. 
-
-This function is a bit faster than the slightly more general 
-`find_zero(f, [a,b], Bisection())` call.
-
-Due to Jason Merrill.
-
-"""
-function bisection64(fn, a::T, b::T) where {T <: FloatNN}
-    
-    x1, x2 = adjust_bracket(float.((a,b)))
-    s1 = sign(fn(x1))
-    s2 = sign(fn(x2))
-
-    xm = _middle(x1, x2)
-    if iszero(xm)
-        sm = sign(fn(xm))
-        if s1 * sm < 0
-            x2, s2 = xm, sm
-        else
-            x1, x1 = xm, sm
-        end
-        m = __middle(x1, x2)
-    end
-
-    while x1 < xm < x2
-        sm = sign(fn(xm))
-        
-        if s1 != sm
-            x2 = xm
-            s2 = sm
-        else
-            x1 = xm
-            s1 = sm
-        end
-        
-        xm = __middle(x1, x2)
-    end
-
-  return x1
-end
 
 
 
@@ -219,6 +154,7 @@ function default_tolerances(::M, ::Type{T}, ::Type{S}) where {M<:Union{Bisection
     (xatol, xrtol, atol, rtol, maxevals, maxfnevals, strict)
 end
 
+
 # find middle of (a,b) with convention that
 # * if a, b finite, they are made non-finite
 # if a,b of different signs, middle is 0
@@ -235,6 +171,7 @@ function _middle(x, y)
     end
 end
 
+const FloatNN = Union{Float64, Float32, Float16}
 
 ## find middle assuming a,b same sign, finite
 ## Alternative "mean" definition that operates on the binary representation

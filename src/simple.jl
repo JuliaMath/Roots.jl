@@ -10,6 +10,10 @@
 # `Roots.dfree(f, xs)`  (Order0) more robust secant method
 #
 
+## Bisection 
+##
+## Essentially from Jason Merrill https://gist.github.com/jwmerrill/9012954
+## cf. http://squishythinking.com/2014/02/22/bisecting-floats/
 """
     bisection(f, a, b; [xatol, xrtol])
 
@@ -22,75 +26,61 @@ and shrunk when a or b is infinite. The function f may be infinite for
 the typical case. If f is not continuous, the algorithm may find
 jumping points over the x axis, not just zeros.
 
-When tolerances are specified, this can use far fewer function calls
-than the `Bisection()` method for `find_zero`.
     
 If non-trivial tolerances are specified, the process will terminate
-when the distance between the midpoint and the current bracket exceeds
-the combined tolerance `max(xatol, max(|a|,|b|)*xrtol)`.
+when the bracket (a,b) satisfies `isapprox(a, b, atol=xatol,
+rtol=xrtol)`. For zero tolerances, the default, for Float64, Float32,
+or Float16 values, the process will terminate at a value `x` with
+`f(x)=0` or `f(x)*f(prevfloat(x)) < 0 ` or `f(x) * f(nextfloat(x)) <
+0`. For other number types, the A42 method is used.
     
 """
-function bisection(f, a, b; xatol=zero(float(a)), xrtol=zero(one(float(a))))
-    u, v = promote(float(a), float(b))
-    if u > v
-        u,v=v,u
-    end
+function bisection(fn, a::Number, b::Number; xatol=nothing, xrtol=nothing)
     
-    if isinf(u)
-        u = nextfloat(u)
-    end
+    x1, x2 = adjust_bracket(float.((a,b)))
+    T = eltype(x1)
     
-    if isinf(v)
-        v = prevfloat(v)
-    end
+    s1 = sign(fn(x1))
+    s2 = sign(fn(x2))
+    s1 * s2 < 0 || throw(ArgumentError(bracketing_error))
+
+    atol = xatol == nothing ? zero(T) : xatol
+    rtol = xrtol == nothing ? zero(one(T)) : xrtol
+
+    # will converge with zero tolerance specified
+    iszero(atol) && iszero(rtol) && !(T <: FloatNN) && find_zero(fn, (a,b), A42())
     
-    sign(f(u)) * sign(f(v)) < 0 || throw(ArgumentError("Interval [a,b] is not a bracket. f(a) and f(b) must have opposite signs"))
-
-    zero_tolerance =  iszero(max(xatol, oneunit(a) * xrtol))
-    _bisect(Val{zero_tolerance}(),  f, u, v, xatol, xrtol)
-end
-
-# if zero tolerance send to bisection64 or a42
-function _bisect(::Val{true}, f, a::T, b::T, xatol, xrtol) where {T <: FloatNN}
-    _find_zero(f, (a, b), BisectionExact())
-end
-function _bisect(::Val{true}, f, a::T, b::T, xatol, xrtol) where {T}
-    _find_zero(f, (a, b), A42())
-end
-# if non zero tolerance, use faster middle.
-function _bisect(::Val{false},  f, a::T, b::T, xatol, xrtol) where {T}
-    
-    fa, fb = sign(f(a)), sign(f(b))
-    
-    iszero(fa) && return a
-    iszero(fb) && return b
-
-
-    m::T = a + 0.5 * (b-a)
-    tol = max(xatol, max(abs(a), abs(b)) * xrtol)
-    
-    while a < m < b
-
-        (m-a) < tol && break 
-        (b-m) < tol && break 
-        
-        
-        fm = sign(f(m))
-
-        iszero(fm) && break
-        isnan(fm) && break
-        
-        if fa * fm < 0
-            b,fb = m, fm
+    xm = _middle(x1, x2)
+    if iszero(xm)
+        sm = sign(fn(xm))
+        if s1 * sm < 0
+            x2, s2 = xm, sm
+        elseif s2 * sm < 0
+            x1, s1 = xm, sm
         else
-            a,fa = m, fm
+            return xm
         end
-
-        m = a + 0.5*(b-a)
-        
+        xm = __middle(x1, x2)
     end
 
-    m
+    while x1 < xm < x2
+        isapprox(x1, x2, atol=atol, rtol=rtol) && break
+        
+        sm = sign(fn(xm))
+
+        if s1 * sm < 0
+            x2 = xm
+            s2 = sm
+        elseif s2 *  sm < 0
+            x1 = xm
+            s1 = sm
+        else
+            return xm
+        end
+        
+        xm = __middle(x1, x2)
+    end
+    return xm
 end
 
 """
@@ -134,12 +124,11 @@ function secant_method(f, xs; atol=zero(float(real(first(xs)))), rtol=8eps(one(f
 
     if length(xs) == 1 # secant needs x0, x1; only x0 given
         a = float(xs[1])
-        fa = f(a)
-
+        
         h = eps(one(real(a)))^(1/3)
         da = h*oneunit(a) + abs(a)*h^2 # adjust for if eps(a) > h
         b = a + da
-        
+
     else
         a, b = promote(float(xs[1]), float(xs[2]))
     end
