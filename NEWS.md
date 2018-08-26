@@ -1,3 +1,7 @@
+CHANGES in v0.7.2
+
+* speed up bisection 
+
 CHANGES in v0.7.1
 
 * refactor Bisection method to reduce conditional checks inside loop
