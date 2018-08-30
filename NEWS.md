@@ -1,3 +1,7 @@
+CHANGES in v0.7.3
+
+* fix bug with find_zeros and Float32
+
 CHANGES in v0.7.2
 
 * speed up bisection 

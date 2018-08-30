@@ -114,9 +114,8 @@ end
 
 
 @testset "not Float64 types" begin
-    f(x) = cos(x) - x/10
     for T in [Float16, Float32, BigFloat]
-        rts = find_zeros(f, T(0.0), T(10.0))
+        rts = find_zeros(x -> cos(x) - x/10, T(0.0), T(10.0))
         @test eltype(rts) == T
     end
 end
