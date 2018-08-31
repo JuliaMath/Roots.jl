@@ -111,3 +111,11 @@ end
     @test length(xrts) >= 3           # should be 5
     @test all(azero.((f7,), xrts))
 end
+
+
+@testset "not Float64 types" begin
+    for T in [Float16, Float32, BigFloat]
+        rts = find_zeros(x -> cos(x) - x/10, T(0.0), T(10.0))
+        @test eltype(rts) == T
+    end
+end
