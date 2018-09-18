@@ -26,7 +26,7 @@ function _fz!(zs, f, a::T, b, no_pts, k=4) where {T}
 
     for (i,x) in enumerate(pts[1:end])
         q,r = divrem(i-1, k)
-        
+
         if i > 1 && iszero(r)
             v::T = x
             if !found_bisection_zero
@@ -54,7 +54,7 @@ function _fz!(zs, f, a::T, b, no_pts, k=4) where {T}
             end
         end
     end
-    
+
     sort!(zs)
 end
 
@@ -78,7 +78,7 @@ end
 function find_non_zero(f, a::T, barrier, xatol, xrtol, atol, rtol) where {T}
     nan = (0*a)/(0*a) # try to get typed NaN
     xtol = max(xatol, abs(a) * xrtol, oneunit(a) * eps(T))
-    sgn = barrier > a ? 1 : -1 
+    sgn = barrier > a ? 1 : -1
     ctr = 0
     x = a + 2^ctr*sgn*xtol
     while !_non_zero(f(x), x, atol, rtol)
@@ -151,9 +151,9 @@ find_zeros(x -> sin(x^2) + cos(x)^2, 0, 10)  # many zeros
 find_zeros(x -> cos(x) + cos(2x), 0, 4pi)    # mix of simple, non-simple zeros
 f(x) = (x-0.5) * (x-0.5001) * (x-1)          # nearby zeros
 find_zeros(f, 0, 2)
-f(x) = (x-0.5) * (x-0.5001) * (x-4) * (x-4.001) * (x-4.2) 
-find_zeros(f, 0, 10)    
-f(x) = (x-0.5)^2 * (x-0.5001)^3 * (x-4) * (x-4.001) * (x-4.2)^2  # hard to identify    
+f(x) = (x-0.5) * (x-0.5001) * (x-4) * (x-4.001) * (x-4.2)
+find_zeros(f, 0, 10)
+f(x) = (x-0.5)^2 * (x-0.5001)^3 * (x-4) * (x-4.001) * (x-4.2)^2  # hard to identify
 find_zeros(f, 0, 10, no_pts=21)                # too hard for default
 ```
 
@@ -192,7 +192,7 @@ compares `|f(x)| <= 8*eps(x)` to identify a zero. The algorithm might
 identify more than one value for a zero, due to floating point
 approximations. If a potential pair of zeros satisfy
 `isapprox(a,b,atol=sqrt(xatol), rtol=sqrt(xrtol))` then they are
-consolidated. 
+consolidated.
 
 The algorithm can make many function calls. When zeros are found in an
 interval, the naive search is carried out on each subinterval. To cut
@@ -216,20 +216,20 @@ function find_zeros(f, a, b; no_pts = 12, k=8,
     a0, b0 = promote(float(a), float(b))
     a0 = isinf(a0) ? nextfloat(a0) : a0
     b0 = isinf(b0) ? prevfloat(b0) : b0
-    
+
     # set tolerances if not specified
     fa0 = f(a0)
     d = Dict(kwargs)
     T, S = eltype(a0), eltype(fa0)
-    xatol::T = get(d, :xatol, eps(one(T))^(4/5) * oneunit(T))
+    xatol::T = get(d, :xatol, eps(one(T))^(4//5) * oneunit(T))
     xrtol = get(d, :xrtol, eps(one(T)) * one(T))
     atol::S  = get(d, :atol,  eps(float(S)) * oneunit(S))
     rtol  = get(d, :rtol,  eps(float(S)) * one(S))
 
     zs = T[]  # collect zeros
-    
+
     _fz!(zs, f, a0, b0, no_pts,k)  # initial zeros
-    
+
     ints = Interval{T}[] # collect subintervals
     !naive && !isempty(zs) &&  make_intervals!(ints, f, a0, b0, zs, 1, xatol, xrtol, atol, rtol)
 
@@ -250,7 +250,7 @@ function find_zeros(f, a, b; no_pts = 12, k=8,
         #sub_no_pts <= 2 && continue  # stop on depth, always divide if roots
         #sub_no_pts = max(3, floor(Int, no_pts  / (2.0)^(i.depth)))
         sub_no_pts = floor(Int, no_pts  / (2.0)^(i.depth))
-        
+
         empty!(nzs)
         if sub_no_pts >= 2
             _fz!(nzs, f, i.a, i.b, sub_no_pts, k)
