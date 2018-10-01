@@ -33,11 +33,11 @@ tolerances are set to zero (the default) guarantees a "best" solution
 
 When tolerances are given, this algorithm terminates when the midpoint
 is approximately equal to an endpoint using absolute tolerance `xatol`
-and relative tolerance `xrtol`. 
+and relative tolerance `xrtol`.
 
 When a zero tolerance is given and the values are not `Float64`
 values, this will call the `A42` method.
-    
+
 
 """
 struct Bisection <: AbstractBisection end  # either solvable or A42
@@ -57,8 +57,8 @@ function show_tracks(l::Tracks, M::AbstractBracketing)
     end
     println("")
 end
-        
-    
+
+
 
 ## helper function
 function adjust_bracket(x0)
@@ -75,7 +75,7 @@ end
 # a,b both finite and of the same sign
 function init_state(method::AbstractBisection, fs, x)
     length(x) > 1 || throw(ArgumentError(bracketing_error))
-    
+
     x0, x1 = adjust_bracket(x) # now finite, right order
     fx0, fx1 = promote(sign(fs(x0)), sign(fs(x1)))
     fx0 * fx1 > 0 && throw(ArgumentError(bracketing_error))
@@ -140,8 +140,8 @@ the function changes sign at one of the answer's adjacent floating
 point values.
 
 For other types, the the `A42` method (with its tolerances) is used.
-    
-"""    
+
+"""
 default_tolerances(M::Union{Bisection, BisectionExact}) = default_tolerances(M,Float64, Float64)
 function default_tolerances(::M, ::Type{T}, ::Type{S}) where {M<:Union{Bisection, BisectionExact},T,S}
     xatol = zero(T)
@@ -181,7 +181,7 @@ __middle(x::Float64, y::Float64) = __middle(Float64, UInt64, x, y)
 __middle(x::Float32, y::Float32) = __middle(Float32, UInt32, x, y)
 __middle(x::Float16, y::Float16) = __middle(Float16, UInt16, x, y)
 ## fallback for non FloatNN number types
-__middle(x::Number, y::Number) = 0.5*x + 0.5*y 
+__middle(x::Number, y::Number) = 0.5*x + 0.5*y
 
 
 function __middle(T, S, x, y)
@@ -206,12 +206,12 @@ function assess_convergence(M::Bisection, state::UnivariateZeroState{T,S}, optio
     assess_convergence(BisectionExact(), state, options) && return true
 
     x0, x1 = state.xn0, state.xn1
-    
+
     tol = max(options.xabstol, max(abs(x0), abs(x1)) * options.xreltol)
-    if x1 - x0 > tol 
+    if x1 - x0 > tol
         return false
     end
- 
+
     state.message = ""
     state.x_converged = true
     return true
@@ -271,11 +271,11 @@ end
 ## Bisection has special cases
 ## for zero tolerance, we have either BisectionExact or A42 methods
 ## for non-zero tolerances, we have use thegeneral Bisection method
-function find_zero(fs, x0, method::M;
+function find_zero(fs, x0, method::Union{Bisection};
                    tracks = NullTracks(),
                    verbose=false,
-                   kwargs...) where {M <: Union{Bisection}}
-    
+                   kwargs...)
+
     x = adjust_bracket(x0)
     T = eltype(x[1])
     F = callable_function(fs)
@@ -285,19 +285,21 @@ function find_zero(fs, x0, method::M;
 
     l = (verbose && isa(tracks, NullTracks)) ? Tracks(eltype(state.xn1)[], eltype(state.fxn1)[]) : tracks
 
-    
+    M = method
     if iszero(tol)
         if T <: FloatNN
-            find_zero(BisectionExact(), F, options, state, l)
+            return find_zero(F, x, BisectionExact(); tracks=tracks, verbose=verbose, kwargs...)
         else
-            return find_zero(F, x, A42())
+            return find_zero(F, x, A42(); tracks=tracks, verbose=verbose, kwargs...)
         end
-    else
-        find_zero(method, F, options, state, l)
     end
 
+    find_zero(M, F, options, state, l)
+
+    verbose && show_trace(M, nothing, state, l)
+
     state.xn1
-    
+
 end
 
 
@@ -371,18 +373,18 @@ function ipzero(a::T, b, c, d, fa, fb, fc, fd, delta=zero(T)) where {T}
     c = a + (Q31 + Q32 + Q33)
 
     (a + 2delta < c < b - 2delta) && return c
-    
+
     newton_quadratic(a,b,d,fa,fb,fd, 3, delta)
-    
+
 end
 
 # return c in (a+delta, b-delta)
 # adds part of `bracket` from paper with `delta`
 function newton_quadratic(a::T, b, d, fa, fb, fd, k::Int, delta=zero(T)) where {T}
-    
+
     A = f_abd(a,b,d,fa,fb,fd)
     r = isbracket(A,fa) ? b : a
-    
+
     # use quadratic step; if that fails, use secant step; if that fails, bisection
     if !(isnan(A) || isinf(A)) || !iszero(A)
         B = f_ab(a,b,fa,fb)
@@ -401,15 +403,15 @@ function newton_quadratic(a::T, b, d, fa, fb, fd, k::Int, delta=zero(T)) where {
     r =  secant_step(a, b, fa, fb)
 
     if a + 2delta < r < b - 2delta
-        return r 
+        return r
     end
 
     return _middle(a, b) # is in paper r + sgn * 2 * delta
-    
+
 end
 
 # (todo: DRY up?)
-function init_state(M::AbstractAlefeldPotraShi, f, xs) 
+function init_state(M::AbstractAlefeldPotraShi, f, xs)
     u, v = promote(float(xs[1]), float(xs[2]))
     if u > v
         u, v = v, u
@@ -421,7 +423,7 @@ function init_state(M::AbstractAlefeldPotraShi, f, xs)
                                 0, 2,
                                 false, false, false, false,
                                 "")
-    
+
     init_state!(state, M, f, (u,v), false)
     state
 end
@@ -544,8 +546,8 @@ function assess_convergence(method::AbstractAlefeldPotraShi, state::UnivariateZe
         return true
     end
 
-    
-    
+
+
     return false
 end
 
@@ -567,7 +569,7 @@ function update_state(M::A42, f, state::UnivariateZeroState{T,S}, options::Univa
     μ, λ = 0.5, 0.7
     tole = max(options.xabstol, max(abs(a),abs(b)) * options.xreltol) # paper uses 2|u|*rtol + atol
     delta = λ * tole
-    
+
     if state.steps < 1
         c = newton_quadratic(a, b, d, fa, fb, fd, 2)
     else
@@ -576,7 +578,7 @@ function update_state(M::A42, f, state::UnivariateZeroState{T,S}, options::Univa
     fc::S = f(c)
     incfn(state)
     check_zero(M, state, c, fc) && return nothing
-    
+
     ab::T, bb::T, db::T, fab::S, fbb::S, fdb::S = bracket(a,b,c,fa,fb,fc)
     eb::T, feb::S = d, fd
 
@@ -586,21 +588,21 @@ function update_state(M::A42, f, state::UnivariateZeroState{T,S}, options::Univa
     check_zero(M, state, cb, fcb) && return nothing
 
     ab,bb,db,fab,fbb,fdb = bracket(ab,bb,cb,fab,fbb,fcb)
-    
-    
+
+
     u::T, fu::S = choose_smallest(ab, bb, fab, fbb)
     cb = u - 2 * fu * (bb - ab) / (fbb - fab)
     ch::T = cb
-    if abs(cb - u) > 0.5 * (b-a) 
+    if abs(cb - u) > 0.5 * (b-a)
         ch = _middle(an, bn)
     end
     fch::S = f(cb)
-    incfn(state)    
+    incfn(state)
     check_zero(M, state, ch, fch) && return nothing
 
     ah::T, bh::T, dh::T, fah::S, fbh::S, fdh::S = bracket(ab, bb, ch, fab, fbb, fch)
 
-    if bh - ah < μ * (b - a) 
+    if bh - ah < μ * (b - a)
         #a, b, d, fa, fb, fd = ahat, b, dhat, fahat, fb, fdhat # typo in paper
         a, b, d, ee =  ah, bh, dh, db
         fa, fb, fd, fe = fah, fbh, fdh, fdb
@@ -633,39 +635,39 @@ struct AlefeldPotraShi <: AbstractAlefeldPotraShi end
 
 # ## 3, maybe 4, functions calls per step
 function update_state(M::AlefeldPotraShi, f, state::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
-  
+
     a::T,b::T,d::T = state.xn0, state.xn1, state.m[1]
     fa::S,fb::S,fd::S = state.fxn0, state.fxn1, state.fm[1]
 
     μ, λ = 0.5, 0.7
     tole = max(options.xabstol, max(abs(a),abs(b)) * options.xreltol) # paper uses 2|u|*rtol + atol
     delta = λ * tole
-  
+
     c::T = newton_quadratic(a, b, d, fa, fb, fd, 2, delta)
     fc::S = f(c)
     incfn(state)
     check_zero(M, state, c, fc) && return nothing
 
     a,b,d,fa,fb,fd = bracket(a,b,c,fa,fb,fc)
-  
+
     c = newton_quadratic(a,b,d,fa,fb,fd, 3, delta)
     fc = f(c)
-    incfn(state)    
+    incfn(state)
     check_zero(M, state, c, fc) && return nothing
-  
+
     a, b, d, fa, fb, fd = bracket(a, b, c, fa, fb,fc)
-  
+
     u::T, fu::S = choose_smallest(a, b, fa, fb)
     c = u - 2 * fu * (b - a) / (fb - fa)
     if abs(c - u) > 0.5 * (b - a)
-        c = _middle(a, b) 
+        c = _middle(a, b)
     end
     fc = f(c)
-    incfn(state)    
+    incfn(state)
     check_zero(M, state, c, fc) && return nothing
 
     ahat::T, bhat::T, dhat::T, fahat::S, fbhat::S, fdhat::S = bracket(a, b, c, fa, fb, fc)
-    if bhat - ahat < μ * (b - a) 
+    if bhat - ahat < μ * (b - a)
         #a, b, d, fa, fb, fd = ahat, b, dhat, fahat, fb, fdhat # typo in paper
         a, b, d, fa, fb, fd = ahat, bhat, dhat, fahat, fbhat, fdhat
     else
@@ -701,18 +703,18 @@ function log_step(l::Tracks, M::Brent, state)
 end
 
 #
-function init_state(M::Brent, f, xs) 
+function init_state(M::Brent, f, xs)
     u, v = promote(float(xs[1]), float(xs[2]))
     fu, fv = promote(f(u), f(v))
     isbracket(fu, fv) || throw(ArgumentError(bracketing_error))
-    
+
     # brent store b as smaller of |fa|, |fb|
     if abs(fu) > abs(fv)
         a, b, fa, fb = u, v, fu, fv
     else
         a, b, fa, fb = v, u, fv, fu
     end
-          
+
 
 
     state = UnivariateZeroState(b, a, [a, a], ## x1, x0, c, d
@@ -728,7 +730,7 @@ function init_state!(state::UnivariateZeroState{T,S}, ::Brent, f, xs::Union{Tupl
     u::T, v::T = promote(float(xs[1]), float(xs[2]))
     fu::S, fv::S = promote(f(u), f(v))
     isbracket(fu, fv) || throw(ArgumentError(bracketing_error))
- 
+
     # brent store b as smaller of |fa|, |fb|
     if abs(fu) > abs(fv)
         a, b, fa, fb = u, v, fu, fv
@@ -769,7 +771,7 @@ function update_state(M::Brent, f, state::UnivariateZeroState{T,S}, options::Uni
     end
 
     tol = max(options.xabstol, max(abs(b), abs(c), abs(d)) * options.xreltol)
-    if !(u < s < v) || 
+    if !(u < s < v) ||
         (mflag && abs(s - b) >= abs(b-c)/2) ||
         (!mflag && abs(s - b) >= abs(b-c)/2) ||
         (mflag && abs(b-c) <= tol) ||
@@ -791,7 +793,7 @@ function update_state(M::Brent, f, state::UnivariateZeroState{T,S}, options::Uni
     else
         a, fa = s, fs
     end
-    
+
     if abs(fa) < abs(fb)
         a, b, fa, fb = b, a, fb, fa
     end
@@ -799,7 +801,7 @@ function update_state(M::Brent, f, state::UnivariateZeroState{T,S}, options::Uni
     state.xn0, state.xn1, state.m[1], state.m[2] = a, b, c, d
     state.fxn0, state.fxn1, state.fm[1] = fa, fb, fc
     state.fm[2] = mflag ? one(fa) : -one(fa)
-    
+
     return nothing
 end
 
@@ -851,7 +853,7 @@ function update_state(method::FalsePosition, fs, o::UnivariateZeroState{T,S}, op
         lambda = 1/2
     end
 
-    x::T = b - lambda * (b-a)        
+    x::T = b - lambda * (b-a)
     fx::S = fs(x)
     incfn(o)
 
@@ -865,13 +867,13 @@ function update_state(method::FalsePosition, fs, o::UnivariateZeroState{T,S}, op
     if sign(fx)*sign(fb) < 0
         a, fa = b, fb
     else
-        fa = galdino_reduction(method, fa, fb, fx) 
+        fa = galdino_reduction(method, fa, fb, fx)
     end
     b, fb = x, fx
 
-    o.xn0, o.xn1 = a, b 
+    o.xn0, o.xn1 = a, b
     o.fxn0, o.fxn1 = fa, fb
-    
+
     nothing
 end
 
@@ -888,7 +890,7 @@ galdino = Dict{Union{Int,Symbol},Function}(:1 => (fa, fb, fx) -> fa*fb/(fb+fx),
                                            :9 => (fa, fb, fx) -> fa/(1 + fx/fb)^2,
                                            :10 => (fa, fb, fx) -> (fa-fx)/4,
                                            :11 => (fa, fb, fx) -> fx*fa/(fb+fx),
-                                           :12 => (fa, fb, fx) -> (fa * (1-fx/fb > 0 ? 1-fx/fb : 1/2))  
+                                           :12 => (fa, fb, fx) -> (fa * (1-fx/fb > 0 ? 1-fx/fb : 1/2))
 )
 
 
