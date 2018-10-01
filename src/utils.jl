@@ -24,8 +24,8 @@ isissue(x) = iszero(x) || isnan(x) || isinf(x)
 
 
 ## find a default secant step
-function _default_secant_step(x1)  
-    h = eps(one(real(x1)))^(1/3)
+function _default_secant_step(x1)
+    h = eps(one(real(x1)))^(1//3)
     dx = h*oneunit(x1) + abs(x1)*h^2 # adjust for if eps(x1) > h
     x0 = x1 + dx
     x0
@@ -39,10 +39,10 @@ function steff_step(x, fx)
 
     xbar, fxbar = real(x/oneunit(x)), fx/oneunit(fx)
     thresh =  max(1, abs(xbar)) * sqrt(eps(one(xbar))) #^(1/2) # max(1, sqrt(abs(x/fx))) * 1e-6
-    
-    out = abs(fxbar) <= thresh ? fxbar  : sign(fx) * thresh 
+
+    out = abs(fxbar) <= thresh ? fxbar  : sign(fx) * thresh
     out * oneunit(x)
-    
+
 end
 
 function guarded_secant_step(alpha, beta, falpha, fbeta)
@@ -104,10 +104,10 @@ function _fbracket_diff(a,b,c, fa, fb, fc)
     x1, issue = _fbracket(b, c, fb,  fc)
     issue && return x1, issue
     x2, issue = _fbracket(a, b, fa,  fb)
-    issue && return x2, issue    
+    issue && return x2, issue
     x3, issue = _fbracket(a, c, fa,  fc)
     issue && return x3, issue
-    
+
     out = x1 - x2 + x3
     out, isissue(out)
 end
