@@ -271,10 +271,10 @@ end
 ## Bisection has special cases
 ## for zero tolerance, we have either BisectionExact or A42 methods
 ## for non-zero tolerances, we have use thegeneral Bisection method
-function find_zero(fs, x0, method::Union{Bisection};
+function find_zero(fs, x0, method::M;
                    tracks = NullTracks(),
                    verbose=false,
-                   kwargs...)
+                   kwargs...) where {M <: Union{Bisection}}
 
     x = adjust_bracket(x0)
     T = eltype(x[1])
@@ -285,7 +285,6 @@ function find_zero(fs, x0, method::Union{Bisection};
 
     l = (verbose && isa(tracks, NullTracks)) ? Tracks(eltype(state.xn1)[], eltype(state.fxn1)[]) : tracks
 
-    M = method
     if iszero(tol)
         if T <: FloatNN
             return find_zero(F, x, BisectionExact(); tracks=tracks, verbose=verbose, kwargs...)
@@ -294,9 +293,9 @@ function find_zero(fs, x0, method::Union{Bisection};
         end
     end
 
-    find_zero(M, F, options, state, l)
+    find_zero(method, F, options, state, l)
 
-    verbose && show_trace(M, nothing, state, l)
+    verbose && show_trace(method, nothing, state, l)
 
     state.xn1
 
