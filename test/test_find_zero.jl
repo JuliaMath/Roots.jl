@@ -280,7 +280,7 @@ end
 test_94()
 
 ## Issue with quad step in Order0 being off
-@test find_zero(f, 7.36842 , Order0()) ≈ 7.068582745628732
+@test find_zero(x -> tanh(x) - tan(x), 7.36842 , Order0()) ≈ 7.068582745628732
 
 
 @testset "init_state!" begin
