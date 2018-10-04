@@ -753,6 +753,7 @@ function find_zero(M::AbstractUnivariateZeroMethod,
                     r = newton_quadratic(state0.xn1, state.xn0, state.xn1, state0.fxn1, state.fxn0, state.fxn1,1)
                     fr = F(r); incfn(state)
                 end
+
                 state0.xn1 = r
                 state0.fxn1 = fr
                 incfn(state)
