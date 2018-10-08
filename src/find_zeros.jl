@@ -140,7 +140,7 @@ end
 """
    find_zeros(f, a, b; [no_pts=12, k=8, naive=false, xatol, xrtol, atol, rtol])
 
-Search for zeros of f in the interval (a,b), assuming a, b are not zeros.
+Search for zeros of f in the interval [a,b].
 
 
 # Examples
@@ -162,16 +162,16 @@ Notes:
 There are two typical cases where the number of zeros may be
 underreported:
 
-* if the initial interval, (a,b), is too wide
+* if the initial interval, [a,b], is too wide
 
 * if there are nearby zeros
 
-The basic algorithm initially divides the interval (a,b) into
-`no_pts-1` subintervals and then proceeds to look for zeros through
-bisection or a derivative-free method.  As checking for a bracketing
-interval is relatively cheap and bisection is guaranteed to converge,
-each interval has `k` pairs of intermediate points checked for a
-bracket.
+The basic algorithm checks for zeros among the endpoints, and then
+divides the interval (a,b) into `no_pts-1` subintervals and then
+proceeds to look for zeros through bisection or a derivative-free
+method.  As checking for a bracketing interval is relatively cheap and
+bisection is guaranteed to converge, each interval has `k` pairs of
+intermediate points checked for a bracket.
 
 If any zeros are found, the algorithm uses these to partition (a,b)
 into subintervals. Each subinterval is shrunk so that the endpoints
@@ -218,7 +218,7 @@ function find_zeros(f, a, b; no_pts = 12, k=8,
     b0 = isinf(b0) ? prevfloat(b0) : b0
 
     # set tolerances if not specified
-    fa0 = f(a0)
+    fa0, fb0 = f(a0), f(b0)
     d = Dict(kwargs)
     T, S = eltype(a0), eltype(fa0)
     xatol::T = get(d, :xatol, eps(one(T))^(4//5) * oneunit(T))
@@ -227,6 +227,13 @@ function find_zeros(f, a, b; no_pts = 12, k=8,
     rtol  = get(d, :rtol,  eps(float(S)) * one(S))
 
     zs = T[]  # collect zeros
+
+    # check endpoints for exact zeros, then narrow
+    abs(fa0) <= 8 * eps(a0) && push!(zs, a0)
+    abs(fb0) <= 8 * eps(b0) && push!(zs, b0)
+    a0 = find_non_zero(f, a0, b0, xatol, xrtol, atol, rtol)
+    b0 = find_non_zero(f, b0, a0, xatol, xrtol, atol, rtol)
+
 
     _fz!(zs, f, a0, b0, no_pts,k)  # initial zeros
 
