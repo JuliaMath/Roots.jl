@@ -271,7 +271,7 @@ end
 ## Bisection has special cases
 ## for zero tolerance, we have either BisectionExact or A42 methods
 ## for non-zero tolerances, we have use thegeneral Bisection method
-function find_zero(fs, x0, method::Union{Bisection};
+function find_zero(fs, x0, method::M;
                    tracks = NullTracks(),
                    verbose=false,
                    kwargs...) where {M <: Union{Bisection}}
