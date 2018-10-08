@@ -65,7 +65,7 @@ function guarded_secant_step(alpha, beta, falpha, fbeta)
     end
 end
 
-# return vertex of parabolar through (a,fa),(b,fb),(c,fc)
+# return vertex of parabola through (a,fa),(b,fb),(c,fc)
 # first time trhough, we have picture of a > b > c; |fa|, |fc| > |fb|, all same sign
 function quad_vertex(c,fc,b,fb,a,fa)
     fba = (fb-fa)/(b-a)
