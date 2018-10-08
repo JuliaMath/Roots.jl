@@ -65,26 +65,17 @@ function guarded_secant_step(alpha, beta, falpha, fbeta)
     end
 end
 
+# return vertex of parabola through (a,fa),(b,fb),(c,fc)
+# first time trhough, we have picture of a > b > c; |fa|, |fc| > |fb|, all same sign
+function quad_vertex(c,fc,b,fb,a,fa)
+    fba = (fb-fa)/(b-a)
+    fbc = (fb-fc)/(b-c)
 
-# for the 3 points, find parabola. Then return vertex of the closest 0
-# to the mean of x1, x2, x3
-function quad_vertex(x1,fx1,x2,fx2,x3,fx3)
-    vertex = -(-fx1*(x2^2 - x3^2) + fx2*(x1^2 - x3^2) - fx3*(x1^2 - x2^2))/(2*(fx1*(x2 - x3) - fx2*(x1 - x3) + fx3*(x1 - x2)))
-    discr = -4*(fx1*(x2 - x3) - fx2*(x1 - x3) + fx3*(x1 - x2))*(fx1*x2*x3*(x2 - x3) - fx2*x1*x3*(x1 - x3) + fx3*x1*x2*(x1 - x2))/(x1^2*x2 - x1^2*x3 - x1*x2^2 + x1*x3^2 + x2^2*x3 - x2*x3^2)^2 + (-fx1*(x2^2 - x3^2) + fx2*(x1^2 - x3^2) - fx3*(x1^2 - x2^2))^2/(x1^2*x2 - x1^2*x3 - x1*x2^2 + x1*x3^2 + x2^2*x3 - x2*x3^2)^2
+    1/2 * ((a+b) - fba/(fbc - fba)*(c-a))
 
-    if discr > zero(discr)
-        b = (-fx1*(x2^2 - x3^2) + fx2*(x1^2 - x3^2) - fx3*(x1^2 - x2^2))/(x1^2*x2 - x1^2*x3 - x1*x2^2 + x1*x3^2 + x2^2*x3 - x2*x3^2)
-        a = (fx1*(x2 - x3) - fx2*(x1 - x3) + fx3*(x1 - x2))/(x1^2*x2 - x1^2*x3 - x1*x2^2 + x1*x3^2 + x2^2*x3 - x2*x3^2)
-        gamma1, gamma2 = (-b + sqrt(discr))/2a, (-b - sqrt(discr))/2a
-
-        xbar = (x1+x2+x3)/3
-        d1,d2,d3 = abs(gamma1 - xbar), abs(gamma2-xbar), abs(vertex - xbar)
-        # return closest
-        d1 < min(d2,d3) && return gamma1
-        d2 < min(d1,d3) && return gamma2
-    end
-    return vertex
 end
+
+
 
 
 

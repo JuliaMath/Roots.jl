@@ -133,7 +133,7 @@ galadino_probs = [(x -> x^3 - 1, [.5, 1.5]),
                   (x -> 11x^11 - 1, [0.1, 1]),
                   (x ->  x^3 + 1, [-1.8, 0]),
                   (x ->  x^3 - 2x - 5, [2.0, 3]),
-                  
+
                   ((x,n=5)  -> 2x * exp(-n) + 1 - 2exp(-n*x) , [0,1]),
                   ((x,n=10) -> 2x * exp(-n) + 1 - 2exp(-n*x) , [0,1]),
                   ((x,n=20) -> 2x * exp(-n) + 1 - 2exp(-n*x) , [0,1]),
@@ -158,7 +158,7 @@ galadino_probs = [(x -> x^3 - 1, [.5, 1.5]),
                   ((x,n=10) -> x^2 + sin(x/n) - 1/4 , [0,1]),
                   ((x,n=10) -> x^2 + sin(x/n) - 1/4 , [0,1])
                   ]
-        
+
 
 for (fn_, ab) in galadino_probs
     for m in [Roots.A42(), Bisection(), (FalsePosition(i) for i in 1:12)...]
@@ -177,7 +177,7 @@ end
 
 ## defaults for method argument
 @test find_zero(x -> cbrt(x), 1) ≈ 0.0 # order0()
-@test find_zero(sin, [3,4]) ≈ π   # Bisection() 
+@test find_zero(sin, [3,4]) ≈ π   # Bisection()
 
 
 ## Callable objects
@@ -206,17 +206,17 @@ fn, xstar = x -> sin(x) - x + 1, 1.9345632107520243
 @test find_zero(fn, 20.0, Order2())  ≈ xstar   # needs 16 iterations, 33 fn evaluations
 @test abs(fn(find_zero(fn, 20.0, Order2(), atol=1e-2)) - xstar) > 1e-12
 @test abs(fn(find_zero(fn, 20.0, Order2(), rtol=1e-2)) - xstar) > 1e-12
-@test_throws Roots.ConvergenceFailed find_zero(fn, 20.0, Order2(), maxevals=5) 
-@test_throws Roots.ConvergenceFailed find_zero(fn, 20.0, Order2(), maxfnevals=10) 
+@test_throws Roots.ConvergenceFailed find_zero(fn, 20.0, Order2(), maxevals=5)
+@test_throws Roots.ConvergenceFailed find_zero(fn, 20.0, Order2(), maxfnevals=10)
 
 
 ## test robustness of Order0
 ## tests from: http://people.sc.fsu.edu/~jburkardt/cpp_src/test_zero/test_zero.html
-function _newton_baffler(x) 
-    if ( x - 0.0 ) < -0.25 
-        0.75 * ( x - 0 ) - 0.3125 
-    elseif  ( x - 0 ) < 0.25 
-        2.0 * ( x - 0 ) 
+function _newton_baffler(x)
+    if ( x - 0.0 ) < -0.25
+        0.75 * ( x - 0 ) - 0.3125
+    elseif  ( x - 0 ) < 0.25
+        2.0 * ( x - 0 )
     else
         0.75 * ( x - 0 ) + 0.3125
     end
@@ -227,23 +227,23 @@ pathological = [
                 (x -> x * exp( - x ), 0.99),
                 (x -> exp( x ) - 1 / ( 10 * x )^2, .1),
                 (x -> ( x + 3 ) * ( x - 1 )^2, 1),
-                
+
                 (x -> exp( x ) - 2 - 1 / ( 10 * x )^2 + 2 / ( 100 * x )^3, 1),
                 (x -> cbrt(x), 1),
                 (x -> cos( x ) - x, 1),
                 (x-> _newton_baffler(x), 8),
-                (x -> 20.0 * x / ( 100.0 * x^2 + 1.0), 0.095), 
-                
+                (x -> 20.0 * x / ( 100.0 * x^2 + 1.0), 0.095),
+
                 (x ->  ( 4.0 + x^2) * ( 2.0 + x ) * ( 2.0 - x )  / ( 16.0 * x * x * x * x + 0.00001 ), 1),
                 (x -> (x == 1.0) ? float(0) : sign(x-1.0) * exp(log(1e4) + log(abs(x - 1.0)) - 1.0/(x-1.0)^2), 1),
                 (x -> 0.00000000001 * (x - 100.0), 1),
                 (x -> 1.0 / ( ( x - 0.3 ) * ( x - 0.3 ) + 0.01 ) + 1.0 / ( ( x - 0.9 ) * ( x - 0.9 ) + 0.04 ) + 2.0 * x - 5.2, -1),
-                (x -> ( 1 - 6x^2) * cbrt(x) * exp(-x^2) / (3*x), -0.25), 
-                
+                (x -> ( 1 - 6x^2) * cbrt(x) * exp(-x^2) / (3*x), -0.25),
+
                 (x -> ( pi * ( x - 5.0 ) / 180.0 ) - 0.8 * sin( pi * x / 180.0 ), 1),
                 (x -> x^3 - 2*x - 5, 2),
 (x -> 1e6 * (x^7 -7x^6 +21x^5 -35x^4 +35x^3-21x^2+7x-1),  0.990),
-(x -> cos(100*x)-4*erf(30*x-10), 0.0) 
+(x -> cos(100*x)-4*erf(30*x-10), 0.0)
                 ]
 
 
@@ -278,6 +278,10 @@ test_94 = function(;kwargs...)
     @test state.steps <= 15
 end
 test_94()
+
+## Issue with quad step in Order0 being off
+@test find_zero(x -> tanh(x) - tan(x), 7.36842 , Order0()) ≈ 7.068582745628732
+
 
 @testset "init_state!" begin
     ## add init_state! method
@@ -328,11 +332,6 @@ test_94()
         @test Roots.init_options!(options, M) == nothing
         @test Roots.update_state(M, g1, state, options)  == nothing
         @test Roots.assess_convergence(M, state, options) == false  # none in 1 step
-    end  
-    
-end
-    
-    
-    
-    
+    end
 
+end
