@@ -720,6 +720,16 @@ function find_zero(M::AbstractUnivariateZeroMethod,
             incfn(state)
         end
 
+        # a sign change after shortening?
+        if sign(state.fxn1) * sign(state0.fxn1) < 0
+            state.xn0, state.fxn0 = state.xn1, state.fxn1
+            state.xn1, state.fxn1 = state0.xn1, state0.fxn1
+            a, b = state.xn0, state.xn1
+            run_bisection(N, F, (a, b), state, options)
+            break
+        end
+
+
         ## did we improve?
         if abs(state0.fxn1) < abs(state.fxn1)
             # check
@@ -739,8 +749,10 @@ function find_zero(M::AbstractUnivariateZeroMethod,
             state.stopped = true
             break
         else
+
             quad_ctr += 1
             r = Roots.quad_vertex(state0.xn1, state0.fxn1, state.xn1, state.fxn1, state.xn0, state.fxn0)
+
             if isnan(r) || isinf(r)
                 copy!(state, state0)
             else
