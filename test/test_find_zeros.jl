@@ -11,7 +11,7 @@ end
 (F::CallableFunction)(x) = (F.n+=1; F.f(x))
 
 
-@testset "find_zeros" begin 
+@testset "find_zeros" begin
 
     function azero(f, x)
         fx = f(x)
@@ -21,7 +21,7 @@ end
         abs(fx) <= 8eps(x) && return true
         false
     end
-    
+
     ## easier ones, counting steps
     F = CallableFunction(x -> exp(x) - x^4, 0)
     xrts = find_zeros(F, -5, 20)
@@ -37,7 +37,7 @@ end
 
     T11(x) = 1024x^11 -2816x^9 + 2816x^7 -1232x^5 + 220x^3 - 11x
     U9(x) = 512x^9 - 1024x^7 + 672x^5 - 160x^3 +10x
-    
+
     F = CallableFunction(T11, 0)
     xrts = find_zeros(F, -1, 1)
     @test length(xrts) == 11
@@ -72,7 +72,7 @@ end
     ## Harder ones
     f1(x) = 2*exp(.5*x) *(sin(5*x) + sin(101*x))
     tiger_tail(x) = f1(x) - round(f1(x)) # (-2,1) then filter
-    
+
     f2(x) = (x-0.5)*(x-0.5001)*(x-4)*(x-4.05)*(x-9.3) # (0,10)
     f3(x) = (x-3)^2*(x-4)^2 # (0,5)
     delta = .001
@@ -81,35 +81,42 @@ end
     M(n) =  x -> prod((x - (0.5 - (1/10)^i)) for i in 1:n)
     f6 = M(4)
     f7 = M(5) # too much
-    
+
     xrts = find_zeros(tiger_tail, -2.0, 1.0)
     xrts = filter(u -> -1/4 < tiger_tail(u) < 1/4, xrts)
     @test 345 <= length(xrts) <= 345
     @test all(azero.((tiger_tail,), xrts))
-    
+
     xrts = find_zeros(f2, 0.0, 10.0)
     @test length(xrts) == 5
     @test all(azero.((f2,), xrts))
-    
+
     xrts = find_zeros(f3, 0.0, 5.0)
     @test length(xrts) == 2
     @test all(azero.((f3,), xrts))
-    
+
     xrts = find_zeros(f4, 0.0, 1.5)
     @test length(xrts) == 3
     @test all(azero.((f4,), xrts))
-    
+
     xrts = find_zeros(f5, 0.0, 5.0)
     @test length(xrts) >= 3          # too hard to get 5 w/o luck, as with no_pts=21/k=4
     @test all(azero.((f5,), xrts))
-    
-    xrts = find_zeros(f6, 0.0, 10.0)  
-    @test length(xrts) == 4      
+
+    xrts = find_zeros(f6, 0.0, 10.0)
+    @test length(xrts) == 4
     @test all(azero.((f6,), xrts))
 
     xrts = find_zeros(f7, 0.0, 10.0)  # too sensitive to interval
     @test length(xrts) >= 3           # should be 5
     @test all(azero.((f7,), xrts))
+
+
+    # Issue #141 solve over [a,b], not (a,b)
+    @test length(find_zeros(p -> p * (1-p), 0, 1)) == 2
+    @test length(find_zeros(sin, 0, 5pi)) == 5+1
+
+
 end
 
 
