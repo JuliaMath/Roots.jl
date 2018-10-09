@@ -1,3 +1,10 @@
+CHANGES in v0.7.4
+
+* change find_zeros to identify zeros on [a,b], not (a,b). Closes #141.
+* bug fix: issue with quad step after a truncated M-step in find_zero(M,N,...)
+* bug fix: verbose argument for Bisection method
+* bug fix: unintentional widening of types in intial secant step
+
 CHANGES in v0.7.3
 
 * fix bug with find_zeros and Float32
