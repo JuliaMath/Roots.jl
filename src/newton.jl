@@ -15,20 +15,21 @@ one derivative. Two function calls per step.
 struct Newton <: AbstractUnivariateZeroMethod
 end
 
-function update_state(method::Newton, fs, o, options) 
+function update_state(method::Newton, fs, o, options)
     xn = o.xn1
-    fxn = o.fxn1
-    fpxn = fs(xn,1)
+    #fxn = o.fxn1
+    #fpxn = fs(xn,1)
+    fxn, fpxn = fdf(fs, xn)
 
     if isissue(fpxn)
         o.stopped=true
         return
     end
-    
+
     xn1 = xn - fxn / fpxn
-    fxn1 = fs(xn1)
+    fxn1 = fxn#fs(xn1)
     incfn(o)
-    
+    incfn(o)
     o.xn0, o.xn1 = xn, xn1
     o.fxn0, o.fxn1 = fxn, fxn1
 
@@ -39,14 +40,14 @@ end
 
 """
     newton(f, fp, x0; kwargs...)
-    
+
 Implementation of Newton's method: `x_n1 = x_n - f(x_n)/ f'(x_n)`
 
 Arguments:
 
 * `f::Function` -- function to find zero of
 
-* `fp::Function` -- the derivative of `f`. 
+* `fp::Function` -- the derivative of `f`.
 
 * `x0::Number` -- initial guess. For Newton's method this may be complex.
 
@@ -70,29 +71,30 @@ Implements Halley's [method](http://tinyurl.com/yd83eytb),
 `x_n1 = xn - (2 f(xn)*f'(xn)) / (2 f'(xn)^2 - f(xn) * f''(xn))`.
 This method is cubically converging, but requires more function calls per step (3) than
 other methods.
-"""    
+"""
 struct Halley <: AbstractUnivariateZeroMethod
 end
 
 
 function update_state(method::Halley, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
     xn = o.xn1
-    fxn = o.fxn1
-    fpxn = fs(xn,1); incfn(o)
-    fppxn = fs(xn,2); incfn(o)
-    
+#    fxn = o.fxn1
+#    fpxn = fs(xn,1); incfn(o)
+#    fppxn = fs(xn,2); incfn(o)
+    fxn, fpxn, fppxn = fdfddf(fs, xn)
+
     xn1 = xn - 2fxn*fpxn / (2*fpxn*fpxn - fxn * fppxn)
     fxn1 = fs(xn1); incfn(o)
 
     o.xn0, o.xn1 = xn, xn1
-    o.fxn0, o.fxn1 = fxn, fxn1
+    o.fxn0, o.fxn1 = fxn, fxn # lag one
 end
 
 """
     halley(f, fp, fpp, x0; kwargs...)
-    
+
 Implementation of Halley's method. `xn1 = xn - 2f(xn)*f'(xn) / (2*f'(xn)^2 - f(xn) * f''(xn))`
-    
+
 Arguments:
 
 * `f::Function` -- function to find zero of

@@ -243,6 +243,35 @@ end
 ### Functions
 abstract type CallableFunction end
 
+struct DerivativeFree <: CallableFunction
+    f
+end
+
+struct FirstDerivative <: CallableFunction
+    f
+    fp
+end
+
+struct SecondDerivative <: CallableFunction
+    f
+    fp
+    fpp
+end
+
+# for functions which return f, f'
+abstract type CallableFunctions <: CallableFunction end
+struct FG <: CallableFunctions
+f
+end
+fg(f) = FG(f)
+(F::FG)(x) = F.f(x)[1]
+
+struct FGH <: CallableFunctions
+f
+end
+fgh(F) = FGH(F)
+(F::FGH)(x) = F.f(x)[1]
+
 ## It is faster the first time a function is used if we do not
 ## parameterize this. (As this requires less compilation) It is slower
 ## the second time a function is used. This seems like the proper
@@ -258,6 +287,7 @@ abstract type CallableFunction end
 ## Roots.callable_function(f::CallbackF64F64) = f
 
 callable_function(fs::Any) = _callable_function(fs)
+callable_function(fs::CallableFunctions) = fs
 
 ## Default does not specialize on function
 function _callable_function(@nospecialize(fs))
@@ -270,21 +300,6 @@ function _callable_function(@nospecialize(fs))
 end
 
 
-
-struct DerivativeFree <: CallableFunction
-    f
-end
-
-struct FirstDerivative <: CallableFunction
-    f
-    fp
-end
-
-struct SecondDerivative <: CallableFunction
-    f
-    fp
-    fpp
-end
 
 (F::DerivativeFree)(x::Number) = F.f(x)
 (F::FirstDerivative)(x::Number) = F.f(x)
@@ -310,7 +325,17 @@ e.g., define `D(f) = x->ForwardDiff.derivative(f, float(x))`, then use `D(D(f))`
 (F::FirstDerivative)(x::Number, ::Type{Val{2}}) =  error(error_msg_d2)
 (F::SecondDerivative)(x::Number, ::Type{Val{2}}) = F.fpp(x)
 
+## Return f, f'
+fdf(F::DerivativeFree, x) = error("No derivative defined")
+fdf(F::FirstDerivative,x) = (F.f(x), F.fp(x))
+fdf(F::SecondDerivative,x) = (F.f(x),F.fp(x))
 
+fdfddf(F::DerivativeFree, x) = error("No first or second derivative defined")
+fdfddf(F::FirstDerivative, x) = error("No second derivative defined")
+fdfddf(F::SecondDerivative, x) = (F.f(x), F.fp(x), F.fpp(x))
+
+fdf(F::CallableFunctions, x) = F.f(x)
+fdfddf(F::CallableFunctions, x) = F.f(x)
 
 
 ## Assess convergence
