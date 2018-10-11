@@ -11,22 +11,37 @@
 Implements Newton's [method](http://tinyurl.com/b4d7vls): `x_n1 = xn -
 f(xn)/f'(xn)`.  This is a quadratically converging method requiring
 one derivative. Two function calls per step.
+
+Example
+```
+find_zero((sin,cos), 3.0, Roots.Newton())
+```
+
+If function evaluations are expensive one can pass in a function which returns (f, f/f') as follows
+
+```
+find_zero(Roots.fg(x -> (sin(x), sin(x)/cos(x))), 3.0, Roots.Newton())
+```
+
+This can be advantageous if the derivative is easily computed from the
+value of f, but otherwise would be expensive to compute.
+
 """
 struct Newton <: AbstractUnivariateZeroMethod
 end
 
-function update_state(method::Newton, fs, o, options)
+function update_state(method::Newton, fs, o::UnivariateZeroState{T,S}, options) where {T, S}
     xn = o.xn1
     #fxn = o.fxn1
     #fpxn = fs(xn,1)
-    fxn, fpxn = fdf(fs, xn)
+    fxn::T, Δxn::S = fΔf(fs, xn)
 
-    if isissue(fpxn)
+    if isissue(Δxn)
         o.stopped=true
         return
     end
 
-    xn1 = xn - fxn / fpxn
+    xn1 = xn - Δxn
     fxn1 = fxn#fs(xn1)
     incfn(o)
     incfn(o)
@@ -56,9 +71,10 @@ With the `FowardDiff` package derivatives may be computed automatically. For exa
 
 Keyword arguments are passed to `find_zero` using the `Roots.Newton()` method.
 
+See also `newton((f,fp), x0) and `newton(fΔf, x0)` for simpler implementations.
+
 """
 newton(f, fp, x0; kwargs...) = find_zero((f, fp), x0, Newton(); kwargs...)
-@deprecate newton(f, x0; kwargs...)  newton(f, fp, x0; kwargs...)
 
 
 ## Halley
@@ -68,9 +84,24 @@ newton(f, fp, x0; kwargs...) = find_zero((f, fp), x0, Newton(); kwargs...)
     Roots.Halley()
 
 Implements Halley's [method](http://tinyurl.com/yd83eytb),
-`x_n1 = xn - (2 f(xn)*f'(xn)) / (2 f'(xn)^2 - f(xn) * f''(xn))`.
+`x_n1 = xn - f/f' * (1 - f/f' * f''/f' * 1/2)^(-1)
 This method is cubically converging, but requires more function calls per step (3) than
 other methods.
+
+Example
+```
+find_zero((sin, cos, x->-sin(x)), 3.0, Roots.Halley())
+```
+
+If function evaluations are expensive one can pass in a function which returns (f, f/f',f''/f) as follows
+
+```
+find_zero(Roots.fg(x -> (sin(x), sin(x)/cos(x), -sin(x)/cos(x))), 3.0, Roots.Halley())
+```
+
+This can be advantageous if the derivatives are easily computed from
+the value of f, but otherwise would be expensive to compute.
+
 """
 struct Halley <: AbstractUnivariateZeroMethod
 end
@@ -80,11 +111,13 @@ function update_state(method::Halley, fs, o::UnivariateZeroState{T,S}, options::
     xn = o.xn1
 #    fxn = o.fxn1
 #    fpxn = fs(xn,1); incfn(o)
-#    fppxn = fs(xn,2); incfn(o)
-    fxn, fpxn, fppxn = fdfddf(fs, xn)
+    #    fppxn = fs(xn,2); incfn(o)
+    fxn::T, Δxn::S, ΔΔxni::S = fΔfΔΔf(fs, xn)  # (f, f/f', f''/f')
+    incfn(o,3)
 
-    xn1 = xn - 2fxn*fpxn / (2*fpxn*fpxn - fxn * fppxn)
-    fxn1 = fs(xn1); incfn(o)
+    xn1 = xn - Δxn * inv(1  - Δxn * ΔΔxni/2)
+
+#    fxn1 = fs(xn1); incfn(o)
 
     o.xn0, o.xn1 = xn, xn1
     o.fxn0, o.fxn1 = fxn, fxn # lag one

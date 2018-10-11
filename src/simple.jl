@@ -184,6 +184,65 @@ function secant(f, a::T, b::T, atol=zero(T), rtol=8eps(T), maxevals=100) where {
     return nan
 end
 
+"""
+    newton((f, f'), x0; xatol=nothing, xrtol=nothing, maxevals=100)
+    newton(fΔf, x0; xatol=nothing, xrtol=nothing, maxevals=100)
+
+Newton's method.
+
+Function may be passed in as a tuple (f, f') *or* as function which returns (f,f/f').
+
+Examples:
+```
+newton((sin, cos), 3.0)
+newton(x -> (sin(x), sin(x)/cos(x)), 3.0, xatol=1e-10, xrtol=1e-10)
+```
+
+Note: unlike the call `newton(f, fp, x0)`--which dispatches to a method of `find_zero`, these
+two interfaces will specialize on the function that is passed in. This means, these functions
+will be faster for subsequent calls, but may be slower for an initial call.
+
+Convergence here is decided by x_n ≈ x_{n-1} using the tolerances specified, which both default to
+`eps(T)^4/5` in the appropriate units.
+
+"""
+struct TupleWrapper{F, Fp}
+f::F
+fp::Fp
+end
+(F::TupleWrapper)(x) = begin
+    u, v = F.f(x), F.fp(x)
+    return (u, u/v)
+end
+
+newton(f::Tuple, x0; kwargs...) = newton(TupleWrapper(f[1],f[2]), x0; kwargs...)
+function newton(f, x0; xatol=nothing, xrtol=nothing, maxevals = 100)
+
+    x = float(x0)
+    T = typeof(x)
+    atol = xatol != nothing ? xatol : oneunit(T) * (eps(one(T)))^(4//5)
+    rtol = xrtol != nothing ? xrtol : eps(one(T))^(4//5)
+
+
+    xo = Inf
+    for i in 1:maxevals
+
+        fx, Δx = f(x)
+        iszero(fx) && return x
+
+        x -= Δx
+
+        if isapprox(x, xo, atol=atol, rtol=rtol)
+            return x
+        end
+
+        xo = x
+    end
+
+    error("No convergence")
+end
+
+
 
 
 ## This is basically Order0(), but with different, default, tolerances employed

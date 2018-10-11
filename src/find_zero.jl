@@ -325,17 +325,21 @@ e.g., define `D(f) = x->ForwardDiff.derivative(f, float(x))`, then use `D(D(f))`
 (F::FirstDerivative)(x::Number, ::Type{Val{2}}) =  error(error_msg_d2)
 (F::SecondDerivative)(x::Number, ::Type{Val{2}}) = F.fpp(x)
 
-## Return f, f'
-fdf(F::DerivativeFree, x) = error("No derivative defined")
-fdf(F::FirstDerivative,x) = (F.f(x), F.fp(x))
-fdf(F::SecondDerivative,x) = (F.f(x),F.fp(x))
+## Return f, f/f'
+fΔf(F::DerivativeFree, x) = error("No derivative defined")
+function fΔf(F::Union{FirstDerivative, SecondDerivative},x)
+    fx, fpx = F.f(x), F.fp(x)
+    fx, fx/fpx
+end
+fΔf(F::CallableFunctions, x) = F.f(x)
 
-fdfddf(F::DerivativeFree, x) = error("No first or second derivative defined")
-fdfddf(F::FirstDerivative, x) = error("No second derivative defined")
-fdfddf(F::SecondDerivative, x) = (F.f(x), F.fp(x), F.fpp(x))
-
-fdf(F::CallableFunctions, x) = F.f(x)
-fdfddf(F::CallableFunctions, x) = F.f(x)
+# return f, f/f', f''/f'
+fΔfΔΔf(F::Union{DerivativeFree, FirstDerivative}, x) = error("no second derivative defined")
+function fΔfΔΔf(F::SecondDerivative, x)
+    fx, fp, fpp = F.f(x), F.fp(x), F.fpp(x)
+    (fx, fx/fp, fpp/fp)
+end
+fΔfΔΔf(F::CallableFunctions, x) = F.f(x)
 
 
 ## Assess convergence
