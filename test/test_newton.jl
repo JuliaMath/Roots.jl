@@ -23,8 +23,8 @@ Roots.newton(sin, cos, 3.0) ≈ π # uses find_zero
 Roots.newton((sin,cos), 3.0) ≈ π # uses simple
 
 fdf = x -> (sin(x), sin(x)/cos(x))  # (f, f/f')
-Roots.find_zero(Roots.fg(fdf), 3.0, Roots.Newton())  ≈ π # uses find_zero
+@test Roots.find_zero(Roots.fg(fdf), 3.0, Roots.Newton())  ≈ π # uses find_zero
 Roots.newton(fdf, 3.0)  ≈ π # uses simple
 
 fdfdf = x -> (sin(x), sin(x)/cos(x), -sin(x)/cos(x))   # (f, f/f', f''/f')
-Roots.find_zero(Roots.fg(fdfdf), 3.0, Roots.Halley())
+@test Roots.find_zero(Roots.fg(fdfdf), 3.0, Roots.Halley()) ≈ π

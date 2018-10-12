@@ -258,19 +258,39 @@ struct SecondDerivative <: CallableFunction
     fpp
 end
 
-# for functions which return f, f'
+
+(F::DerivativeFree)(x::Number) = F.f(x)
+(F::FirstDerivative)(x::Number) = F.f(x)
+(F::SecondDerivative)(x::Number) = F.f(x)
+
+# for functions which return f, f/f', f'/f''
 abstract type CallableFunctions <: CallableFunction end
 struct FG <: CallableFunctions
 f
 end
 fg(f) = FG(f)
+fgh(f) = FG(f) # alias
 (F::FG)(x) = F.f(x)[1]
 
-struct FGH <: CallableFunctions
-f
+
+# ## Return f, f/f'
+fΔx(F::DerivativeFree, x) = error("No derivative defined")
+function fΔx(F::Union{FirstDerivative, SecondDerivative},x)
+    fx, fpx = F.f(x), F.fp(x)
+    fx, fx/fpx
 end
-fgh(F) = FGH(F)
-(F::FGH)(x) = F.f(x)[1]
+function fΔx(F::CallableFunctions, x)
+    F.f(x)
+end
+
+# return f, f/f', f'/f'' (types T, S, S)
+fΔxΔΔx(F::Union{DerivativeFree, FirstDerivative}, x) = error("no second derivative defined")
+function fΔxΔΔx(F::SecondDerivative, x)
+    fx, fp, fpp = F.f(x), F.fp(x), F.fpp(x)
+    (fx, fx/fp, fp/fpp)
+end
+fΔxΔΔx(F::CallableFunctions, x) = F.f(x)
+
 
 ## It is faster the first time a function is used if we do not
 ## parameterize this. (As this requires less compilation) It is slower
@@ -298,48 +318,6 @@ function _callable_function(@nospecialize(fs))
     end
     DerivativeFree(fs)
 end
-
-
-
-(F::DerivativeFree)(x::Number) = F.f(x)
-(F::FirstDerivative)(x::Number) = F.f(x)
-(F::SecondDerivative)(x::Number) = F.f(x)
-
-(F::DerivativeFree)(x::Number, n::Int)  = F(x, Val{n})
-(F::FirstDerivative)(x::Number, n::Int)  = F(x, Val{n})
-(F::SecondDerivative)(x::Number, n::Int)  = F(x, Val{n})
-
-error_msg_d1 = """
-A first derivative must be specified. Automatic derivatives can be used:
-e.g., define `D(f) = x->ForwardDiff.derivative(f, float(x))`, then use `D(f)`.
-"""
-(F::DerivativeFree)(x::Number, ::Type{Val{1}}) = error(error_msg_d1)
-(F::FirstDerivative)(x::Number, ::Type{Val{1}}) = F.fp(x)
-(F::SecondDerivative)(x::Number, ::Type{Val{1}}) = F.fp(x)
-
-error_msg_d2 = """
-A second derivative must be specified.  Automatic derivatives can be used:
-e.g., define `D(f) = x->ForwardDiff.derivative(f, float(x))`, then use `D(D(f))`.
-"""
-(F::DerivativeFree)(x::Number, ::Type{Val{2}}) = error(error_msg_d2)
-(F::FirstDerivative)(x::Number, ::Type{Val{2}}) =  error(error_msg_d2)
-(F::SecondDerivative)(x::Number, ::Type{Val{2}}) = F.fpp(x)
-
-## Return f, f/f'
-fΔf(F::DerivativeFree, x) = error("No derivative defined")
-function fΔf(F::Union{FirstDerivative, SecondDerivative},x)
-    fx, fpx = F.f(x), F.fp(x)
-    fx, fx/fpx
-end
-fΔf(F::CallableFunctions, x) = F.f(x)
-
-# return f, f/f', f''/f'
-fΔfΔΔf(F::Union{DerivativeFree, FirstDerivative}, x) = error("no second derivative defined")
-function fΔfΔΔf(F::SecondDerivative, x)
-    fx, fp, fpp = F.f(x), F.fp(x), F.fpp(x)
-    (fx, fx/fp, fpp/fp)
-end
-fΔfΔΔf(F::CallableFunctions, x) = F.f(x)
 
 
 ## Assess convergence

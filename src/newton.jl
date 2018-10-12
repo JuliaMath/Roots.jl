@@ -30,11 +30,35 @@ value of f, but otherwise would be expensive to compute.
 struct Newton <: AbstractUnivariateZeroMethod
 end
 
+function init_state(method::Newton, fs, x)
+
+    x1 = float(x)
+    T = eltype(x1)
+    fx1, Δ::T = fΔx(fs, x1)
+    fnevals = 1
+    S = eltype(fx1)
+
+    state = UnivariateZeroState(x1, oneunit(x1) * (0*x1)/(0*x1), [Δ],
+                                fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[],
+                                0, fnevals,
+                                false, false, false, false,
+                                "")
+    state
+end
+
+function init_state!(state::UnivariateZeroState{T,S}, M::Newton, fs, x) where {T,S}
+    x1::T = float(x)
+    fx1::S, Δ::T = fΔx(fs, x)
+
+     init_state!(state, x1, oneunit(x1) * (0*x1)/(0*x1), [Δ],
+                fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[])
+end
+
+
 function update_state(method::Newton, fs, o::UnivariateZeroState{T,S}, options) where {T, S}
     xn = o.xn1
-    #fxn = o.fxn1
-    #fpxn = fs(xn,1)
-    fxn::T, Δxn::S = fΔf(fs, xn)
+    fxn = o.fxn1
+    Δxn::S = o.m[1]
 
     if isissue(Δxn)
         o.stopped=true
@@ -42,12 +66,15 @@ function update_state(method::Newton, fs, o::UnivariateZeroState{T,S}, options) 
     end
 
     xn1 = xn - Δxn
-    fxn1 = fxn#fs(xn1)
-    incfn(o)
-    incfn(o)
+
+    fxn1::S, Δxn1::T = fΔx(fs, xn1)
+    incfn(o,2)
+
     o.xn0, o.xn1 = xn, xn1
     o.fxn0, o.fxn1 = fxn, fxn1
+    empty!(o.m); push!(o.m, Δxn1)
 
+    nothing
 
 
 
@@ -93,10 +120,11 @@ Example
 find_zero((sin, cos, x->-sin(x)), 3.0, Roots.Halley())
 ```
 
-If function evaluations are expensive one can pass in a function which returns (f, f/f',f''/f) as follows
+If function evaluations are expensive one can pass in a function which
+returns (f, f/f',f'/f'') as follows
 
 ```
-find_zero(Roots.fg(x -> (sin(x), sin(x)/cos(x), -sin(x)/cos(x))), 3.0, Roots.Halley())
+find_zero(Roots.fgh(x -> (sin(x), sin(x)/cos(x), -cos(x)/sin(x))), 3.0, Roots.Halley())
 ```
 
 This can be advantageous if the derivatives are easily computed from
@@ -107,20 +135,44 @@ struct Halley <: AbstractUnivariateZeroMethod
 end
 
 
+function init_state(method::Halley, fs, x)
+
+    x1 = float(x)
+    T = eltype(x1)
+    fx1, Δ::T, ΔΔ::T = fΔxΔΔx(fs, x1)
+    S = eltype(fx1)
+    fnevals = 3
+
+    state = UnivariateZeroState(x1, oneunit(x1) * (0*x1)/(0*x1), [Δ,ΔΔ],
+                                fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[],
+                                0, fnevals,
+                                false, false, false, false,
+                                "")
+    state
+end
+
+function init_state!(state::UnivariateZeroState{T,S}, M::Halley, fs, x) where {T,S}
+    x1::T = float(x)
+    fx1::S, Δ::T, ΔΔ::T = fΔxΔΔx(fs, x)
+
+     init_state!(state, x1, oneunit(x1) * (0*x1)/(0*x1), [Δ],
+                fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[])
+end
+
 function update_state(method::Halley, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
     xn = o.xn1
-#    fxn = o.fxn1
-#    fpxn = fs(xn,1); incfn(o)
-    #    fppxn = fs(xn,2); incfn(o)
-    fxn::T, Δxn::S, ΔΔxni::S = fΔfΔΔf(fs, xn)  # (f, f/f', f''/f')
+    fxn = o.fxn1
+    Δxn, ΔΔxn = o.m
+
+
+    xn1::T = xn - Δxn * inv(1  - Δxn / ΔΔxn / 2)
+
+    fxn1::S, Δxn1::T, ΔΔxn1::T = fΔxΔΔx(fs, xn1)
     incfn(o,3)
-
-    xn1 = xn - Δxn * inv(1  - Δxn * ΔΔxni/2)
-
-#    fxn1 = fs(xn1); incfn(o)
 
     o.xn0, o.xn1 = xn, xn1
     o.fxn0, o.fxn1 = fxn, fxn # lag one
+    empty!(o.m); append!(o.m, (Δxn1, ΔΔxn1))
 end
 
 """
