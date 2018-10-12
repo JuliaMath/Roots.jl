@@ -243,34 +243,6 @@ end
 ### Functions
 abstract type CallableFunction end
 
-## It is faster the first time a function is used if we do not
-## parameterize this. (As this requires less compilation) It is slower
-## the second time a function is used. This seems like the proper
-## tradeoff.
-##
-## We can override this with, say:
-## import FunctionWrappers
-## import FunctionWrappers: FunctionWrapper
-## struct CallbackF64F64
-## f::FunctionWrapper{Float64,Tuple{Float64}}
-## end
-## (cb::CallbackF64F64)(v) = cb.f(v)
-## Roots.callable_function(f::CallbackF64F64) = f
-
-callable_function(fs::Any) = _callable_function(fs)
-
-## Default does not specialize on function
-function _callable_function(@nospecialize(fs))
-    if isa(fs, Tuple)
-        length(fs)==1 && return DerivativeFree(fs[1])
-        length(fs)==2 && return FirstDerivative(fs[1],fs[2])
-        return SecondDerivative(fs[1],fs[2],fs[3])
-    end
-    DerivativeFree(fs)
-end
-
-
-
 struct DerivativeFree <: CallableFunction
     f
 end
@@ -286,31 +258,66 @@ struct SecondDerivative <: CallableFunction
     fpp
 end
 
+
 (F::DerivativeFree)(x::Number) = F.f(x)
 (F::FirstDerivative)(x::Number) = F.f(x)
 (F::SecondDerivative)(x::Number) = F.f(x)
 
-(F::DerivativeFree)(x::Number, n::Int)  = F(x, Val{n})
-(F::FirstDerivative)(x::Number, n::Int)  = F(x, Val{n})
-(F::SecondDerivative)(x::Number, n::Int)  = F(x, Val{n})
-
-error_msg_d1 = """
-A first derivative must be specified. Automatic derivatives can be used:
-e.g., define `D(f) = x->ForwardDiff.derivative(f, float(x))`, then use `D(f)`.
-"""
-(F::DerivativeFree)(x::Number, ::Type{Val{1}}) = error(error_msg_d1)
-(F::FirstDerivative)(x::Number, ::Type{Val{1}}) = F.fp(x)
-(F::SecondDerivative)(x::Number, ::Type{Val{1}}) = F.fp(x)
-
-error_msg_d2 = """
-A second derivative must be specified.  Automatic derivatives can be used:
-e.g., define `D(f) = x->ForwardDiff.derivative(f, float(x))`, then use `D(D(f))`.
-"""
-(F::DerivativeFree)(x::Number, ::Type{Val{2}}) = error(error_msg_d2)
-(F::FirstDerivative)(x::Number, ::Type{Val{2}}) =  error(error_msg_d2)
-(F::SecondDerivative)(x::Number, ::Type{Val{2}}) = F.fpp(x)
+# for functions which return f, f/f', f'/f''
+abstract type CallableFunctions <: CallableFunction end
+struct FG <: CallableFunctions
+f
+end
+fg(f) = FG(f)
+fgh(f) = FG(f) # alias
+(F::FG)(x) = F.f(x)[1]
 
 
+# ## Return f, f/f'
+fΔx(F::DerivativeFree, x) = error("No derivative defined")
+function fΔx(F::Union{FirstDerivative, SecondDerivative},x)
+    fx, fpx = F.f(x), F.fp(x)
+    fx, fx/fpx
+end
+function fΔx(F::CallableFunctions, x)
+    F.f(x)
+end
+
+# return f, f/f', f'/f'' (types T, S, S)
+fΔxΔΔx(F::Union{DerivativeFree, FirstDerivative}, x) = error("no second derivative defined")
+function fΔxΔΔx(F::SecondDerivative, x)
+    fx, fp, fpp = F.f(x), F.fp(x), F.fpp(x)
+    (fx, fx/fp, fp/fpp)
+end
+fΔxΔΔx(F::CallableFunctions, x) = F.f(x)
+
+
+## It is faster the first time a function is used if we do not
+## parameterize this. (As this requires less compilation) It is slower
+## the second time a function is used. This seems like the proper
+## tradeoff.
+##
+## We can override this with, say:
+## import FunctionWrappers
+## import FunctionWrappers: FunctionWrapper
+## struct CallbackF64F64
+## f::FunctionWrapper{Float64,Tuple{Float64}}
+## end
+## (cb::CallbackF64F64)(v) = cb.f(v)
+## Roots.callable_function(f::CallbackF64F64) = f
+
+callable_function(fs::Any) = _callable_function(fs)
+callable_function(fs::CallableFunctions) = fs
+
+## Default does not specialize on function
+function _callable_function(@nospecialize(fs))
+    if isa(fs, Tuple)
+        length(fs)==1 && return DerivativeFree(fs[1])
+        length(fs)==2 && return FirstDerivative(fs[1],fs[2])
+        return SecondDerivative(fs[1],fs[2],fs[3])
+    end
+    DerivativeFree(fs)
+end
 
 
 ## Assess convergence

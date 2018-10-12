@@ -11,42 +11,85 @@
 Implements Newton's [method](http://tinyurl.com/b4d7vls): `x_n1 = xn -
 f(xn)/f'(xn)`.  This is a quadratically converging method requiring
 one derivative. Two function calls per step.
+
+Example
+```
+find_zero((sin,cos), 3.0, Roots.Newton())
+```
+
+If function evaluations are expensive one can pass in a function which returns (f, f/f') as follows
+
+```
+find_zero(Roots.fg(x -> (sin(x), sin(x)/cos(x))), 3.0, Roots.Newton())
+```
+
+This can be advantageous if the derivative is easily computed from the
+value of f, but otherwise would be expensive to compute.
+
 """
 struct Newton <: AbstractUnivariateZeroMethod
 end
 
-function update_state(method::Newton, fs, o, options) 
+function init_state(method::Newton, fs, x)
+
+    x1 = float(x)
+    T = eltype(x1)
+    fx1, Δ::T = fΔx(fs, x1)
+    fnevals = 1
+    S = eltype(fx1)
+
+    state = UnivariateZeroState(x1, oneunit(x1) * (0*x1)/(0*x1), [Δ],
+                                fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[],
+                                0, fnevals,
+                                false, false, false, false,
+                                "")
+    state
+end
+
+function init_state!(state::UnivariateZeroState{T,S}, M::Newton, fs, x) where {T,S}
+    x1::T = float(x)
+    fx1::S, Δ::T = fΔx(fs, x)
+
+     init_state!(state, x1, oneunit(x1) * (0*x1)/(0*x1), [Δ],
+                fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[])
+end
+
+
+function update_state(method::Newton, fs, o::UnivariateZeroState{T,S}, options) where {T, S}
     xn = o.xn1
     fxn = o.fxn1
-    fpxn = fs(xn,1)
+    Δxn::T = o.m[1]
 
-    if isissue(fpxn)
+    if isissue(Δxn)
         o.stopped=true
         return
     end
-    
-    xn1 = xn - fxn / fpxn
-    fxn1 = fs(xn1)
-    incfn(o)
-    
+
+    xn1 = xn - Δxn
+
+    fxn1::S, Δxn1::T = fΔx(fs, xn1)
+    incfn(o,2)
+
     o.xn0, o.xn1 = xn, xn1
     o.fxn0, o.fxn1 = fxn, fxn1
+    empty!(o.m); push!(o.m, Δxn1)
 
+    nothing
 
 
 
 end
 
 """
-    newton(f, fp, x0; kwargs...)
-    
+    Roots.newton(f, fp, x0; kwargs...)
+
 Implementation of Newton's method: `x_n1 = x_n - f(x_n)/ f'(x_n)`
 
 Arguments:
 
 * `f::Function` -- function to find zero of
 
-* `fp::Function` -- the derivative of `f`. 
+* `fp::Function` -- the derivative of `f`.
 
 * `x0::Number` -- initial guess. For Newton's method this may be complex.
 
@@ -55,9 +98,10 @@ With the `FowardDiff` package derivatives may be computed automatically. For exa
 
 Keyword arguments are passed to `find_zero` using the `Roots.Newton()` method.
 
+See also `Roots.newton((f,fp), x0) and `Roots.newton(fΔf, x0)` for simpler implementations.
+
 """
 newton(f, fp, x0; kwargs...) = find_zero((f, fp), x0, Newton(); kwargs...)
-@deprecate newton(f, x0; kwargs...)  newton(f, fp, x0; kwargs...)
 
 
 ## Halley
@@ -67,32 +111,75 @@ newton(f, fp, x0; kwargs...) = find_zero((f, fp), x0, Newton(); kwargs...)
     Roots.Halley()
 
 Implements Halley's [method](http://tinyurl.com/yd83eytb),
-`x_n1 = xn - (2 f(xn)*f'(xn)) / (2 f'(xn)^2 - f(xn) * f''(xn))`.
+`x_n1 = xn - f/f' * (1 - f/f' * f''/f' * 1/2)^(-1)
 This method is cubically converging, but requires more function calls per step (3) than
 other methods.
-"""    
+
+Example
+```
+find_zero((sin, cos, x->-sin(x)), 3.0, Roots.Halley())
+```
+
+If function evaluations are expensive one can pass in a function which
+returns (f, f/f',f'/f'') as follows
+
+```
+find_zero(Roots.fgh(x -> (sin(x), sin(x)/cos(x), -cos(x)/sin(x))), 3.0, Roots.Halley())
+```
+
+This can be advantageous if the derivatives are easily computed from
+the value of f, but otherwise would be expensive to compute.
+
+"""
 struct Halley <: AbstractUnivariateZeroMethod
 end
 
 
+function init_state(method::Halley, fs, x)
+
+    x1 = float(x)
+    T = eltype(x1)
+    fx1, Δ::T, ΔΔ::T = fΔxΔΔx(fs, x1)
+    S = eltype(fx1)
+    fnevals = 3
+
+    state = UnivariateZeroState(x1, oneunit(x1) * (0*x1)/(0*x1), [Δ,ΔΔ],
+                                fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[],
+                                0, fnevals,
+                                false, false, false, false,
+                                "")
+    state
+end
+
+function init_state!(state::UnivariateZeroState{T,S}, M::Halley, fs, x) where {T,S}
+    x1::T = float(x)
+    fx1::S, Δ::T, ΔΔ::T = fΔxΔΔx(fs, x)
+
+     init_state!(state, x1, oneunit(x1) * (0*x1)/(0*x1), [Δ],
+                fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[])
+end
+
 function update_state(method::Halley, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
     xn = o.xn1
     fxn = o.fxn1
-    fpxn = fs(xn,1); incfn(o)
-    fppxn = fs(xn,2); incfn(o)
-    
-    xn1 = xn - 2fxn*fpxn / (2*fpxn*fpxn - fxn * fppxn)
-    fxn1 = fs(xn1); incfn(o)
+    Δxn, ΔΔxn = o.m
+
+
+    xn1::T = xn - Δxn * inv(1  - Δxn / ΔΔxn / 2)
+
+    fxn1::S, Δxn1::T, ΔΔxn1::T = fΔxΔΔx(fs, xn1)
+    incfn(o,3)
 
     o.xn0, o.xn1 = xn, xn1
     o.fxn0, o.fxn1 = fxn, fxn1
+    empty!(o.m); append!(o.m, (Δxn1, ΔΔxn1))
 end
 
 """
-    halley(f, fp, fpp, x0; kwargs...)
-    
-Implementation of Halley's method. `xn1 = xn - 2f(xn)*f'(xn) / (2*f'(xn)^2 - f(xn) * f''(xn))`
-    
+    Roots.halley(f, fp, fpp, x0; kwargs...)
+
+Implementation of Halley's method (cf `?Roots.Halley()`).
+
 Arguments:
 
 * `f::Function` -- function to find zero of

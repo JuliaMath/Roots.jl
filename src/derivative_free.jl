@@ -17,7 +17,7 @@ end
 
 function init_state(method::AbstractSecant, fs, x::Union{Tuple, Vector})
     x0, x1 = promote(float(x[1]), float(x[2]))
-    fx0, fx1 = fs(x0), fs(x1)        
+    fx0, fx1 = fs(x0), fs(x1)
     state = UnivariateZeroState(x1, x0, eltype(x1)[],
                                 fx1, fx0, eltype(fx1)[],
                                 0, 2,
@@ -77,7 +77,7 @@ end
 
 ## Secant
 ## https://en.wikipedia.org/wiki/Secant_method
-""" 
+"""
     Order1()
 
 The `Order1()` method is an alias for `Secant`. It specifies the
@@ -93,17 +93,17 @@ const Order1 = Secant
 
 function update_state(method::Secant, fs, o::UnivariateZeroState{T,S}, options)  where {T, S}
 
-    if (o.fxn0 == o.fxn1) || (o.xn0 == o.xn1) 
+    if (o.fxn0 == o.fxn1) || (o.xn0 == o.xn1)
          o.stopped = true
          o.message = "Derivative approximation had issues"
          return
      end
-  
+
     dx = o.fxn1 * (o.xn1 - o.xn0) / (o.fxn1 - o.fxn0)
     o.xn0, o.xn1 = o.xn1, o.xn1 - dx
     o.fxn0, o.fxn1 = o.fxn1, fs(o.xn1)
     incfn(o)
-    
+
     nothing
 
 end
@@ -128,11 +128,11 @@ necessary, though like Newton's method, two function calls per step
 are. This algorithm is more sensitive than Newton's method to poor
 initial guesses.
 
-"""    
+"""
 const Order2 = Steffensen
 
 function update_state(method::Steffensen, fs, o::UnivariateZeroState{T,S}, options) where {T, S}
-    
+
     wn::T = o.xn1 + steff_step(o.xn1, o.fxn1)
 
     fwn::S = fs(wn)
@@ -170,18 +170,18 @@ Kumar, Akhilesh Kumar Singh, and Akanksha, Appl. Math. Inf. Sci. 9,
 No. 3, 1507-1513 (2015), DOI: 10.12785/amis/090346. Four function
 calls per step are needed.
 
-"""    
+"""
 struct Order5 <: AbstractUnivariateZeroMethod end
 
 
-## If we have a derivative, we have this
-function update_state(method::Order5, fs::Union{FirstDerivative,SecondDerivative},
+## If we have a derivative, we have this. (Deprecate?)
+function update_state(method::Order5, fs::Union{FirstDerivative,SecondDerivative, CallableFunctions},
                       o::UnivariateZeroState{T,S}, options)  where {T, S}
 
 
     xn, fxn = o.xn1, o.fxn1
-
-    fpxn::S = fs(xn, 1)
+    a::T, b::S = fΔx(fs, xn)
+    fpxn = a/b
     incfn(o)
 
     if isissue(fpxn)
@@ -190,7 +190,8 @@ function update_state(method::Order5, fs::Union{FirstDerivative,SecondDerivative
     end
 
     yn::T = xn - fxn / fpxn
-    fyn::S, fpyn::S = fs(yn), fs(yn, 1)
+    fyn::S, Δyn::T = fΔx(fs, yn)
+    fpyn = fyn / Δyn
     incfn(o, 2)
 
     if isissue(fpyn)
@@ -274,7 +275,7 @@ Derivative-Free Methods for Solving Nonlinear Equations* by Rajinder
 Thukral, International Journal of Mathematics and Mathematical
 Sciences Volume 2012 (2012), Article ID 493456, 12 pages DOI:
 10.1155/2012/493456. Four function calls per step are required.
-    
+
 """
 struct Order8 <: AbstractUnivariateZeroMethod
 end
@@ -293,7 +294,7 @@ function update_state(method::Order8, fs, o::UnivariateZeroState{T,S}, options) 
         o.fxn0,o.fxn1 = fxn, fwn
         o.stopped = true
         o.message = "issue with Steffensen step fwn"
-        return 
+        return
     end
 
 
@@ -303,7 +304,7 @@ function update_state(method::Order8, fs, o::UnivariateZeroState{T,S}, options) 
     if issue
         o.stopped = true
         o.message = "issue with divided difference f[xn, wn]"
-        return 
+        return
     end
 
     yn::T = xn - fxn / fp
@@ -355,7 +356,7 @@ end
 
 Implement the algorithm from
 *New Sixteenth-Order Derivative-Free Methods for Solving Nonlinear Equations*
-by R. Thukral, 
+by R. Thukral,
 American Journal of Computational and Applied Mathematics
 p-ISSN: 2165-8935;    e-ISSN: 2165-8943; 2012;  2(3): 112-118
 doi: 10.5923/j.ajcam.20120203.08.
@@ -379,7 +380,7 @@ function update_state(method::Order16, fs, o::UnivariateZeroState{T,S}, options)
 
     fp, issue = _fbracket(xn, wn, fxn, fwn)
 
-  
+
     if issue
         o.xn0, o.xn1 = xn, wn
         o.fxn0, o.fxn1 = fxn, fwn
@@ -410,7 +411,7 @@ function update_state(method::Order16, fs, o::UnivariateZeroState{T,S}, options)
     fp, issue = _fbracket_diff(xn, yn, zn, fxn, fyn, fzn)
     u2, u3, u4 = fzn/fwn, fyn/fxn, fyn/fwn
 
-    
+
     eta = 1 / (1 + 2*u3*u4^2) / (1 - u2)
     if issue
         o.xn0, o.xn1 = xn, zn
@@ -424,7 +425,7 @@ function update_state(method::Order16, fs, o::UnivariateZeroState{T,S}, options)
     fan::S = fs(an)
     incfn(o)
 
-        
+
     fp, issue = _fbracket_ratio(an, yn, zn, fan, fyn, fzn)
     if issue
         o.xn0, o.xn1 = xn, an
@@ -437,7 +438,7 @@ function update_state(method::Order16, fs, o::UnivariateZeroState{T,S}, options)
     u1, u5, u6 = fzn/fxn, fan/fxn, fan/fwn
 
     fp1, issue = _fbracket(xn,yn, fxn, fyn)
-    
+
     sigma =  1 + u1*u2 - u1*u3*u4^2 + u5 + u6 + u1^2*u4 +
     u2^2*u3 + 3*u1*u4^2*(u3^2 - u4^2)/(fp1/oneunit(fp1))
 
@@ -451,5 +452,3 @@ function update_state(method::Order16, fs, o::UnivariateZeroState{T,S}, options)
 
     nothing
 end
-
-
