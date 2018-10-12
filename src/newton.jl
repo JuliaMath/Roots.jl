@@ -58,7 +58,7 @@ end
 function update_state(method::Newton, fs, o::UnivariateZeroState{T,S}, options) where {T, S}
     xn = o.xn1
     fxn = o.fxn1
-    Δxn::S = o.m[1]
+    Δxn::T = o.m[1]
 
     if isissue(Δxn)
         o.stopped=true
