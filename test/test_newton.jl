@@ -26,5 +26,5 @@ fdf = x -> (sin(x), sin(x)/cos(x))  # (f, f/f')
 @test Roots.find_zero(Roots.fg(fdf), 3.0, Roots.Newton())  ≈ π # uses find_zero
 Roots.newton(fdf, 3.0)  ≈ π # uses simple
 
-fdfdf = x -> (sin(x), sin(x)/cos(x), -sin(x)/cos(x))   # (f, f/f', f''/f')
+fdfdf = x -> (sin(x), sin(x)/cos(x), -cos(x)/sin(x))   # (f, f/f', f'/f'')
 @test Roots.find_zero(Roots.fg(fdfdf), 3.0, Roots.Halley()) ≈ π

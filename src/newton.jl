@@ -81,7 +81,7 @@ function update_state(method::Newton, fs, o::UnivariateZeroState{T,S}, options) 
 end
 
 """
-    newton(f, fp, x0; kwargs...)
+    Roots.newton(f, fp, x0; kwargs...)
 
 Implementation of Newton's method: `x_n1 = x_n - f(x_n)/ f'(x_n)`
 
@@ -98,7 +98,7 @@ With the `FowardDiff` package derivatives may be computed automatically. For exa
 
 Keyword arguments are passed to `find_zero` using the `Roots.Newton()` method.
 
-See also `newton((f,fp), x0) and `newton(fΔf, x0)` for simpler implementations.
+See also `Roots.newton((f,fp), x0) and `Roots.newton(fΔf, x0)` for simpler implementations.
 
 """
 newton(f, fp, x0; kwargs...) = find_zero((f, fp), x0, Newton(); kwargs...)
@@ -176,9 +176,9 @@ function update_state(method::Halley, fs, o::UnivariateZeroState{T,S}, options::
 end
 
 """
-    halley(f, fp, fpp, x0; kwargs...)
+    Roots.halley(f, fp, fpp, x0; kwargs...)
 
-Implementation of Halley's method. `xn1 = xn - 2f(xn)*f'(xn) / (2*f'(xn)^2 - f(xn) * f''(xn))`
+Implementation of Halley's method (cf `?Roots.Halley()`).
 
 Arguments:
 
