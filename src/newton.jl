@@ -171,7 +171,7 @@ function update_state(method::Halley, fs, o::UnivariateZeroState{T,S}, options::
     incfn(o,3)
 
     o.xn0, o.xn1 = xn, xn1
-    o.fxn0, o.fxn1 = fxn, fxn # lag one
+    o.fxn0, o.fxn1 = fxn, fxn1
     empty!(o.m); append!(o.m, (Δxn1, ΔΔxn1))
 end
 
