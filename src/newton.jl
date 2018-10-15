@@ -34,7 +34,10 @@ function init_state(method::Newton, fs, x)
 
     x1 = float(x)
     T = eltype(x1)
-    fx1, Δ::T = fΔx(fs, x1)
+    #fx1, Δ::T = fΔx(fs, x1)
+    tmp = fΔx(fs, x1)
+    fx1, Δ::T = tmp[1], tmp[2]
+
     fnevals = 1
     S = eltype(fx1)
 
@@ -48,7 +51,8 @@ end
 
 function init_state!(state::UnivariateZeroState{T,S}, M::Newton, fs, x) where {T,S}
     x1::T = float(x)
-    fx1::S, Δ::T = fΔx(fs, x)
+    tmp = fΔx(fs, x)
+    fx1::S, Δ::T = tmp[1],tmp[2]
 
      init_state!(state, x1, oneunit(x1) * (0*x1)/(0*x1), [Δ],
                 fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[])
@@ -139,7 +143,8 @@ function init_state(method::Halley, fs, x)
 
     x1 = float(x)
     T = eltype(x1)
-    fx1, Δ::T, ΔΔ::T = fΔxΔΔx(fs, x1)
+    tmp = fΔxΔΔx(fs, x1)
+    fx1, Δ::T, ΔΔ::T = tmp[1], tmp[2], tmp[3]
     S = eltype(fx1)
     fnevals = 3
 
@@ -153,7 +158,8 @@ end
 
 function init_state!(state::UnivariateZeroState{T,S}, M::Halley, fs, x) where {T,S}
     x1::T = float(x)
-    fx1::S, Δ::T, ΔΔ::T = fΔxΔΔx(fs, x)
+    tmp = fΔxΔΔx(fs, x)
+    fx1::S, Δ::T, ΔΔ::T = tmp[1],tmp[2], tmp[3]
 
      init_state!(state, x1, oneunit(x1) * (0*x1)/(0*x1), [Δ],
                 fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[])

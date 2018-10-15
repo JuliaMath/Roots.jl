@@ -28,3 +28,13 @@ Roots.newton(fdf, 3.0)  ≈ π # uses simple
 
 fdfdf = x -> (sin(x), sin(x)/cos(x), -cos(x)/sin(x))   # (f, f/f', f'/f'')
 @test Roots.find_zero(fdfdf, 3.0, Roots.Halley()) ≈ π
+
+# check that functions with multiple return values can work with other
+# methods
+for M in [Roots.Halley(), Roots.Newton(), Roots.Order1(), Roots.Order0()]
+    @test Roots.find_zero(fdfdf, 3.0, M) ≈ π  # can pass function to others
+end
+for M in [Roots.Bisection(), Roots.A42(), Roots.AlefeldPotraShi()]
+    @test Roots.find_zero(fdfdf, (3.0, 4.0), M) ≈ π  # can pass function to others
+end
+@test find_zero(x -> (x^2 -2, (x^2-2)/2x), 1.0, Roots.Newton(), Roots.Bisection()) ≈ sqrt(2)
