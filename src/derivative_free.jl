@@ -175,7 +175,7 @@ struct Order5 <: AbstractUnivariateZeroMethod end
 
 
 ## If we have a derivative, we have this. (Deprecate?)
-function update_state(method::Order5, fs::Union{FirstDerivative,SecondDerivative, CallableFunctions},
+function update_state(method::Order5, fs::Union{FirstDerivative,SecondDerivative},
                       o::UnivariateZeroState{T,S}, options)  where {T, S}
 
 

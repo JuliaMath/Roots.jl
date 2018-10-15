@@ -20,7 +20,7 @@ find_zero((sin,cos), 3.0, Roots.Newton())
 If function evaluations are expensive one can pass in a function which returns (f, f/f') as follows
 
 ```
-find_zero(Roots.fg(x -> (sin(x), sin(x)/cos(x))), 3.0, Roots.Newton())
+find_zero(x -> (sin(x), sin(x)/cos(x)), 3.0, Roots.Newton())
 ```
 
 This can be advantageous if the derivative is easily computed from the
@@ -124,7 +124,7 @@ If function evaluations are expensive one can pass in a function which
 returns (f, f/f',f'/f'') as follows
 
 ```
-find_zero(Roots.fgh(x -> (sin(x), sin(x)/cos(x), -cos(x)/sin(x))), 3.0, Roots.Halley())
+find_zero(x -> (sin(x), sin(x)/cos(x), -cos(x)/sin(x)), 3.0, Roots.Halley())
 ```
 
 This can be advantageous if the derivatives are easily computed from

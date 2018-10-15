@@ -259,37 +259,31 @@ struct SecondDerivative <: CallableFunction
 end
 
 
-(F::DerivativeFree)(x::Number) = F.f(x)
-(F::FirstDerivative)(x::Number) = F.f(x)
-(F::SecondDerivative)(x::Number) = F.f(x)
+(F::DerivativeFree)(x::Number) = first(F.f(x))
+(F::FirstDerivative)(x::Number) = first(F.f(x))
+(F::SecondDerivative)(x::Number) = first(F.f(x))
 
-# for functions which return f, f/f', f'/f''
-abstract type CallableFunctions <: CallableFunction end
-struct FG <: CallableFunctions
-f
+## Return f, f/f'
+function fΔx(F::DerivativeFree, x)
+    F.f(x)
 end
-fg(f) = FG(f)
-fgh(f) = FG(f) # alias
-(F::FG)(x) = F.f(x)[1]
 
-
-# ## Return f, f/f'
-fΔx(F::DerivativeFree, x) = error("No derivative defined")
 function fΔx(F::Union{FirstDerivative, SecondDerivative},x)
     fx, fpx = F.f(x), F.fp(x)
     fx, fx/fpx
 end
-function fΔx(F::CallableFunctions, x)
-    F.f(x)
+function fΔx(F, x)
+    F(x)
 end
 
 # return f, f/f', f'/f'' (types T, S, S)
-fΔxΔΔx(F::Union{DerivativeFree, FirstDerivative}, x) = error("no second derivative defined")
+fΔxΔΔx(F::DerivativeFree, x) = F.f(x)
+fΔxΔΔx(F::FirstDerivative, x) = error("no second derivative defined")
 function fΔxΔΔx(F::SecondDerivative, x)
     fx, fp, fpp = F.f(x), F.fp(x), F.fpp(x)
     (fx, fx/fp, fp/fpp)
 end
-fΔxΔΔx(F::CallableFunctions, x) = F.f(x)
+@inline fΔxΔΔx(F, x) = F(x)
 
 
 ## It is faster the first time a function is used if we do not
@@ -307,7 +301,6 @@ fΔxΔΔx(F::CallableFunctions, x) = F.f(x)
 ## Roots.callable_function(f::CallbackF64F64) = f
 
 callable_function(fs::Any) = _callable_function(fs)
-callable_function(fs::CallableFunctions) = fs
 
 ## Default does not specialize on function
 function _callable_function(@nospecialize(fs))
@@ -611,7 +604,7 @@ function decide_convergence(M::AbstractUnivariateZeroMethod,  F, state, options)
         ## are we at a crossing values?
         ## seems worth a check for 2 fn evals.
         for u in (prevfloat(xn1), nextfloat(xn1))
-            fu = F(u)
+            fu = first(F(u))
             if iszero(fu) || _unitless(fu * fxn1) < 0
                 state.message *= "Change of sign at xn identified. "
                 state.f_converged = true
