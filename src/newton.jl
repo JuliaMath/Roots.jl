@@ -34,7 +34,6 @@ function init_state(method::Newton, fs, x)
 
     x1 = float(x)
     T = eltype(x1)
-    #fx1, Δ::T = fΔx(fs, x1)
     tmp = fΔx(fs, x1)
     fx1, Δ::T = tmp[1], tmp[2]
 
