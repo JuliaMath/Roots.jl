@@ -212,54 +212,6 @@ halley(f, fp, fpp, x0; kwargs...) = find_zero((f, fp, fpp), x0, Halley(); kwargs
 
 ## Shroder-like methods
 
-## a method needing derivatives
-abstract type AbstractSchroderLikeMethod <: AbstractUnivariateZeroMethod end
-
-#
-fΔxs(F::DerivativeFree, x) = F.f(x)
-function fΔxs(F::FirstDerivative, x)
-    u, v = F.f(x), F.fp(x)
-    (u, u/v)
-end
-function fΔxs(F::SecondDerivative, x)
-    u, v, w = F.f(x), F.fp(x), F.fpp(x)
-    (u, u/v, v/w)
-end
-fΔxs(F, x) = F(x)
-
-
-
-peel(xs, T) = (xs[1], collect(T, xs[2:end]))
-peel(xs) = (xs[1], collect(xs[2:end]))
-
-# can speed these up if they are specific like above cases
-function init_state(method::AbstractSchroderLikeMethod, fs, x)
-
-    x1 = float(x)
-    T = eltype(x1)
-    fx1, Δs = peel(fΔxs(fs, x1), T)
-    S = eltype(fx1)
-    fnevals = 3
-
-
-    state = UnivariateZeroState(x1, oneunit(x1) * (0*x1)/(0*x1), Δs,
-                                fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[],
-                                0, fnevals,
-                                false, false, false, false,
-                                "")
-    state
-end
-
-function init_state!(state::UnivariateZeroState{T,S}, M::AbstractSchroderLikeMethod, fs, x) where {T,S}
-    x1::T = float(x)
-    fx1::S, Δs = peel(fΔxs(fs, x1), T)
-
-
-    init_state!(state, x1, oneunit(x1) * (0*x1)/(0*x1), Δs,
-                fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[])
-end
-
-
 """
     Roots.Schroder()
 
@@ -320,8 +272,55 @@ function update_state(method::Schroder, fs, o::UnivariateZeroState{T,S}, options
 
     o.xn0, o.xn1 = xn, xn1
     o.fxn0, o.fxn1 = fxn, fxn1
-    empty!(o.m); append!(o.m, (r1, r2))
+    o.m[1], o.m[2] = r1, r2
 end
+
+
+## This is a more generic interface, with only one init_state, but allocates more
+abstract type AbstractSchroderLikeMethod <: AbstractUnivariateZeroMethod end
+
+#
+# like Base.Iterators.peel
+peelT(xs, T) = (xs[1], collect(T, xs[2:end]))
+fΔxs(F::DerivativeFree, x::T) where {T} = peelT(F.f(x), T)
+function fΔxs(F::FirstDerivative, x::T) where {T}
+    u, v = F.f(x), F.fp(x)
+    peelT((u, u/v),T)
+end
+function fΔxs(F::SecondDerivative, x::T) where {T}
+    u, v, w = F.f(x), F.fp(x), F.fpp(x)
+    peelT((u, u/v, v/w), T)
+end
+fΔxs(F, x::T) where {T} = peelT(F(x), T)
+
+
+# can speed these up if they are specific like above cases
+function init_state(method::AbstractSchroderLikeMethod, fs, x)
+
+    x1 = float(x)
+    T = eltype(x1)
+    fx1, Δs::Vector{T} = fΔxs(fs, x1)
+    S = eltype(fx1)
+    fnevals = 3
+
+
+    state = UnivariateZeroState(x1, oneunit(x1) * (0*x1)/(0*x1), Δs,
+                                fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[],
+                                0, fnevals,
+                                false, false, false, false,
+                                "")
+    state
+end
+
+function init_state!(state::UnivariateZeroState{T,S}, M::AbstractSchroderLikeMethod, fs, x) where {T,S}
+    x1::T = float(x)
+    fx1::S, Δs::Vector{T} = fΔxs(fs, x1)
+
+
+    init_state!(state, x1, oneunit(x1) * (0*x1)/(0*x1), Δs,
+                fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[])
+end
+
 
 
 """
@@ -369,7 +368,7 @@ function update_state(method::Thukral3, fs, o::UnivariateZeroState{T,S}, options
     xn1::T = xn - delta
 
 
-    fxn1::S, Δs::Vector{T} = peel(fΔxs(fs, xn1), T)
+    fxn1::S, Δs::Vector{T}  = fΔxs(fs, xn1)
     r1,r2,r3 = Δs[1], Δs[2], Δs[3]
     incfn(o,4)
 
@@ -422,11 +421,34 @@ function update_state(method::Thukral4, fs, o::UnivariateZeroState{T,S}, options
     delta::T = 3*r1*r2*r4*(r1^2 - 3*r1*r3 + 2*r2*r3)/(-r1^3*r2 + 4*r1^2*r2*r4 + 3*r1^2*r3*r4 - 12*r1*r2*r3*r4 + 6*r2^2*r3*r4)
     xn1::T = xn - delta
 
-    fxn1::S, Δs::Vector{T} = peel(fΔxs(fs, xn1), T)
+    fxn1::S, Δs::Vector{T} = fΔxs(fs, xn1)
     r1,r2,r3, r4 = Δs[1], Δs[2], Δs[3], Δs[4]
     incfn(o,5)
 
     o.xn0, o.xn1 = xn, xn1
     o.fxn0, o.fxn1 = fxn, fxn1
     o.m[1], o.m[2], o.m[3], o.m[4] = r1, r2, r3, r4
+end
+
+
+## test
+struct SchroderG <: AbstractSchroderLikeMethod
+end
+
+
+function update_state(method::SchroderG, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
+    xn = o.xn1
+    fxn = o.fxn1
+    r1, r2 = o.m[1], o.m[2]
+
+    delta =  r2 / (r2 - r1) * r1  # m * r1
+    xn1::T = xn - delta
+
+    fxn1::S, rs::Vector{T} = fΔxs(fs, xn1)
+    incfn(o,3)
+    r1, r2 = rs[1], rs[2]
+
+    o.xn0, o.xn1 = xn, xn1
+    o.fxn0, o.fxn1 = fxn, fxn1
+    o.m[1], o.m[2] = r1, r2
 end
