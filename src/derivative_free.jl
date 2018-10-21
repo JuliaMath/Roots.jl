@@ -70,7 +70,8 @@ function find_zero(fs, x0, method::Order0;
                    kwargs...)
     M = Order1()
     N = AlefeldPotraShi()
-    _find_zero(fs, x0, M, N; tracks=tracks,verbose=verbose, kwargs...)
+
+    _find_zero(callable_function(fs), x0, M, N; tracks=tracks,verbose=verbose, kwargs...)
 end
 
 ##################################################
@@ -175,7 +176,7 @@ struct Order5 <: AbstractUnivariateZeroMethod end
 
 
 ## If we have a derivative, we have this. (Deprecate?)
-function update_state(method::Order5, fs::Union{FirstDerivative,SecondDerivative, CallableFunctions},
+function update_state(method::Order5, fs::Union{FirstDerivative,SecondDerivative},
                       o::UnivariateZeroState{T,S}, options)  where {T, S}
 
 
