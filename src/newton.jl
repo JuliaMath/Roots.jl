@@ -223,9 +223,9 @@ multiplicity of the zero.
 If ri = f^(i-1)/f^(i), then we have an update step `xn - delta` where:
 
 * Newton: delta = r1
-* Halley: delta = 2*r2*r2/(2r2 - r1)
-* Schroder: delta = r2 * r1 / (r2 - r1)
-* Thukral3: delta =  -2*r1*r3*(r2 - r1)/(r1^2 - 3*r1*r3 + 2*r2*r3)
+* Halley: delta = 2*r2/(2r2 - r1) * r1
+* Schroder: delta = r2  / (r2 - r1) * r1
+* Thukral3: delta =  (-2*r3)*(r2 - r1)/(r1^2 - 3*r1*r3 + 2*r2*r3) * r1
 * Thukral4: delta =  3*r1*r2*r4*(r1^2 - 3*r1*r3 + 2*r2*r3)/(-r1^3*r2 + 4*r1^2*r2*r4 + 3*r1^2*r3*r4 - 12*r1*r2*r3*r4 + 6*r2^2*r3*r4)
 
 The latter two come from
