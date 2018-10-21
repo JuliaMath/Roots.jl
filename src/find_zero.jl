@@ -283,7 +283,7 @@ function fΔxΔΔx(F::SecondDerivative, x)
     fx, fp, fpp = F.f(x), F.fp(x), F.fpp(x)
     (fx, fx/fp, fp/fpp)
 end
-@inline fΔxΔΔx(F, x) = F(x)
+fΔxΔΔx(F, x) = F(x)
 
 
 ## It is faster the first time a function is used if we do not

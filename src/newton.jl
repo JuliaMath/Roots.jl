@@ -1,6 +1,16 @@
 ##################################################
-## Classical derivative-based, iterative, root-finding algorithms: Newton and Halley
-## Historic, we have derivative free versions of similar order
+## Classical derivative-based, iterative, root-finding algorithms
+##
+## If ri = f^(i-1)/f^(i), then these have an update step `xn - delta` where:
+##
+## * Newton: delta = r1  # order 2 if simple root (multiplicity 1)
+## * Halley: delta = 2*r2/(2r2 - r1) * r1 # order 3 if simple root
+## * Schroder: delta = r2  / (r2 - r1) * r1  # order 2
+## * Thukral(3): delta =  (-2*r3)*(r2 - r1)/(r1^2 - 3*r1*r3 + 2*r2*r3) * r1 # order 3
+## * Thukral(4): delta =  3*r1*r2*r4*(r1^2 - 3*r1*r3 + 2*r2*r3)/(-r1^3*r2 + 4*r1^2*r2*r4 + 3*r1^2*r3*r4 - 12*r1*r2*r3*r4 + 6*r2^2*r3*r4) # order 4
+##
+## The latter two come from
+## [Thukral](http://article.sapub.org/10.5923.j.ajcam.20170702.05.html). They are not implemented.
 
 
 ## Newton
@@ -35,7 +45,7 @@ function init_state(method::Newton, fs, x)
     x1 = float(x)
     T = eltype(x1)
     tmp = fΔx(fs, x1)
-    fx1, Δ::T = tmp[1], tmp[2]
+    fx1, Δ::T = tmp[1], tmp[2] # faster to pass in fx, fx/f'(x) than (fx, f'(x)) and compute
 
     fnevals = 1
     S = eltype(fx1)
@@ -51,7 +61,7 @@ end
 function init_state!(state::UnivariateZeroState{T,S}, M::Newton, fs, x) where {T,S}
     x1::T = float(x)
     tmp = fΔx(fs, x)
-    fx1::S, Δ::T = tmp[1],tmp[2]
+    fx1::S, Δ::T = tmp[1], tmp[2]
 
      init_state!(state, x1, oneunit(x1) * (0*x1)/(0*x1), [Δ],
                 fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[])
@@ -61,21 +71,22 @@ end
 function update_state(method::Newton, fs, o::UnivariateZeroState{T,S}, options) where {T, S}
     xn = o.xn1
     fxn = o.fxn1
-    Δxn::T = o.m[1]
+    r1 = o.m[1]
 
-    if isissue(Δxn)
+    if isissue(r1)
         o.stopped=true
         return
     end
 
-    xn1 = xn - Δxn
+    xn1 = xn - r1
 
-    fxn1::S, Δxn1::T = fΔx(fs, xn1)
+    tmp = fΔx(fs, xn1)
+    fxn1::S, r1::T = tmp[1], tmp[2]
     incfn(o,2)
 
     o.xn0, o.xn1 = xn, xn1
     o.fxn0, o.fxn1 = fxn, fxn1
-    empty!(o.m); push!(o.m, Δxn1)
+    empty!(o.m); push!(o.m, r1)
 
     nothing
 
@@ -158,26 +169,26 @@ end
 function init_state!(state::UnivariateZeroState{T,S}, M::AbstractHalleyLikeMethod, fs, x) where {T,S}
     x1::T = float(x)
     tmp = fΔxΔΔx(fs, x)
-    fx1::S, Δ::T, ΔΔ::T = tmp[1],tmp[2], tmp[3]
+    fx1::S, Δ::T, ΔΔ::T = tmp[1], tmp[2], tmp[3]
 
-     init_state!(state, x1, oneunit(x1) * (0*x1)/(0*x1), [Δ],
+     init_state!(state, x1, oneunit(x1) * (0*x1)/(0*x1), [Δ, ΔΔ],
                 fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[])
 end
 
 function update_state(method::Halley, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
     xn = o.xn1
     fxn = o.fxn1
-    Δxn, ΔΔxn = o.m
+    r1, r2 = o.m
 
+    xn1::T = xn - 2*r2/(2r2 - r1) * r1
 
-    xn1::T = xn - Δxn * inv(1  - Δxn / ΔΔxn / 2)
-
-    fxn1::S, Δxn1::T, ΔΔxn1::T = fΔxΔΔx(fs, xn1)
+    tmp = fΔxΔΔx(fs, xn1)
+    fxn1::S, r1::T, r2::T = tmp[1], tmp[2], tmp[3]
     incfn(o,3)
 
     o.xn0, o.xn1 = xn, xn1
     o.fxn0, o.fxn1 = fxn, fxn1
-    empty!(o.m); append!(o.m, (Δxn1, ΔΔxn1))
+    empty!(o.m); append!(o.m, (r1, r2))
 end
 
 """
@@ -217,19 +228,11 @@ halley(f, fp, fpp, x0; kwargs...) = find_zero((f, fp, fpp), x0, Halley(); kwargs
 
 
 Schroder's method, like Halley's method, utilizes f, f', and
-f''. Unlike Halley it is quadratically converging, but this is independent of the
-multiplicity of the zero.
-
-If ri = f^(i-1)/f^(i), then we have an update step `xn - delta` where:
-
-* Newton: delta = r1
-* Halley: delta = 2*r2/(2r2 - r1) * r1
-* Schroder: delta = r2  / (r2 - r1) * r1
-* Thukral3: delta =  (-2*r3)*(r2 - r1)/(r1^2 - 3*r1*r3 + 2*r2*r3) * r1
-* Thukral4: delta =  3*r1*r2*r4*(r1^2 - 3*r1*r3 + 2*r2*r3)/(-r1^3*r2 + 4*r1^2*r2*r4 + 3*r1^2*r3*r4 - 12*r1*r2*r3*r4 + 6*r2^2*r3*r4)
-
-The latter two come from
-[Thukral](http://article.sapub.org/10.5923.j.ajcam.20170702.05.html)
+f''. Unlike Halley it is quadratically converging, but this is
+independent of the multiplicity of the zero (cf. Schröder, E. "Über
+unendlich viele Algorithmen zur Auflösung der Gleichungen."
+Math. Ann. 2, 317-365, 1870;
+http://mathworld.wolfram.com/SchroedersMethod.html).
 
 
 Example
@@ -267,186 +270,9 @@ function update_state(method::Schroder, fs, o::UnivariateZeroState{T,S}, options
     delta =  r2 / (r2 - r1) * r1  # m * r1
     xn1::T = xn - delta
 
-    fxn1::S, r1::T, r2::T = fΔxΔΔx(fs, xn1)
+    tmp = fΔxΔΔx(fs, xn1)
+    fxn1::S, r1::T, r2::T = tmp[1], tmp[2], tmp[3]
     incfn(o,3)
-
-    o.xn0, o.xn1 = xn, xn1
-    o.fxn0, o.fxn1 = fxn, fxn1
-    o.m[1], o.m[2] = r1, r2
-end
-
-
-## This is a more generic interface, with only one init_state, but allocates more
-abstract type AbstractSchroderLikeMethod <: AbstractUnivariateZeroMethod end
-
-#
-# like Base.Iterators.peel
-peelT(xs, T) = (xs[1], collect(T, xs[2:end]))
-fΔxs(F::DerivativeFree, x::T) where {T} = peelT(F.f(x), T)
-function fΔxs(F::FirstDerivative, x::T) where {T}
-    u, v = F.f(x), F.fp(x)
-    peelT((u, u/v),T)
-end
-function fΔxs(F::SecondDerivative, x::T) where {T}
-    u, v, w = F.f(x), F.fp(x), F.fpp(x)
-    peelT((u, u/v, v/w), T)
-end
-fΔxs(F, x::T) where {T} = peelT(F(x), T)
-
-
-# can speed these up if they are specific like above cases
-function init_state(method::AbstractSchroderLikeMethod, fs, x)
-
-    x1 = float(x)
-    T = eltype(x1)
-    fx1, Δs::Vector{T} = fΔxs(fs, x1)
-    S = eltype(fx1)
-    fnevals = 3
-
-
-    state = UnivariateZeroState(x1, oneunit(x1) * (0*x1)/(0*x1), Δs,
-                                fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[],
-                                0, fnevals,
-                                false, false, false, false,
-                                "")
-    state
-end
-
-function init_state!(state::UnivariateZeroState{T,S}, M::AbstractSchroderLikeMethod, fs, x) where {T,S}
-    x1::T = float(x)
-    fx1::S, Δs::Vector{T} = fΔxs(fs, x1)
-
-
-    init_state!(state, x1, oneunit(x1) * (0*x1)/(0*x1), Δs,
-                fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[])
-end
-
-
-
-"""
-    Roots.Thukral3()
-
-Higher order Schroder-like algorithm. Requires 3 derivatives. Trades
-off one order of convergence for an algorithm that does not depend on
-the multiplicity of the zero.
-
-From [Thukral](http://article.sapub.org/10.5923.j.ajcam.20170702.05.html).
-
-
-Example
-```
-using ForwardDiff
-D(f, n=1) = n > 1 ? D(D(f),n-1) : x -> ForwardDiff.derivative(f, float(x))
-
-m = 5
-f(x) = (exp(-x^2) - exp(x^2) - x^8 + 10)^m
-function Fs(f, x)
-    fx = f(x)
-    fp, fpp, fppp, fpppp = [D(f,i)(x) for i in 1:4]
-    r1, r2, r3, r4 = fx/fp, fp/fpp, fpp/fppp, fppp/fpppp
-    fx, r1, r2, r3, r4
-end
-
-x0 = 1.4
-
-find_zero(x->Fs(f, x), x0, Roots.Thukral4()) # 2 iterations
-find_zero(x->Fs(f, x), x0, Roots.Thukral3()) # 2 iterations
-find_zero(x->Fs(f, x), x0, Roots.Halley())   # 24 iterations
-```
-"""
-struct Thukral3 <: AbstractSchroderLikeMethod
-end
-
-
-function update_state(method::Thukral3, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
-    xn = o.xn1
-    fxn = o.fxn1
-    r1::T, r2::T, r3::T = o.m[1], o.m[2], o.m[3]
-
-    delta::T = -2*r1*r3*(r1 - r2)/(r1^2 - 3*r1*r3 + 2*r2*r3)
-
-    xn1::T = xn - delta
-
-
-    fxn1::S, Δs::Vector{T}  = fΔxs(fs, xn1)
-    r1,r2,r3 = Δs[1], Δs[2], Δs[3]
-    incfn(o,4)
-
-    o.xn0, o.xn1 = xn, xn1
-    o.fxn0, o.fxn1 = fxn, fxn1
-    o.m[1], o.m[2], o.m[3] = r1, r2, r3
-
-end
-
-"""
-    Roots.Thukral4()
-
-Higher order Schroder-like algorithm. Requires 4 derivatives. Trades
-off one order of convergence for an algorithm that does not depend on
-the multiplicity of the zero.
-
-From [Thukral](http://article.sapub.org/10.5923.j.ajcam.20170702.05.html).
-
-
-Example
-```
-using ForwardDiff
-D(f, n=1) = n > 1 ? D(D(f),n-1) : x -> ForwardDiff.derivative(f, float(x))
-
-m = 5
-f(x) = (exp(-x^2) - exp(x^2) - x^8 + 10)^m
-function Fs(f, x)
-    fx = f(x)
-    fp, fpp, fppp, fpppp = [D(f,i)(x) for i in 1:4]
-    r1, r2, r3, r4 = fx/fp, fp/fpp, fpp/fppp, fppp/fpppp
-    fx, r1, r2, r3, r4
-end
-
-x0 = 1.4
-
-find_zero(x->Fs(f, x), x0, Roots.Thukral4()) # 2 iterations
-find_zero(x->Fs(f, x), x0, Roots.Thukral3()) # 2 iterations
-find_zero(x->Fs(f, x), x0, Roots.Halley())   # 24 iterations
-```
-"""
-struct Thukral4 <: AbstractSchroderLikeMethod
-end
-
-
-function update_state(method::Thukral4, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
-    xn = o.xn1
-    fxn = o.fxn1
-    r1, r2, r3, r4 = o.m[1], o.m[2], o.m[3], o.m[4]
-
-    delta::T = 3*r1*r2*r4*(r1^2 - 3*r1*r3 + 2*r2*r3)/(-r1^3*r2 + 4*r1^2*r2*r4 + 3*r1^2*r3*r4 - 12*r1*r2*r3*r4 + 6*r2^2*r3*r4)
-    xn1::T = xn - delta
-
-    fxn1::S, Δs::Vector{T} = fΔxs(fs, xn1)
-    r1,r2,r3, r4 = Δs[1], Δs[2], Δs[3], Δs[4]
-    incfn(o,5)
-
-    o.xn0, o.xn1 = xn, xn1
-    o.fxn0, o.fxn1 = fxn, fxn1
-    o.m[1], o.m[2], o.m[3], o.m[4] = r1, r2, r3, r4
-end
-
-
-## test
-struct SchroderG <: AbstractSchroderLikeMethod
-end
-
-
-function update_state(method::SchroderG, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
-    xn = o.xn1
-    fxn = o.fxn1
-    r1, r2 = o.m[1], o.m[2]
-
-    delta =  r2 / (r2 - r1) * r1  # m * r1
-    xn1::T = xn - delta
-
-    fxn1::S, rs::Vector{T} = fΔxs(fs, xn1)
-    incfn(o,3)
-    r1, r2 = rs[1], rs[2]
 
     o.xn0, o.xn1 = xn, xn1
     o.fxn0, o.fxn1 = fxn, fxn1

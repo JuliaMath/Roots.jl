@@ -11,6 +11,10 @@ a = halley(x -> exp(x) - cos(x),
            x -> exp(x) + cos(x), 3.0)
 @test abs(a - 0.0) <= 1e-14
 
+# find_zero calls
+@test find_zero((x -> x^2 - 2x - 1,x -> 2x - 2), 3.0, Roots.Newton())  ≈ 2.414213562373095
+@test find_zero((x -> x^2 - 2x - 1,x -> 2x - 2,x -> 2), 3.0, Roots.Halley())  ≈ 2.414213562373095
+@test find_zero((x -> x^2 - 2x - 1,x -> 2x - 2,x -> 2), 3.0, Roots.Schroder())  ≈ 2.414213562373095
 
 
 ## test with Complex input
@@ -26,12 +30,12 @@ fdf = x -> (sin(x), sin(x)/cos(x))  # (f, f/f')
 @test Roots.find_zero(fdf, 3.0, Roots.Newton())  ≈ π # uses find_zero
 Roots.newton(fdf, 3.0)  ≈ π # uses simple
 
-fdfdf = x -> (sin(x), sin(x)/cos(x), -cos(x)/sin(x))   # (f, f/f', f'/f'')
+fdfdf = x -> (sin(x), sin(x)/cos(x), -cos(x)/sin(x), sin(x)/cos(x))   # (f, f/f', f'/f'', f''/f''')
 @test Roots.find_zero(fdfdf, 3.0, Roots.Halley()) ≈ π
 
 # check that functions with multiple return values can work with other
 # methods
-for M in [Roots.Halley(), Roots.Newton(), Roots.Order1(), Roots.Order0()]
+for M in [Roots.Schroder(), Roots.Halley(), Roots.Newton(), Roots.Order1(), Roots.Order0()]
     @test Roots.find_zero(fdfdf, 3.0, M) ≈ π  # can pass function to others
 end
 for M in [Roots.Bisection(), Roots.A42(), Roots.AlefeldPotraShi()]
