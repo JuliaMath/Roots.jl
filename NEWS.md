@@ -1,5 +1,6 @@
 CHANGES in v0.7.4
 
+* add Schroder method
 * close issue #143 by allowing fns to Newton, Halley to compute f, f/fp, fp/fpp
 * add `newton` function to simple.jl
 * change find_zeros to identify zeros on [a,b], not (a,b). Closes #141.
