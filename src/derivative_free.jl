@@ -159,6 +159,83 @@ end
 
 steffenson(f, x0; kwargs...) = find_zero(f, x0, Steffensen(); kwargs...)
 
+
+### Order2B() Esser method
+"""
+    Order2B()
+
+Esser's method. This is a quadratically convergent method that, like
+Schroder's method, does not depend on the multiplicity of the
+zero. Schroder's method has update step x- r2/(r2-r1) * r1, where ri =
+f^(i-1)/f^(i). Esser approximates f' ~ f[x-h, x+h], f'' ~
+f[x-h,x,x+h], where h = fx, as with Steffensen's method, Requiring
+3 function calls per step. This implementation uses a secant step when
+|fx| is considered too large.
+
+
+Esser, H. Computing (1975) 14: 367. https://doi.org/10.1007/BF02253547
+Eine stets quadratisch konvergente Modifikation des Steffensen-Verfahrens
+
+
+Example
+```
+f(x) = cos(x) - x
+g(x) = f(x)^2
+x0 = pi/4
+find_zero(f, x0, Order2(), verbose=true)        #  3 steps / 7 function calls
+find_zero(f, x0, Roots.Order2B(), verbose=true) #  4 / 9
+find_zero(g, x0, Order2(), verbose=true)        #  22 / 45
+find_zero(g, x0, Roots.Order2B(), verbose=true) #  4 / 10
+```
+"""
+struct Esser <: AbstractSecant end
+const Order2B = Esser
+
+
+function update_state(method::Esser, fs,
+                      o::UnivariateZeroState{T,S}, options)  where {T, S}
+
+
+    x0, x1 = o.xn0, o.xn1
+    fx0, fx1 = o.fxn0, o.fxn1
+
+    # some engineering here to avoid issues with evaluation of f(x + fx), f(x-fx)
+    # Steffensen step is not taken if f(x1) is too big
+    if abs(fx1) >  max(one(S), one(S)*abs(x1)/oneunit(T)) * eps(T)^(1//5)
+        # @debug "Esser: take a secant step"
+        delta = fx1 * (x1 - x0) / (fx1 - fx0)
+    else
+        f0 = fx1
+
+        f1 = fs(x1 + f0)
+        f_1 = fs(x1 - f0)
+        incfn(o, 2)
+
+        # h = f0
+        # r1 = f/f' ~ f/f[x+h,x-h]
+        # r2 = f'/f'' ~ f[x+h, x-h]/f[x-h,x,x+h]
+        r1 = f0 * 2*f0 / (f1 - f_1)
+        r2 = (f1 - f_1)/(f1 - 2*f0 + f_1) * f0/2
+
+        k = r2/(r2-r1)
+        delta = k * r1
+    end
+
+
+    if isissue(delta)
+        o.stopped  = true
+        return
+    end
+
+
+    o.xn0, o.fxn0 = o.xn1, o.fxn1
+    o.xn1 -= delta
+    o.fxn1 = fs(o.xn1)
+    incfn(o)
+
+    nothing
+end
+
 ##################################################
 
 

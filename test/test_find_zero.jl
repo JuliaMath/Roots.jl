@@ -74,10 +74,10 @@ end
 ## issues with starting near a maxima. Some bounce out of it, but
 ## one would expect all to have issues
 fn, xstar = x -> x^3 + 4x^2 -10,  1.365230013414097
-for m in [Order0(), Order1()]
+for m in [Order0(), Order1(), Roots.Order2B()]
     @test_throws Roots.ConvergenceFailed find_zero(fn, -1.0, m)
 end
-for m in [Order2(), Order5(), Order8(), Order16()]
+for m in [Order2(),  Order5(), Order8(), Order16()]
     @test find_zero(fn, -1.0, m) ≈ xstar
 end
 
@@ -311,7 +311,7 @@ test_94()
 
     # test conversion between states/options
     Ms = vcat([Roots.FalsePosition(i) for i in 1:12], Roots.A42(), Roots.AlefeldPotraShi(), Roots.Brent(), Roots.Bisection())
-    Ns = [Roots.Order1(), Roots.Order2(), Roots.Order5(), Roots.Order8(), Roots.Order16()]
+    Ns = [Roots.Order1(), Roots.Order2(), Roots.Order2B(), Roots.Order5(), Roots.Order8(), Roots.Order16()]
 
     g1(x) = exp(x) - x^4
     x0_, xstar_ = (5.0, 20.0), 8.613169456441398
