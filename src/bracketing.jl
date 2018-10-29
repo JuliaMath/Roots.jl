@@ -256,9 +256,8 @@ function update_state(method::Union{Bisection, BisectionExact}, fs, o::Univariat
         o.xn0, o.fxn0 = m, ym
     end
 
-
     m  = __middle(o.xn0, o.xn1) # assume a,b have same sign
-    fm = fs(m)
+    fm::S = fs(m)
     o.m[1], o.fm[1] = m, sign(fm)
     incfn(o)
 

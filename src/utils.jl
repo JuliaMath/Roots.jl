@@ -45,6 +45,12 @@ function steff_step(x, fx)
 
 end
 
+# should we do a step step?
+# only if fx small compared to x
+@inline function do_steff_step(x::T, fx::S) where {T, S}
+    abs(fx) <=  max(one(S), one(S)*abs(x)/oneunit(T)) * eps(T)^(1//5)
+end
+
 function guarded_secant_step(alpha, beta, falpha, fbeta)
 
     fp = (fbeta - falpha) /  (beta - alpha)

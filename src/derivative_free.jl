@@ -92,23 +92,104 @@ evaluation per step and has order `(1+sqrt(5))/2`.
 struct Secant <: AbstractSecant end
 const Order1 = Secant
 
-function update_state(method::Secant, fs, o::UnivariateZeroState{T,S}, options)  where {T, S}
+function update_state(method::Order1, fs, o::UnivariateZeroState{T,S}, options) where {T, S}
 
-    if (o.fxn0 == o.fxn1) || (o.xn0 == o.xn1)
+    xn0, xn1 = o.xn0, o.xn1
+    fxn0, fxn1 = o.fxn0, o.fxn1
+
+    delta = fxn1 * (xn1 - xn0) / (fxn1 - fxn0)
+
+
+    if isinf(delta) || isnan(delta)
          o.stopped = true
          o.message = "Derivative approximation had issues"
          return
      end
 
-    dx = o.fxn1 * (o.xn1 - o.xn0) / (o.fxn1 - o.fxn0)
-    o.xn0, o.xn1 = o.xn1, o.xn1 - dx
-    o.fxn0, o.fxn1 = o.fxn1, fs(o.xn1)
+    o.xn0 = xn1
+    o.xn1 -= delta
+    o.fxn0 = fxn1
+    o.fxn1 = (tmp::S = fs(o.xn1))
     incfn(o)
 
     nothing
 
 end
 
+"""
+    King()
+    Order1B()
+
+A superlinear (order 1.6...) modification of the secant method for multiple roots.
+Presented in A SECANT METHOD FOR MULTIPLE ROOTS, by RICHARD F. KING, BIT 17 (1977), 321-328
+
+The basic idea is similar to Shroder's method: apply the secant method
+to  f/f'. However, this uses f' ~ fp = (fx - f(x-fx))/fx (a Steffensen step). In
+this implementation, when `fx` is too big, a single secant step of `f`
+is used.
+
+
+"""
+struct King <: AbstractSecant end
+const Order1B = King
+
+
+function update_state(method::King, fs,
+                      o::UnivariateZeroState{T,S}, options)  where {T, S}
+
+
+    x0, x1 = o.xn0, o.xn1
+    fx0, fx1 = o.fxn0, o.fxn1
+
+    # some engineering here to avoid issues with evaluation of f(x + fx), f(x-fx)
+    # Steffensen step is not taken if f(x1) is too big
+    if  !do_steff_step(x1, fx1)
+        #@info "King: take a secant step"
+        delta = fx1 * (x1 - x0) / (fx1 - fx0)
+
+        empty!(o.fm)
+    else
+        # G(x,f0,f_1) = -fx^2/(f_1 - f0)
+        f0 = fx1
+        f_1::S = fs(x1 - f0)
+        incfn(o, 1)
+
+        G1 = -f0^2 / (f_1 - f0)
+
+        if isempty(o.fm)
+            f0 = fx0
+            tmp::S = fs(x0 - f0)
+            f_1 = tmp
+            incfn(o,1)
+            G0 = -f0^2 / (f_1 - f0)
+        else
+            G0 = first(o.fm)
+        end
+
+
+        #@debug "m ~ $((x1 - x0) / (G1 - G0))"
+
+        delta = G1 * (x1 - x0) / (G1 - G0)
+        empty!(o.fm); push!(o.fm, G1)
+
+    end
+
+
+    if isissue(delta)
+        o.stopped  = true
+        return
+    end
+
+
+    o.xn0, o.fxn0 = o.xn1, o.fxn1
+    o.xn1 -= delta
+    o.fxn1 = fs(o.xn1)
+    incfn(o)
+
+    #@debug "x1 = $(o.xn1) fx1 = $(o.fxn1)"
+
+    nothing
+end
 
 
 ##################################################
@@ -156,8 +237,6 @@ function update_state(method::Steffensen, fs, o::UnivariateZeroState{T,S}, optio
 
     nothing
 end
-
-steffenson(f, x0; kwargs...) = find_zero(f, x0, Steffensen(); kwargs...)
 
 
 ### Order2B() Esser method
