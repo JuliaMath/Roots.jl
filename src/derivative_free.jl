@@ -101,8 +101,8 @@ function update_state(method::Order1, fs, o::UnivariateZeroState{T,S}, options) 
 
 
     if isinf(delta) || isnan(delta)
-         o.stopped = true
-         o.message = "Derivative approximation had issues"
+        o.stopped = true
+        o.message = "Increment `Δx` has issues. "
          return
      end
 
@@ -123,7 +123,7 @@ end
 A superlinear (order 1.6...) modification of the secant method for multiple roots.
 Presented in A SECANT METHOD FOR MULTIPLE ROOTS, by RICHARD F. KING, BIT 17 (1977), 321-328
 
-The basic idea is similar to Shroder's method: apply the secant method
+The basic idea is similar to Schroder's method: apply the secant method
 to  f/f'. However, this uses f' ~ fp = (fx - f(x-fx))/fx (a Steffensen step). In
 this implementation, when `fx` is too big, a single secant step of `f`
 is used.
@@ -146,7 +146,6 @@ function update_state(method::King, fs,
     if  !do_steff_step(x1, fx1)
         #@info "King: take a secant step"
         delta = fx1 * (x1 - x0) / (fx1 - fx0)
-
         empty!(o.fm)
     else
         # G(x,f0,f_1) = -fx^2/(f_1 - f0)
@@ -166,8 +165,13 @@ function update_state(method::King, fs,
             G0 = first(o.fm)
         end
 
-
-        #@debug "m ~ $((x1 - x0) / (G1 - G0))"
+        m = (x1-x0)/(G1-G0) # approximate value of `m`, the multiplicity
+        if abs(m) <= 1e-2
+            #@info "small m estimate, stopping"
+            o.stopped  = true
+            o.message = "Estimate for multiplicity has issues. "
+            return
+        end
 
         delta = G1 * (x1 - x0) / (G1 - G0)
         empty!(o.fm); push!(o.fm, G1)
@@ -177,6 +181,7 @@ function update_state(method::King, fs,
 
     if isissue(delta)
         o.stopped  = true
+        o.message = "Increment `Δx` has issues. "
         return
     end
 
@@ -196,7 +201,7 @@ end
 
 ### Steffensen
 ## https://en.wikipedia.org/wiki/Steffensen's_method#Simple_description
-struct Steffensen <: AbstractUnivariateZeroMethod
+struct Steffensen <: AbstractSecant
 end
 
 """
@@ -207,37 +212,47 @@ The quadratically converging
 method is used for the derivative-free `Order2()` algorithm. Unlike
 the quadratically converging Newton's method, no derivative is
 necessary, though like Newton's method, two function calls per step
-are. This algorithm is more sensitive than Newton's method to poor
-initial guesses.
+are. Steffensen's algorithm is more sensitive than Newton's method to
+poor initial guesses when `f(x)` is large, due to how `f'(x)` is
+approximated. This algorithm replaces a Steffensen step with a secant
+step when `f(x)` is large.
 
 """
 const Order2 = Steffensen
 
-function update_state(method::Steffensen, fs, o::UnivariateZeroState{T,S}, options) where {T, S}
+function update_state(method::Order2, fs,
+                      o::UnivariateZeroState{T,S}, options)  where {T, S}
 
-    wn::T = o.xn1 + steff_step(o.xn1, o.fxn1)
 
-    fwn::S = fs(wn)
-    incfn(o)
+    x0, x1 = o.xn0, o.xn1
+    fx0, fx1 = o.fxn0, o.fxn1
 
-    fp, issue = _fbracket(o.xn1, wn, o.fxn1, fwn)
+    # some engineering here to avoid issues with evaluation of f(x + fx), f(x-fx)
+    # Steffensen step is not taken if f(x1) is too big
+    if !do_steff_step(x1, fx1)
+        delta = fx1 * (x1 - x0) / (fx1 - fx0)
+    else
+        f0 = fx1
+        f1 = fs(x1 + f0)
+        incfn(o, 1)
 
-    if issue
-        o.stopped = true
-        o.message = "Derivative approximation had issues"
+        delta = f0 * f0 / (f1 - f0)
+    end
+
+    if isissue(delta)
+        o.stopped  = true
+        o.message = "Increment `Δx` has issues. "
         return
     end
 
-    o.xn0 = o.xn1
-    o.fxn0 = o.fxn1
-    o.xn1 = o.xn1 - o.fxn1 / fp #xn1
+
+    o.xn0, o.fxn0 = o.xn1, o.fxn1
+    o.xn1 -= delta
     o.fxn1 = fs(o.xn1)
     incfn(o)
 
-
     nothing
 end
-
 
 ### Order2B() Esser method
 """
@@ -280,8 +295,8 @@ function update_state(method::Esser, fs,
 
     # some engineering here to avoid issues with evaluation of f(x + fx), f(x-fx)
     # Steffensen step is not taken if f(x1) is too big
-    if abs(fx1) >  max(one(S), one(S)*abs(x1)/oneunit(T)) * eps(T)^(1//5)
-        # @debug "Esser: take a secant step"
+    if !do_steff_step(x1, fx1)
+        #@info "Esser: take a secant step"
         delta = fx1 * (x1 - x0) / (fx1 - fx0)
     else
         f0 = fx1
@@ -296,13 +311,25 @@ function update_state(method::Esser, fs,
         r1 = f0 * 2*f0 / (f1 - f_1)
         r2 = (f1 - f_1)/(f1 - 2*f0 + f_1) * f0/2
 
-        k = r2/(r2-r1)
+        k = r2/(r2-r1)  # ~ m
+
+        if abs(k) <= 1e-2
+            #@info "estimate for m is *too* small"
+            o.stopped  = true
+            o.message = "Estimate for multiplicity had issues. "
+            return
+        end
+
+
         delta = k * r1
+
+        #@info "delta = $delta, k=$k, r1=$r1 r2=$r2"
     end
 
 
     if isissue(delta)
         o.stopped  = true
+        o.message = "Increment `Δx` has issues. "
         return
     end
 
@@ -314,6 +341,8 @@ function update_state(method::Esser, fs,
 
     nothing
 end
+
+
 
 ##################################################
 
