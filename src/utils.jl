@@ -45,10 +45,13 @@ function steff_step(x, fx)
 
 end
 
-# should we do a step step?
-# only if fx small compared to x
+
+
+# Should a Steffensen step or secant step be taken? If |fx| small enough, take a
+# Steffensen step. A steffensen step uses f(x + fx) - fx = f'(x)*fx + f''(ξ) /2 * fx^2
+# We keep the error small here as long as |x|f''(x) not huge.
 @inline function do_steff_step(x::T, fx::S) where {T, S}
-    abs(fx) <=  max(one(S), one(S)*abs(x)/oneunit(T)) * eps(T)^(1//5)
+    abs(fx) <=  max(oneunit(S), oneunit(S)*abs(x)/oneunit(T)) * one(T) * 1//1000
 end
 
 function guarded_secant_step(alpha, beta, falpha, fbeta)

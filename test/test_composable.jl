@@ -9,7 +9,7 @@ using SymEngine
 
 @testset "Test composability with other packages" begin
 
-    orders = [Order0(), Order1(), Order2(), Roots.Order2B(), Order5(),
+    orders = [Order0(), Order1(), Roots.Order1B(), Order2(), Roots.Order2B(), Order5(),
               Order8(), Order16()]
 
     # Unitful

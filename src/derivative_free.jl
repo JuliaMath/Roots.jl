@@ -150,14 +150,14 @@ function update_state(method::King, fs,
     else
         # G(x,f0,f_1) = -fx^2/(f_1 - f0)
         f0 = fx1
-        f_1::S = fs(x1 - f0)
+        f_1::S = fs(x1 - f0*oneunit(T)/oneunit(S))
         incfn(o, 1)
 
         G1 = -f0^2 / (f_1 - f0)
 
         if isempty(o.fm)
             f0 = fx0
-            tmp::S = fs(x0 - f0)
+            tmp::S = fs(x0 - f0*oneunit(T)/oneunit(S))
             f_1 = tmp
             incfn(o,1)
             G0 = -f0^2 / (f_1 - f0)
@@ -166,7 +166,7 @@ function update_state(method::King, fs,
         end
 
         m = (x1-x0)/(G1-G0) # approximate value of `m`, the multiplicity
-        if abs(m) <= 1e-2
+        if abs(m) <= 1e-2 * oneunit(m)
             #@info "small m estimate, stopping"
             o.stopped  = true
             o.message = "Estimate for multiplicity has issues. "
@@ -229,14 +229,15 @@ function update_state(method::Order2, fs,
 
     # some engineering here to avoid issues with evaluation of f(x + fx), f(x-fx)
     # Steffensen step is not taken if f(x1) is too big
+
     if !do_steff_step(x1, fx1)
         delta = fx1 * (x1 - x0) / (fx1 - fx0)
     else
         f0 = fx1
-        f1 = fs(x1 + f0)
+        f1 = fs(x1 + f0 * oneunit(T) / oneunit(S))
         incfn(o, 1)
 
-        delta = f0 * f0 / (f1 - f0)
+        delta = f0 * f0 / (f1 - f0) * oneunit(T) / oneunit(S) # f0 used as increment
     end
 
     if isissue(delta)
@@ -296,24 +297,24 @@ function update_state(method::Esser, fs,
     # some engineering here to avoid issues with evaluation of f(x + fx), f(x-fx)
     # Steffensen step is not taken if f(x1) is too big
     if !do_steff_step(x1, fx1)
-        #@info "Esser: take a secant step"
+        #@info "Esser: take a secant step $x1 $fx1"
         delta = fx1 * (x1 - x0) / (fx1 - fx0)
     else
         f0 = fx1
 
-        f1 = fs(x1 + f0)
-        f_1 = fs(x1 - f0)
+        f1  = fs(x1 + f0 * oneunit(T) / oneunit(S))
+        f_1 = fs(x1 - f0 * oneunit(T) / oneunit(S))
         incfn(o, 2)
 
         # h = f0
         # r1 = f/f' ~ f/f[x+h,x-h]
         # r2 = f'/f'' ~ f[x+h, x-h]/f[x-h,x,x+h]
-        r1 = f0 * 2*f0 / (f1 - f_1)
-        r2 = (f1 - f_1)/(f1 - 2*f0 + f_1) * f0/2
+        r1 = f0 * 2*f0 / (f1 - f_1) * oneunit(T) / oneunit(S)
+        r2 = (f1 - f_1)/(f1 - 2*f0 + f_1) * f0/2 * oneunit(T) / oneunit(S)
 
         k = r2/(r2-r1)  # ~ m
 
-        if abs(k) <= 1e-2
+        if abs(k) <= 1e-2 * oneunit(k)
             #@info "estimate for m is *too* small"
             o.stopped  = true
             o.message = "Estimate for multiplicity had issues. "
@@ -323,7 +324,6 @@ function update_state(method::Esser, fs,
 
         delta = k * r1
 
-        #@info "delta = $delta, k=$k, r1=$r1 r2=$r2"
     end
 
 
@@ -336,6 +336,7 @@ function update_state(method::Esser, fs,
 
     o.xn0, o.fxn0 = o.xn1, o.fxn1
     o.xn1 -= delta
+
     o.fxn1 = fs(o.xn1)
     incfn(o)
 

@@ -229,8 +229,8 @@ function find_zeros(f, a, b; no_pts = 12, k=8,
     zs = T[]  # collect zeros
 
     # check endpoints for exact zeros, then narrow
-    abs(fa0) <= 8 * eps(a0) && push!(zs, a0)
-    abs(fb0) <= 8 * eps(b0) && push!(zs, b0)
+    abs(fa0) * oneunit(T) / oneunit(S) <= 8 * eps(a0) && push!(zs, a0)
+    abs(fb0) * oneunit(T) / oneunit(S) <= 8 * eps(b0) && push!(zs, b0)
     a0 = find_non_zero(f, a0, b0, xatol, xrtol, atol, rtol)
     b0 = find_non_zero(f, b0, a0, xatol, xrtol, atol, rtol)
 

@@ -356,18 +356,6 @@ function assess_convergence(method::Any, state::UnivariateZeroState{T,S}, option
         return true
     end
 
-    if state.steps > options.maxevals
-        state.stopped = true
-        state.message *= "Too many steps taken. "
-        return true
-    end
-
-    if state.fnevals > options.maxfnevals
-        state.stopped = true
-        state.message *= "Too many function evaluations taken. "
-        return true
-    end
-
     if isnan(xn1) || isnan(fxn1)
         state.convergence_failed = true
         state.message *= "NaN produced by algorithm. "
@@ -394,6 +382,18 @@ function assess_convergence(method::Any, state::UnivariateZeroState{T,S}, option
         return true
     end
 
+
+    if state.steps > options.maxevals
+        state.stopped = true
+        state.message *= "Too many steps taken. "
+        return true
+    end
+
+    if state.fnevals > options.maxfnevals
+        state.stopped = true
+        state.message *= "Too many function evaluations taken. "
+        return true
+    end
 
     return false
 end
