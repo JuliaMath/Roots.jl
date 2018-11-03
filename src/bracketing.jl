@@ -760,7 +760,7 @@ function update_state(M::Brent, f, state::UnivariateZeroState{T,S}, options::Uni
     else
         s = secant_step(a,b,fa,fb)
     end
-    fs::T = f(s)
+    fs::S = f(s)
     incfn(state)
     check_zero(M, state, s, fs) && return nothing
 
