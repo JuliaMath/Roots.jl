@@ -233,11 +233,15 @@ function update_state(method::Order2, fs,
     if !do_steff_step(x1, fx1)
         delta = fx1 * (x1 - x0) / (fx1 - fx0)
     else
+        # we use x-fx or x+fx depending on secant line slope
+        sgn = sign((fx1 - fx0) / (x1 - x0))
+        x2 = x1 - sgn * fx1 / oneunit(S) * oneunit(T)
+
         f0 = fx1
-        f1 = fs(x1 + f0 * oneunit(T) / oneunit(S))
+        f1::S = fs(x2)
         incfn(o, 1)
 
-        delta = f0 * f0 / (f1 - f0) * oneunit(T) / oneunit(S) # f0 used as increment
+        delta = -sgn * f0 * f0 / (f1 - f0) * oneunit(T) / oneunit(S) # f0 used as increment
     end
 
     if isissue(delta)
@@ -245,7 +249,6 @@ function update_state(method::Order2, fs,
         o.message = "Increment `Δx` has issues. "
         return
     end
-
 
     o.xn0, o.fxn0 = o.xn1, o.fxn1
     o.xn1 -= delta
