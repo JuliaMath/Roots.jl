@@ -47,24 +47,22 @@ end
 
 
 
-## Should we do a steffensen step?
-## This could be better engineered. Two approaches were considered:
-## error:
-## Steffensen error: f[x,x+fx, alpha]/f[x, x+fx] * (1 - f[x, alpha]) (x-alpha)^2
-## ~ f''/(2f') * ( 1 + f') Δ^2
-## Secant error: f[x,x_{-1},alpha] / f[x, x_{-1}] * (x-alpha) * (x_{-1} - alpha)
-## ~ f''/(2f') Δ^(1+sqrt(5))/2
-## Ratio is ~ ( 1 + f')  Δ^(2 - (1+sqrt(5))/2)
-## We do steff step if this ratio is small enough
-## we use f' ~ fp = (fx1-fx0)/(x1-x0);  Δ ~ x1 - x0
-## so this becomes |(1 + fp)  Δ^(2 - (1+sqrt(5))/2)| <= 1
-## the issue here is the proxy Δ for (xn-alpha) is small on the first step when
-## x0 not specified. This needs working around
-## Otherwise, If |fx| small enough, take a
-# Steffensen step. A steffensen step uses f(x + fx) - fx = f'(x)*fx + f''(ξ) /2 * fx^2
-# We keep the error small here as long as |x|f''(x) not huge.
+## Should we do a steffensen step?  This could be better
+## engineered. Two approaches were considered:
+## error: Steffensen
+## Δn+1 = f[x,x+fx, alpha]/f[x, x+fx] * (1 - f[x, alpha]) (x-alpha)^2
+## ~ f''/(2f') * ( 1 + f') Δn^2
+## Secant error: Δn+1 = f[x,x_{-1},alpha] / f[x,x_{-1}] * (x-alpha) * (x_{-1} - alpha)
+## Should take steffensen step when the ratio satisfies -1 < (1+f')Δn /Δn-1 < 1
+## We could use f' ~ fp = (fx1-fx0)/(x1-x0); but our proxy for Δn /Δn-1 is problematic, as
+## we don't know alpha, and using xn-x_{n-1} can be an issue when only
+## x1 and not x0 is specified. This needs working around
+##
+## Instead, If |fx| small enough, we take a
+## Steffensen step. A steffensen step uses f(x + fx) - fx = f'(x)*fx + f''(ξ) /2 * fx^2
+## We keep the error small here as long as |x|f''(x) not huge.
 @inline function do_steff_step(x::T, fx::S) where {T, S}
-    abs(fx) <=  max(oneunit(S), oneunit(S)*abs(x)/oneunit(T)) * one(T) * 1//1000
+    10 * abs(fx) <=  max(oneunit(S), abs(x) * oneunit(S) /oneunit(T)) * one(T)
 end
 
 function guarded_secant_step(alpha, beta, falpha, fbeta)
