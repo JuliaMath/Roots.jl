@@ -144,7 +144,6 @@ function update_state(method::King, fs,
     # some engineering here to avoid issues with evaluation of f(x + fx), f(x-fx)
     # Steffensen step is not taken if f(x1) is too big
     if  !do_steff_step(x1, fx1)
-        #@info "King: take a secant step"
         delta = fx1 * (x1 - x0) / (fx1 - fx0)
         empty!(o.fm)
     else

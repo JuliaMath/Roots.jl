@@ -62,7 +62,7 @@ end
 ## Steffensen step. A steffensen step uses f(x + fx) - fx = f'(x)*fx + f''(ξ) /2 * fx^2
 ## We keep the error small here as long as |x|f''(x) not huge.
 @inline function do_steff_step(x::T, fx::S) where {T, S}
-    10 * abs(fx) <=  max(oneunit(S), abs(x) * oneunit(S) /oneunit(T)) * one(T)
+    1000 * abs(fx) <=  max(oneunit(S), abs(x) * oneunit(S) /oneunit(T)) * one(T)
 end
 
 function guarded_secant_step(alpha, beta, falpha, fbeta)
