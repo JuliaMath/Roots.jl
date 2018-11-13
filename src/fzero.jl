@@ -44,7 +44,7 @@ the method specified by `order`.
 """
 function fzero(f, bracket::Tuple{T,S}; kwargs...)  where {T <: Number, S<:Number}
     if haskey(kwargs, :order)
-        find_zero(FnWrapper(f), bracket, _method_lookup(kwargs,:order); kwargs...)
+        find_zero(FnWrapper(f), bracket, _method_lookup[kwargs[:order]]; kwargs...)
     else
         find_zero(FnWrapper(f), bracket, Bisection();kwargs...)
     end
