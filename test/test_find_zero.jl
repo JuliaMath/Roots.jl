@@ -4,7 +4,7 @@ using Compat.Test
 import SpecialFunctions.erf
 
 
-meths = [Order0(), Order1(), Order2(), Order5(), Order8(), Order16()]
+meths = [Order0(), Order1(), Roots.Order1B(), Order2(), Roots.Order2B(), Order5(), Order8(), Order16()]
 
 ## basics
 fns = [(x -> x^2 - exp(x) - 3x + 2,   0.257530285439860, [-1, 0.5]),
@@ -29,7 +29,7 @@ for (i, (f, xstar, xs)) in enumerate(fns)
         for x0_ in xs
             out = try
                 xn = find_zero(f, x0_, m)
-                @test abs(xn - xstar) < 1e-14 || abs(f(xn)) < 1e-13
+                @test abs(xn - xstar) < 1e-14 || abs(f(xn)) < 1e-09
                 "."
             catch err
                 "*"
@@ -74,10 +74,10 @@ end
 ## issues with starting near a maxima. Some bounce out of it, but
 ## one would expect all to have issues
 fn, xstar = x -> x^3 + 4x^2 -10,  1.365230013414097
-for m in [Order0(), Order1()]
+for m in [Order0(), Order1(), Order2(), Roots.Order1B(), Roots.Order2B()]
     @test_throws Roots.ConvergenceFailed find_zero(fn, -1.0, m)
 end
-for m in [Order2(), Order5(), Order8(), Order16()]
+for m in [Order5(), Order8(), Order16()]
     @test find_zero(fn, -1.0, m) ≈ xstar
 end
 
@@ -206,8 +206,8 @@ fn, xstar = x -> sin(x) - x + 1, 1.9345632107520243
 @test find_zero(fn, 20.0, Order2())  ≈ xstar   # needs 16 iterations, 33 fn evaluations
 @test abs(fn(find_zero(fn, 20.0, Order2(), atol=1e-2)) - xstar) > 1e-12
 @test abs(fn(find_zero(fn, 20.0, Order2(), rtol=1e-2)) - xstar) > 1e-12
-@test_throws Roots.ConvergenceFailed find_zero(fn, 20.0, Order2(), maxevals=5)
-@test_throws Roots.ConvergenceFailed find_zero(fn, 20.0, Order2(), maxfnevals=10)
+@test_throws Roots.ConvergenceFailed find_zero(fn, 20.0, Order2(), maxevals=3)
+@test_throws Roots.ConvergenceFailed find_zero(fn, 20.0, Order2(), maxfnevals=4)
 
 
 ## test robustness of Order0
@@ -311,7 +311,7 @@ test_94()
 
     # test conversion between states/options
     Ms = vcat([Roots.FalsePosition(i) for i in 1:12], Roots.A42(), Roots.AlefeldPotraShi(), Roots.Brent(), Roots.Bisection())
-    Ns = [Roots.Order1(), Roots.Order2(), Roots.Order5(), Roots.Order8(), Roots.Order16()]
+    Ns = [Roots.Order1(), Roots.Order2(), Roots.Order2B(), Roots.Order5(), Roots.Order8(), Roots.Order16()]
 
     g1(x) = exp(x) - x^4
     x0_, xstar_ = (5.0, 20.0), 8.613169456441398

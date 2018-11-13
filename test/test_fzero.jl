@@ -49,4 +49,3 @@ fn = x -> cos(10*pi*x)
 
 ### issue with fzeros and roots near 'b'
 @test 0 <  maximum(fzeros(x -> sin(x) - 1/1000*x, 0, pi)) < pi
-

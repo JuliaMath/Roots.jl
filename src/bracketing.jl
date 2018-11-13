@@ -104,6 +104,7 @@ function init_state!(state::UnivariateZeroState{T,S}, M::AbstractBisection, fs,
                      xs::Union{Tuple, Vector}, fxs::Union{Tuple, Vector}) where {T, S}
     x0, x1 = xs
     fx0, fx1 = fxs
+
     fx0 * fx1 > 0 && throw(ArgumentError(bracketing_error))
 
     # we need a,b to be same sign, finite
@@ -226,7 +227,7 @@ function assess_convergence(M::BisectionExact, state::UnivariateZeroState{T,S}, 
     y0, ym, y1 = state.fxn0, state.fm[1], state.fxn1
 
     for (c,fc) in ((x0,y0), (xm,ym), (x1, y1))
-        if iszero(fc) || isinf(fc) || isnan(fc)
+        if iszero(fc) || isnan(fc) || isinf(fc)
             state.f_converged = true
             state.xn1 = c
             state.fxn1 = fc
@@ -256,9 +257,8 @@ function update_state(method::Union{Bisection, BisectionExact}, fs, o::Univariat
         o.xn0, o.fxn0 = m, ym
     end
 
-
     m  = __middle(o.xn0, o.xn1) # assume a,b have same sign
-    fm = fs(m)
+    fm::S = fs(m)
     o.m[1], o.fm[1] = m, sign(fm)
     incfn(o)
 
@@ -281,6 +281,7 @@ function find_zero(fs, x0, method::M;
     F = callable_function(fs)
     state = init_state(method, F, x)
     options = init_options(method, state; kwargs...)
+
     tol = max(options.xabstol, maximum(abs.(x)) * options.xreltol)
 
     l = (verbose && isa(tracks, NullTracks)) ? Tracks(eltype(state.xn1)[], eltype(state.fxn1)[]) : tracks
@@ -759,7 +760,7 @@ function update_state(M::Brent, f, state::UnivariateZeroState{T,S}, options::Uni
     else
         s = secant_step(a,b,fa,fb)
     end
-    fs::T = f(s)
+    fs::S = f(s)
     incfn(state)
     check_zero(M, state, s, fs) && return nothing
 
@@ -855,7 +856,6 @@ function update_state(method::FalsePosition, fs, o::UnivariateZeroState{T,S}, op
     x::T = b - lambda * (b-a)
     fx::S = fs(x)
     incfn(o)
-
     if iszero(fx)
         o.xn1 = x
         o.fxn1 = fx

@@ -208,7 +208,7 @@ results = [run_tests((f,b) -> find_zero(f, b, M), name="$M") for M in Ms]
 results = [run_tests((f,b) -> find_zero(f, big.(b), M), name="$M") for M in Ms]
 @test all([length(result.failures) == 0 for result in results[13:end]])
 
-          
+
 
 
 ## run but not in general testing suite
@@ -219,7 +219,7 @@ function run_benchmark_tests()
     @printf "%s\n" run_tests((f,b) -> find_zero(f, b, FalsePosition()), name="FalsePosition")
 
 
-    for m in [Order0(), Order1(), Order2(), Order5(), Order8(), Order16()]
+    for m in [Order0(), Order1(), Order2(), Roots.Order2B(), Order5(), Order8(), Order16()]
         @printf "%s\n" run_tests((f, b) -> find_zero(f, mean(b), m), name="$m")
     end
 
@@ -243,4 +243,3 @@ end
 
 
 nothing
-
