@@ -243,22 +243,26 @@ end
 ### Functions
 abstract type CallableFunction end
 
-struct DerivativeFree <: CallableFunction
-    f
+struct FnWrapper <: CallableFunction
+   f
 end
 
-struct FirstDerivative <: CallableFunction
-    f
-    fp
+struct DerivativeFree{F} <: CallableFunction
+    f::F
 end
 
-struct SecondDerivative <: CallableFunction
-    f
-    fp
-    fpp
+struct FirstDerivative{F,FP} <: CallableFunction
+    f::F
+    fp::FP
 end
 
+struct SecondDerivative{F,FP,FPP} <: CallableFunction
+    f::F
+    fp::FP
+    fpp::FPP
+end
 
+(F::FnWrapper)(x::Number) = first(F.f(x))
 (F::DerivativeFree)(x::Number) = first(F.f(x))
 (F::FirstDerivative)(x::Number) = first(F.f(x))
 (F::SecondDerivative)(x::Number) = first(F.f(x))
@@ -286,24 +290,19 @@ end
 fΔxΔΔx(F, x) = F(x)
 
 
-## It is faster the first time a function is used if we do not
-## parameterize this. (As this requires less compilation) It is slower
-## the second time a function is used. This seems like the proper
-## tradeoff.
-##
-## We can override this with, say:
-## import FunctionWrappers
-## import FunctionWrappers: FunctionWrapper
-## struct CallbackF64F64
-## f::FunctionWrapper{Float64,Tuple{Float64}}
-## end
-## (cb::CallbackF64F64)(v) = cb.f(v)
-## Roots.callable_function(f::CallbackF64F64) = f
-
+# allows override for function, if desired
+# the default for this specializes on the function passed
+# in. When specializatoin occurs there is overhead due to compilation
+# costs which can be amortized over subsequent calls to `find_zero`.
+# However, if a function is only used once, then using `fzero` will be
+# faster. (The difference is clear between `@time` and `@btime` to measure
+# speed)
+#                 first call    subsequent calls  default for
+# specialize       slower         faster          find_zero
+# no specialize    faster         slower          fzero
+#
 callable_function(fs::Any) = _callable_function(fs)
-
-## Default does not specialize on function
-function _callable_function(@nospecialize(fs))
+function _callable_function(fs)
     if isa(fs, Tuple)
         length(fs)==1 && return DerivativeFree(fs[1])
         length(fs)==2 && return FirstDerivative(fs[1],fs[2])
