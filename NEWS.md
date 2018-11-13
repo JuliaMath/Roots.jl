@@ -1,6 +1,10 @@
 CHANGES in v0.7.4
 
-* add Schroder method
+* adjust Steffensen method logic to take secant step or steffensen
+  step, rather than modified steffensen step. Seems to improve robustness.
+* add Schroder method (order 2 for multiplicity with derivative), King (1B)
+  (superlinear for multiplicity, no derivative), Esser (2B) (order 2
+  for multipicity, no derivative)
 * close issue #143 by allowing fns to Newton, Halley to compute f, f/fp, fp/fpp
 * add `newton` function to simple.jl
 * change find_zeros to identify zeros on [a,b], not (a,b). Closes #141.
