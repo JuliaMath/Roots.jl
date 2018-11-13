@@ -292,11 +292,11 @@ fΔxΔΔx(F, x) = F(x)
 
 # allows override for function, if desired
 # the default for this specializes on the function passed
-# in. When specializatoin occurs there is overhead due to compilation
+# in. When specialization occurs there is overhead due to compilation
 # costs which can be amortized over subsequent calls to `find_zero`.
 # However, if a function is only used once, then using `fzero` will be
 # faster. (The difference is clear between `@time` and `@btime` to measure
-# speed)
+# execution time)
 #                 first call    subsequent calls  default for
 # specialize       slower         faster          find_zero
 # no specialize    faster         slower          fzero
@@ -523,23 +523,6 @@ function find_zero(fs, x0, method::AbstractUnivariateZeroMethod,
                    kwargs...)
 
     F = callable_function(fs)
-
-    _find_zero(F, x0, method, N; tracks=tracks, verbose=verbose, kwargs...)
-end
-
-## This allows for bypassing of `callable_function`.  With
-## callable_function there is no specialization on the function. This
-## makes the first call faster, but subsequent calls slower, due to
-## type instability. Without callable_function the first usage is
-## slower, though this can be effectively reduced using
-## `FunctionWrappers`.
-function _find_zero(F, x0, method::AbstractUnivariateZeroMethod,
-                    N::Union{Nothing, AbstractBracketing}=nothing;
-                    tracks::AbstractTracks=NullTracks(),
-                    verbose=false,
-                    kwargs...)
-
-
     state = init_state(method, F, x0)
     options = init_options(method, state; kwargs...)
 

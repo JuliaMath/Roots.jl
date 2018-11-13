@@ -71,7 +71,7 @@ function find_zero(fs, x0, method::Order0;
     M = Order1()
     N = AlefeldPotraShi()
 
-    _find_zero(callable_function(fs), x0, M, N; tracks=tracks,verbose=verbose, kwargs...)
+    find_zero(callable_function(fs), x0, M, N; tracks=tracks,verbose=verbose, kwargs...)
 end
 
 ##################################################
