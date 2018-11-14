@@ -133,7 +133,7 @@ _method_lookup = Dict(0   => Order0(),
     if haskey(_method_lookup, order)
         M = _method_lookup[order]
     else
-        warn("Invalid order. Valid orders are 0, 1, 2, 5, 8, and 16")
+        warn("Invalid order specified. See ?fzero.")
         throw(ArgumentError())
     end
 
