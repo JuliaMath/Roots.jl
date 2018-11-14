@@ -74,8 +74,9 @@ function fzero(f, x0, M::AbstractUnivariateZeroMethod, N::AbstractBracketing; kw
 end
 
 function fzero(f, bracket::Tuple{T,S}; kwargs...)  where {T <: Number, S<:Number}
-    if haskey(Dict(kwargs), :order)
-        find_zero(FnWrapper(f), bracket, _method_lookup[kwargs[:order]]; kwargs...)
+    d = Dict(kwargs)
+    if haskey(d, :order)
+        find_zero(FnWrapper(f), bracket, _method_lookup[order]; kwargs...)
     else
         find_zero(FnWrapper(f), bracket, Bisection();kwargs...)
     end
