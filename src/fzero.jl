@@ -76,7 +76,7 @@ end
 function fzero(f, bracket::Tuple{T,S}; kwargs...)  where {T <: Number, S<:Number}
     d = Dict(kwargs)
     if haskey(d, :order)
-        find_zero(FnWrapper(f), bracket, _method_lookup[order]; kwargs...)
+        find_zero(FnWrapper(f), bracket, _method_lookup[d[:order]]; kwargs...)
     else
         find_zero(FnWrapper(f), bracket, Bisection();kwargs...)
     end
