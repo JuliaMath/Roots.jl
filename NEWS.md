@@ -1,16 +1,18 @@
 CHANGES in v0.7.4
 
+* set find_zero(s) to specialize on the function, fzero(s) to not. (#148)
 * adjust Steffensen method logic to take secant step or steffensen
-  step, rather than modified steffensen step. Seems to improve robustness.
+  step, rather than modified steffensen step. Seems to improve
+  robustness. (#147)
 * add Schroder method (order 2 for multiplicity with derivative), King (1B)
   (superlinear for multiplicity, no derivative), Esser (2B) (order 2
-  for multipicity, no derivative)
+  for multipicity, no derivative) (#143, #147)
 * close issue #143 by allowing fns to Newton, Halley to compute f, f/fp, fp/fpp
 * add `newton` function to simple.jl
 * change find_zeros to identify zeros on [a,b], not (a,b). Closes #141.
 * bug fix: issue with quad step after a truncated M-step in find_zero(M,N,...)
-* bug fix: verbose argument for Bisection method
-* bug fix: unintentional widening of types in intial secant step
+* bug fix: verbose argument for Bisection method (#139)
+* bug fix: unintentional widening of types in intial secant step (#139)
 
 CHANGES in v0.7.3
 
