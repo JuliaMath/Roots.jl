@@ -49,3 +49,26 @@ fn = x -> cos(10*pi*x)
 
 ### issue with fzeros and roots near 'b'
 @test 0 <  maximum(fzeros(x -> sin(x) - 1/1000*x, 0, pi)) < pi
+
+
+## Change to interface
+for o in  keys(Roots._method_lookup)
+    @test fzero(x -> x^3 - x, 0.9, order=o)  ≈ 1.0
+end
+
+for M in [Roots.Order0(), Roots.Order1(), Roots.Order1B(), Roots.Order2(), Roots.Order2B()]
+    @test fzero(x -> x^3 - x, 0.7, M)  ≈ 1.0
+end
+
+for M in [Roots.Order1(), Roots.Order1B(), Roots.Order2(), Roots.Order2B()]
+    N = Roots.Bisection()
+    @test fzero(x -> x^3 - x, 0.7, M, N)  ≈ 1.0
+end
+
+@test fzero(sin, 3)  ≈ pi # order0
+@test fzero(sin, (3,3.1), order=1)  ≈ pi # use order if specified
+@test fzero(sin, (3,4))  ≈ pi  # bracketing
+@test fzero(sin, 3, 4)  ≈ pi  # bracketing
+@test fzero(sin, [3,4])  ≈ pi  # bracketing
+@test_throws ArgumentError fzero(sin, (3,3.1)) # not a bracket
+@test fzero(sin, cos, 3)  ≈ pi # newton

@@ -1,5 +1,5 @@
 [![Roots](http://pkg.julialang.org/badges/Roots_0.6.svg)](http://pkg.julialang.org/?pkg=Roots&ver=0.6)
-[![Roots](http://pkg.julialang.org/badges/Roots_0.7.svg)](http://pkg.julialang.org/?pkg=Roots&ver=0.7)  
+[![Roots](http://pkg.julialang.org/badges/Roots_0.7.svg)](http://pkg.julialang.org/?pkg=Roots&ver=0.7)
 Linux: [![Build Status](https://travis-ci.org/JuliaMath/Roots.jl.svg?branch=master)](https://travis-ci.org/JuliaMath/Roots.jl)
 Windows: [![Build status](https://ci.appveyor.com/api/projects/status/goteuptn5kypafyl?svg=true)](https://ci.appveyor.com/project/jverzani/roots-jl)
 
@@ -13,15 +13,11 @@ specification of a method. These include:
 
 * Bisection-like algorithms. For functions where a bracketing interval
   is known (one where `f(a)` and `f(b)` have alternate signs), the
-  `Bisection` method can be specified. For most floating point number types, bisection occurs
-  in a manner exploiting floating point storage conventions. For
-  others, an algorithm of Alefeld, Potra, and Shi is used. These
-  methods are guaranteed to converge.
+  `Bisection` method can be specified. For most floating point number
+  types, bisection occurs in a manner exploiting floating point
+  storage conventions. For others, an algorithm of Alefeld, Potra, and
+  Shi is used. These methods are guaranteed to converge.
 
-  For typically faster convergence -- though not guaranteed -- the
-  `FalsePosition` method can be specified. This method has one of 12
-  implementations for a modified secant method to potentially
-  accelerate convergence.
 
 * Several derivative-free methods are implemented. These are specified
   through the methods `Order0`, `Order1` (the secant method), `Order2`
@@ -30,15 +26,19 @@ specification of a method. These include:
   method is the default, and the most robust, but may take many more
   function calls to converge. The higher order methods promise higher
   order (faster) convergence, though don't always yield results with
-  fewer function calls than `Order1` or `Order2`.
+  fewer function calls than `Order1` or `Order2`. The methods
+  `Roots.Order1B` and `Roots.Order2B` are superlinear and quadratically converging
+  methods independent of the multiplicity of the zero.
 
 
-* There are two historic methods that require a derivative or two:
-  `Roots.Newton` and `Roots.Halley`. (Neither is exported.)
+* There are historic methods that require a derivative or two:
+  `Roots.Newton` and `Roots.Halley`.  `Roots.Schroder` provides a
+  quadratic method, like Newton's method, which is independent of the
+  multiplicity of the zero.
 
 Each method's documentation has additional detail.
 
-Some examples: 
+Some examples:
 
 
 ```julia
@@ -116,7 +116,7 @@ Now we have:
 ```
 f(x) = x^3 - 2x - 5
 x0 = 2
-find_zero((f,D(f)) x0, Roots.Newton())   # 2.0945514815423265
+find_zero((f,D(f)), x0, Roots.Newton())   # 2.0945514815423265
 ```
 
 Automatic derivatives allow for easy solutions to finding critical
@@ -124,18 +124,19 @@ points of a function.
 
 ```julia
 ## mean
+using Statistics
 as = rand(5)
-function M(x) 
+function M(x)
   sum([(x-a)^2 for a in as])
 end
-fzero(D(M), .5) - mean(as)	  # 0.0
+find_zero(D(M), .5) - mean(as)	  # 0.0
 
 ## median
-function m(x) 
+function m(x)
   sum([abs(x-a) for a in as])
 
 end
-fzero(D(m), 0, 1)  - median(as)	# 0.0
+find_zero(D(m), (0, 1)) - median(as)	# 0.0
 ```
 
 ### Multiple zeros
@@ -179,23 +180,22 @@ accepts keyword arguments `atol`, `rtol`, `xatol`, and `xrtol`.
 The `Bisection` and `Roots.A42` methods are guaranteed to converge
 even if the tolerances are set to zero, so these are the
 defaults. Non-zero values for `xatol` and `xrtol` can be specified to
-reduce the number of function calls when lower precision is required. 
+reduce the number of function calls when lower precision is required.
 
 
 ## An alternate interface
 
-For MATLAB users, this functionality is provided by the `fzero`
-function. `Roots` also provides this alternative interface:
+This functionality is provided by the `fzero` function, familiar to
+MATLAB users. `Roots` also provides this alternative interface:
 
 
-* `fzero(f, a::Real, b::Real)` and `fzero(f,
-  bracket::Vector)` call the `find_zero` algorithm with the
-  `Bisection` method.
-  
-* `fzero(f, x0::Real; order::Int=0)` calls a
-  derivative-free method. with the order specified matching one of
+* `fzero(f, x0::Real; order=0)` calls a
+  derivative-free method. with the order specifying one of
   `Order0`, `Order1`, etc.
-  
+
+* `fzero(f, a::Real, b::Real)` calls the `find_zero` algorithm with the
+  `Bisection` method.
+
 * `fzeros(f, a::Real, b::Real)` will call `find_zeros`.
 
 
@@ -207,16 +207,22 @@ f(x) = exp(x) - x^4
 ## bracketing
 fzero(f, 8, 9)		          # 8.613169456441398
 fzero(f, -10, 0)		      # -0.8155534188089606
-fzeros(f, -10, 10)            # -0.815553, 1.42961  and 8.61317 
+fzeros(f, -10, 10)            # -0.815553, 1.42961  and 8.61317
 
 ## use a derivative free method
 fzero(f, 3)			          # 1.4296118247255558
 
 ## use a different order
-fzero(sin, 3, order=16)		  # 3.141592653589793
+fzero(sin, big(3), order=16)  # 3.141592653589793...
 ```
 
+### Technical difference between find_zero and fzero
 
+The `fzero` function is not identical to `find_zero`. When a function, `f`,
+is passed to `find_zero` the code is specialized to the function `f`
+which means the first use of `f` will be slower due to compilation,
+but subsequent uses will be faster. For `fzero`, the code is not
+specialized to the function `f`, so the story is reversed.
 
 
 
