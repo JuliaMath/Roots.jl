@@ -137,7 +137,6 @@ function Base.copy!(dst::UnivariateZeroState{T,S}, src::UnivariateZeroState{T,S}
     nothing
 end
 
-
 ### Options
 mutable struct UnivariateZeroOptions{Q,R,S,T}
     xabstol::Q
