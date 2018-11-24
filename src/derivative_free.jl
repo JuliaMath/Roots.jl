@@ -7,7 +7,9 @@
 
 
 ##################################################
-## Guard against non-robust algorithms We do this by deciding if we
+## Guard against non-robust algorithms
+##
+## By default, we do this by deciding if we
 ## should take a secant step instead of the algorithm For example, for
 ## Steffensen which is quadratically convergent and the Secant method
 ## which is only superlinear,
@@ -32,20 +34,20 @@
 ## (f(x+fx) - fx)/fx  ≈ f'(x), we take a Steffensen step if |fx|
 ## is small enough. For this we use |fx| <= x/1000; which
 ## seems to work reasonably well over several different test cases.
-@inline function do_secant_step(M::AbstractSecant, o::UnivariateZeroState{T,S}) where {T, S}
+@inline function do_guarded_step(M::AbstractSecant, o::UnivariateZeroState{T,S}) where {T, S}
     x, fx = o.xn1, o.fxn1
     1000 * abs(fx) >  max(oneunit(S), abs(x) * oneunit(S) /oneunit(T)) * one(T)
 end
 
 
-# perform secant step if warranted
-function update_state_guarded(M::AbstractSecant,N::AbstractUnivariateZeroMethod, fs, o, options)
-    if do_secant_step(M, o)
+# check if we should guard against step for method M; call N if yes, P if not
+function update_state_guarded(M::AbstractSecant,N::AbstractUnivariateZeroMethod, P::AbstractUnivariateZeroMethod, fs, o, options)
+    if do_guarded_step(M, o)
         #@debug "do secant step"
-        return update_state(Order1(), fs, o, options)
+        return update_state(N, fs, o, options)
     else
         #@debug "do $N step"
-        update_state(N, fs, o, options)
+        update_state(P, fs, o, options)
     end
 end
 
@@ -237,7 +239,7 @@ end
 
 
 function update_state(method::Order1B, fs, o::UnivariateZeroState{T,S}, options)  where {T, S}
-    update_state_guarded(method, King(), fs, o, options)
+    update_state_guarded(method, Secant(), King(), fs, o, options)
 end
 
 
@@ -296,7 +298,7 @@ end
 
 
 function update_state(method::Order2, fs, o::UnivariateZeroState{T,S}, options)  where {T, S}
-     update_state_guarded(method, Steffensen(), fs, o, options)
+     update_state_guarded(method, Secant(), Steffensen(), fs, o, options)
 end
 
 ##################################################
@@ -383,7 +385,7 @@ end
 
 
 function update_state(method::Order2B, fs, o::UnivariateZeroState{T,S}, options)  where {T, S}
-     update_state_guarded(method, Esser(), fs, o, options)
+     update_state_guarded(method, Secant(), Esser(), fs, o, options)
 end
 
 

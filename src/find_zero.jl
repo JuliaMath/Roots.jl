@@ -573,7 +573,7 @@ function find_zero(M::AbstractUnivariateZeroMethod,
 end
 
 # state has stopped, this identifies if it has converged
-function decide_convergence(M::AbstractUnivariateZeroMethod,  F, state, options)
+function decide_convergence(M::AbstractUnivariateZeroMethod,  F, state::UnivariateZeroState{T,S}, options) where {T,S}
     xn1 = state.xn1
     fxn1 = state.fxn1
 
@@ -584,11 +584,13 @@ function decide_convergence(M::AbstractUnivariateZeroMethod,  F, state, options)
 
         ## are we at a crossing values?
         ## seems worth a check for 2 fn evals.
-        for u in (prevfloat(xn1), nextfloat(xn1))
-            fu = first(F(u))
-            if iszero(fu) || _unitless(fu * fxn1) < 0
-                state.message *= "Change of sign at xn identified. "
-                state.f_converged = true
+        if T <: Real && S <: Real
+            for u in (prevfloat(xn1), nextfloat(xn1))
+                fu = first(F(u))
+                if iszero(fu) || _unitless(fu * fxn1) < 0
+                    state.message *= "Change of sign at xn identified. "
+                    state.f_converged = true
+                end
             end
         end
 
