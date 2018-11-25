@@ -33,16 +33,14 @@ end
 
 
 """
-heuristic to get a decent first step with Steffensen steps
+    steff_step(M, x, fx)
+
+Return first steffensen step x + fx (with proper units).
+May be overriden to provide a guard when fx is too large.
+
 """
-function steff_step(x, fx)
-
-    xbar, fxbar = real(x/oneunit(x)), fx/oneunit(fx)
-    thresh =  max(1, abs(xbar)) * sqrt(eps(one(xbar))) #^(1/2) # max(1, sqrt(abs(x/fx))) * 1e-6
-
-    out = abs(fxbar) <= thresh ? fxbar  : sign(fx) * thresh
-    out * oneunit(x)
-
+function steff_step(M::Any, x::T, fx::S) where {T, S}
+    x + fx * oneunit(T) / oneunit(S)
 end
 
 

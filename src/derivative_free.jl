@@ -392,6 +392,7 @@ end
 ##################################################
 
 
+
 """
     Order5()
 
@@ -400,8 +401,11 @@ Free Newton-Type Method for Solving Nonlinear Equations* by Manoj
 Kumar, Akhilesh Kumar Singh, and Akanksha, Appl. Math. Inf. Sci. 9,
 No. 3, 1507-1513 (2015), DOI: 10.12785/amis/090346. Four function
 calls per step are needed.
+
 """
 struct Order5 <: AbstractSecant end
+struct KumarSinghAkanksha <: AbstractSecant end
+
 
 
 ## If we have a derivative, we have this. (Deprecate?)
@@ -447,12 +451,14 @@ function update_state(method::Order5, fs::Union{FirstDerivative,SecondDerivative
 end
 
 
-function update_state(method::Order5, fs, o::UnivariateZeroState{T,S}, options) where {T, S}
+
+function update_state(M::Union{Order5, KumarSinghAkanksha}, fs, o::UnivariateZeroState{T,S},
+                      options) where {T, S}
 
     xn = o.xn1
     fxn = o.fxn1
 
-    wn::T = o.xn1 + steff_step(o.xn1, o.fxn1)
+    wn::T = steff_step(M, o.xn1, o.fxn1)
 
     fwn::S = fs(wn)
     incfn(o)
@@ -507,15 +513,15 @@ Sciences Volume 2012 (2012), Article ID 493456, 12 pages DOI:
 10.1155/2012/493456. Four function calls per step are required.
 
 """
-struct Order8 <: AbstractSecant
-end
+struct Order8 <: AbstractSecant end
+struct Thukral8 <: AbstractSecant end
 
-function update_state(method::Order8, fs, o::UnivariateZeroState{T,S}, options) where {T, S}
+function update_state(M::Union{Thukral8, Order8}, fs, o::UnivariateZeroState{T,S}, options) where {T, S}
 
     xn = o.xn1
     fxn = o.fxn1
 
-    wn::T = xn + steff_step(xn, fxn)
+    wn::T = steff_step(M, xn, fxn)
     fwn::S = fs(wn)
     incfn(o)
 
@@ -597,14 +603,14 @@ other methods when using `Float64` values, but may be useful for
 solving over `BigFloat`.
 
 """
-struct Order16 <: AbstractSecant
-end
+struct Order16 <: AbstractSecant end
+struct Thukral16 <: AbstractSecant end
 
-function update_state(method::Order16, fs, o::UnivariateZeroState{T,S}, options) where {T, S}
+function update_state(M::Union{Thukral16, Order16}, fs, o::UnivariateZeroState{T,S}, options) where {T, S}
     xn = o.xn1
     fxn = o.fxn1
 
-    wn::T = xn + steff_step(xn, fxn)
+    wn::T = steff_step(M, xn, fxn)
     fwn::S = fs(wn)
     incfn(o)
 
@@ -681,4 +687,16 @@ function update_state(method::Order16, fs, o::UnivariateZeroState{T,S}, options)
     o.fxn0, o.fxn1 = fxn, fxn1
 
     nothing
+end
+
+##################################################
+## some means of guarding against large fx when taking a secant step
+function steff_step(M::Union{Order5, Order8, Order16}, x, fx)
+
+    xbar, fxbar = real(x/oneunit(x)), fx/oneunit(fx)
+    thresh =  max(1, abs(xbar)) * sqrt(eps(one(xbar))) #^(1/2) # max(1, sqrt(abs(x/fx))) * 1e-6
+
+    out = abs(fxbar) <= thresh ? fxbar  : sign(fx) * thresh
+    x + out * oneunit(x)
+
 end
