@@ -53,13 +53,11 @@ end
 
 ##################################################
 
-## Order0 and 1 are secant type
 function init_state(method::AbstractSecant, fs, x::Number)
     x1 = float(x)
     x0 = _default_secant_step(x1)
     init_state(method, fs, (x0, x1))
 end
-
 
 function init_state(method::AbstractSecant, fs, x::Union{Tuple, Vector})
     x0, x1 = promote(float(x[1]), float(x[2]))
@@ -71,8 +69,6 @@ function init_state(method::AbstractSecant, fs, x::Union{Tuple, Vector})
 
     state
 end
-
-
 
 function init_state!(state::UnivariateZeroState{T, S}, method::AbstractSecant, fs, x::Number) where {T, S}
     x1::T = float(x)
@@ -105,7 +101,7 @@ SOLVE button from the
 The basic idea is to use a secant step. If along the way a bracket is
 found, switch to bisection, using `AlefeldPotraShi`.  If the secant
 step fails to decrease the function value, a quadratic step is used up
-to 3 times.
+to 4 times.
 
 """
 struct Order0 <: AbstractSecant end
@@ -126,6 +122,7 @@ end
 ## https://en.wikipedia.org/wiki/Secant_method
 """
     Order1()
+    Roots.Secant()
 
 The `Order1()` method is an alias for `Secant`. It specifies the
 [secant method](https://en.wikipedia.org/wiki/Secant_method).
@@ -163,7 +160,30 @@ function update_state(method::Order1, fs, o::UnivariateZeroState{T,S}, options) 
 end
 
 ##################################################
+
+
+"""
+    Roots.Order1B()
+    Roots.King()
+
+A superlinear (order 1.6...) modification of the secant method for multiple roots.
+Presented in A SECANT METHOD FOR MULTIPLE ROOTS, by RICHARD F. KING, BIT 17 (1977), 321-328
+
+The basic idea is similar to Schroder's method: apply the secant method
+to  f/f'. However, this uses f' ~ fp = (fx - f(x-fx))/fx (a Steffensen step). In
+this implementation, `Order1B`, when `fx` is too big, a single secant step of `f`
+is used.
+
+
+"""
+struct Order1B <: AbstractSecant end
 struct King <: AbstractSecant end
+
+
+function update_state(method::Order1B, fs, o::UnivariateZeroState{T,S}, options)  where {T, S}
+    update_state_guarded(method, Secant(), King(), fs, o, options)
+end
+
 
 function update_state(method::King, fs,
                       o::UnivariateZeroState{T,S}, options)  where {T, S}
@@ -219,36 +239,31 @@ end
 
 
 
-"""
-    Roots.Order1B()
-    Roots.King()
-
-A superlinear (order 1.6...) modification of the secant method for multiple roots.
-Presented in A SECANT METHOD FOR MULTIPLE ROOTS, by RICHARD F. KING, BIT 17 (1977), 321-328
-
-The basic idea is similar to Schroder's method: apply the secant method
-to  f/f'. However, this uses f' ~ fp = (fx - f(x-fx))/fx (a Steffensen step). In
-this implementation, `Order1B`, when `fx` is too big, a single secant step of `f`
-is used.
-
-
-"""
-struct Order1B <: AbstractSecant
-end
-
-
-
-function update_state(method::Order1B, fs, o::UnivariateZeroState{T,S}, options)  where {T, S}
-    update_state_guarded(method, Secant(), King(), fs, o, options)
-end
-
-
-
-
 ### Steffensen
 ## https://en.wikipedia.org/wiki/Steffensen's_method#Simple_description
-struct Steffensen <: AbstractSecant
+
+"""
+    Order2()
+    Roots.Steffensen()
+
+The quadratically converging
+[Steffensen](https://en.wikipedia.org/wiki/Steffensen's_method#Simple_description)
+method is used for the derivative-free `Order2()` algorithm. Unlike
+the quadratically converging Newton's method, no derivative is
+necessary, though like Newton's method, two function calls per step
+are. Steffensen's algorithm is more sensitive than Newton's method to
+poor initial guesses when `f(x)` is large, due to how `f'(x)` is
+approximated. This algorithm, `Order2`, replaces a Steffensen step with a secant
+step when `f(x)` is large.
+
+"""
+struct Order2 <: AbstractSecant end
+struct Steffensen <: AbstractSecant end
+
+function update_state(method::Order2, fs, o::UnivariateZeroState{T,S}, options)  where {T, S}
+     update_state_guarded(method, Secant(), Steffensen(), fs, o, options)
 end
+
 
 function update_state(method::Steffensen, fs, o::UnivariateZeroState{T,S}, options)  where {T, S}
 
@@ -278,32 +293,43 @@ function update_state(method::Steffensen, fs, o::UnivariateZeroState{T,S}, optio
     nothing
 end
 
-"""
-    Order2()
-    Roots.Steffensen()
-
-The quadratically converging
-[Steffensen](https://en.wikipedia.org/wiki/Steffensen's_method#Simple_description)
-method is used for the derivative-free `Order2()` algorithm. Unlike
-the quadratically converging Newton's method, no derivative is
-necessary, though like Newton's method, two function calls per step
-are. Steffensen's algorithm is more sensitive than Newton's method to
-poor initial guesses when `f(x)` is large, due to how `f'(x)` is
-approximated. This algorithm, `Order2`, replaces a Steffensen step with a secant
-step when `f(x)` is large.
-
-"""
-struct Order2 <: AbstractSecant
-end
-
-
-function update_state(method::Order2, fs, o::UnivariateZeroState{T,S}, options)  where {T, S}
-     update_state_guarded(method, Secant(), Steffensen(), fs, o, options)
-end
-
 ##################################################
 
+### Order2B() Esser method
+"""
+    Roots.Order2B()
+    Roots.Esser()
+
+Esser's method. This is a quadratically convergent method that, like
+Schroder's method, does not depend on the multiplicity of the
+zero. Schroder's method has update step x- r2/(r2-r1) * r1, where ri =
+f^(i-1)/f^(i). Esser approximates f' ~ f[x-h, x+h], f'' ~
+f[x-h,x,x+h], where h = fx, as with Steffensen's method, Requiring 3
+function calls per step. This implementation, `Order2B`, uses a secant
+step when |fx| is considered too large.
+
+
+Esser, H. Computing (1975) 14: 367. https://doi.org/10.1007/BF02253547
+Eine stets quadratisch konvergente Modifikation des Steffensen-Verfahrens
+
+
+Example
+```
+f(x) = cos(x) - x
+g(x) = f(x)^2
+x0 = pi/4
+find_zero(f, x0, Order2(), verbose=true)        #  3 steps / 7 function calls
+find_zero(f, x0, Roots.Order2B(), verbose=true) #  4 / 9
+find_zero(g, x0, Order2(), verbose=true)        #  22 / 45
+find_zero(g, x0, Roots.Order2B(), verbose=true) #  4 / 10
+```
+"""
+struct Order2B <: AbstractSecant end
 struct Esser <: AbstractSecant end
+
+function update_state(method::Order2B, fs, o::UnivariateZeroState{T,S}, options)  where {T, S}
+     update_state_guarded(method, Secant(), Esser(), fs, o, options)
+end
 
 function update_state(method::Esser, fs,
                       o::UnivariateZeroState{T,S}, options)  where {T, S}
@@ -351,47 +377,9 @@ function update_state(method::Esser, fs,
 end
 
 
-### Order2B() Esser method
-"""
-    Roots.Order2B()
-    Roots.Esser()
-
-Esser's method. This is a quadratically convergent method that, like
-Schroder's method, does not depend on the multiplicity of the
-zero. Schroder's method has update step x- r2/(r2-r1) * r1, where ri =
-f^(i-1)/f^(i). Esser approximates f' ~ f[x-h, x+h], f'' ~
-f[x-h,x,x+h], where h = fx, as with Steffensen's method, Requiring 3
-function calls per step. This implementation, `Order2B`, uses a secant
-step when |fx| is considered too large.
-
-
-Esser, H. Computing (1975) 14: 367. https://doi.org/10.1007/BF02253547
-Eine stets quadratisch konvergente Modifikation des Steffensen-Verfahrens
-
-
-Example
-```
-f(x) = cos(x) - x
-g(x) = f(x)^2
-x0 = pi/4
-find_zero(f, x0, Order2(), verbose=true)        #  3 steps / 7 function calls
-find_zero(f, x0, Roots.Order2B(), verbose=true) #  4 / 9
-find_zero(g, x0, Order2(), verbose=true)        #  22 / 45
-find_zero(g, x0, Roots.Order2B(), verbose=true) #  4 / 10
-```
-"""
-struct Order2B <: AbstractSecant
-end
-
-
-function update_state(method::Order2B, fs, o::UnivariateZeroState{T,S}, options)  where {T, S}
-     update_state_guarded(method, Secant(), Esser(), fs, o, options)
-end
 
 
 ##################################################
-
-
 
 """
     Order5()
@@ -406,49 +394,6 @@ calls per step are needed.
 struct Order5 <: AbstractSecant end
 struct KumarSinghAkanksha <: AbstractSecant end
 
-
-
-## If we have a derivative, we have this. (Deprecate?)
-function update_state(method::Order5, fs::Union{FirstDerivative,SecondDerivative},
-                      o::UnivariateZeroState{T,S}, options)  where {T, S}
-
-
-    xn, fxn = o.xn1, o.fxn1
-    a::T, b::S = fΔx(fs, xn)
-    fpxn = a/b
-    incfn(o)
-
-    if isissue(fpxn)
-        o.stopped  = true
-        return
-    end
-
-    yn::T = xn - fxn / fpxn
-    fyn::S, Δyn::T = fΔx(fs, yn)
-    fpyn = fyn / Δyn
-    incfn(o, 2)
-
-    if isissue(fpyn)
-        o.xn0, o.xn1 = xn, yn
-        o.fxn0, o.fxn1 = fxn, fyn
-        o.stopped  = true
-        return
-    end
-
-
-    zn::T = xn  - (fxn + fyn) / fpxn
-    fzn::S = fs(zn)
-    incfn(o, 1)
-
-    xn1 = zn - fzn / fpyn
-    fxn1 = fs(xn1)
-    incfn(o, 1)
-
-    o.xn0, o.xn1 = xn, xn1
-    o.fxn0, o.fxn1 = fxn, fxn1
-
-    nothing
-end
 
 
 
@@ -495,6 +440,50 @@ function update_state(M::Union{Order5, KumarSinghAkanksha}, fs, o::UnivariateZer
     o.xn1 = zn  - fzn  / fp
     o.fxn1 = fs(o.xn1)
     incfn(o)
+
+    nothing
+end
+
+
+
+## If we have a derivative, we have this. (Deprecate?)
+function update_state(method::Order5, fs::Union{FirstDerivative,SecondDerivative},
+                      o::UnivariateZeroState{T,S}, options)  where {T, S}
+
+
+    xn, fxn = o.xn1, o.fxn1
+    a::T, b::S = fΔx(fs, xn)
+    fpxn = a/b
+    incfn(o)
+
+    if isissue(fpxn)
+        o.stopped  = true
+        return
+    end
+
+    yn::T = xn - fxn / fpxn
+    fyn::S, Δyn::T = fΔx(fs, yn)
+    fpyn = fyn / Δyn
+    incfn(o, 2)
+
+    if isissue(fpyn)
+        o.xn0, o.xn1 = xn, yn
+        o.fxn0, o.fxn1 = fxn, fyn
+        o.stopped  = true
+        return
+    end
+
+
+    zn::T = xn  - (fxn + fyn) / fpxn
+    fzn::S = fs(zn)
+    incfn(o, 1)
+
+    xn1 = zn - fzn / fpyn
+    fxn1 = fs(xn1)
+    incfn(o, 1)
+
+    o.xn0, o.xn1 = xn, xn1
+    o.fxn0, o.fxn1 = fxn, fxn1
 
     nothing
 end
@@ -691,6 +680,7 @@ end
 
 ##################################################
 ## some means of guarding against large fx when taking a secant step
+## TODO: rework this
 function steff_step(M::Union{Order5, Order8, Order16}, x::S, fx::T) where {S, T}
 
     xbar, fxbar = real(x/oneunit(x)), fx/oneunit(fx)
