@@ -6,14 +6,58 @@
 
 
 
+##################################################
+## Guard against non-robust algorithms
+##
+## By default, we do this by deciding if we
+## should take a secant step instead of the algorithm For example, for
+## Steffensen which is quadratically convergent and the Secant method
+## which is only superlinear,
+## the error, e_{n+1} = x_{n+1} - alpha, may be smaller after a secant
+## step than a Steffensen step. (It is only once x_n is close enough
+## to alpha that the method is quadratically convergent.
+## The Steffensen error is
+## Δn+1 = f[x,x+fx, alpha]/f[x, x+fx] * (1 - f[x, alpha]) (x-alpha)^2
+##      ≈ f''/(2f') * ( 1 + f') Δn^2
+## The Secant error is
+## Δn+1 = f[x,x_{-1},alpha] / f[x,x_{-1}] * (x-alpha) * (x_{-1} - alpha)
+##      ≈  f''/(2f')  Δn ⋅ Δn-1
+## The ratio is ≈ (1 + f')(Δn / Δn-1)
+## It seems reasonable, that a Steffensen step is preferred when
+## the ratio satisfies -1 < (1+f') ⋅ Δn /Δn-1 < 1
+## We could use f' ~ fp = (fx1-fx0)/(x1-x0); but our proxy for
+## Δn/Δn-1 is problematic, as we don't know alpha, and using xn-x_{n-1}
+## can be an issue when only x1 and not x0 is specified. This needs
+## working around.
+##
+## Instead, as Steffensen is related to Newton as much as
+## (f(x+fx) - fx)/fx  ≈ f'(x), we take a Steffensen step if |fx|
+## is small enough. For this we use |fx| <= x/1000; which
+## seems to work reasonably well over several different test cases.
+@inline function do_guarded_step(M::AbstractSecant, o::UnivariateZeroState{T,S}) where {T, S}
+    x, fx = o.xn1, o.fxn1
+    1000 * abs(fx) >  max(oneunit(S), abs(x) * oneunit(S) /oneunit(T)) * one(T)
+end
 
-## Order0 and 1 are secant type
+
+# check if we should guard against step for method M; call N if yes, P if not
+function update_state_guarded(M::AbstractSecant,N::AbstractUnivariateZeroMethod, P::AbstractUnivariateZeroMethod, fs, o, options)
+    if do_guarded_step(M, o)
+        #@debug "do secant step"
+        return update_state(N, fs, o, options)
+    else
+        #@debug "do $N step"
+        update_state(P, fs, o, options)
+    end
+end
+
+##################################################
+
 function init_state(method::AbstractSecant, fs, x::Number)
     x1 = float(x)
     x0 = _default_secant_step(x1)
     init_state(method, fs, (x0, x1))
 end
-
 
 function init_state(method::AbstractSecant, fs, x::Union{Tuple, Vector})
     x0, x1 = promote(float(x[1]), float(x[2]))
@@ -25,8 +69,6 @@ function init_state(method::AbstractSecant, fs, x::Union{Tuple, Vector})
 
     state
 end
-
-
 
 function init_state!(state::UnivariateZeroState{T, S}, method::AbstractSecant, fs, x::Number) where {T, S}
     x1::T = float(x)
@@ -59,7 +101,7 @@ SOLVE button from the
 The basic idea is to use a secant step. If along the way a bracket is
 found, switch to bisection, using `AlefeldPotraShi`.  If the secant
 step fails to decrease the function value, a quadratic step is used up
-to 3 times.
+to 4 times.
 
 """
 struct Order0 <: AbstractSecant end
@@ -80,6 +122,7 @@ end
 ## https://en.wikipedia.org/wiki/Secant_method
 """
     Order1()
+    Roots.Secant()
 
 The `Order1()` method is an alias for `Secant`. It specifies the
 [secant method](https://en.wikipedia.org/wiki/Secant_method).
@@ -116,22 +159,30 @@ function update_state(method::Order1, fs, o::UnivariateZeroState{T,S}, options) 
 
 end
 
+##################################################
+
+
 """
-    King()
-    Order1B()
+    Roots.Order1B()
+    Roots.King()
 
 A superlinear (order 1.6...) modification of the secant method for multiple roots.
 Presented in A SECANT METHOD FOR MULTIPLE ROOTS, by RICHARD F. KING, BIT 17 (1977), 321-328
 
 The basic idea is similar to Schroder's method: apply the secant method
 to  f/f'. However, this uses f' ~ fp = (fx - f(x-fx))/fx (a Steffensen step). In
-this implementation, when `fx` is too big, a single secant step of `f`
+this implementation, `Order1B`, when `fx` is too big, a single secant step of `f`
 is used.
 
 
 """
+struct Order1B <: AbstractSecant end
 struct King <: AbstractSecant end
-const Order1B = King
+
+
+function update_state(method::Order1B, fs, o::UnivariateZeroState{T,S}, options)  where {T, S}
+    update_state_guarded(method, Secant(), King(), fs, o, options)
+end
 
 
 function update_state(method::King, fs,
@@ -141,42 +192,33 @@ function update_state(method::King, fs,
     x0, x1 = o.xn0, o.xn1
     fx0, fx1 = o.fxn0, o.fxn1
 
-    # some engineering here to avoid issues with evaluation of f(x + fx), f(x-fx)
-    # Steffensen step is not taken if f(x1) is too big
-    if  !do_steff_step(x1, fx1)
-        delta = fx1 * (x1 - x0) / (fx1 - fx0)
-        empty!(o.fm)
+    # G(x,f0,f_1) = -fx^2/(f_1 - f0)
+    f0 = fx1
+    f_1::S = fs(x1 - f0*oneunit(T)/oneunit(S))
+    incfn(o, 1)
+
+    G1 = -f0^2 / (f_1 - f0)
+
+    if isempty(o.fm)
+        f0 = fx0
+        tmp::S = fs(x0 - f0*oneunit(T)/oneunit(S))
+        f_1 = tmp
+        incfn(o,1)
+        G0 = -f0^2 / (f_1 - f0)
     else
-        # G(x,f0,f_1) = -fx^2/(f_1 - f0)
-        f0 = fx1
-        f_1::S = fs(x1 - f0*oneunit(T)/oneunit(S))
-        incfn(o, 1)
-
-        G1 = -f0^2 / (f_1 - f0)
-
-        if isempty(o.fm)
-            f0 = fx0
-            tmp::S = fs(x0 - f0*oneunit(T)/oneunit(S))
-            f_1 = tmp
-            incfn(o,1)
-            G0 = -f0^2 / (f_1 - f0)
-        else
-            G0 = first(o.fm)
-        end
-
-        m = (x1-x0)/(G1-G0) # approximate value of `m`, the multiplicity
-        if abs(m) <= 1e-2 * oneunit(m)
-            #@info "small m estimate, stopping"
-            o.stopped  = true
-            o.message = "Estimate for multiplicity has issues. "
-            return
-        end
-
-        delta = G1 * (x1 - x0) / (G1 - G0)
-        empty!(o.fm); push!(o.fm, G1)
-
+        G0 = first(o.fm)
     end
 
+    m = (x1-x0)/(G1-G0) # approximate value of `m`, the multiplicity
+    if abs(m) <= 1e-2 * oneunit(m)
+        #@info "small m estimate, stopping"
+        o.stopped  = true
+        o.message = "Estimate for multiplicity has issues. "
+        return
+    end
+
+    delta = G1 * (x1 - x0) / (G1 - G0)
+    empty!(o.fm); push!(o.fm, G1)
 
     if isissue(delta)
         o.stopped  = true
@@ -190,21 +232,19 @@ function update_state(method::King, fs,
     o.fxn1 = fs(o.xn1)
     incfn(o)
 
-    #@debug "x1 = $(o.xn1) fx1 = $(o.fxn1)"
-
     nothing
 end
 
 
-##################################################
+
+
 
 ### Steffensen
 ## https://en.wikipedia.org/wiki/Steffensen's_method#Simple_description
-struct Steffensen <: AbstractSecant
-end
 
 """
     Order2()
+    Roots.Steffensen()
 
 The quadratically converging
 [Steffensen](https://en.wikipedia.org/wiki/Steffensen's_method#Simple_description)
@@ -213,35 +253,31 @@ the quadratically converging Newton's method, no derivative is
 necessary, though like Newton's method, two function calls per step
 are. Steffensen's algorithm is more sensitive than Newton's method to
 poor initial guesses when `f(x)` is large, due to how `f'(x)` is
-approximated. This algorithm replaces a Steffensen step with a secant
+approximated. This algorithm, `Order2`, replaces a Steffensen step with a secant
 step when `f(x)` is large.
 
 """
-const Order2 = Steffensen
+struct Order2 <: AbstractSecant end
+struct Steffensen <: AbstractSecant end
 
-function update_state(method::Order2, fs,
-                      o::UnivariateZeroState{T,S}, options)  where {T, S}
+function update_state(method::Order2, fs, o::UnivariateZeroState{T,S}, options)  where {T, S}
+     update_state_guarded(method, Secant(), Steffensen(), fs, o, options)
+end
 
+
+function update_state(method::Steffensen, fs, o::UnivariateZeroState{T,S}, options)  where {T, S}
 
     x0, x1 = o.xn0, o.xn1
     fx0, fx1 = o.fxn0, o.fxn1
 
-    # some engineering here to avoid issues with evaluation of f(x + fx), f(x-fx)
-    # Steffensen step is not taken if f(x1) is too big
+    sgn = sign((fx1 - fx0) / (x1 - x0))
+    x2 = x1 - sgn * fx1 / oneunit(S) * oneunit(T)
 
-    if !do_steff_step(x1, fx1)
-        delta = fx1 * (x1 - x0) / (fx1 - fx0)
-    else
-        # we use x-fx or x+fx depending on secant line slope
-        sgn = sign((fx1 - fx0) / (x1 - x0))
-        x2 = x1 - sgn * fx1 / oneunit(S) * oneunit(T)
+    f0 = fx1
+    f1::S = fs(x2)
+    incfn(o, 1)
 
-        f0 = fx1
-        f1::S = fs(x2)
-        incfn(o, 1)
-
-        delta = -sgn * f0 * f0 / (f1 - f0) * oneunit(T) / oneunit(S) # f0 used as increment
-    end
+    delta = -sgn * f0 * f0 / (f1 - f0) * oneunit(T) / oneunit(S)
 
     if isissue(delta)
         o.stopped  = true
@@ -257,17 +293,20 @@ function update_state(method::Order2, fs,
     nothing
 end
 
+##################################################
+
 ### Order2B() Esser method
 """
-    Order2B()
+    Roots.Order2B()
+    Roots.Esser()
 
 Esser's method. This is a quadratically convergent method that, like
 Schroder's method, does not depend on the multiplicity of the
 zero. Schroder's method has update step x- r2/(r2-r1) * r1, where ri =
 f^(i-1)/f^(i). Esser approximates f' ~ f[x-h, x+h], f'' ~
-f[x-h,x,x+h], where h = fx, as with Steffensen's method, Requiring
-3 function calls per step. This implementation uses a secant step when
-|fx| is considered too large.
+f[x-h,x,x+h], where h = fx, as with Steffensen's method, Requiring 3
+function calls per step. This implementation, `Order2B`, uses a secant
+step when |fx| is considered too large.
 
 
 Esser, H. Computing (1975) 14: 367. https://doi.org/10.1007/BF02253547
@@ -285,9 +324,12 @@ find_zero(g, x0, Order2(), verbose=true)        #  22 / 45
 find_zero(g, x0, Roots.Order2B(), verbose=true) #  4 / 10
 ```
 """
+struct Order2B <: AbstractSecant end
 struct Esser <: AbstractSecant end
-const Order2B = Esser
 
+function update_state(method::Order2B, fs, o::UnivariateZeroState{T,S}, options)  where {T, S}
+     update_state_guarded(method, Secant(), Esser(), fs, o, options)
+end
 
 function update_state(method::Esser, fs,
                       o::UnivariateZeroState{T,S}, options)  where {T, S}
@@ -296,45 +338,34 @@ function update_state(method::Esser, fs,
     x0, x1 = o.xn0, o.xn1
     fx0, fx1 = o.fxn0, o.fxn1
 
-    # some engineering here to avoid issues with evaluation of f(x + fx), f(x-fx)
-    # Steffensen step is not taken if f(x1) is too big
-    if !do_steff_step(x1, fx1)
-        #@info "Esser: take a secant step $x1 $fx1"
-        delta = fx1 * (x1 - x0) / (fx1 - fx0)
-    else
-        f0 = fx1
+    f0 = fx1
 
-        f1  = fs(x1 + f0 * oneunit(T) / oneunit(S))
-        f_1 = fs(x1 - f0 * oneunit(T) / oneunit(S))
-        incfn(o, 2)
+    f1  = fs(x1 + f0 * oneunit(T) / oneunit(S))
+    f_1 = fs(x1 - f0 * oneunit(T) / oneunit(S))
+    incfn(o, 2)
 
-        # h = f0
-        # r1 = f/f' ~ f/f[x+h,x-h]
-        # r2 = f'/f'' ~ f[x+h, x-h]/f[x-h,x,x+h]
-        r1 = f0 * 2*f0 / (f1 - f_1) * oneunit(T) / oneunit(S)
-        r2 = (f1 - f_1)/(f1 - 2*f0 + f_1) * f0/2 * oneunit(T) / oneunit(S)
+    # h = f0
+    # r1 = f/f' ~ f/f[x+h,x-h]
+    # r2 = f'/f'' ~ f[x+h, x-h]/f[x-h,x,x+h]
+    r1 = f0 * 2*f0 / (f1 - f_1) * oneunit(T) / oneunit(S)
+    r2 = (f1 - f_1)/(f1 - 2*f0 + f_1) * f0/2 * oneunit(T) / oneunit(S)
 
-        k = r2/(r2-r1)  # ~ m
+    k = r2/(r2-r1)  # ~ m
 
-        if abs(k) <= 1e-2 * oneunit(k)
-            #@info "estimate for m is *too* small"
-            o.stopped  = true
-            o.message = "Estimate for multiplicity had issues. "
-            return
-        end
-
-
-        delta = k * r1
-
+    if abs(k) <= 1e-2 * oneunit(k)
+        #@info "estimate for m is *too* small"
+        o.stopped  = true
+        o.message = "Estimate for multiplicity had issues. "
+        return
     end
 
+    delta = k * r1
 
     if isissue(delta)
         o.stopped  = true
         o.message = "Increment `Δx` has issues. "
         return
     end
-
 
     o.xn0, o.fxn0 = o.xn1, o.fxn1
     o.xn1 -= delta
@@ -347,8 +378,8 @@ end
 
 
 
-##################################################
 
+##################################################
 
 """
     Order5()
@@ -360,7 +391,59 @@ No. 3, 1507-1513 (2015), DOI: 10.12785/amis/090346. Four function
 calls per step are needed.
 
 """
-struct Order5 <: AbstractUnivariateZeroMethod end
+struct Order5 <: AbstractSecant end
+struct KumarSinghAkanksha <: AbstractSecant end
+
+
+
+
+function update_state(M::Union{Order5, KumarSinghAkanksha}, fs, o::UnivariateZeroState{T,S},
+                      options) where {T, S}
+
+    xn = o.xn1
+    fxn = o.fxn1
+
+    wn::T = steff_step(M, o.xn1, o.fxn1)
+
+    fwn::S = fs(wn)
+    incfn(o)
+
+    fp, issue = _fbracket(o.xn1, wn, o.fxn1, fwn)
+    if issue
+        o.xn0, o.xn1 = o.xn1, wn
+        o.fxn0, o.fxn1 = o.fxn1, fwn
+        o.message = "Issue with divided difference f[xn, wn]"
+        o.stopped  = true
+        return
+    end
+
+    yn::T = o.xn1 - o.fxn1 / fp
+    fyn::S = fs(yn)
+    incfn(o)
+
+
+    zn::T = xn - (fxn + fyn) / fp
+    fzn::S = fs(zn)
+    incfn(o)
+
+    fp, issue = _fbracket_ratio(yn, o.xn1, wn, fyn, o.fxn1, fwn)
+    if issue
+        o.xn0, o.xn1 = o.xn1, yn
+        o.fxn0, o.fxn1 = o.fxn1, fyn
+        o.message = "Issue with f[xn,yn]*f[yn,wn] / f[xn, wn]"
+        o.stopped = true
+        return
+    end
+
+    o.xn0 = o.xn1
+    o.fxn0 = o.fxn1
+    o.xn1 = zn  - fzn  / fp
+    o.fxn1 = fs(o.xn1)
+    incfn(o)
+
+    nothing
+end
+
 
 
 ## If we have a derivative, we have this. (Deprecate?)
@@ -405,53 +488,6 @@ function update_state(method::Order5, fs::Union{FirstDerivative,SecondDerivative
     nothing
 end
 
-
-function update_state(method::Order5, fs, o::UnivariateZeroState{T,S}, options) where {T, S}
-
-    xn = o.xn1
-    fxn = o.fxn1
-
-    wn::T = o.xn1 + steff_step(o.xn1, o.fxn1)
-
-    fwn::S = fs(wn)
-    incfn(o)
-
-    fp, issue = _fbracket(o.xn1, wn, o.fxn1, fwn)
-    if issue
-        o.xn0, o.xn1 = o.xn1, wn
-        o.fxn0, o.fxn1 = o.fxn1, fwn
-        o.message = "Issue with divided difference f[xn, wn]"
-        o.stopped  = true
-        return
-    end
-
-    yn::T = o.xn1 - o.fxn1 / fp
-    fyn::S = fs(yn)
-    incfn(o)
-
-
-    zn::T = xn - (fxn + fyn) / fp
-    fzn::S = fs(zn)
-    incfn(o)
-
-    fp, issue = _fbracket_ratio(yn, o.xn1, wn, fyn, o.fxn1, fwn)
-    if issue
-        o.xn0, o.xn1 = o.xn1, yn
-        o.fxn0, o.fxn1 = o.fxn1, fyn
-        o.message = "Issue with f[xn,yn]*f[yn,wn] / f[xn, wn]"
-        o.stopped = true
-        return
-    end
-
-    o.xn0 = o.xn1
-    o.fxn0 = o.fxn1
-    o.xn1 = zn  - fzn  / fp
-    o.fxn1 = fs(o.xn1)
-    incfn(o)
-
-    nothing
-end
-
 ##################################################
 
 
@@ -466,15 +502,15 @@ Sciences Volume 2012 (2012), Article ID 493456, 12 pages DOI:
 10.1155/2012/493456. Four function calls per step are required.
 
 """
-struct Order8 <: AbstractUnivariateZeroMethod
-end
+struct Order8 <: AbstractSecant end
+struct Thukral8 <: AbstractSecant end
 
-function update_state(method::Order8, fs, o::UnivariateZeroState{T,S}, options) where {T, S}
+function update_state(M::Union{Thukral8, Order8}, fs, o::UnivariateZeroState{T,S}, options) where {T, S}
 
     xn = o.xn1
     fxn = o.fxn1
 
-    wn::T = xn + steff_step(xn, fxn)
+    wn::T = steff_step(M, xn, fxn)
     fwn::S = fs(wn)
     incfn(o)
 
@@ -556,14 +592,14 @@ other methods when using `Float64` values, but may be useful for
 solving over `BigFloat`.
 
 """
-struct Order16 <: AbstractUnivariateZeroMethod
-end
+struct Order16 <: AbstractSecant end
+struct Thukral16 <: AbstractSecant end
 
-function update_state(method::Order16, fs, o::UnivariateZeroState{T,S}, options) where {T, S}
+function update_state(M::Union{Thukral16, Order16}, fs, o::UnivariateZeroState{T,S}, options) where {T, S}
     xn = o.xn1
     fxn = o.fxn1
 
-    wn::T = xn + steff_step(xn, fxn)
+    wn::T = steff_step(M, xn, fxn)
     fwn::S = fs(wn)
     incfn(o)
 
@@ -640,4 +676,17 @@ function update_state(method::Order16, fs, o::UnivariateZeroState{T,S}, options)
     o.fxn0, o.fxn1 = fxn, fxn1
 
     nothing
+end
+
+##################################################
+## some means of guarding against large fx when taking a secant step
+## TODO: rework this
+function steff_step(M::Union{Order5, Order8, Order16}, x::S, fx::T) where {S, T}
+
+    xbar, fxbar = real(x/oneunit(x)), fx/oneunit(fx)
+    thresh =  max(1, abs(xbar)) * sqrt(eps(one(xbar))) #^(1/2) # max(1, sqrt(abs(x/fx))) * 1e-6
+
+    out = abs(fxbar) <= thresh ? fxbar  : sign(fx) * thresh
+    x + out * oneunit(x)
+
 end

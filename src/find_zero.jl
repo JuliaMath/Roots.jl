@@ -137,7 +137,6 @@ function Base.copy!(dst::UnivariateZeroState{T,S}, src::UnivariateZeroState{T,S}
     nothing
 end
 
-
 ### Options
 mutable struct UnivariateZeroOptions{Q,R,S,T}
     xabstol::Q
@@ -443,9 +442,9 @@ A method is specified to indicate which algorithm to employ:
 
 * There are methods for bisection where a bracket is specified: `Bisection`, `Roots.A42`, `FalsePosition`
 
-* There are several derivative-free methods: cf. `Order0`, `Order1` (secant method), `Order2` (Steffensen), `Order5`, `Order8`, and `Order16`, where the number indicates the order of the convergence.
+* There are several derivative-free methods: cf. `Order0`, `Order1` (secant method), `Order2` (Steffensen), `Order5`, `Order8`, and `Order16`, where the number indicates the order of the convergence. Methods `Roots.Order1B` and `Roots.Order2B` implement methods useful when the desired zero has a multiplicity.
 
-* There are some classical methods where derivatives are required: `Roots.Newton`, `Roots.Halley`. (The are not exported.)
+* There are some classical methods where derivatives are required: `Roots.Newton`, `Roots.Halley`, `Roots.Schroder`. (The are not exported.)
 
 For more detail, see the help page for each method (e.g., `?Order1`).
 
@@ -459,7 +458,7 @@ If no method is specified, the default method depends on `x0`:
 
 The function(s) are passed as the first argument.
 
-For the few methods that use a derivative (`Newton`, `Halley`, and
+For the few methods that use a derivative (`Newton`, `Halley`, `Shroder`, and
 optionally `Order5`) a tuple of functions is used.
 
 # Optional arguments (tolerances, limit evaluations, tracing)
@@ -479,14 +478,14 @@ for details on the default tolerances.
 
 In general, with floating point numbers, convergence must be
 understood as not an absolute statement. Even if mathematically x is
-an answer the floating point realization, say xstar, it may be that
+an answer and xstar the floating point realization, it may be that
 f(xstar) - f(x) = f(xstar) ≈ f'(x) ⋅ eps(x), so tolerances must be
 appreciated, and at times specified.
 
 For the `Bisection` methods, convergence is guaranteed, so the tolerances are set to be 0 by default.
 
 
-If a bracketing method is passed in after the method specification if a bracket is found, the method will switch. This is what `Order0` does by default, with a secant step initially.
+If a bracketing method is passed in after the method specification, if a bracket is found, the bracketing method will used to identify the zero. This is what `Order0` does by default, with a secant step initially.
 
 # Examples:
 
@@ -498,7 +497,7 @@ find_zero(sin, (3,4)) # use Bisection()
 # specifying a method
 find_zero(sin, 3.0, Order2())              # Use Steffensen method
 find_zero(sin, big(3.0), Order16())        # rapid convergence
-find_zero(sin, (3, 4), FalsePosition())    # fewer function calls than Bisection(), in this case
+find_zero(sin, (3, 4), Roots.A42()())      # fewer function calls than Bisection(), in this case
 find_zero(sin, (3, 4), FalsePosition(8))   # 1 or 12 possible algorithms for false position
 find_zero((sin,cos), 3.0, Roots.Newton())  # use Newton's method
 find_zero((sin, cos, x->-sin(x)), 3.0, Roots.Halley())  # use Halley's method
@@ -574,7 +573,7 @@ function find_zero(M::AbstractUnivariateZeroMethod,
 end
 
 # state has stopped, this identifies if it has converged
-function decide_convergence(M::AbstractUnivariateZeroMethod,  F, state, options)
+function decide_convergence(M::AbstractUnivariateZeroMethod,  F, state::UnivariateZeroState{T,S}, options) where {T,S}
     xn1 = state.xn1
     fxn1 = state.fxn1
 
@@ -585,11 +584,13 @@ function decide_convergence(M::AbstractUnivariateZeroMethod,  F, state, options)
 
         ## are we at a crossing values?
         ## seems worth a check for 2 fn evals.
-        for u in (prevfloat(xn1), nextfloat(xn1))
-            fu = first(F(u))
-            if iszero(fu) || _unitless(fu * fxn1) < 0
-                state.message *= "Change of sign at xn identified. "
-                state.f_converged = true
+        if T <: Real && S <: Real
+            for u in (prevfloat(xn1), nextfloat(xn1))
+                fu = first(F(u))
+                if iszero(fu) || _unitless(fu * fxn1) < 0
+                    state.message *= "Change of sign at xn identified. "
+                    state.f_converged = true
+                end
             end
         end
 
