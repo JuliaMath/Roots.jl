@@ -14,6 +14,7 @@
 
 
 ## Newton
+abstract type AbstractNewtonLikeMethod <: AbstractUnivariateZeroMethod end
 """
 
     Roots.Newton()
@@ -36,11 +37,12 @@ find_zero(x -> (sin(x), sin(x)/cos(x)), 3.0, Roots.Newton())
 This can be advantageous if the derivative is easily computed from the
 value of f, but otherwise would be expensive to compute.
 
-"""
-struct Newton <: AbstractUnivariateZeroMethod
-end
+The error, `en = xn - alpha`, can be expressed as `e1 = f[x0,x0,alpha]/(2f[x0,x0])e0^2` (Sidi).
 
-function init_state(method::Newton, fs, x)
+"""
+struct Newton <: AbstractNewtonLikeMethod end
+
+function init_state(method::AbstractNewtonLikeMethod, fs, x)
 
     x1 = float(x)
     T = eltype(x1)
@@ -144,6 +146,9 @@ find_zero(x -> (sin(x), sin(x)/cos(x), -cos(x)/sin(x)), 3.0, Roots.Halley())
 This can be advantageous if the derivatives are easily computed from
 the value of f, but otherwise would be expensive to compute.
 
+The error, `e_n = x_n - alpha`, satisfies
+`e1 ≈ -(2f'⋅f''' -3⋅(f'')^2)/(12⋅(f'')^2) ⋅ e0^3` (all evaluated at `alpha`).
+
 """
 struct Halley <: AbstractHalleyLikeMethod
 end
@@ -227,12 +232,14 @@ halley(f, fp, fpp, x0; kwargs...) = find_zero((f, fp, fpp), x0, Halley(); kwargs
     Roots.Schroder()
 
 
-Schroder's method, like Halley's method, utilizes f, f', and
+Schröder's method, like Halley's method, utilizes f, f', and
 f''. Unlike Halley it is quadratically converging, but this is
 independent of the multiplicity of the zero (cf. Schröder, E. "Über
 unendlich viele Algorithmen zur Auflösung der Gleichungen."
 Math. Ann. 2, 317-365, 1870;
-http://mathworld.wolfram.com/SchroedersMethod.html).
+http://mathworld.wolfram.com/SchroedersMethod.html). (Schröder's
+method applies Newton's method to `f/f'`, a function with all
+simple zeros.)
 
 
 Example
@@ -245,7 +252,7 @@ find_zero((f, fp, fpp), pi/4, Roots.Halley())    # 14 steps
 find_zero((f, fp, fpp), 1.0, Roots.Schroder())    # 3 steps
 ```
 
-(Whereas, when `m=1`, Halley is 2 steps to Schroder's 3.)
+(Whereas, when `m=1`, Halley is 2 steps to Schröder's 3.)
 
 If function evaluations are expensive one can pass in a function which
 returns (f, f/f',f'/f'') as follows
@@ -257,10 +264,13 @@ find_zero(x -> (sin(x), sin(x)/cos(x), -cos(x)/sin(x)), 3.0, Roots.Schroder())
 This can be advantageous if the derivatives are easily computed from
 the value of f, but otherwise would be expensive to compute.
 
+The error, `e_n = x_n - alpha`, is the same as `Newton` with `f` replaced by `f/f'`.
+
 """
 struct Schroder <: AbstractHalleyLikeMethod
 end
-
+const Schroeder = Schroder # either spelling
+const Schröder = Schroder
 
 function update_state(method::Schroder, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
     xn = o.xn1
