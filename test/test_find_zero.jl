@@ -74,10 +74,10 @@ end
 ## issues with starting near a maxima. Some bounce out of it, but
 ## one would expect all to have issues
 fn, xstar = x -> x^3 + 4x^2 -10,  1.365230013414097
-for m in [Order0(), Order1(), Order2(), Roots.Order1B(), Roots.Order2B()]
+for m in [Order1(), Order2(), Roots.Order1B(), Roots.Order2B()]
     @test_throws Roots.ConvergenceFailed find_zero(fn, -1.0, m)
 end
-for m in [Order5(), Order8(), Order16()]
+for m in [Order0(), Order5(), Order8(), Order16()]
     @test find_zero(fn, -1.0, m) ≈ xstar
 end
 
@@ -163,7 +163,7 @@ galadino_probs = [(x -> x^3 - 1, [.5, 1.5]),
 for (fn_, ab) in galadino_probs
     for m in [Roots.A42(), Bisection(), (FalsePosition(i) for i in 1:12)...]
         global x0 = find_zero(fn_, ab, m, maxevals=120)
-        @test abs(fn_(x0)) <= 1e-14
+        @test abs(fn_(x0)) <= sqrt(eps())
     end
 end
 

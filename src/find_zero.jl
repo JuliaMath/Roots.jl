@@ -151,7 +151,7 @@ end
 """
     default_tolerances(Method, [T], [S])
 
-The default tolerances for most methods are `xatol=zero(T)`,
+The default tolerances for most methods are `xatol=eps(T)`,
 `xrtol=eps(T)`, `atol=4eps(S)`, and `rtol=4eps(S)`, with the proper
 units (absolute tolerances have the units of `x` and `f(x)`; relative
 tolerances are unitless). For `Complex{T}` values, `T` is used.
@@ -163,7 +163,7 @@ and `strict=false`.
 """
 default_tolerances(M::AbstractUnivariateZeroMethod) = default_tolerances(M, Float64, Float64)
 function default_tolerances(::AbstractUnivariateZeroMethod, ::Type{T}, ::Type{S}) where {T, S}
-    xatol = zero(real(T))
+    xatol = eps(real(T)) * oneunit(real(T))
     xrtol = eps(real(T))  # unitless
     atol = 4.0 * eps(real(float(S))) * oneunit(real(S))
     rtol = 4.0 * eps(real(float(S))) * one(real(S))
@@ -367,7 +367,7 @@ function assess_convergence(method::Any, state::UnivariateZeroState{T,S}, option
     end
 
     # f(xstar) ≈ xstar * f'(xstar)*eps(), so we pass in lambda
-    if   _is_f_approx_0(fxn1, xn1, options.abstol, options.reltol)
+    if _is_f_approx_0(fxn1, xn1, options.abstol, options.reltol)
         state.f_converged = true
         return true
     end
@@ -484,8 +484,17 @@ appreciated, and at times specified.
 
 For the `Bisection` methods, convergence is guaranteed, so the tolerances are set to be 0 by default.
 
-
 If a bracketing method is passed in after the method specification, if a bracket is found, the bracketing method will used to identify the zero. This is what `Order0` does by default, with a secant step initially.
+
+Note: The order of the method is hinted at in the naming scheme. A
+scheme is order `q` if, with `e_n = x_n - alpha`, `e_{n+1} = C
+e_n^q`. If the error `e_n` is small enough, then essentially the error
+will gain `q` times as many leading zeros each step. However, if the
+error is not small, this will not be the case. Without good initial
+guesses, a high order method may still converge slowly, if at all. The
+`OrderN` methods have some heuristics employed to ensure a wider range
+for convergence at the cost of not faithfully implementing the method,
+though those are available through unexported methods.
 
 # Examples:
 
@@ -495,10 +504,11 @@ find_zero(sin, 3)  # use Order0()
 find_zero(sin, (3,4)) # use Bisection()
 
 # specifying a method
+find_zero(sin, (3,4), Order1())            # can specify two starting points for secant method
 find_zero(sin, 3.0, Order2())              # Use Steffensen method
 find_zero(sin, big(3.0), Order16())        # rapid convergence
 find_zero(sin, (3, 4), Roots.A42()())      # fewer function calls than Bisection(), in this case
-find_zero(sin, (3, 4), FalsePosition(8))   # 1 or 12 possible algorithms for false position
+find_zero(sin, (3, 4), FalsePosition(8))   # 1 of 12 possible algorithms for false position
 find_zero((sin,cos), 3.0, Roots.Newton())  # use Newton's method
 find_zero((sin, cos, x->-sin(x)), 3.0, Roots.Halley())  # use Halley's method
 
@@ -513,6 +523,7 @@ find_zero(fn, x0, Order2(), maxevals=3)    # Roots.ConvergenceFailed: 26 iterati
 # tracing output
 find_zero(x->sin(x), 3.0, Order2(), verbose=true)   # 3 iterations
 find_zero(x->sin(x)^5, 3.0, Order2(), verbose=true) # 22 iterations
+find_zero(x->sin(x)^5, 3.0, Roots.Order2B(), verbose=true) # 2 iterations
 ```
 """
 function find_zero(fs, x0, method::AbstractUnivariateZeroMethod,
@@ -673,6 +684,7 @@ function find_zero(M::AbstractUnivariateZeroMethod,
         copy!(state0, state)
         update_state(M, F, state0, options) # state0 is proposed step
 
+        adj = false
         ## did we find a zero or a bracketing interval?
         if iszero(state0.fxn1)
             copy!(state, state0)
@@ -692,15 +704,18 @@ function find_zero(M::AbstractUnivariateZeroMethod,
         Δx = abs(b - a)
         ts,TB = 1e-3, 1e2 # too small, too big
         if  Δr >= TB * Δx
+            adj = true
             r = b + sign(r-b) * TB * Δx  ## too big
             state0.xn1 = r
             state0.fxn1 = F(r)
             incfn(state)
-        elseif Δr <= ts * Δx
+        elseif Δr  <= ts *  Δx
+            adj = true
             r = b + sign(r - b) * ts * Δx
-            state0.xn1 = r
-            state0.fxn1 = F(r)
+            fr = F(r)
             incfn(state)
+            state0.xn1 = r
+            state0.fxn1 = fr
         end
 
         # a sign change after shortening?
@@ -714,8 +729,7 @@ function find_zero(M::AbstractUnivariateZeroMethod,
 
 
         ## did we improve?
-        if abs(state0.fxn1) < abs(state.fxn1)
-            # check
+        if adj || abs(state0.fxn1) < abs(state.fxn1)
             if isnan(state0.xn1) || isnan(state0.fxn1) || isinf(state0.xn1) || isinf(state0.fxn1)
                 break
             end
@@ -732,7 +746,6 @@ function find_zero(M::AbstractUnivariateZeroMethod,
             state.stopped = true
             break
         else
-
             quad_ctr += 1
             r = quad_vertex(state0.xn1, state0.fxn1, state.xn1, state.fxn1, state.xn0, state.fxn0)
 
