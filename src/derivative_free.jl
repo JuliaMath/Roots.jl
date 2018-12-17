@@ -93,7 +93,7 @@ end
 
 
 The `Order0` method is engineered to be a more robust, though possibly
-slower, alternative to to the other derivative-free root-finding
+slower, alternative to the other derivative-free root-finding
 methods. The implementation roughly follows the algorithm described in
 *Personal Calculator Has Key to Solve Any Equation f(x) = 0*, the
 SOLVE button from the
@@ -102,6 +102,13 @@ The basic idea is to use a secant step. If along the way a bracket is
 found, switch to bisection, using `AlefeldPotraShi`.  If the secant
 step fails to decrease the function value, a quadratic step is used up
 to 4 times.
+
+This is not really 0-order: the secant method has order
+1.6...[https://en.wikipedia.org/wiki/Secant_method#Comparison_with_other_root-finding_methods]
+and the the bracketing method has order
+1.6180...[http://www.ams.org/journals/mcom/1993-61-204/S0025-5718-1993-1192965-2/S0025-5718-1993-1192965-2.pdf]
+so for reasonable starting points, this algorithm should be
+superlinear, and relatively robust to non-reasonable starting points.
 
 """
 struct Order0 <: AbstractSecant end
@@ -130,6 +137,9 @@ This method keeps two values in its state, `x_n` and `x_n1`. The
 updated point is the intersection point of x axis with the secant line
 formed from the two points. The secant method uses 1 function
 evaluation per step and has order `(1+sqrt(5))/2`.
+
+The error, `e_n = x_n - alpha`, satisfies
+`e2 = f[x1,x0,alpha] / f[x1,x0] * (x1-alpha) * (x0 - alpha)`.
 
 """
 struct Secant <: AbstractSecant end
@@ -170,10 +180,12 @@ A superlinear (order 1.6...) modification of the secant method for multiple root
 Presented in A SECANT METHOD FOR MULTIPLE ROOTS, by RICHARD F. KING, BIT 17 (1977), 321-328
 
 The basic idea is similar to Schroder's method: apply the secant method
-to  f/f'. However, this uses f' ~ fp = (fx - f(x-fx))/fx (a Steffensen step). In
+to  `f/f'`. However, this uses `f' ~ fp = (fx - f(x-fx))/fx` (a Steffensen step). In
 this implementation, `Order1B`, when `fx` is too big, a single secant step of `f`
 is used.
 
+The *asymptotic* error, `e_n = x_n - alpha`, is given by
+`e2 = 1/2⋅G''/G'⋅ e0⋅e1 + (1/6⋅G'''/G' - (1/2⋅G''/G'))^2⋅e0⋅e1⋅(e0+e1)`.
 
 """
 struct Order1B <: AbstractSecant end
@@ -256,6 +268,8 @@ poor initial guesses when `f(x)` is large, due to how `f'(x)` is
 approximated. This algorithm, `Order2`, replaces a Steffensen step with a secant
 step when `f(x)` is large.
 
+The error, `e_n - alpha`, satisfies
+`e1 = f[x0, x+f0, alpha] / f[x0,x0+f0] ⋅ (1 - f[x0,alpha] ⋅ e0^2`
 """
 struct Order2 <: AbstractSecant end
 struct Steffensen <: AbstractSecant end
@@ -302,10 +316,10 @@ end
 
 Esser's method. This is a quadratically convergent method that, like
 Schroder's method, does not depend on the multiplicity of the
-zero. Schroder's method has update step x- r2/(r2-r1) * r1, where ri =
-f^(i-1)/f^(i). Esser approximates f' ~ f[x-h, x+h], f'' ~
-f[x-h,x,x+h], where h = fx, as with Steffensen's method, Requiring 3
-function calls per step. This implementation, `Order2B`, uses a secant
+zero. Schroder's method has update step `x - r2/(r2-r1) * r1`, where `ri =
+f^(i-1)/f^(i)`. Esser approximates `f' ~ f[x-h, x+h], f'' ~
+f[x-h,x,x+h]`, where `h = fx`, as with Steffensen's method, Requiring 3
+function calls per step. The implementation `Order2B` uses a secant
 step when |fx| is considered too large.
 
 
@@ -390,6 +404,9 @@ Kumar, Akhilesh Kumar Singh, and Akanksha, Appl. Math. Inf. Sci. 9,
 No. 3, 1507-1513 (2015), DOI: 10.12785/amis/090346. Four function
 calls per step are needed.
 
+The error, `e_n = x_n - alpha`, satisfies
+`e1 = K_1 ⋅ K_5 ⋅ M ⋅ e0^5 + O(e0^6)`
+
 """
 struct Order5 <: AbstractSecant end
 struct KumarSinghAkanksha <: AbstractSecant end
@@ -412,7 +429,7 @@ function update_state(M::Union{Order5, KumarSinghAkanksha}, fs, o::UnivariateZer
     if issue
         o.xn0, o.xn1 = o.xn1, wn
         o.fxn0, o.fxn1 = o.fxn1, fwn
-        o.message = "Issue with divided difference f[xn, wn]"
+        o.message = "Issue with divided difference f[xn, wn]. "
         o.stopped  = true
         return
     end
@@ -501,6 +518,9 @@ Thukral, International Journal of Mathematics and Mathematical
 Sciences Volume 2012 (2012), Article ID 493456, 12 pages DOI:
 10.1155/2012/493456. Four function calls per step are required.
 
+The error, `e_n = x_n - alpha`, is expressed as `e1 = K ⋅ e0^8` in
+(2.25) of the paper for an explicit K.
+
 """
 struct Order8 <: AbstractSecant end
 struct Thukral8 <: AbstractSecant end
@@ -528,7 +548,7 @@ function update_state(M::Union{Thukral8, Order8}, fs, o::UnivariateZeroState{T,S
 
     if issue
         o.stopped = true
-        o.message = "issue with divided difference f[xn, wn]"
+        o.message = "issue with divided difference f[xn, wn]. "
         return
     end
 
@@ -541,7 +561,7 @@ function update_state(M::Union{Thukral8, Order8}, fs, o::UnivariateZeroState{T,S
         o.xn0,o.xn1 = xn, yn
         o.fxn0,o.fxn1 = fxn, fyn
         o.stopped = true
-        o.message = "issue with divided difference f[xn, yn]"
+        o.message = "issue with divided difference f[xn, yn]. "
         return
     end
 
@@ -555,7 +575,7 @@ function update_state(M::Union{Thukral8, Order8}, fs, o::UnivariateZeroState{T,S
     if issue
         o.xn0,o.xn1 = xn, zn
         o.fxn0,o.fxn1 = fxn, fzn
-        o.message = "issue with divided difference  f[y,z] - f[x,y] + f[x,z]"
+        o.message = "issue with divided difference  f[y,z] - f[x,y] + f[x,z]. "
         o.stopped = true
         return
     end
@@ -579,7 +599,7 @@ end
 """
     Order16()
 
-Implement the algorithm from
+Implements the order 16 algorithm from
 *New Sixteenth-Order Derivative-Free Methods for Solving Nonlinear Equations*
 by R. Thukral,
 American Journal of Computational and Applied Mathematics
@@ -590,6 +610,9 @@ Five function calls per step are required. Though rapidly converging,
 this method generally isn't faster (fewer function calls/steps) over
 other methods when using `Float64` values, but may be useful for
 solving over `BigFloat`.
+
+The error, `e_n = x_n - alpha`, is expressed as `e1 = K
+e_0^16` for an explicit `K` in equation (50) of the paper.
 
 """
 struct Order16 <: AbstractSecant end

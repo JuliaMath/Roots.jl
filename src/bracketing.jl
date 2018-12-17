@@ -288,9 +288,9 @@ function find_zero(fs, x0, method::M;
 
     if iszero(tol)
         if T <: FloatNN
-            return find_zero(F, x, BisectionExact(); tracks=tracks, verbose=verbose, kwargs...)
+            return find_zero(F, x, BisectionExact(); tracks=l, verbose=verbose, kwargs...)
         else
-            return find_zero(F, x, A42(); tracks=tracks, verbose=verbose, kwargs...)
+            return find_zero(F, x, A42(); tracks=l, verbose=verbose, kwargs...)
         end
     end
 
@@ -836,7 +836,7 @@ fewer function calls.
 
 Examples
 ```
-find_zero(x -> x^5 - x - 1, [-2, 2], FalsePosition())
+find_zero(x -> x^5 - x - 1, (-2, 2), FalsePosition())
 ```
 """
 struct FalsePosition{R} <: AbstractBisection end
