@@ -1,5 +1,4 @@
-using Compat.Test
-
+using Test
 
 @testset "simpler implementations" begin
 
@@ -8,7 +7,7 @@ using Compat.Test
     @test isapprox(xrt, pi)
 
     xrt = Roots.bisection(sin, 3.0, 4.0, xatol=1e-3)
-    @test abs(sin(xrt)) >= 1e-7  # not to close
+    @test abs(sin(xrt)) >= 1e-7  # not to0 close
 
     xrt = Roots.bisection(sin, big(3.0), big(4.0))
     @test isapprox(xrt, pi)
@@ -27,4 +26,8 @@ using Compat.Test
     xrt = Roots.dfree(fpoly, 1.0)
     @test abs(fpoly(xrt)) <= 1e-14
 
+    # newton
+    @test Roots.newton((sin, cos), 3.0)  ≈ pi
+    u = Roots.newton(x -> (sin(x), sin(x)/cos(x)), 3.0, xatol=1e-10, xrtol=1e-10)
+    @test abs(u -pi) <= 1e-8
 end

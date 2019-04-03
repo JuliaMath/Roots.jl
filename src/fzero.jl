@@ -172,5 +172,5 @@ Dispatches to `find_zeros(f, a, b; kwargs...)`.
 function fzeros(f, a::Number, b::Number; kwargs...)
     find_zeros(FnWrapper(f), float(a), float(b); kwargs...)
 end
-fzeros(f, bracket::Vector{T}; kwargs...) where {T <: Number} = fzeros(f, a, b; kwargs...)
-fzeros(f, bracket::Tuple{T,S}; kwargs...) where {T <: Number, S<:Number} = fzeros(f, a, b; kwargs...)
+fzeros(f, bracket::Vector{T}; kwargs...) where {T <: Number} = fzeros(f, bracket[1], bracket[2]; kwargs...)
+fzeros(f, bracket::Tuple{T,S}; kwargs...) where {T <: Number, S<:Number} = fzeros(f, bracket[1], bracket[2]; kwargs...)

@@ -1,13 +1,6 @@
-VERSION < v"0.7.0-beta2.199" && __precompile__()
 module Roots
 
-
-if VERSION >= v"0.7-"
-    using Printf
-end
-
-using Compat: @nospecialize, lastindex, range, Nothing
-
+using Printf
 
 export fzero,
        fzeros,
