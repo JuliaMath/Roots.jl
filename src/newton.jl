@@ -278,6 +278,12 @@ function update_state(method::Schroder, fs, o::UnivariateZeroState{T,S}, options
     r1, r2 = o.m[1], o.m[2]
 
     delta =  r2 / (r2 - r1) * r1  # m * r1
+
+    if isissue(delta)
+        o.stopped=true
+        return
+    end
+
     xn1::T = xn - delta
 
     tmp = fΔxΔΔx(fs, xn1)

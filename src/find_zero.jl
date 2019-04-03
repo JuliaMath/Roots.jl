@@ -178,11 +178,8 @@ function init_options(M::AbstractUnivariateZeroMethod,
                       kwargs...
                       ) where {T, S}
 
-    if VERSION < v"0.7.0"
-        d = Dict(kwargs)
-    else
-        d = kwargs
-    end
+    d = kwargs
+
     defs = default_tolerances(M, T, S)
     options = UnivariateZeroOptions(get(d, :xatol, get(d, :xabstol, defs[1])),
                                     get(d, :xrtol, get(d, :xreltol, defs[2])),

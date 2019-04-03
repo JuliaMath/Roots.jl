@@ -1,9 +1,15 @@
 using Roots
+using Test
+using Printf
 
-import Base: show
-if VERSION >= v"0.7.0-"
-    using Printf
-end
+## testing bracketing methods
+## Orignially by John Travers
+#
+#
+## This set of tests is very useful for benchmarking the number of function
+## calls, failures, and max errors for the various bracketing methods.
+## Table 1 from TOMS748 by Alefeld, Potra, Shi
+
 
 mutable struct Func
     name :: Symbol
@@ -201,45 +207,91 @@ function run_tests(method; verbose=false, trace=false, name=nothing, abandon=fal
     results
 end
 
-Ms = vcat([Roots.FalsePosition(i) for i in 1:12], Roots.A42(), Roots.AlefeldPotraShi(), Roots.Brent(), Roots.Bisection())
-results = [run_tests((f,b) -> find_zero(f, b, M), name="$M") for M in Ms]
-@test all([length(result.failures) <= 10 for result in results])
+avg(x) = sum(x)/length(x)
 
-results = [run_tests((f,b) -> find_zero(f, big.(b), M), name="$M") for M in Ms]
-@test all([length(result.failures) == 0 for result in results[13:end]])
+@testset "bracketing methods" begin
 
-
-
-
-## run but not in general testing suite
-function run_benchmark_tests()
-
-    @printf "%s\n" run_tests((f,b) -> find_zero(f, b, Roots.A42()), name="a42")
-    @printf "%s\n" run_tests((f,b) -> find_zero(f, b, Bisection()), name="Bisection")
-    @printf "%s\n" run_tests((f,b) -> find_zero(f, b, FalsePosition()), name="FalsePosition")
+    ## Test for failures, ideally all of these would be 0
+    ## test for residual, ideally small
+    ## test for evaluation counts, ideally not so low for these problems
 
 
-    for m in [Order0(), Order1(), Order2(), Roots.Order2B(), Order5(), Order8(), Order16()]
-        @printf "%s\n" run_tests((f, b) -> find_zero(f, mean(b), m), name="$m")
-    end
+    ## exact_bracket
+    Ms = [Roots.A42(), Roots.AlefeldPotraShi(), Roots.Bisection()]
+    results = [run_tests((f,b) -> find_zero(f, b, M), name="$M") for M in Ms]
+    maxfailures = maximum([length(result.failures) for result in results])
+    maxresidual = maximum([result.maxresidual for result in results])
+    cnts = [result.evalcount for result in results]
+    @test maxfailures == 0
+    @test maxresidual <= 5e-15
+    @test avg(cnts) <= 4700
 
-    println("---- using BigFloat ----")
+    ## brent has some failures
+    Ms = [Roots.Brent()]
+    results = [run_tests((f,b) -> find_zero(f, b, M), name="$M") for M in Ms]
+    maxfailures = maximum([length(result.failures) for result in results])
+    maxresidual = maximum([result.maxresidual for result in results])
+    cnts = [result.evalcount for result in results]
+    @test maxfailures <= 4
+    @test maxresidual <= 1e-13
+    @test avg(cnts) <= 2600
 
-    @printf "%s\n" run_tests((f,b) -> find_zero(f, big.(b), Bisection()), name="a42 (no bisection with Big values)")
-    @printf "%s\n" run_tests((f,b) -> find_zero(f, big.(b), FalsePosition()), name="FalsePosition")
+    ## False position has failures, and larger residuals
+    Ms = [Roots.FalsePosition(i) for i in 1:12]
+    results = [run_tests((f,b) -> find_zero(f, b, M), name="$M") for M in Ms]
+    maxfailures = maximum([length(result.failures) for result in results])
+    maxresidual = maximum([result.maxresidual for result in results])
+    cnts = [result.evalcount for result in results]
+    @test maxfailures <= 5
+    @test maxresidual <= 5e-8
+    @test avg(cnts) <= 2500
 
-    for m in [Order0(), Order1(), Order2(), Order5(), Order8(), Order16()]
-        @printf "%s\n" run_tests((f, b) -> find_zero(f, mean(big.(b)), m), name="$m/BigFloat")
-    end
 
-    @printf "%s\n" run_tests((f, b) -> Roots.secant_method(f, big.(b)), name="secant_method")
-    @printf "%s\n" run_tests((f, b) -> Roots.dfree(f, mean(big.(b))), name="dfree")
-#    using ForwardDiff
-#    D(f,n=1) = n > 1 ? D(D(f), n-1) : x -> ForwardDiff.derivative(f, float(x))
-#    @printf "%s\n" run_tests((f, b) -> find_zero(f, D(f), mean(big.(b)), Order5()), name="Order5/D;BigFloat")
-#    @printf "%s\n" run_tests((f, b) -> newton(f, D(f), mean(big.(b))), name="newton/BigFloat")
-#    @printf "%s\n" run_tests((f, b) -> halley(f, D(f), D(f,2), mean(big.(b))), name="halley/BigFloat")
+
+
 end
 
+## Some tests for FalsePosition methods
+@testset "FalsePosition" begin
+    galadino_probs = [(x -> x^3 - 1, [.5, 1.5]),
+                      (x -> x^2 * (x^2/3 + sqrt(2) * sin(x)) - sqrt(3)/18, [.1, 1]),
+                      (x -> 11x^11 - 1, [0.1, 1]),
+                      (x ->  x^3 + 1, [-1.8, 0]),
+                      (x ->  x^3 - 2x - 5, [2.0, 3]),
 
-nothing
+                      ((x,n=5)  -> 2x * exp(-n) + 1 - 2exp(-n*x) , [0,1]),
+                      ((x,n=10) -> 2x * exp(-n) + 1 - 2exp(-n*x) , [0,1]),
+    ((x,n=20) -> 2x * exp(-n) + 1 - 2exp(-n*x) , [0,1]),
+
+    ((x,n=5)  -> (1 + (1-n)^2) * x^2 - (1 - n*x)^2 , [0,1]),
+    ((x,n=10) -> (1 + (1-n)^2) * x^2 - (1 - n*x)^2 , [0,1]),
+    ((x,n=20) -> (1 + (1-n)^2) * x^2 - (1 - n*x)^2 , [0,1]),
+
+    ((x,n=5)  -> x^2 - (1-x)^n , [0,1]),
+    ((x,n=10) -> x^2 - (1-x)^n , [0,1]),
+    ((x,n=20) -> x^2 - (1-x)^n , [0,1]),
+
+    ((x,n=5)  -> (1 + (1-n)^4)*x - (1 - n*x)^4 , [0,1]),
+    ((x,n=10) -> (1 + (1-n)^4)*x - (1 - n*x)^4 , [0,1]),
+    ((x,n=20) -> (1 + (1-n)^4)*x - (1 - n*x)^4 , [0,1]),
+
+    ((x,n=5)  -> exp(-n*x)*(x-1) + x^n , [0,1]),
+    ((x,n=10) -> exp(-n*x)*(x-1) + x^n , [0,1]),
+    ((x,n=20) -> exp(-n*x)*(x-1) + x^n , [0,1]),
+
+    ((x,n=5)  -> x^2 + sin(x/n) - 1/4 , [0,1]),
+    ((x,n=10) -> x^2 + sin(x/n) - 1/4 , [0,1]),
+    ((x,n=20) -> x^2 + sin(x/n) - 1/4 , [0,1])
+    ]
+
+
+    for (fn_, ab) in galadino_probs
+        for M in (FalsePosition(i) for i in 1:12)
+            g = Cnt(fn_)
+            x0_ = find_zero(g, ab, M)
+            @test abs(fn_(x0_)) <= 1e-7
+            @test g.cnt <= 50
+        end
+    end
+
+end

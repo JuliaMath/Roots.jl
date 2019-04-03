@@ -1,7 +1,7 @@
 # tests for find_zeros
 
 using Roots
-using Compat.Test
+using Test
 
 
 mutable struct CallableFunction
@@ -111,7 +111,6 @@ end
     @test length(xrts) >= 3           # should be 5
     @test all(azero.((f7,), xrts))
 
-
     # Issue #141 solve over [a,b], not (a,b)
     @test length(find_zeros(p -> p * (1-p), 0, 1)) == 2
     @test length(find_zeros(sin, 0, 5pi)) == 5+1
@@ -120,7 +119,7 @@ end
 end
 
 
-@testset "not Float64 types" begin
+@testset "find_zeros: not Float64 types" begin
     for T in [Float16, Float32, BigFloat]
         rts = find_zeros(x -> cos(x) - x/10, T(0.0), T(10.0))
         @test eltype(rts) == T
