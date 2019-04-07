@@ -219,7 +219,9 @@ function assess_convergence(M::Bisection, state::UnivariateZeroState{T,S}, optio
     if x_converged || f_converged
       state.message = ""
       state.x_converged = x_converged
-      state.f_converged = f_converged
+      if !state.f_converged
+        state.f_converged = f_converged
+      end
       return true
     else
       return false
