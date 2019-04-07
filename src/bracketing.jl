@@ -77,8 +77,8 @@ function init_state(method::AbstractBisection, fs, x)
     length(x) > 1 || throw(ArgumentError(bracketing_error))
 
     x0, x1 = adjust_bracket(x) # now finite, right order
-    fx0, fx1 = promote(sign(fs(x0)), sign(fs(x1)))
-    fx0 * fx1 > 0 && throw(ArgumentError(bracketing_error))
+    fx0, fx1 = promote(fs(x0), fs(x1))
+    sign(fx0) * sign(fx1) > 0 && throw(ArgumentError(bracketing_error))
 
     state = UnivariateZeroState(x1, x0, [x1],
                                 fx1, fx0, [fx1],
@@ -95,7 +95,7 @@ function init_state!(state::UnivariateZeroState{T,S}, M::AbstractBisection, fs,
                      xs::Union{Tuple, Vector}) where {T, S}
 
     x0::T, x1::T = adjust_bracket(xs) # now finite, right order
-    fx0::S, fx1::S = promote(sign(fs(x0)), sign(fs(x1)))
+    fx0::S, fx1::S = promote(fs(x0), fs(x1))
     init_state!(state, M, fs, (x0,x1), (fx0, fx1))
 
 end
@@ -105,14 +105,14 @@ function init_state!(state::UnivariateZeroState{T,S}, M::AbstractBisection, fs,
     x0, x1 = xs
     fx0, fx1 = fxs
 
-    fx0 * fx1 > 0 && throw(ArgumentError(bracketing_error))
+    sign(fx0) * sign(fx1) > 0 && throw(ArgumentError(bracketing_error))
 
     # we need a,b to be same sign, finite
     if sign(x0) * sign(x1) < 0
         m = zero(x1)
-        fm::S = sign(fs(m)) # iszero(fm) caught in assess_convergence
+        fm::S = fs(m) # iszero(fm) caught in assess_convergence
         incfn(state)
-        if fx0 * fm < 0
+        if sign(fx0) * sign(fm) < 0
             x1, fx1 = m, fm
         else
             x0, fx0 = m, fm
@@ -120,7 +120,7 @@ function init_state!(state::UnivariateZeroState{T,S}, M::AbstractBisection, fs,
     end
 
     m = __middle(x0, x1)
-    fm = sign(fs(m))
+    fm = fs(m)
     incfn(state)
 
     y0, y1, ym = promote(fx0, fx1, fm)
@@ -207,15 +207,23 @@ function assess_convergence(M::Bisection, state::UnivariateZeroState{T,S}, optio
     assess_convergence(BisectionExact(), state, options) && return true
 
     x0, x1 = state.xn0, state.xn1
+    
+    xtol = max(options.xabstol, max(abs(x0), abs(x1)) * options.xreltol)
+    x_converged = x1 - x0 < xtol
 
-    tol = max(options.xabstol, max(abs(x0), abs(x1)) * options.xreltol)
-    if x1 - x0 > tol
-        return false
+    fm = state.fm[1]
+     
+    ftol = max(options.abstol, max(abs(x0), abs(x1)) * options.reltol)
+    f_converged = abs(fm) < ftol
+
+    if x_converged || f_converged
+      state.message = ""
+      state.x_converged = x_converged
+      state.f_converged = f_converged
+      return true
+    else
+      return false
     end
-
-    state.message = ""
-    state.x_converged = true
-    return true
 end
 
 # for exact convergence, we can skip some steps
@@ -249,7 +257,7 @@ function update_state(method::Union{Bisection, BisectionExact}, fs, o::Univariat
 
     y0 = o.fxn0
     m::T = o.m[1]
-    ym::S = o.fm[1] #sign(fs(m))
+    ym::S = o.fm[1] #fs(m)
 
     if y0 * ym < 0
         o.xn1, o.fxn1 = m, ym
@@ -259,7 +267,7 @@ function update_state(method::Union{Bisection, BisectionExact}, fs, o::Univariat
 
     m  = __middle(o.xn0, o.xn1) # assume a,b have same sign
     fm::S = fs(m)
-    o.m[1], o.fm[1] = m, sign(fm)
+    o.m[1], o.fm[1] = m, fm
     incfn(o)
 
     return nothing
