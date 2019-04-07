@@ -71,6 +71,7 @@ function adjust_bracket(x0)
     u, v
 end
 
+
 # In init_state the bracketing interval is left as (a,b) with
 # a,b both finite and of the same sign
 function init_state(method::AbstractBisection, fs, x)
@@ -79,15 +80,27 @@ function init_state(method::AbstractBisection, fs, x)
     x0, x1 = adjust_bracket(x) # now finite, right order
     fx0, fx1 = promote(fs(x0), fs(x1))
     sign(fx0) * sign(fx1) > 0 && throw(ArgumentError(bracketing_error))
+    
+    init_state(method, fs, x, [fx0; fx1])
+end
 
-    state = UnivariateZeroState(x1, x0, [x1],
+function init_state(method::AbstractBisection, fs, x, fx)
+  x0, x1 = x
+  (isinf(x0) || isinf(x1)) && throw(ArgumentError("the brackets a, b must be finite if initial function values are provided"))
+  fx0, fx1 = fx # promote ?
+  if x0 > x1
+    x0, x1 = x1, x0
+    fx0, fx1 = fx1, fx0
+  end
+
+  state = UnivariateZeroState(x1, x0, [x1],
                                 fx1, fx0, [fx1],
                                 0, 2,
                                 false, false, false, false,
                                 "")
 
-    init_state!(state, method, fs, (x0, x1), (fx0, fx1))
-    state
+  init_state!(state, method, fs, (x0, x1), (fx0, fx1))
+  state
 end
 
 
@@ -202,7 +215,7 @@ end
 ## the method converges,
 ## as we bound between x0, nextfloat(x0) is not measured by eps(), but eps(x0)
 function assess_convergence(M::Bisection, state::UnivariateZeroState{T,S}, options) where {T, S}
-
+  
     assess_convergence(BisectionExact(), state, options) && return true
     x0, x1, xm = state.xn0, state.xn1, first(state.m)
 
@@ -285,6 +298,21 @@ end
 ## Bisection has special cases
 ## for zero tolerance, we have either BisectionExact or A42 methods
 ## for non-zero tolerances, we have use thegeneral Bisection method
+function find_zero(fs, x0, fx0, method::M;
+                   tracks = NullTracks(),
+                   verbose=false,
+                   kwargs...) where {M <: Union{Bisection}}
+    length(fx0) != 2 && throw(ArgumentError("provide initial function values as third argument"))
+    F = callable_function(fs)
+    state = init_state(method, F, x0, fx0)
+    T = eltype(x0[1])
+    
+    _find_zero(F, state, T, method::M;
+               tracks = tracks,
+               verbose = verbose,
+               kwargs...)    
+end
+
 function find_zero(fs, x0, method::M;
                    tracks = NullTracks(),
                    verbose=false,
@@ -294,7 +322,20 @@ function find_zero(fs, x0, method::M;
     T = eltype(x[1])
     F = callable_function(fs)
     state = init_state(method, F, x)
+
+    _find_zero(F, state, T, method;
+               tracks = tracks,
+               verbose = verbose,
+               kwargs...)
+end
+function _find_zero(F, state, T, method::M;
+                   tracks = NullTracks(),
+                   verbose=false,
+                   kwargs...) where {M <: Union{Bisection}}
+
     options = init_options(method, state; kwargs...)
+    x = [state.xn1; state.xn0]
+    tol = max(options.xabstol, maximum(abs, x) * options.xreltol)
 
     # check if tolerances are exactly 0
     tol = max(options.xabstol, options.xreltol)
