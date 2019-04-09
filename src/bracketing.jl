@@ -203,29 +203,33 @@ end
 ## as we bound between x0, nextfloat(x0) is not measured by eps(), but eps(x0)
 function assess_convergence(M::Bisection, state::UnivariateZeroState{T,S}, options) where {T, S}
 
-
     assess_convergence(BisectionExact(), state, options) && return true
+    x0, x1, xm = state.xn0, state.xn1, first(state.m)
 
-    x0, x1 = state.xn0, state.xn1
-    
     xtol = max(options.xabstol, max(abs(x0), abs(x1)) * options.xreltol)
     x_converged = x1 - x0 < xtol
 
-    fm = state.fm[1]
-     
+    if x_converged
+        state.message=""
+        state.xn1 = xm
+        state.x_converged = true
+        return true
+    end
+
+
+    fm = first(state.fm)
     ftol = max(options.abstol, max(abs(x0), abs(x1)) * options.reltol)
     f_converged = abs(fm) < ftol
 
-    if x_converged || f_converged
-      state.message = ""
-      state.x_converged = x_converged
-      if !state.f_converged
+    if f_converged
+        state.message = ""
+        state.xn1 = xm
+        state.fxn1 = fm
         state.f_converged = f_converged
-      end
-      return true
-    else
-      return false
+        return true
     end
+
+    return false
 end
 
 # for exact convergence, we can skip some steps
@@ -237,7 +241,7 @@ function assess_convergence(M::BisectionExact, state::UnivariateZeroState{T,S}, 
     y0, ym, y1 = state.fxn0, state.fm[1], state.fxn1
 
     for (c,fc) in ((x0,y0), (xm,ym), (x1, y1))
-        if iszero(fc) || isnan(fc) || isinf(fc)
+        if iszero(fc) || isnan(fc) #|| isinf(fc)
             state.f_converged = true
             state.xn1 = c
             state.fxn1 = fc
@@ -292,11 +296,13 @@ function find_zero(fs, x0, method::M;
     state = init_state(method, F, x)
     options = init_options(method, state; kwargs...)
 
-    tol = max(options.xabstol, maximum(abs.(x)) * options.xreltol)
+    # check if tolerances are exactly 0
+    tol = max(options.xabstol, options.xreltol)
+    ftol = max(options.abstol, options.reltol)
 
     l = (verbose && isa(tracks, NullTracks)) ? Tracks(eltype(state.xn1)[], eltype(state.fxn1)[]) : tracks
 
-    if iszero(tol)
+    if iszero(tol) && iszero(ftol)
         if T <: FloatNN
             return find_zero(F, x, BisectionExact(); tracks=l, verbose=verbose, kwargs...)
         else
