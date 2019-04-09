@@ -267,7 +267,7 @@ end
         options = Roots.init_options(M, state)
         find_zero(M, F, options, state)
 
-        @test state.steps <= 15
+        @test state.steps <= 45 # 15
     end
     test_94()
 
@@ -276,6 +276,10 @@ end
     ## Issue with quad_step after truncated M-step PR #140
     @test find_zero(x -> tanh(x) - tan(x), 7.36842 , Order0()) ≈ 7.068582745628732
 
+    ## Use tolerance on f, not x with bisectoin
+    atol = 0.01
+    u = find_zero(sin, (3, 4), atol=atol)
+    @test atol >= abs(sin(u)) >= atol^2
 
 end
 
