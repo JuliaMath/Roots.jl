@@ -281,6 +281,9 @@ end
     u = find_zero(sin, (3, 4), atol=atol)
     @test atol >= abs(sin(u)) >= atol^2
 
+    ## issue #159 bracket with zeros should be found
+    @test find_zero(x->x+1,(-1,1)) == -1
+
 end
 
 

@@ -107,6 +107,20 @@ function init_state!(state::UnivariateZeroState{T,S}, M::AbstractBisection, fs,
 
     sign(fx0) * sign(fx1) > 0 && throw(ArgumentError(bracketing_error))
 
+    if iszero(sign(fx0) * sign(fx1))
+        # should be an error -- not bracketing, but we have a zero, so return it.
+        if iszero(fx0)
+            m, fm = x0, fx0
+        else
+            m, fm = x1, fx1
+        end
+        state.f_converged = true
+        state.xn1 = m
+        state.fxn1 = fm
+        return state
+    end
+
+
     # we need a,b to be same sign, finite
     if sign(x0) * sign(x1) < 0
         m = zero(x1)
