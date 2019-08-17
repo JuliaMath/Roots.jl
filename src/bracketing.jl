@@ -311,12 +311,11 @@ function find_zero(fs, x0, method::M;
     options = init_options(method, state; kwargs...)
 
     # check if tolerances are exactly 0
-    tol = max(options.xabstol, options.xreltol)
-    ftol = max(options.abstol, options.reltol)
+    iszero_tol = iszero(options.xabstol) && iszero(options.xreltol) && iszero(options.abstol) && iszero(options.reltol)
 
     l = (verbose && isa(tracks, NullTracks)) ? Tracks(eltype(state.xn1)[], eltype(state.fxn1)[]) : tracks
 
-    if iszero(tol) && iszero(ftol)
+    if iszero_tol
         if T <: FloatNN
             return find_zero(F, x, BisectionExact(); tracks=l, verbose=verbose, kwargs...)
         else
