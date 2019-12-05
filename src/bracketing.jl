@@ -80,6 +80,16 @@ function init_state(method::AbstractBisection, fs, x)
     fx0, fx1 = promote(fs(x0), fs(x1))
     sign(fx0) * sign(fx1) > 0 && throw(ArgumentError(bracketing_error))
 
+    _init_state(method, fs, (x0, x1), (fx0, fx1))
+end
+
+# assume xs, fxs, have all been checked so that we have a bracket
+# gives an  entry for the case where the endpoints are expensive to compute
+# as requested in issue #156 by @greimel
+function _init_state(method::AbstractBisection, fs, xs, fxs)
+
+    x0, x1 = xs
+    fx0, fx1 = fxs
     state = UnivariateZeroState(x1, x0, [x1],
                                 fx1, fx0, [fx1],
                                 0, 2,
@@ -89,7 +99,6 @@ function init_state(method::AbstractBisection, fs, x)
     init_state!(state, method, fs, (x0, x1), (fx0, fx1))
     state
 end
-
 
 function init_state!(state::UnivariateZeroState{T,S}, M::AbstractBisection, fs,
                      xs::Union{Tuple, Vector}) where {T, S}
