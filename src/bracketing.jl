@@ -90,8 +90,8 @@ function _init_state(method::AbstractBisection, fs, xs, fxs)
 
     x0, x1 = xs
     fx0, fx1 = fxs
-    state = UnivariateZeroState(x1, x0, [x1],
-                                fx1, fx0, [fx1],
+    state = UnivariateZeroState(x1, x0, x1, [x1],
+                                fx1, fx0, fx1, [fx1],
                                 0, 2,
                                 false, false, false, false,
                                 "")
@@ -234,7 +234,7 @@ function assess_convergence(M::Bisection, state::UnivariateZeroState{T,S}, optio
 
     if x_converged
         state.message=""
-        state.xn1 = xm
+        state.xstar = xm
         state.x_converged = true
         return true
     end
@@ -246,8 +246,8 @@ function assess_convergence(M::Bisection, state::UnivariateZeroState{T,S}, optio
 
     if f_converged
         state.message = ""
-        state.xn1 = xm
-        state.fxn1 = fm
+        state.xstar = xm
+        state.fxstar = fm
         state.f_converged = f_converged
         return true
     end
@@ -266,14 +266,17 @@ function assess_convergence(M::BisectionExact, state::UnivariateZeroState{T,S}, 
     for (c,fc) in ((x0,y0), (xm,ym), (x1, y1))
         if iszero(fc) || isnan(fc) #|| isinf(fc)
             state.f_converged = true
-            state.xn1 = c
-            state.fxn1 = fc
+            state.x_converged = true
+            state.xstar = c
+            state.fxstar = fc
             return true
         end
     end
 
     x0 < xm < x1 && return false
 
+    state.xstar = x1
+    state.fxstar = ym
     state.x_converged = true
     return true
 end
@@ -336,7 +339,7 @@ function find_zero(fs, x0, method::M;
 
     verbose && show_trace(method, nothing, state, l)
 
-    state.xn1
+    state.xstar
 
 end
 
@@ -456,8 +459,8 @@ function init_state(M::AbstractAlefeldPotraShi, f, xs)
     end
     fu, fv = promote(f(u), f(v))
     isbracket(fu, fv) || throw(ArgumentError(bracketing_error))
-    state = UnivariateZeroState(v, u, [v, v], ## x1, x0, d, [ee]
-                                fv, fu, [fv,fv], ## fx1, fx0, d, [fe]
+    state = UnivariateZeroState(v, u, v, [v, v], ## x1, x0, d, [ee]
+                                fv, fu, fv, [fv,fv], ## fx1, fx0, d, [fe]
                                 0, 2,
                                 false, false, false, false,
                                 "")
@@ -545,7 +548,10 @@ end
 
 function assess_convergence(method::AbstractAlefeldPotraShi, state::UnivariateZeroState{T,S}, options) where {T,S}
 
-    (state.stopped || state.x_converged || state.f_converged) && return true
+    if state.stopped || state.x_converged || state.f_converged
+        state.xstar, state.fxstar = state.xn1, state.fxn1
+        return true
+    end
 
     if state.steps > options.maxevals
         state.stopped = true
@@ -565,9 +571,10 @@ function assess_convergence(method::AbstractAlefeldPotraShi, state::UnivariateZe
 
     if abs(fu) <= maximum(promote(options.abstol, abs(u) * oneunit(fu) / oneunit(u) * options.reltol))
         state.f_converged = true
-        state.xn1=u
-        state.fxn1=fu
+        state.xstar=u
+        state.fxstar=fu
         if iszero(fu)
+            state.x_converged
             state.message *= "Exact zero found. "
         end
         return true
@@ -578,8 +585,8 @@ function assess_convergence(method::AbstractAlefeldPotraShi, state::UnivariateZe
 
     if abs(b-a) <= 2tol
         # use smallest of a,b,m
-        state.xn1 = u
-        state.fxn1 = fu
+        state.xstar = u
+        state.fxstar = fu
         state.x_converged = true
         return true
     end
@@ -755,8 +762,8 @@ function init_state(M::Brent, f, xs)
 
 
 
-    state = UnivariateZeroState(b, a, [a, a], ## x1, x0, c, d
-                                fb, fa, [fa, one(fa)], ## fx1, fx0, fc, mflag
+    state = UnivariateZeroState(b, a, b, [a, a], ## x1, x0, c, d
+                                fb, fa, fb, [fa, one(fa)], ## fx1, fx0, fc, mflag
                                 0, 2,
                                 false, false, false, false,
                                 "")
@@ -943,4 +950,29 @@ end
         $Expr(:meta, :inline)
         $f(fa, fb, fx)
     end
+end
+
+
+
+
+"""
+    find_bracket(f, x0, method=A42(); kwargs...)
+
+For bracketing methods returns an approximate root, the last bracketing interval used, and a flag indicating if an exact zero was found as a named tuple.
+
+"""
+function find_bracket(fs, x0, method::M=A42(); kwargs...) where {M <: Union{A42, BisectionExact}}
+    x = adjust_bracket(x0)
+    T = eltype(x[1])
+    F = callable_function(fs)
+    state = init_state(method, F, x)
+    options = init_options(method, state; kwargs...)
+
+    # check if tolerances are exactly 0
+    iszero_tol = iszero(options.xabstol) && iszero(options.xreltol) && iszero(options.abstol) && iszero(options.reltol)
+
+    find_zero(method, F, options, state, NullTracks())
+
+    (xstar=state.xstar, bracket=(state.xn0, state.xn1), exact=iszero(state.fxstar))
+
 end

@@ -317,3 +317,15 @@ end
     end
 
 end
+
+@testset "find_bracket test" begin
+    fs_xs = ((x -> x^5 - x - 1, (0,2)),
+             (sin, (3,4)),
+             (x -> exp(x) - x^4, (5, 20))
+             )
+
+    for (f, x0) in fs_xs
+        out = Roots.find_bracket(f, x0)
+        @test prod(f.(out.bracket)) <= 0
+    end
+end
