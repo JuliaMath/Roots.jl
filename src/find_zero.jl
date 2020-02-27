@@ -64,7 +64,7 @@ function init_state(method::Any, fs, x)
     fx1 = fs(x1); fnevals = 1
     T, S = eltype(x1), eltype(fx1)
     zT, zS =  oneunit(x1) * (0*x1)/(0*x1), oneunit(fx1) * (0*fx1)/(0*fx1)
-    state = UnivariateZeroState(x1, zT, zT, T[],
+    state = UnivariateZeroState(x1, zT, zT/Zt*oneunit(x1), T[],
                                 fx1, zS, zS, S[],
                                 0, fnevals,
                                 false, false, false, false,
@@ -350,7 +350,9 @@ function assess_convergence(method::Any, state::UnivariateZeroState{T,S}, option
     fxn1 = state.fxn1
 
     if (state.x_converged || state.f_converged || state.stopped)
-        state.xstar, state.fxstar =  xn1, fxn1
+        if isnan(state.xstar)
+            state.xstar, state.fxstar =  xn1, fxn1
+        end
         return true
     end
 

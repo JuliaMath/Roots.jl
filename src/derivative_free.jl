@@ -62,7 +62,7 @@ end
 function init_state(method::AbstractSecant, fs, x::Union{Tuple, Vector})
     x0, x1 = promote(float(x[1]), float(x[2]))
     fx0, fx1 = fs(x0), fs(x1)
-    state = UnivariateZeroState(x1, x0, x1, eltype(x1)[],
+    state = UnivariateZeroState(x1, x0, zero(x1)/zero(x1)*oneunit(x1), eltype(x1)[],
                                 fx1, fx0, fx1, eltype(fx1)[],
                                 0, 2,
                                 false, false, false, false, "")
