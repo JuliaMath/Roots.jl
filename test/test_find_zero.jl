@@ -317,3 +317,55 @@ end
     end
 
 end
+
+@testset "find_bracket test" begin
+    fs_xs = ((x -> x^5 - x - 1, (0,2)),
+             (sin, (3,4)),
+             (x -> exp(x) - x^4, (5, 20))
+             )
+
+    for (f, x0) in fs_xs
+        out = Roots.find_bracket(f, x0)
+        @test prod(f.(out.bracket)) <= 0
+    end
+
+    ## test size of  bracket
+    for M in  (Roots.BisectionExact(),  Roots.A42(), Roots.AlefeldPotraShi())
+        for (fn, b) in ((x  -> x == 0. ? 0. : x/exp(1/(x*x)), (-1.0, 4.0)),
+                        (x -> exp(-15*x)*(x-1) + x^15, (0., 1.)),
+                        (x -> (-40.0)*x*exp(-x),  (-9, 31))
+                        )
+            l =  Roots.find_bracket(fn, b, M)
+            @test  l.exact ||  abs(l.bracket[2] -  l.bracket[1])  <=  eps(l.xstar)
+        end
+    end
+
+    ## subnormal
+    x0 = nextfloat(nextfloat(0.0))
+    fn = x  ->  (x-x0)
+    b =  (0.0, 1.0)
+    m =  Roots.__middle(b...)  # 1e-154
+    M = Roots.BisectionExact()
+    l = Roots.find_bracket(fn,  b,  M)
+    ## Here l.exact=true, but  this checks the bracket size
+    @test  !(abs(-(l.bracket...)) <=  eps(l.xstar))
+    @test  abs(-(l.bracket...)) <=  m
+
+    M =  Roots.A42()
+    l = Roots.find_bracket(fn,  b,  M)
+    @test  !(abs(-(l.bracket...)) <=  eps(l.xstar))
+    @test  abs(-(l.bracket...)) <= m
+
+    M =  Roots.AlefeldPotraShi()
+    l = Roots.find_bracket(fn,  b,  M)
+    @test  !(abs(-(l.bracket...)) <=  eps(l.xstar))
+    @test  abs(-(l.bracket...)) <= m
+
+    x0 = nextfloat(0.0)
+    fn  = x ->  x <=  0.0 ?  x-x0  : x  +  x0
+    b = (-1.0, 1.0)
+    M = Roots.BisectionExact()
+    l = Roots.find_bracket(fn,  b,  M)
+    @test !l.exact &&   abs(-(l.bracket...))  <= maximum(eps.(l.bracket))
+
+end

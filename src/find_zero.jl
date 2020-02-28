@@ -39,9 +39,11 @@ abstract type  AbstractUnivariateZeroState end
 mutable struct UnivariateZeroState{T,S} <: AbstractUnivariateZeroState where {T,S}
     xn1::T
     xn0::T
+    xstar::T
     m::Vector{T}
     fxn1::S
     fxn0::S
+    fxstar::S
     fm::Vector{S}
     steps::Int
     fnevals::Int
@@ -61,9 +63,9 @@ function init_state(method::Any, fs, x)
     x1 = float(x)
     fx1 = fs(x1); fnevals = 1
     T, S = eltype(x1), eltype(fx1)
-
-    state = UnivariateZeroState(x1, oneunit(x1) * (0*x1)/(0*x1), T[],
-                                fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[],
+    zT, zS =  oneunit(x1) * (0*x1)/(0*x1), oneunit(fx1) * (0*fx1)/(0*fx1)
+    state = UnivariateZeroState(x1, zT, zT/Zt*oneunit(x1), T[],
+                                fx1, zS, zS, S[],
                                 0, fnevals,
                                 false, false, false, false,
                                 "")
@@ -112,8 +114,8 @@ end
 
 
 function Base.copy(state::UnivariateZeroState{T,S}) where {T, S}
-    UnivariateZeroState(state.xn1, state.xn0, copy(state.m),
-                        state.fxn1, state.fxn0, copy(state.fm),
+    UnivariateZeroState(state.xn1, state.xn0, state.xstar, copy(state.m),
+                        state.fxn1, state.fxn0, state.fxstar, copy(state.fm),
                         state.steps, state.fnevals,
                         state.stopped, state.x_converged,
                         state.f_converged, state.convergence_failed,
@@ -348,6 +350,9 @@ function assess_convergence(method::Any, state::UnivariateZeroState{T,S}, option
     fxn1 = state.fxn1
 
     if (state.x_converged || state.f_converged || state.stopped)
+        if isnan(state.xstar)
+            state.xstar, state.fxstar =  xn1, fxn1
+        end
         return true
     end
 
@@ -365,6 +370,7 @@ function assess_convergence(method::Any, state::UnivariateZeroState{T,S}, option
 
     # f(xstar) ≈ xstar * f'(xstar)*eps(), so we pass in lambda
     if _is_f_approx_0(fxn1, xn1, options.abstol, options.reltol)
+        state.xstar, state.fxstar = xn1, fxn1
         state.f_converged = true
         return true
     end
@@ -372,6 +378,7 @@ function assess_convergence(method::Any, state::UnivariateZeroState{T,S}, option
     # stop when xn1 ~ xn.
     # in find_zeros there is a check that f could be a zero with a relaxed tolerance
     if abs(xn1 - xn0) < max(options.xabstol, max(abs(xn1), abs(xn0)) * options.xreltol)
+        state.xstar, state.fxstar = xn1, fxn1
         state.message *= "x_n ≈ x_{n-1}. "
         state.x_converged = true
         return true
@@ -580,10 +587,22 @@ function find_zero(M::AbstractUnivariateZeroMethod,
     return decide_convergence(M, F, state, options)
 end
 
+function find_zero(M::AbstractUnivariateZeroMethod,
+                   F,
+                   state::AbstractUnivariateZeroState,
+                   l::AbstractTracks=NullTracks()
+                   )  #where {T<:Number, S<:Number}
+
+    options = init_options(M, state)
+    find_zero(M, F, options, state, l)
+end
+
+
+
 # state has stopped, this identifies if it has converged
 function decide_convergence(M::AbstractUnivariateZeroMethod,  F, state::UnivariateZeroState{T,S}, options) where {T,S}
-    xn1 = state.xn1
-    fxn1 = state.fxn1
+    xn1 = state.xstar
+    fxn1 = state.fxstar
 
     if (state.stopped || state.x_converged) && !(state.f_converged)
         ## stopped is a heuristic, x_converged can mask issues
@@ -611,6 +630,7 @@ function decide_convergence(M::AbstractUnivariateZeroMethod,  F, state::Univaria
         else
             xstar, fxstar = state.xn1, state.fxn1
             if _is_f_approx_0(fxstar, xstar, options.abstol, options.reltol, :relaxed)
+                state.xstar, state.fxstar = xstar, fxstar
                 msg = "Algorithm stopped early, but |f(xn)| < ϵ^(1/3), where ϵ depends on xn, rtol, and atol. "
                 state.message = state.message == "" ? msg : state.message * "\n\t" * msg
                 state.f_converged = true
@@ -621,10 +641,10 @@ function decide_convergence(M::AbstractUnivariateZeroMethod,  F, state::Univaria
     end
 
     if state.f_converged
-        return state.xn1
+        return state.xstar
     end
 
-    nan = NaN * state.xn1
+    nan = NaN * xn1
     if state.convergence_failed
         return nan
     end
@@ -685,6 +705,7 @@ function find_zero(M::AbstractUnivariateZeroMethod,
         ## did we find a zero or a bracketing interval?
         if iszero(state0.fxn1)
             copy!(state, state0)
+            state.xstar, state.fxstar = state.xn1, state.fxn1
             state.f_converged = true
             break
         elseif sign(state0.fxn0) * sign(state0.fxn1) < 0

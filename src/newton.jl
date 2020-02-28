@@ -52,8 +52,9 @@ function init_state(method::AbstractNewtonLikeMethod, fs, x)
     fnevals = 1
     S = eltype(fx1)
 
-    state = UnivariateZeroState(x1, oneunit(x1) * (0*x1)/(0*x1), [Δ],
-                                fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[],
+    zT, zS = oneunit(x1) * (0*x1)/(0*x1), oneunit(fx1) * (0*fx1)/(0*fx1)
+    state = UnivariateZeroState(x1, zT, zT/zT*oneunit(x1), [Δ],
+                                fx1, zS, zS, S[],
                                 0, fnevals,
                                 false, false, false, false,
                                 "")
@@ -163,8 +164,9 @@ function init_state(method::AbstractHalleyLikeMethod, fs, x)
     S = eltype(fx1)
     fnevals = 3
 
-    state = UnivariateZeroState(x1, oneunit(x1) * (0*x1)/(0*x1), [Δ,ΔΔ],
-                                fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[],
+    zT, zS =  oneunit(x1) * (0*x1)/(0*x1), oneunit(fx1) * (0*fx1)/(0*fx1)
+    state = UnivariateZeroState(x1, zT, zT/zT*oneunit(x1), [Δ,ΔΔ],
+                                fx1, zS, zS, S[],
                                 0, fnevals,
                                 false, false, false, false,
                                 "")

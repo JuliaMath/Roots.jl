@@ -229,6 +229,7 @@ avg(x) = sum(x)/length(x)
     ## brent has some failures
     Ms = [Roots.Brent()]
     results = [run_tests((f,b) -> find_zero(f, b, M), name="$M") for M in Ms]
+
     maxfailures = maximum([length(result.failures) for result in results])
     maxresidual = maximum([result.maxresidual for result in results])
     cnts = [result.evalcount for result in results]
@@ -250,6 +251,13 @@ avg(x) = sum(x)/length(x)
 
 
 end
+
+mutable struct Cnt
+    cnt::Int
+    f
+    Cnt(f) = new(0, f)
+end
+(f::Cnt)(x) = (f.cnt += 1; f.f(x))
 
 ## Some tests for FalsePosition methods
 @testset "FalsePosition" begin

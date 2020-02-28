@@ -90,8 +90,9 @@ function _init_state(method::AbstractBisection, fs, xs, fxs)
 
     x0, x1 = xs
     fx0, fx1 = fxs
-    state = UnivariateZeroState(x1, x0, [x1],
-                                fx1, fx0, [fx1],
+
+    state = UnivariateZeroState(x1, x0, zero(x1)/zero(x1)*oneunit(x1), [x1],
+                                fx1, fx0, fx1, [fx1],
                                 0, 2,
                                 false, false, false, false,
                                 "")
@@ -124,8 +125,10 @@ function init_state!(state::UnivariateZeroState{T,S}, M::AbstractBisection, fs,
             m, fm = x1, fx1
         end
         state.f_converged = true
-        state.xn1 = m
-        state.fxn1 = fm
+        state.xstar  = m
+        state.fxstar =  fm
+        #state.xn1 = m
+        #state.fxn1 = fm
         return state
     end
 
@@ -137,8 +140,15 @@ function init_state!(state::UnivariateZeroState{T,S}, M::AbstractBisection, fs,
         incfn(state)
         if sign(fx0) * sign(fm) < 0
             x1, fx1 = m, fm
-        else
+        elseif  sign(fx0) * sign(fm) > 0
             x0, fx0 = m, fm
+        else
+            state.message = "Exact zero found"
+            state.xstar = m
+            state.fxstar = fm
+            state.f_converged = true
+            state.x_converged = true
+            return state
         end
     end
 
@@ -234,7 +244,7 @@ function assess_convergence(M::Bisection, state::UnivariateZeroState{T,S}, optio
 
     if x_converged
         state.message=""
-        state.xn1 = xm
+        state.xstar = xm
         state.x_converged = true
         return true
     end
@@ -246,8 +256,8 @@ function assess_convergence(M::Bisection, state::UnivariateZeroState{T,S}, optio
 
     if f_converged
         state.message = ""
-        state.xn1 = xm
-        state.fxn1 = fm
+        state.xstar = xm
+        state.fxstar = fm
         state.f_converged = f_converged
         return true
     end
@@ -266,14 +276,17 @@ function assess_convergence(M::BisectionExact, state::UnivariateZeroState{T,S}, 
     for (c,fc) in ((x0,y0), (xm,ym), (x1, y1))
         if iszero(fc) || isnan(fc) #|| isinf(fc)
             state.f_converged = true
-            state.xn1 = c
-            state.fxn1 = fc
+            state.x_converged = true
+            state.xstar = c
+            state.fxstar = fc
             return true
         end
     end
 
     x0 < xm < x1 && return false
 
+    state.xstar = x1
+    state.fxstar = ym
     state.x_converged = true
     return true
 end
@@ -288,7 +301,7 @@ function update_state(method::Union{Bisection, BisectionExact}, fs, o::Univariat
     m::T = o.m[1]
     ym::S = o.fm[1] #fs(m)
 
-    if y0 * ym < 0
+    if sign(y0) * sign(ym) < 0
         o.xn1, o.fxn1 = m, ym
     else
         o.xn0, o.fxn0 = m, ym
@@ -336,7 +349,7 @@ function find_zero(fs, x0, method::M;
 
     verbose && show_trace(method, nothing, state, l)
 
-    state.xn1
+    state.xstar
 
 end
 
@@ -456,8 +469,8 @@ function init_state(M::AbstractAlefeldPotraShi, f, xs)
     end
     fu, fv = promote(f(u), f(v))
     isbracket(fu, fv) || throw(ArgumentError(bracketing_error))
-    state = UnivariateZeroState(v, u, [v, v], ## x1, x0, d, [ee]
-                                fv, fu, [fv,fv], ## fx1, fx0, d, [fe]
+    state = UnivariateZeroState(v, u, zero(v)/zero(v)*oneunit(v), [v, v], ## x1, x0, d, [ee]
+                                fv, fu, fv, [fv,fv], ## fx1, fx0, d, [fe]
                                 0, 2,
                                 false, false, false, false,
                                 "")
@@ -502,14 +515,14 @@ end
     default_tolerances(::AbstractAlefeldPotraShi, T, S)
 
 The default tolerances for Alefeld, Potra, and Shi methods are
-`xatol=zero(T)`, `xrtol=2eps(T)`, `atol= zero(S), and rtol=zero(S)`, with
+`xatol=zero(T)`, `xrtol=eps(T)/2`, `atol= zero(S), and rtol=zero(S)`, with
 appropriate units; `maxevals=45`, `maxfnevals = Inf`; and `strict=true`.
 
 """
 default_tolerances(M::AbstractAlefeldPotraShi) = default_tolerances(M, Float64, Float64)
 function default_tolerances(::AbstractAlefeldPotraShi, ::Type{T}, ::Type{S}) where {T,S}
     xatol = zero(T)
-    xrtol = 2 * eps(one(T))
+    xrtol = eps(one(T))/2
     atol = zero(float(one(S))) * oneunit(S)
     rtol = zero(float(one(S))) * one(S)
     maxevals = 45
@@ -536,8 +549,10 @@ function check_zero(::AbstractBracketing, state, c, fc)
     elseif iszero(fc)
         state.f_converged=true
         state.message *= "Exact zero found. "
-        state.xn1 = c
-        state.fxn1 = fc
+        state.xstar = c
+        state.fxstar =  fc
+#        state.xn1 = c
+#        state.fxn1 = fc
         return true
     end
     return false
@@ -545,7 +560,12 @@ end
 
 function assess_convergence(method::AbstractAlefeldPotraShi, state::UnivariateZeroState{T,S}, options) where {T,S}
 
-    (state.stopped || state.x_converged || state.f_converged) && return true
+    if state.stopped || state.x_converged || state.f_converged
+        if isnan(state.xstar)
+            state.xstar, state.fxstar = state.xn1, state.fxn1
+        end
+        return true
+    end
 
     if state.steps > options.maxevals
         state.stopped = true
@@ -565,21 +585,24 @@ function assess_convergence(method::AbstractAlefeldPotraShi, state::UnivariateZe
 
     if abs(fu) <= maximum(promote(options.abstol, abs(u) * oneunit(fu) / oneunit(u) * options.reltol))
         state.f_converged = true
-        state.xn1=u
-        state.fxn1=fu
+        state.xstar=u
+        state.fxstar=fu
         if iszero(fu)
+
+            state.x_converged
             state.message *= "Exact zero found. "
         end
         return true
     end
 
     a,b = state.xn0, state.xn1
-    tol = maximum(promote(options.xabstol, max(abs(a),abs(b)) * options.xreltol))
+    mx = max(abs(a), abs(b))
+    tol = maximum(promote(options.xabstol, mx * options.xreltol, sign(options.xreltol) *   eps(mx)))
 
     if abs(b-a) <= 2tol
         # use smallest of a,b,m
-        state.xn1 = u
-        state.fxn1 = fu
+        state.xstar = u
+        state.fxstar = fu
         state.x_converged = true
         return true
     end
@@ -755,8 +778,8 @@ function init_state(M::Brent, f, xs)
 
 
 
-    state = UnivariateZeroState(b, a, [a, a], ## x1, x0, c, d
-                                fb, fa, [fa, one(fa)], ## fx1, fx0, fc, mflag
+    state = UnivariateZeroState(b, a, zero(b)/zero(b)*oneunit(b), [a, a], ## x1, x0, c, d
+                                fb, fa, fb, [fa, one(fa)], ## fx1, fx0, fc, mflag
                                 0, 2,
                                 false, false, false, false,
                                 "")
@@ -943,4 +966,31 @@ end
         $Expr(:meta, :inline)
         $f(fa, fb, fx)
     end
+end
+
+
+
+
+"""
+    find_bracket(f, x0, method=A42(); kwargs...)
+
+For bracketing methods returns an approximate root, the last bracketing interval used, and a flag indicating if an exact zero was found as a named tuple.
+
+With the default tolerances, one  of these should be the case: `exact`  is `true` (indicating termination  of the algorithm due to an exact zero  being identified) or the length of `bracket` is less or equal than `2eps(maximum(abs.(bracket)))`. In the `BisectionExact` case, the 2 could  be replaced by 1, as the bracket, `(a,b)` will satisfy  `nextfloat(a) == b `;  the Alefeld,  Potra, and Shi algorithms don't quite have  that promise.
+
+"""
+function find_bracket(fs, x0, method::M=A42(); kwargs...) where {M <: Union{AbstractAlefeldPotraShi, BisectionExact}}
+    x = adjust_bracket(x0)
+    T = eltype(x[1])
+    F = callable_function(fs)
+    state = init_state(method, F, x)
+    options = init_options(method, state; kwargs...)
+
+    # check if tolerances are exactly 0
+    iszero_tol = iszero(options.xabstol) && iszero(options.xreltol) && iszero(options.abstol) && iszero(options.reltol)
+
+    find_zero(method, F, options, state, NullTracks())
+
+    (xstar=state.xstar, bracket=(state.xn0, state.xn1), exact=iszero(state.fxstar))
+
 end
