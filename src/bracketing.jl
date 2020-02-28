@@ -301,7 +301,7 @@ function update_state(method::Union{Bisection, BisectionExact}, fs, o::Univariat
     m::T = o.m[1]
     ym::S = o.fm[1] #fs(m)
 
-    if y0 * ym < 0
+    if sign(y0) * sign(ym) < 0
         o.xn1, o.fxn1 = m, ym
     else
         o.xn0, o.fxn0 = m, ym
@@ -522,7 +522,7 @@ appropriate units; `maxevals=45`, `maxfnevals = Inf`; and `strict=true`.
 default_tolerances(M::AbstractAlefeldPotraShi) = default_tolerances(M, Float64, Float64)
 function default_tolerances(::AbstractAlefeldPotraShi, ::Type{T}, ::Type{S}) where {T,S}
     xatol = zero(T)
-    xrtol = eps(one(T)/2)
+    xrtol = eps(one(T))/2
     atol = zero(float(one(S))) * oneunit(S)
     rtol = zero(float(one(S))) * one(S)
     maxevals = 45
@@ -596,7 +596,8 @@ function assess_convergence(method::AbstractAlefeldPotraShi, state::UnivariateZe
     end
 
     a,b = state.xn0, state.xn1
-    tol = maximum(promote(options.xabstol, max(abs(a),abs(b)) * options.xreltol))
+    mx = max(abs(a), abs(b))
+    tol = maximum(promote(options.xabstol, mx * options.xreltol, sign(options.xreltol) *   eps(mx)))
 
     if abs(b-a) <= 2tol
         # use smallest of a,b,m
@@ -975,8 +976,10 @@ end
 
 For bracketing methods returns an approximate root, the last bracketing interval used, and a flag indicating if an exact zero was found as a named tuple.
 
+With the default tolerances, one  of these should be the case: `exact`  is `true` (indicating termination  of the algorithm due to an exact zero  being identified) or the length of `bracket` is less or equal than `2eps(maximum(abs.(bracket)))`. In the `BisectionExact` case, the 2 could  be replaced by 1, as the bracket, `(a,b)` will satisfy  `nextfloat(a) == b `;  the Alefeld,  Potra, and Shi algorithms don't quite have  that promise.
+
 """
-function find_bracket(fs, x0, method::M=A42(); kwargs...) where {M <:  AbstractBracketing} #{M <: Union{A42, BisectionExact}}
+function find_bracket(fs, x0, method::M=A42(); kwargs...) where {M <: Union{AbstractAlefeldPotraShi, BisectionExact}}
     x = adjust_bracket(x0)
     T = eltype(x[1])
     F = callable_function(fs)

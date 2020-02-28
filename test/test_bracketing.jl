@@ -252,6 +252,13 @@ avg(x) = sum(x)/length(x)
 
 end
 
+mutable struct Cnt
+    cnt::Int
+    f
+    Cnt(f) = new(0, f)
+end
+(f::Cnt)(x) = (f.cnt += 1; f.f(x))
+
 ## Some tests for FalsePosition methods
 @testset "FalsePosition" begin
     galadino_probs = [(x -> x^3 - 1, [.5, 1.5]),
