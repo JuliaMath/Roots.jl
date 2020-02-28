@@ -515,14 +515,14 @@ end
     default_tolerances(::AbstractAlefeldPotraShi, T, S)
 
 The default tolerances for Alefeld, Potra, and Shi methods are
-`xatol=zero(T)`, `xrtol=2eps(T)`, `atol= zero(S), and rtol=zero(S)`, with
+`xatol=zero(T)`, `xrtol=eps(T)/2`, `atol= zero(S), and rtol=zero(S)`, with
 appropriate units; `maxevals=45`, `maxfnevals = Inf`; and `strict=true`.
 
 """
 default_tolerances(M::AbstractAlefeldPotraShi) = default_tolerances(M, Float64, Float64)
 function default_tolerances(::AbstractAlefeldPotraShi, ::Type{T}, ::Type{S}) where {T,S}
     xatol = zero(T)
-    xrtol = 2 * eps(one(T))
+    xrtol = eps(one(T)/2)
     atol = zero(float(one(S))) * oneunit(S)
     rtol = zero(float(one(S))) * one(S)
     maxevals = 45
