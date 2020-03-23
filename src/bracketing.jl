@@ -538,12 +538,16 @@ end
 function check_zero(::AbstractBracketing, state, c, fc)
     if isnan(c)
         state.stopped = true
-        state.xn1 = c
+        #state.xn1 = c
+        state.xstar = c
+        state.fxstar =fc
         state.message *= "NaN encountered. "
         return true
     elseif isinf(c)
         state.stopped = true
-        state.xn1 = c
+        #state.xn1 = c
+        state.xstar = c
+        state.fxstar =fc
         state.message *= "Inf encountered. "
         return true
     elseif iszero(fc)
@@ -561,9 +565,9 @@ end
 function assess_convergence(method::AbstractAlefeldPotraShi, state::UnivariateZeroState{T,S}, options) where {T,S}
 
     if state.stopped || state.x_converged || state.f_converged
-        if isnan(state.xstar)
-            state.xstar, state.fxstar = state.xn1, state.fxn1
-        end
+        ## if isnan(state.xstar)
+        ##     state.xstar, state.fxstar = state.xn1, state.fxn1
+        ## end
         return true
     end
 
@@ -581,7 +585,7 @@ function assess_convergence(method::AbstractAlefeldPotraShi, state::UnivariateZe
 
     # check f
     u,fu = choose_smallest(state.xn0, state.xn1, state.fxn0, state.fxn1)
-    u, fu = choose_smallest(u, state.m[1], fu, state.fm[1])
+    #u,fu = choose_smallest(u, state.m[1], fu, state.fm[1])
 
     if abs(fu) <= maximum(promote(options.abstol, abs(u) * oneunit(fu) / oneunit(u) * options.reltol))
         state.f_converged = true
@@ -638,7 +642,9 @@ function update_state(M::A42, f, state::UnivariateZeroState{T,S}, options::Univa
     end
     fc::S = f(c)
     incfn(state)
-    check_zero(M, state, c, fc) && return nothing
+    if check_zero(M, state, c, fc)
+        return nothing
+    end
 
     ab::T, bb::T, db::T, fab::S, fbb::S, fdb::S = bracket(a,b,c,fa,fb,fc)
     eb::T, feb::S = d, fd
@@ -646,7 +652,13 @@ function update_state(M::A42, f, state::UnivariateZeroState{T,S}, options::Univa
     cb::T = take_a42_step(ab, bb, db, eb, fab, fbb, fdb, feb, delta)
     fcb::S = f(cb)
     incfn(state)
-    check_zero(M, state, cb, fcb) && return nothing
+    if check_zero(M, state, cb, fcb)
+        # tighten up bracket
+        state.xn0, state.xn1, state.m[1]  = ab, bb, db
+        state.fxn0, state.fxn1, state.fm[1]= fab, fbb, fdb
+
+        return nothing
+    end
 
     ab,bb,db,fab,fbb,fdb = bracket(ab,bb,cb,fab,fbb,fcb)
 
@@ -659,7 +671,13 @@ function update_state(M::A42, f, state::UnivariateZeroState{T,S}, options::Univa
     end
     fch::S = f(cb)
     incfn(state)
-    check_zero(M, state, ch, fch) && return nothing
+    if check_zero(M, state, ch, fch)
+        # tighten up bracket
+        state.xn0, state.xn1, state.m[1]  = ab, bb, db
+        state.fxn0, state.fxn1, state.fm[1]= fab, fbb, fdb
+
+        return nothing
+    end
 
     ah::T, bh::T, dh::T, fah::S, fbh::S, fdh::S = bracket(ab, bb, ch, fab, fbb, fch)
 
@@ -714,7 +732,13 @@ function update_state(M::AlefeldPotraShi, f, state::UnivariateZeroState{T,S}, op
     c = newton_quadratic(a,b,d,fa,fb,fd, 3, delta)
     fc = f(c)
     incfn(state)
-    check_zero(M, state, c, fc) && return nothing
+    if check_zero(M, state, c, fc)
+        # tighten up bracket
+        state.xn0, state.xn1, state.m[1]  = a, b, d
+        state.fxn0, state.fxn1, state.fm[1]= fa, fb, fd
+
+        return nothing
+    end
 
     a, b, d, fa, fb, fd = bracket(a, b, c, fa, fb,fc)
 
@@ -725,7 +749,13 @@ function update_state(M::AlefeldPotraShi, f, state::UnivariateZeroState{T,S}, op
     end
     fc = f(c)
     incfn(state)
-    check_zero(M, state, c, fc) && return nothing
+    if  check_zero(M, state, c, fc)
+        # tighten up bracket
+        state.xn0, state.xn1, state.m[1]  = a, b, d
+        state.fxn0, state.fxn1, state.fm[1]= fa, fb, fd
+
+        return nothing
+    end
 
     ahat::T, bhat::T, dhat::T, fahat::S, fbhat::S, fdhat::S = bracket(a, b, c, fa, fb, fc)
     if bhat - ahat < μ * (b - a)
