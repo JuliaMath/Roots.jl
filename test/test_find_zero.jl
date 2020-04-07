@@ -187,10 +187,10 @@ end
     ## issues with starting near a maxima. Some bounce out of it, but
     ## one would expect all to have issues
     fn, xstar = x -> x^3 + 4x^2 -10,  1.365230013414097
-    for M in [Order1(), Roots.Order1B(), Order2(), Roots.Order2B()]
+    for M in [Order1(), Roots.Order1B(), Order2(), Roots.Order2B(), Order5()]
         @test_throws Roots.ConvergenceFailed find_zero(fn, -1.0, M)
     end
-    for M in [Order0(),  Order5(), Order8(), Order16()]
+    for M in [Order0(),  Order8(), Order16()]
         @test find_zero(fn, -1.0, M) ≈ xstar
     end
 

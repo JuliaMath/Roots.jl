@@ -108,7 +108,7 @@ function _fbracket_ratio(a, b, c, fa, fb, fc)
     x1, _ = _fbracket(a, b, fa, fb)
     x2, _ = _fbracket(a, c, fa, fc)
     x3, _ = _fbracket(b, c, fb, fc)
-    out = (x2 * x3) / x3
+    out = (x1 * x2) / x3
     out, isissue(out)
 end
 
