@@ -185,6 +185,95 @@ function secant(f, a::T, b::T, atol=zero(T), rtol=8eps(T), maxevals=100) where {
 end
 
 """
+    muller(f, xᵢ; xatol=nothing, xrtol=nothing, maxevals=100)
+    muller(f, xᵢ₋₂, xᵢ₋₁, xᵢ; xatol=nothing, xrtol=nothing, maxevals=100)
+
+> *Muller’s method* generalizes the secant method, but uses quadratic
+> interpolation among three points instead of linear interpolation between two.
+> Solving for the zeros of the quadratic allows the method to find complex
+> pairs of roots.
+> Given three previous guesses for the root `xᵢ₋₂`, `xᵢ₋₁`, `xᵢ`, and the values
+> of the polynomial `f` at those points, the next approximation `xᵢ₊₁` is produced.
+
+Excerpt and the algorithm taken from
+
+> W.H. Press, S.A. Teukolsky, W.T. Vetterling and B.P. Flannery
+> *Numerical Recipes in C*, Cambridge University Press (2002), p. 371
+
+Convergence here is decided by `xᵢ₊₁ ≈ xᵢ` using the tolerances specified,
+which both default to `eps(one(typeof(abs(xᵢ))))^4/5` in the appropriate units.
+Each iteration performs three evaluations of `f`.
+The first method picks two remaining points at random in relative proximity of `xᵢ`.
+
+Note that the method may return complex result even for real intial values
+as this depends on the function.
+
+Examples:
+```
+muller(x->x^3-1, 0.5, 0.5im, -0.5) # → -0.500 + 0.866…im
+muller(x->x^2+2, 0.0, 0.5, 1.0) # → ≈ 0.00 - 1.41…im
+muller(x->(x-5)*x*(x+5), rand(3)...) # → ≈ 0.00
+muller(x->x^3-1, 1.5, 1.0, 2.0) # → 2.0, Not converged
+```
+
+"""
+muller(f, x₀::T; kwargs...) where T = muller(f, (rand(T, 2).*x₀)..., x₀; kwargs...)
+
+muller(f, xᵢ₋₂, xᵢ₋₁, xᵢ; kwargs...) =
+    muller(f, promote(xᵢ₋₂, xᵢ₋₁, xᵢ)...; kwargs...)
+
+function muller(f, oldest::T, older::T, old::T;
+    xatol=nothing, xrtol=nothing, maxevals=300) where {T}
+    @assert old ≠ older ≠ oldest ≠ old # we want q to be non-degenerate
+    xᵢ₋₂, xᵢ₋₁, xᵢ = oldest, older, old
+
+    RT = typeof(abs(oldest))
+    atol = xatol !== nothing ? xatol : oneunit(RT) * (eps(one(RT)))^(4/5)
+    rtol = xrtol !== nothing ? xrtol : eps(one(RT))^(4/5)
+
+    for i in 1:maxevals÷3
+        # three evaluations per iteration
+        x = muller_step(xᵢ₋₂, xᵢ₋₁, xᵢ, f(xᵢ₋₂), f(xᵢ₋₁), f(xᵢ))
+
+        if isnan(x)
+            @warn "The algorithm might not have converged, stopping at i=$i:" abs(xᵢ - xᵢ₋₁)
+            return xᵢ
+        end
+
+        # @debug "Iteration $i:" xᵢ₋₂ xᵢ₋₁ xᵢ x abs(x-xᵢ)
+        xᵢ₋₂, xᵢ₋₁, xᵢ = xᵢ₋₁, xᵢ, x
+        #stopping criterion
+        isapprox(xᵢ, xᵢ₋₁, atol=atol, rtol=rtol) && return xᵢ
+    end
+    @warn "The algorithm might not have converged, maxevals limit hit:" abs(xᵢ₋₁- xᵢ)
+    return xᵢ
+end
+
+function muller_step(a,b,c,fa,fb,fc)
+    a,b,c = promote(a,b,c)
+    q = qq(a, b, c)
+    q² = q^2
+    q1 = q+one(q)
+
+    A =      q*fc - q*q1*fb + q²*fa
+    B = (q1+q)*fc - q1^2*fb + q²*fa
+    C =     q1*fc
+
+    den = let
+        Δ = B^2 - 4A*C
+        typeof(Δ) <: Real && Δ < 0 && throw(
+            DomainError(Δ, "Discriminant is negative and the function most likely has complex roots. You might want to call muller with complex input."))
+        Δ = √Δ
+        d⁺ = B + Δ
+        d⁻ = B - Δ
+        abs(d⁺) > abs(d⁻) ? d⁺ : d⁻
+    end
+    return c - (c - b)*2C/den
+end
+
+@inline qq(a, b, c) = (c - b)/(b - a)
+
+"""
     newton((f, f'), x0; xatol=nothing, xrtol=nothing, maxevals=100)
     newton(fΔf, x0; xatol=nothing, xrtol=nothing, maxevals=100)
 

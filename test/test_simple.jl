@@ -21,6 +21,23 @@ using Test
     @test abs(fpoly(xrt)) <= 1e-14
 
 
+    # muller
+    fpoly(x) = x^5 - x - 1
+    xrt = Roots.muller(fpoly, 1.0)
+    @test xrt isa Real
+    @test abs(fpoly(xrt)) <= 1e-15
+
+    @test_throws DomainError Roots.muller(fpoly, -1.0)
+    xrt = Roots.muller(fpoly, -1.0+0im)
+    @test xrt isa Complex
+    @test abs(fpoly(xrt)) <= 1e-15
+
+    @test Roots.muller(cos, 1.0) ≈ π/2
+    expoly(z) = log(-z)*asin(z)/tanh(z)
+
+    @test Roots.muller(expoly, 0.2+0.5im) ≈ im*π/2
+    @test Roots.muller(expoly, -0.7-0.5im) ≈ -1.0
+    
     # dfree
     fpoly(x) = x^5 - x - 1
     xrt = Roots.dfree(fpoly, 1.0)
