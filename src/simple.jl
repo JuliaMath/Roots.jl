@@ -309,8 +309,8 @@ function newton(f, x0; xatol=nothing, xrtol=nothing, maxevals = 100)
 
     x = float(x0)
     T = typeof(x)
-    atol = xatol != nothing ? xatol : oneunit(T) * (eps(one(T)))^(4//5)
-    rtol = xrtol != nothing ? xrtol : eps(one(T))^(4//5)
+    atol = xatol != nothing ? xatol : oneunit(T) * (eps(one(T)))^(4/5)
+    rtol = xrtol != nothing ? xrtol : eps(one(T))^(4/5)
 
 
     xo = Inf
