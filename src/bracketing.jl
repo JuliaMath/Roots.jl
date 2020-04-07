@@ -403,7 +403,6 @@ end
 # Cubic if possible, if not, quadratic(3)
 function take_a42_step(a::T, b, d, ee, fa, fb, fd, fe, k, delta=zero(T)) where {T}
 
-    fs = (fa, fb, fd, fe)
     # if r is NaN or Inf we move on by condition. Faster than checking ahead of time for
     # distinctness
     r = ipzero(a,b,d,ee, fa, fb,fd,fe, delta) # let error and see difference in allcoation?
@@ -440,7 +439,6 @@ function newton_quadratic(a::T, b, d, fa, fb, fd, k::Int, delta=zero(T)) where {
     if !(isnan(A) || isinf(A)) || !iszero(A)
         B = f_ab(a,b,fa,fb)
 
-        dr = zero(r)
         for i in 1:k
             Pr = fa + B * (r-a) +  A * (r-a)*(r-b)
             Prp = (B + A*(2r - a - b))

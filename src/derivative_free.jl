@@ -349,8 +349,7 @@ function update_state(method::Esser, fs,
                       o::UnivariateZeroState{T,S}, options)  where {T, S}
 
 
-    x0, x1 = o.xn0, o.xn1
-    fx0, fx1 = o.fxn0, o.fxn1
+    x1, fx1 = o.xn1, o.fxn1
 
     f0 = fx1
 
