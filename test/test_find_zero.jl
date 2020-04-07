@@ -284,6 +284,8 @@ end
     ## issue #159 bracket with zeros should be found
     @test find_zero(x->x+1,(-1,1)) == -1
 
+    ## issue #178 passinig through method
+    @test fzero(sin, 3, 4, Roots.Brent()) ≈ π
 end
 
 
