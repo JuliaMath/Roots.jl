@@ -124,16 +124,18 @@ points of a function.
 ## mean
 using Statistics
 as = rand(5)
+
 function M(x)
   sum([(x-a)^2 for a in as])
 end
+
 find_zero(D(M), .5) - mean(as)	  # 0.0
 
 ## median
 function m(x)
   sum([abs(x-a) for a in as])
-
 end
+
 find_zero(D(m), (0, 1)) - median(as)	# 0.0
 ```
 
