@@ -527,7 +527,7 @@ julia> find_zero(sin, big(3.0), Order16())        # rapid convergence
 julia> find_zero(sin, (3, 4), Roots.A42()())      # fewer function calls than Bisection(), in this case
 ERROR: MethodError: objects of type Roots.A42 are not callable
 Stacktrace:
- [1] top-level scope at REPL[26]:1
+ [1] top-level scope at REPL[12]:1
 
 julia> find_zero(sin, (3, 4), FalsePosition(8))   # 1 of 12 possible algorithms for false position
 3.141592653589793
@@ -553,8 +553,8 @@ true
 julia> find_zero(fn, x0, Order2(), atol=0.0, rtol=0.0) # error: x_n ≉ x_{n-1}; just f(x_n) ≈ 0
 ERROR: Roots.ConvergenceFailed("Stopped at: xn = 2.991488255523429")
 Stacktrace:
- [1] find_zero(::Function, ::Float64, ::Order2, ::Nothing; tracks::Roots.NullTracks, verbose::Bool, kwargs::Base.Iterators.Pairs{Symbol,Float64,Tuple{Symbol,Symbol},NamedTuple{(:atol, :rtol),Tuple{Float64,Float64}}}) at /Users/verzani/julia/Roots/src/find_zero.jl:678
- [2] top-level scope at REPL[26]:1
+ [1] find_zero(::Function, ::Float64, ::Order2, ::Nothing; tracks::Roots.NullTracks, verbose::Bool, kwargs::Base.Iterators.Pairs{Symbol,Float64,Tuple{Symbol,Symbol},NamedTuple{(:atol, :rtol),Tuple{Float64,Float64}}}) at /Users/verzani/julia/Roots/src/find_zero.jl:670
+ [2] top-level scope at REPL[12]:1
 
 julia> fn = x -> (sin(x)*cos(x) - x^3 + 1)^9;
 
@@ -566,8 +566,8 @@ true
 julia> find_zero(fn, x0, Order2(), maxevals=3)    # Roots.ConvergenceFailed: 26 iterations needed, not 3
 ERROR: Roots.ConvergenceFailed("Stopped at: xn = 1.0482748172022405")
 Stacktrace:
- [1] find_zero(::Function, ::Float64, ::Order2, ::Nothing; tracks::Roots.NullTracks, verbose::Bool, kwargs::Base.Iterators.Pairs{Symbol,Int64,Tuple{Symbol},NamedTuple{(:maxevals,),Tuple{Int64}}}) at /Users/verzani/julia/Roots/src/find_zero.jl:678
- [2] top-level scope at REPL[26]:1
+ [1] find_zero(::Function, ::Float64, ::Order2, ::Nothing; tracks::Roots.NullTracks, verbose::Bool, kwargs::Base.Iterators.Pairs{Symbol,Int64,Tuple{Symbol},NamedTuple{(:maxevals,),Tuple{Int64}}}) at /Users/verzani/julia/Roots/src/find_zero.jl:670
+ [2] top-level scope at REPL[12]:1
 ```
 
 Tracing output.
