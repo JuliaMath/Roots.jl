@@ -15,12 +15,13 @@
 
 ## Newton
 abstract type AbstractNewtonLikeMethod <: AbstractUnivariateZeroMethod end
+struct Newton <: AbstractNewtonLikeMethod end
 """
 
     Roots.Newton()
 
-Implements Newton's [method](http://tinyurl.com/b4d7vls): `x_n1 = xn -
-f(xn)/f'(xn)`.  This is a quadratically converging method requiring
+Implements Newton's [method](http://tinyurl.com/b4d7vls): 
+`xᵢ₊₁ =  xᵢ - f(xᵢ)/f'(xᵢ)`.  This is a quadratically convergent method requiring
 one derivative. Two function calls per step.
 
 Example
@@ -37,10 +38,11 @@ find_zero(x -> (sin(x), sin(x)/cos(x)), 3.0, Roots.Newton())
 This can be advantageous if the derivative is easily computed from the
 value of f, but otherwise would be expensive to compute.
 
-The error, `en = xn - alpha`, can be expressed as `e1 = f[x0,x0,alpha]/(2f[x0,x0])e0^2` (Sidi).
+The error, `eᵢ = xᵢ - α`, can be expressed as `eᵢ₊₁ = f[xᵢ,xᵢ,α]/(2f[xᵢ,xᵢ])eᵢ²` (Sidi, Unified treatment of regula falsi, Newton-Raphson, secant, and Steffensen methods for nonlinear equations).
 
 """
-struct Newton <: AbstractNewtonLikeMethod end
+Newton
+
 
 function init_state(method::AbstractNewtonLikeMethod, fs, x)
 
@@ -128,7 +130,7 @@ abstract type AbstractHalleyLikeMethod <: AbstractUnivariateZeroMethod end
     Roots.Halley()
 
 Implements Halley's [method](http://tinyurl.com/yd83eytb),
-`x_n1 = xn - f/f' * (1 - f/f' * f''/f' * 1/2)^(-1)
+`xᵢ₊₁ = xᵢ - (f/f')(xᵢ) * (1 - (f/f')(xᵢ) * (f''/f')(xᵢ) * 1/2)^(-1)`
 This method is cubically converging, but requires more function calls per step (3) than
 other methods.
 
@@ -147,8 +149,8 @@ find_zero(x -> (sin(x), sin(x)/cos(x), -cos(x)/sin(x)), 3.0, Roots.Halley())
 This can be advantageous if the derivatives are easily computed from
 the value of f, but otherwise would be expensive to compute.
 
-The error, `e_n = x_n - alpha`, satisfies
-`e1 ≈ -(2f'⋅f''' -3⋅(f'')^2)/(12⋅(f'')^2) ⋅ e0^3` (all evaluated at `alpha`).
+The error, `eᵢ = xᵢ - α`, satisfies
+`eᵢ₊₁ ≈ -(2f'⋅f''' -3⋅(f'')²)/(12⋅(f'')²) ⋅ eᵢ³` (all evaluated at `α`).
 
 """
 struct Halley <: AbstractHalleyLikeMethod
@@ -234,14 +236,14 @@ halley(f, fp, fpp, x0; kwargs...) = find_zero((f, fp, fpp), x0, Halley(); kwargs
     Roots.Schroder()
 
 
-Schröder's method, like Halley's method, utilizes f, f', and
-f''. Unlike Halley it is quadratically converging, but this is
+Schröder's method, like Halley's method, utilizes `f`, `f'`, and
+`f''`. Unlike Halley it is quadratically converging, but this is
 independent of the multiplicity of the zero (cf. Schröder, E. "Über
 unendlich viele Algorithmen zur Auflösung der Gleichungen."
 Math. Ann. 2, 317-365, 1870;
-http://mathworld.wolfram.com/SchroedersMethod.html). (Schröder's
+[mathworld](http://mathworld.wolfram.com/SchroedersMethod.html)). Schröder's
 method applies Newton's method to `f/f'`, a function with all
-simple zeros.)
+simple zeros.
 
 
 Example
@@ -257,16 +259,16 @@ find_zero((f, fp, fpp), 1.0, Roots.Schroder())    # 3 steps
 (Whereas, when `m=1`, Halley is 2 steps to Schröder's 3.)
 
 If function evaluations are expensive one can pass in a function which
-returns (f, f/f',f'/f'') as follows
+returns `(f, f/f',f'/f'')` as follows
 
 ```
 find_zero(x -> (sin(x), sin(x)/cos(x), -cos(x)/sin(x)), 3.0, Roots.Schroder())
 ```
 
 This can be advantageous if the derivatives are easily computed from
-the value of f, but otherwise would be expensive to compute.
+the value of `f`, but otherwise would be expensive to compute.
 
-The error, `e_n = x_n - alpha`, is the same as `Newton` with `f` replaced by `f/f'`.
+The error, `eᵢ = xᵢ - α`, is the same as `Newton` with `f` replaced by `f/f'`.
 
 """
 struct Schroder <: AbstractHalleyLikeMethod
