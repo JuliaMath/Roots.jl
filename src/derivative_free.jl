@@ -104,9 +104,9 @@ step fails to decrease the function value, a quadratic step is used up
 to 4 times.
 
 This is not really 0-order: the secant method has order
-1.6...[https://en.wikipedia.org/wiki/Secant_method#Comparison_with_other_root-finding_methods]
+1.6...[Wikipedia](https://en.wikipedia.org/wiki/Secant_method#Comparison_with_other_root-finding_methods_
 and the the bracketing method has order
-1.6180...[http://www.ams.org/journals/mcom/1993-61-204/S0025-5718-1993-1192965-2/S0025-5718-1993-1192965-2.pdf]
+1.6180...[Wikipedia](http://www.ams.org/journals/mcom/1993-61-204/S0025-5718-1993-1192965-2/S0025-5718-1993-1192965-2.pdf)
 so for reasonable starting points, this algorithm should be
 superlinear, and relatively robust to non-reasonable starting points.
 
@@ -138,8 +138,8 @@ updated point is the intersection point of x axis with the secant line
 formed from the two points. The secant method uses 1 function
 evaluation per step and has order `(1+sqrt(5))/2`.
 
-The error, `e_n = x_n - alpha`, satisfies
-`e2 = f[x1,x0,alpha] / f[x1,x0] * (x1-alpha) * (x0 - alpha)`.
+The error, `eᵢ = xᵢ - α`, satisfies
+`eᵢ₊₂ = f[xᵢ₊₁,xᵢ,α] / f[xᵢ₊₁,xᵢ] * (xᵢ₊₁-α) * (xᵢ - α)`.
 
 """
 struct Secant <: AbstractSecant end
@@ -184,12 +184,12 @@ to  `f/f'`. However, this uses `f' ~ fp = (fx - f(x-fx))/fx` (a Steffensen step)
 this implementation, `Order1B`, when `fx` is too big, a single secant step of `f`
 is used.
 
-The *asymptotic* error, `e_n = x_n - alpha`, is given by
-`e2 = 1/2⋅G''/G'⋅ e0⋅e1 + (1/6⋅G'''/G' - (1/2⋅G''/G'))^2⋅e0⋅e1⋅(e0+e1)`.
+The *asymptotic* error, `eᵢ = xᵢ - α`, is given by
+`eᵢ₊₂ = 1/2⋅G''/G'⋅ eᵢ⋅eᵢ₊₁ + (1/6⋅G'''/G' - (1/2⋅G''/G'))^2⋅eᵢ⋅eᵢ₊₁⋅(eᵢ+eᵢ₊₁)`.
 
 """
-struct Order1B <: AbstractSecant end
 struct King <: AbstractSecant end
+struct Order1B <: AbstractSecant end
 
 
 function update_state(method::Order1B, fs, o::UnivariateZeroState{T,S}, options)  where {T, S}
@@ -268,8 +268,8 @@ poor initial guesses when `f(x)` is large, due to how `f'(x)` is
 approximated. This algorithm, `Order2`, replaces a Steffensen step with a secant
 step when `f(x)` is large.
 
-The error, `e_n - alpha`, satisfies
-`e1 = f[x0, x+f0, alpha] / f[x0,x0+f0] ⋅ (1 - f[x0,alpha] ⋅ e0^2`
+The error, `eᵢ - α`, satisfies
+`eᵢ₊₁ = f[xᵢ, xᵢ+fᵢ, α] / f[xᵢ,xᵢ+fᵢ] ⋅ (1 - f[xᵢ,α] ⋅ eᵢ²`
 """
 struct Order2 <: AbstractSecant end
 struct Steffensen <: AbstractSecant end
@@ -320,7 +320,7 @@ zero. Schroder's method has update step `x - r2/(r2-r1) * r1`, where `ri =
 f^(i-1)/f^(i)`. Esser approximates `f' ~ f[x-h, x+h], f'' ~
 f[x-h,x,x+h]`, where `h = fx`, as with Steffensen's method, Requiring 3
 function calls per step. The implementation `Order2B` uses a secant
-step when |fx| is considered too large.
+step when `|fx|` is considered too large.
 
 
 Esser, H. Computing (1975) 14: 367. https://doi.org/10.1007/BF02253547
@@ -338,8 +338,8 @@ find_zero(g, x0, Order2(), verbose=true)        #  22 / 45
 find_zero(g, x0, Roots.Order2B(), verbose=true) #  4 / 10
 ```
 """
-struct Order2B <: AbstractSecant end
 struct Esser <: AbstractSecant end
+struct Order2B <: AbstractSecant end
 
 function update_state(method::Order2B, fs, o::UnivariateZeroState{T,S}, options)  where {T, S}
      update_state_guarded(method, Secant(), Esser(), fs, o, options)
@@ -400,11 +400,11 @@ end
 Implements an order 5 algorithm from *A New Fifth Order Derivative
 Free Newton-Type Method for Solving Nonlinear Equations* by Manoj
 Kumar, Akhilesh Kumar Singh, and Akanksha, Appl. Math. Inf. Sci. 9,
-No. 3, 1507-1513 (2015), DOI: 10.12785/amis/090346. Four function
+No. 3, 1507-1513 (2015), DOI: [10.12785/amis/090346](https://doi.org/10.12785/amis/090346). Four function
 calls per step are needed.
 
-The error, `e_n = x_n - alpha`, satisfies
-`e1 = K_1 ⋅ K_5 ⋅ M ⋅ e0^5 + O(e0^6)`
+The error, `eᵢ = xᵢ - α`, satisfies
+`eᵢ₊₁ = K₁ ⋅ K₅ ⋅ M ⋅ eᵢ⁵ + O(eᵢ⁶)`
 
 """
 struct Order5 <: AbstractSecant end
@@ -515,10 +515,10 @@ Implements an eighth-order algorithm from *New Eighth-Order
 Derivative-Free Methods for Solving Nonlinear Equations* by Rajinder
 Thukral, International Journal of Mathematics and Mathematical
 Sciences Volume 2012 (2012), Article ID 493456, 12 pages DOI:
-10.1155/2012/493456. Four function calls per step are required.
+[10.1155/2012/493456](https://doi.org/10.1155/2012/493456). Four function calls per step are required.
 
-The error, `e_n = x_n - alpha`, is expressed as `e1 = K ⋅ e0^8` in
-(2.25) of the paper for an explicit K.
+The error, `eᵢ = xᵢ - α`, is expressed as `eᵢ₊₁ = K ⋅ eᵢ⁸` in
+(2.25) of the paper for an explicit `K`.
 
 """
 struct Order8 <: AbstractSecant end
@@ -610,8 +610,8 @@ this method generally isn't faster (fewer function calls/steps) over
 other methods when using `Float64` values, but may be useful for
 solving over `BigFloat`.
 
-The error, `e_n = x_n - alpha`, is expressed as `e1 = K
-e_0^16` for an explicit `K` in equation (50) of the paper.
+The error, `eᵢ = xᵢ - α`, is expressed as `eᵢ₊₁ = K⋅eᵢ¹⁶` for an explicit `K` 
+in equation (50) of the paper.
 
 """
 struct Order16 <: AbstractSecant end

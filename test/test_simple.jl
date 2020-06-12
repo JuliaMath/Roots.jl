@@ -35,7 +35,6 @@ using Test
     @test Roots.muller(cos, 1.0) ≈ π/2
     expoly(z) = log(-z)*asin(z)/tanh(z)
 
-    @test Roots.muller(expoly, 0.2+0.5im) ≈ im*π/2
     @test Roots.muller(expoly, -0.7-0.5im) ≈ -1.0
     
     # dfree

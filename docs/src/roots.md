@@ -1,4 +1,4 @@
-# The Roots package
+# An overview of `Roots`
 
 The `Roots` package contains simple routines for finding zeros of
 continuous scalar functions of a single real variable.  A zero of $f$
@@ -8,9 +8,11 @@ function `find_zero`, which through multiple dispatch can handle many different 
 In the following, we will use `Plots` for plotting and `ForwardDiff`
 to take derivatives.
 
-```
-using Roots
-using Plots, ForwardDiff; pyplot();
+```jldoctest roots
+julia> using Roots
+
+julia> using Plots, ForwardDiff
+
 ```
 
 ## Bracketing
@@ -33,19 +35,29 @@ To illustrate, consider the function $f(x) = \cos(x) - x$. From the
 graph we see readily that $[0,1]$ is a bracket (which we emphasize
 with an overlay):
 
-```figure
+```@example roots
+using Plots, Roots
 f(x) = cos(x) - x
 plot(f, -2, 2)
 plot!([0,1], [0,0], linewidth=2)
+savefig("plot-f-1.svg"); nothing #hide
 ```
+
+![](plot-f-1.svg)
 
 The `Roots` package includes the bisection algorithm through
 `find_zero`. We use a vector or tuple to specify the initial condition
 and `Bisection()` to specify the algorithm:
 
-```
-x = find_zero(f, (0, 1), Bisection())    # alternatively fzero(f, [0, 1])
-x, f(x)
+```jldoctest roots
+julia> f(x) = cos(x) - x
+f (generic function with 1 method)
+
+julia> x = find_zero(f, (0, 1), Bisection())    # alternatively fzero(f, [0, 1])
+0.7390851332151607
+
+julia> x, f(x)
+(0.7390851332151607, 0.0)
 ```
 
 For this function we see that `f(x)` is `0.0`.
@@ -57,16 +69,24 @@ tells us that $[\pi/2, 3\pi/2]$ will be a bracket. In this call `Bisection()`
 is not specified, as it will be the default when the initial value is
 specified as a pair of numbers:
 
-```
-f(x) = sin(x)
-x = find_zero(f, (pi/2, 3pi/2))
-x, f(x)
+```jldoctest roots
+julia> f(x) = sin(x)
+f (generic function with 1 method)
+
+julia> x = find_zero(f, (pi/2, 3pi/2))
+3.1415926535897936
+
+julia> x, f(x)
+(3.1415926535897936, -3.216245299353273e-16)
+
 ```
 
 This value of `x` does not exactly produce a zero, however, it is as close as can be:
 
-```
-f(prevfloat(x)) * f(x) < 0.0 || f(x) * f(nextfloat(x)) < 0.0
+```jldoctest roots
+julia> f(prevfloat(x)) * f(x) < 0.0 || f(x) * f(nextfloat(x)) < 0.0
+true
+
 ```
 
 That is, at `x` the function is changing sign.
@@ -76,15 +96,19 @@ From a mathematical perspective, a zero is guaranteed for a
 continuity, it just looks for changes of sign. As such, the algorithm
 will  identify discontinuities, not just zeros. For example:
 
-```
-find_zero(x -> 1/x, (-1, 1))
+```jldoctest roots
+julia> find_zero(x -> 1/x, (-1, 1))
+0.0
+
 ```
 
 
 The endpoints and function values can even be infinite:
 
-```
-find_zero(x -> Inf*sign(x), (-Inf, Inf))  # Float64 only
+```jldoctest roots
+julia> find_zero(x -> Inf*sign(x), (-Inf, Inf))  # Float64 only
+0.0
+
 ```
 
 
@@ -92,8 +116,11 @@ The basic algorithm used for bracketing when the values are simple
 floating point values is a modification of the bisection method. For big float values, an
 algorithm due to Alefeld, Potra, and Shi is used.
 
-```
-find_zero(sin, (big(3), big(4)))    # uses a different algorithm then for (3,4)
+```jldoctest roots
+julia> find_zero(sin, (big(3), big(4)))    # uses a different algorithm then for (3,4)
+3.141592653589793238462643383279502884197169399375105820974944592307816406286198
+
+
 ```
 
 By default, bisection will converge to machine tolerance. This may
@@ -102,9 +129,13 @@ terminate early, thereby utilizing fewer resources. For example, this
 uses 19 steps to reach accuracy to $10^{-6}$ (without specifying `xatol` it uses
 51 steps):
 
-```
-rt = find_zero(sin, (3.0, 4.0), xatol=1e-6)
-rt - pi
+```jldoctest roots
+julia> rt = find_zero(sin, (3.0, 4.0), xatol=1e-6)
+3.141592502593994
+
+julia> rt - pi
+-1.5099579897537296e-7
+
 ```
 
 
@@ -128,25 +159,42 @@ For example, the answer to our initial problem is visibly seen from a
 graph to be near 1. Given this,
 the zero is found through:
 
-```
-f(x) = cos(x) - x
-x = find_zero(f , 1)
-x, f(x)
+```jldoctest roots
+julia> f(x) = cos(x) - x
+f (generic function with 1 method)
+
+
+julia> x = find_zero(f , 1)
+0.7390851332151607
+
+julia> x, f(x)
+(0.7390851332151607, 0.0)
+
 ```
 
 For the polynomial $f(x) = x^3 - 2x - 5$, an initial guess of 2 seems reasonable:
 
-```
-f(x) = x^3 - 2x - 5
-x = find_zero(f, 2)
-x, f(x), sign(f(prevfloat(x)) * f(nextfloat(x)))
+```jldoctest roots
+julia> f(x) = x^3 - 2x - 5
+f (generic function with 1 method)
+
+julia> x = find_zero(f, 2)
+2.0945514815423265
+
+julia> x, f(x), sign(f(prevfloat(x)) * f(nextfloat(x)))
+(2.0945514815423265, -8.881784197001252e-16, -1.0)
+
 ```
 
 For even more precision, `BigFloat` numbers can be used
 
-```
-x = find_zero(sin, big(3))
-x, sin(x), x - pi
+```jldoctest roots
+julia> x = find_zero(sin, big(3))
+3.141592653589793238462643383279502884197169399375105820974944592307816406286198
+
+julia> x, sin(x), x - pi
+(3.141592653589793238462643383279502884197169399375105820974944592307816406286198, 1.096917440979352076742130626395698021050758236508687951179005716992142688513354e-77, 0.0)
+
 ```
 
 ### Higher order methods
@@ -162,24 +210,40 @@ generally quite efficient. The even higher order ones are potentially
 useful when more precision is used. These algorithms are accessed by
 specifying the method after the initial starting point:
 
-```
-f(x) = 2x - exp(-x)
-x = find_zero(f, 1, Order1())      # also fzero(f, 1, order=1)
-x, f(x)
+```jldoctest roots
+julia> f(x) = 2x - exp(-x)
+f (generic function with 1 method)
+
+julia> x = find_zero(f, 1, Order1())      # also fzero(f, 1, order=1)
+0.35173371124919584
+
+julia> x, f(x)
+(0.35173371124919584, 0.0)
+
 ```
 
 The above makes $8$ function calls, to the $57$ made with `Order0`.
 
-```
-f(x) = (x + 3) * (x - 1)^2
-x = find_zero(f, -2, Order2())
-x, f(x)
+```jldoctest roots
+julia> f(x) = (x + 3) * (x - 1)^2
+f (generic function with 1 method)
+
+julia> x = find_zero(f, -2, Order2())
+-3.0
+
+julia> x, f(x)
+(-3.0, 0.0)
+
 ```
 
 
-```
-x = find_zero(f, 2, Order8())
-x, f(x)
+```jldoctest roots
+julia> x = find_zero(f, 2, Order8())
+1.0000000027152591
+
+julia> x, f(x)
+(1.0000000027152591, 2.949052856287529e-17)
+
 ```
 
 The latter shows that zeros need not be simple zeros  to be found.
@@ -209,11 +273,19 @@ these are not exported, so must be prefixed with the package name to
 be used.) We can see how each works on a problem studied by Newton
 himself. Newton's method uses the function and its derivative:
 
-```
-f(x) = x^3 - 2x - 5
-fp(x) = 3x^2 - 2
-x = Roots.newton(f, fp, 2)
-x, f(x)
+```jldoctest roots
+julia> f(x) = x^3 - 2x - 5
+f (generic function with 1 method)
+
+julia> fp(x) = 3x^2 - 2
+fp (generic function with 1 method)
+
+julia> x = Roots.newton(f, fp, 2)
+2.0945514815423265
+
+julia> x, f(x)
+(2.0945514815423265, -8.881784197001252e-16)
+
 ```
 
 To see the algorithm in progress, the argument `verbose=true` may be
@@ -222,23 +294,31 @@ specified.
 Alternatively, `Roots.Newton()` can be specified as the method for `find_zero`. The
 functions are specified using a tuple:
 
-```
-find_zero((f,fp), 2, Roots.Newton())
+```jldoctest roots
+julia> find_zero((f,fp), 2, Roots.Newton())
+2.0945514815423265
+
 ```
 
 The secant method typically needs two starting points, though a second
 one is computed if only one is give. Here we start with 2 and 3,
 specified through a tuple:
 
-```
-x = Roots.secant_method(f, (2,3))
-x, f(x)
+```jldoctest roots
+julia> x = Roots.secant_method(f, (2,3))
+2.094551481542327
+
+julia> x, f(x)
+(2.094551481542327, 3.552713678800501e-15)
+
 ```
 
 Starting with a single point is also supported:
 
-```
-Roots.secant_method(f, 2)
+```jldoctest roots
+julia> Roots.secant_method(f, 2)
+2.0945514815423265
+
 ```
 
 (This is like `Order1()`, but the implementation is significantly
@@ -248,10 +328,16 @@ are used. This method can be used when speed is very important.)
 Halley's method has cubic convergence, as compared to Newton's
 quadratic convergence. It uses the second derivative as well:
 
-```
-fpp(x) = 6x
-x = Roots.halley(f, fp, fpp, 2)
-x, f(x), sign(f(prevfloat(x)) * f(nextfloat(x)))
+```jldoctest roots
+julia> fpp(x) = 6x
+fpp (generic function with 1 method)
+
+julia> x = Roots.halley(f, fp, fpp, 2)
+2.0945514815423265
+
+julia> x, f(x), sign(f(prevfloat(x)) * f(nextfloat(x)))
+(2.0945514815423265, -8.881784197001252e-16, -1.0)
+
 ```
 
 (Halley's method takes 3 steps, Newton's 4, but Newton's uses 5
@@ -261,21 +347,30 @@ For many functions, their derivatives can be computed automatically. The
 `ForwardDiff` package provides a means. Here we define an operator `D`
 to compute a derivative:
 
-```
-using ForwardDiff
-D(f) = x -> ForwardDiff.derivative(f, float(x))
-D(f, n) = n > 1 ? D(D(f),n-1) : D(f)
+```jldoctest roots
+julia> using ForwardDiff
+
+julia> D(f) = x -> ForwardDiff.derivative(f, float(x))
+D (generic function with 1 method)
+
+julia> D(f, n) = n > 1 ? D(D(f),n-1) : D(f)
+D (generic function with 2 methods)
+
 ```
 
 
-```
-Roots.newton(f, D(f), 2)    
+```jldoctest roots
+julia> Roots.newton(f, D(f), 2)
+2.0945514815423265
+
 ```
 
 Or, for Halley's method:
 
-```
-Roots.halley(f, D(f), D(f,2), 2)  
+```jldoctest roots
+julia> Roots.halley(f, D(f), D(f,2), 2)
+2.0945514815423265
+
 ```
 
 
@@ -286,9 +381,13 @@ The `D` function, defined above, makes it straightforward to find critical point
 point of the function $f(x) = 1/x^2 + x^3, x > 0$ near $1.0$ is where
 the derivative is $0$ and can be found through:
 
-```
-f(x) = 1/x^2 + x^3
-find_zero(D(f), 1)
+```jldoctest roots
+julia> f(x) = 1/x^2 + x^3
+f (generic function with 1 method)
+
+julia> find_zero(D(f), 1)
+0.9221079114817278
+
 ```
 
 For more complicated expressions, `D` will not work, and other means
@@ -296,13 +395,15 @@ of finding a derivative can be employed. In
 this example, we have a function that models the flight
 of an arrow on a windy day:
 
-```
-function flight(x, theta)
- 	 k = 1/2
-	 a = 200*cosd(theta)
-	 b = 32/k
-	 tand(theta)*x + (b/a)*x - b*log(a/(a-x))
-end
+```jldoctest roots
+julia> function flight(x, theta)
+         k = 1/2
+         a = 200*cosd(theta)
+         b = 32/k
+         tand(theta)*x + (b/a)*x - b*log(a/(a-x))
+       end
+flight (generic function with 1 method)
+	   
 ```
 
 
@@ -312,20 +413,30 @@ This can be solved for different `theta` with `find_zero`. In the
 following, we note that `log(a/(a-x))` will have an asymptote at `a`,
 so we start our search at `a-5`:
 
-```
-function howfar(theta)
-	 a = 200*cosd(theta)
-	 find_zero(x -> flight(x, theta), a-5)
-end
+```jldoctest roots
+julia> function howfar(theta)
+         a = 200*cosd(theta)
+         find_zero(x -> flight(x, theta), a-5)
+        end
+howfar (generic function with 1 method)
+	   
 ```	 
 
 To visualize the trajectory if shot at 45 degrees, we have:
 
 
-```figure
+```@example roots
+flight(x, theta) = (k = 1/2;a = 200*cosd(theta);b = 32/k;tand(theta)*x + (b/a)*x - b*log(a/(a-x))); nothing
+howfar(theta) = (a = 200*cosd(theta);find_zero(x -> flight(x, theta), a-5)); nothing
+howfarp(theta,h=1e-5) = (howfar(theta+h) - howfar(theta-h)) / (2h); nothing
+tstar = find_zero(howfarp, 45); nothing  # hide
+
 theta = 45
 plot(x -> flight(x,  theta), 0, howfar(theta))
+savefig("flight.svg"); nothing # hide
 ```
+
+![](flight.svg)
 
 
 To maximize the range we solve for the lone critical point of `howfar`
@@ -334,18 +445,27 @@ within reasonable starting points. In this example, the derivative can not be ta
 search at 45 degrees--the angle which maximizes the trajectory on a
 non-windy day:
 
-```
-h = 1e-5
-howfarp(theta) = (howfar(theta+h) - howfar(theta-h)) / (2h)
-tstar = find_zero(howfarp, 45)
+```jldoctest roots
+julia> h = 1e-5
+1.0e-5
+
+julia> howfarp(theta) = (howfar(theta+h) - howfar(theta-h)) / (2h)
+howfarp (generic function with 1 method)
+
+julia> tstar = find_zero(howfarp, 45)
+26.262308916287818
+
 ```
 
 This graph shows the differences in the trajectories:
 
-```figure
+```@example roots
 plot(x -> flight(x, 45), 0, howfar(45))  
 plot!(x -> flight(x, tstar), 0, howfar(tstar))
+savefig("flight-2.svg"); nothing #hide
 ```
+
+![](flight-2.svg)
 
 
 
@@ -372,8 +492,10 @@ be quite different, as the next step generally tracks the intersection point of
 the tangent line. We see that starting at a $\pi/2$ causes this search
 to be problematic:
 
-```
-find_zero(sin, pi/2, Order1())
+```jldoctest roots
+julia> try  find_zero(sin, pi/2, Order1()) catch err  "Convergence failed" end
+"Convergence failed"
+
 ```
 
 (Whereas, starting at `pi/2 + 0.3`--where the slope of the tangent
@@ -382,16 +504,24 @@ is sufficiently close to point towards $\pi$--will find convergence at $\pi$.)
 For a classic example where a large second derivative is
 the issue, we have $f(x) = x^{1/3}$:
 
-```
-f(x) = cbrt(x)
-x = find_zero(f, 1, Order2())	# all of 2, 5, 8, and 16 fail or diverge towards infinity
+```jldoctest roots
+julia> f(x) = cbrt(x)
+f (generic function with 1 method)
+
+julia> x = try  find_zero(f, 1, Order2())  catch err  "Convergence failed" end	# all of 2, 5, 8, and 16 fail or diverge towards infinity
+"Convergence failed"
+
 ```
 
 However, the default finds the root here, as a bracket is identified:
 
-```
-x = find_zero(f, 1)
-x,  f(x)
+```jldoctest roots
+julia> x = find_zero(f, 1)
+0.0
+
+julia> x,  f(x)
+(0.0, 0.0)
+
 ```
 
 Finally, for many functions, all of these methods need a good initial
@@ -399,25 +529,34 @@ guess. For example, the polynomial function $f(x) = x^5 - x - 1$ has
 its one zero near $1.16$. If we start far from it, convergence may
 happen, but it isn't guaranteed:
 
-```
-f(x) = x^5 - x - 1
-x0 = 0.1
-find_zero(f, x0)
+```jldoctest roots
+julia> f(x) = x^5 - x - 1
+f (generic function with 1 method)
+
+julia> x0 = 0.1
+0.1
+
+julia> try find_zero(f, x0)  catch err  "Convergence failed" end
+"Convergence failed"
+
 ```
 
 Whereas, 
 
-```
-find_zero(f, x0, Order2())
+```jldoctest roots
+julia> try find_zero(f, x0, Order2())  catch err  "Convergence failed" end
+"Convergence failed"
+
+
 ```
 
 A graph shows the issue. We have overlayed 15 steps of Newton's
 method, the other algorithms being somewhat similar:
 
-```figure,nocode
+```@example roots
 using ForwardDiff
 D(f) = x -> ForwardDiff.derivative(f,float(x))
-xs = [x0]
+xs = [0.1] # x0
 n = 15
 for i in 1:(n-1) push!(xs, xs[end] - f(xs[end])/D(f)(xs[end])) end
 ys = [zeros(Float64,n)';map(f, xs)'][1:2n]
@@ -425,7 +564,10 @@ xs = xs[repeat(collect(1:n), inner=[2], outer=[1])]
 plot(f, -1.25, 1.5, linewidth=3, legend=false)
 plot!(zero, -1.25, 1.5, linewidth=3)
 plot!(xs, ys)
+savefig("newton-15.svg"); nothing #hide
 ```
+
+![](newton-15.svg)
 
 Though 15 steps are shown, only a few are discernible, as the function's relative maximum
 causes a trap for this algorithm. Starting to the right of the
@@ -446,15 +588,24 @@ x^2 + 270\cdot x^3 - 405\cdot x^4 + 243\cdot x^5$. Mathematically
 these are the same, however not so when evaluated in floating
 point. Here we look at the 21 floating point numbers near $1/3$:
 
-```
-f(x) = (3x-1)^5
-f1(x) =  -1 + 15*x - 90*x^2 + 270*x^3 - 405*x^4 + 243*x^5
-ns = [1/3];
-u=1/3; for i in 1:10 (u=nextfloat(u);push!(ns, u)) end
-u=1/3; for i in 1:10 (u=prevfloat(u);push!(ns, u)) end
-sort!(ns)
+```jldoctest roots
+julia> f(x) = (3x-1)^5
+f (generic function with 1 method)
 
-maximum(abs.(f.(ns) - f1.(ns)))
+julia> f1(x) =  -1 + 15*x - 90*x^2 + 270*x^3 - 405*x^4 + 243*x^5
+f1 (generic function with 1 method)
+
+julia> ns = [1/3];
+
+julia> u=1/3; for i in 1:10 (global  u=nextfloat(u);push!(ns, u)) end
+
+julia> u=1/3; for i in 1:10 (global  u=prevfloat(u);push!(ns, u)) end
+
+julia> sort!(ns);
+
+julia> maximum(abs.(f.(ns) - f1.(ns)))
+1.887379141862766e-15
+
 ```
 
 We see the function values are close for each point, as the maximum difference
@@ -468,20 +619,80 @@ small differences might matter. Here we look at the signs of the
 function values:
 
 
-```
-fs = sign.(f.(ns))
-f1s = sign.(f1.(ns))
-[ns-1/3 fs f1s]
+```jldoctest roots
+julia> fs = sign.(f.(ns));
+
+julia> f1s = sign.(f1.(ns));
+
+julia> [ns.-1/3 fs f1s]
+21×3 Array{Float64,2}:
+ -5.55112e-16  -1.0  -1.0
+ -4.996e-16    -1.0  -1.0
+ -4.44089e-16  -1.0  -1.0
+ -3.88578e-16  -1.0   1.0
+ -3.33067e-16  -1.0   1.0
+ -2.77556e-16  -1.0   1.0
+ -2.22045e-16  -1.0  -1.0
+ -1.66533e-16  -1.0  -1.0
+ -1.11022e-16  -1.0   1.0
+ -5.55112e-17  -1.0   1.0
+  ⋮
+  1.11022e-16   1.0   1.0
+  1.66533e-16   1.0   1.0
+  2.22045e-16   1.0  -1.0
+  2.77556e-16   1.0  -1.0
+  3.33067e-16   1.0   1.0
+  3.88578e-16   1.0   1.0
+  4.44089e-16   1.0   1.0
+  4.996e-16     1.0   1.0
+  5.55112e-16   1.0   0.0
+
 ```
 
 Parsing this shows a few surprises. First, there are two zeros of
 `f(x)` identified--not just one as expected mathematically--the
 floating point value of `1/3` and the next largest floating point
-number. For `f1(x)` there is only one zero, but it isn't the floating
+number. 
+
+```jldoctest roots
+julia> findall(iszero, fs)
+2-element Array{Int64,1}:
+ 11
+ 12
+```
+
+
+
+For `f1(x)` there is only one zero, but it isn't the floating
 point value for `1/3` but rather 10 floating point numbers
-away. Further, there are 5 sign changes of the function values. There
-is no guarantee that a zero will be present, but for a mathematical
-function that changes sign, there will be at least one sign change.
+away. 
+
+
+```jldoctest roots
+julia> findall(iszero, f1s)
+1-element Array{Int64,1}:
+ 21
+```
+
+
+
+Further, there are several sign changes of the function values for `f1s`:
+
+```jldoctest roots
+julia> findall(!iszero,diff(sign.(f1s)))
+6-element Array{Int64,1}:
+  3
+  6
+  8
+ 14
+ 16
+ 20
+
+```
+
+There is no guarantee that a zero will be present, but for a
+mathematical function that changes sign, there will be at least one
+sign change.
 
 With this in mind, an exact zero of `f` would be either where `iszero(f(x))` is true *or* where the function has a sign change (either `f(x)*f(prevfloat(x))<0` or `f(x)*f(nextfloat(x)) < 0`).
 
@@ -495,26 +706,40 @@ these conditions.
 
 Now consider the function `f(x) = exp(x)-x^4`. The value`x=8.613169456441398` is a zero in this sense, as there is a change of sign:
 
-```
-f(x) = exp(x) - x^4
-F(x) = sign(f(x))
-x=8.613169456441398
-F(prevfloat(x)), F(x), F(nextfloat(x))
+```jldoctest roots
+julia> f(x) = exp(x) - x^4
+f (generic function with 1 method)
+
+julia> F(x) = sign(f(x))
+F (generic function with 1 method)
+
+julia> x=8.613169456441398
+8.613169456441398
+
+julia> F(prevfloat(x)), F(x), F(nextfloat(x))
+(-1.0, -1.0, 1.0)
+
 ```
 
 However, the value of `f(x)` is not as small as one might initially
 expect for a zero:
 
-```
-f(x)
+```jldoctest roots
+julia> f(x), abs(f(x)/eps(x))
+(-2.7284841053187847e-12, 1536.0)
+
 ```
 
 The value `x` is an approximation to the actual mathematical zero,
 call it $x$. There is a difference between $f(x)$ (the mathematical answer) and `f(x)` (the floating point answer). Roughly speaking we expect `f(x)` to be about $f(x) + f'(x)\cdot \delta$, where $\delta$ is the difference between `x` and $x$. This will be on the scale of `abs(x) * eps()`, so all told we expect an answer to be in the range of $0$ plus or minus this value:
 
-```
-fp(x) = exp(x) - 4x^3 # the derivative
-fp(x) * abs(x) * eps()
+```jldoctest roots
+julia> fp(x) = exp(x) - 4x^3 # the derivative
+fp (generic function with 1 method)
+
+julia> fp(x) * abs(x) * eps()
+5.637565490466956e-12
+
 ```
 
 which is about what we see.
@@ -546,8 +771,10 @@ One issue with relative tolerances is that for functions with
 sublinear growth, extremely large values will be considered zeros.
 Returning to an earlier example, we have a misidentified zero:
 
-```
-find_zero(cbrt, 1, Order8())
+```jldoctest roots
+julia> find_zero(cbrt, 1, Order8())
+2.0998366730115564e23
+
 ```
 
 For `Order8`, the algorithm rapidly marches off towards infinity so the relative
@@ -587,59 +814,82 @@ The methods described above are used to identify one of possibly
 several zeros.  The `find_zeros` function searches the interval $(a,b)$
 for all zeros of a function $f$. It is straightforward to use:
 
-```
-f(x) = exp(x) - x^4
-a, b = -10, 10
-zs = find_zeros(f, a, b)
+```jldoctest roots
+julia> f(x) = exp(x) - x^4
+f (generic function with 1 method)
+
+julia> a, b = -10, 10
+(-10, 10)
+
+julia> zs = find_zeros(f, a, b)
+3-element Array{Float64,1}:
+ -0.8155534188089606
+  1.4296118247255556
+  8.613169456441398
+
 ```
 
 The  search interval, $(a,b)$, is specified through two arguments. It is
 assumed that neither endpoint is a zero. Here we see the result of the
 search graphically:
 
-```
+```@example roots
+f(x) = exp(x) - x^4; nothing
+a,b=-10,10; nothing
+zs = find_zeros(f, a, b); nothing
 plot(f, a, b)
 scatter!(zs, f.(zs))
+savefig("plot-f-2.svg"); nothing #hide
 ```
+
+![](plot-f-2.svg)
+
 
 We can identify points where the first and second derivative is
 zero. We use `D` from above:
 
 
-```
+```@example roots
 f(x) = cos(x) + cos(2x)
 a, b = -10, 10
 cps = find_zeros(D(f), a, b)
-ips = find_zeros(D(f,2), a, b)
+ips = find_zeros((D∘D)(f), a, b)
 plot(f, a, b)
 scatter!(cps, f.(cps))
 scatter!(ips, f.(ips), markercolor = :yellow)
+savefig("plot-f-3.svg"); nothing
 ```
+
+![](plot-f-3.svg)
+
 
 The `find_zeros` algorithm will use bisection when a bracket is
 identified. This method will identify jumps, so areas where the
 derivative changes sign (and not necessarily a zero of the derivative)
 will typically be identified:
 
-```
+```@example roots
 f(x) = abs(cbrt(x^2-1))
 a, b = -5, 5
 cps = find_zeros(D(f), a, b)
 plot(f, a, b)
 scatter!(cps, f.(cps))
+savefig("plot-f-4.svg"); nothing
 ```
+
+![](plot-f-4.svg)
 
 In this example, the derivative has vertical asymptotes at $x=1$ and
 $x=-1$ so is not continuous there. The bisection method identifies the
 zero crossing, not a zero.
 
-
+----
 
 
 The search for all zeros in an interval is confounded by a few things:
 
 * too many zeros in the interval $(a,b)$
-* nearby zeros
+* nearby zeros ("nearby" depends on the size of $(a,b)$ as well should this be very wide)
 
 The algorithm is adaptive, so that it can succeed when there are many
 zeros, but it may be necessary to increase `no_pts` from the default
@@ -647,13 +897,17 @@ of 12, at the cost of possibly taking longer for the search.
 
 Here the algorithm identifies all the zeros, despite there being several:
 
-```
+```@example roots
 f(x) = cos(x)^2 + cos(x^2)
 a, b = 0, 10
 rts = find_zeros(f, a, b)
 plot(f, a, b)
 scatter!(rts, f.(rts))
+savefig("plot-f-4a.svg"); nothing
 ```
+
+![](plot-f-4a.svg)
+
 
 For nearby zeros, the algorithm does pretty well, though it isn't
 perfect.
@@ -661,19 +915,27 @@ perfect.
 Here we see for $f(x) = \sin(1/x)$--with infinitely many zeros around
 $0$--it finds many:
 
-```
+```@example roots
 f(x) = iszero(x) ? NaN : sin(1/x)  # avoid sin(Inf) error
 rts = find_zeros(f, -1, 1)  # 88 zeros identified
 plot(f, -1, 1)
 scatter!(rts, f.(rts))
+savefig("plot-f-5.svg"); nothing
 ```
+
+![](plot-f-5.svg)
 
 The function, $f(x) = (x-0.5)^3 \cdot (x-0.499)^3$, looks *too* much like
 $g(x) = x^6$ to `find_zeros` for success, as the two zeros are very nearby:
 
-```
-f(x) =  (x-0.5)^3 * (x-0.499)^3
-find_zeros(f, 0, 1)
+```jldoctest roots
+julia> f(x) =  (x-0.5)^3 * (x-0.499)^3
+f (generic function with 1 method)
+
+julia> find_zeros(f, 0, 1)
+1-element Array{Float64,1}:
+ 0.5
+
 ```
 
 The issue here isn't *just* that the algorithm can't identify zeros
@@ -682,17 +944,30 @@ nearby values approximately zero.
 
 The algorithm will have success when the powers are smaller
 
-```
-f(x) =  (x-0.5)^2 * (x-0.499)^2
-find_zeros(f, 0, 1)
+```jldoctest roots
+julia> f(x) =  (x-0.5)^2 * (x-0.499)^2
+f (generic function with 1 method)
+
+julia> find_zeros(f, 0, 1)
+2-element Array{Float64,1}:
+ 0.49899999999999994
+ 0.5
+
 ```
 
 It can have success for closer pairs of zeros:
 
-```
-f(x) = (x-0.5) * (x - 0.49999)
-find_zeros(f, 0, 1)
+```jldoctest roots
+julia> f(x) = (x-0.5) * (x - 0.49999)
+f (generic function with 1 method)
+
+julia> find_zeros(f, 0, 1)
+2-element Array{Float64,1}:
+ 0.49999
+ 0.5
+
 ```
 
 Combinations of large (even) multiplicity zeros or very nearby
-zeros, can lead to misidentification.
+zeros, can lead to misidentification.  
+

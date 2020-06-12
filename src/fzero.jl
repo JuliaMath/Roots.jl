@@ -24,7 +24,7 @@ Find zero of a function using one of several iterative algorithms.
    use for `find_zero`. The `Order0` default may be specified directly
    by `order=0`, `order=:0`, or `order="0"`; `Order1()` by `order=1`,
    `order=:1`, `order="1"`, or `order=:secant`; `Order1B()` by
-   `order="1B", etc.
+   `order="1B"`, etc.
 
 * `M`: a specific method, as would be passed to `find_zero`, bypassing
   the use of the `order` keyword

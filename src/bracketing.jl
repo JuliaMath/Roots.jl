@@ -19,6 +19,7 @@ abstract type AbstractBisection <: AbstractBracketing end
 """
 
     Bisection()
+    Roots.BisectionExact()
 
 If possible, will use the bisection method over `Float64` values. The
 bisection method starts with a bracketing interval `[a,b]` and splits
@@ -26,7 +27,8 @@ it into two intervals `[a,c]` and `[c,b]`, If `c` is not a zero, then
 one of these two will be a bracketing interval and the process
 continues. The computation of `c` is done by `_middle`, which
 reinterprets floating point values as unsigned integers and splits
-there. This method avoids floating point issues and when the
+there. It was contributed  by  [Jason Merrill](https://gist.github.com/jwmerrill/9012954). 
+This method avoids floating point issues and when the
 tolerances are set to zero (the default) guarantees a "best" solution
 (one where a zero is found or the bracketing interval is of the type
 `[a, nextfloat(a)]`).
@@ -36,7 +38,7 @@ is approximately equal to an endpoint using absolute tolerance `xatol`
 and relative tolerance `xrtol`.
 
 When a zero tolerance is given and the values are not `Float64`
-values, this will call the `A42` method.
+values, this will call the [`A42`](@ref) method.
 
 
 """
@@ -163,7 +165,7 @@ end
 
 # for Bisection, the defaults are zero tolerances and strict=true
 """
-    default_tolerances(M, [T], [S])
+    default_tolerances(M::Bisection, [T], [S])
 
 
 For `Bisection` (or `BisectionExact`), when the `x` values are of type `Float64`, `Float32`,
@@ -173,7 +175,7 @@ algorithm is guaranteed to converge to an exact zero, or a point where
 the function changes sign at one of the answer's adjacent floating
 point values.
 
-For other types, the the `A42` method (with its tolerances) is used.
+For other types,  the [`A42`](@ref) method (with its tolerances) is used.
 
 """
 default_tolerances(M::Union{Bisection, BisectionExact}) = default_tolerances(M,Float64, Float64)
@@ -365,10 +367,10 @@ abstract type AbstractAlefeldPotraShi <: AbstractBracketing end
 
 Bracketing method which finds the root of a continuous function within
 a provided interval [a, b], without requiring derivatives. It is based
-on algorithm 4.2 described in: 1. G. E. Alefeld, F. A. Potra, and
+on algorithm 4.2 described in: G. E. Alefeld, F. A. Potra, and
 Y. Shi, "Algorithm 748: enclosing zeros of continuous functions," ACM
-Trans. Math. Softw. 21, 327–344 (1995), DOI: 10.1145/210089.210111.
-Originally by John Travers
+Trans. Math. Softw. 21, 327–344 (1995), DOI: [10.1145/210089.210111](https://doi.org/10.1145/210089.210111).
+Originally by John Travers.
 
 """
 struct A42 <: AbstractAlefeldPotraShi end
@@ -703,10 +705,9 @@ end
 
 Follows algorithm in "ON ENCLOSING SIMPLE ROOTS OF NONLINEAR
 EQUATIONS", by Alefeld, Potra, Shi; DOI:
-10.1090/S0025-5718-1993-1192965-2
-[link](http://www.ams.org/journals/mcom/1993-61-204/S0025-5718-1993-1192965-2/S0025-5718-1993-1192965-2.pdf). Efficiency
-is 1.618. Less efficient, but can be faster than A42() method.
-
+[10.1090/S0025-5718-1993-1192965-2](https://doi.org/10.1090/S0025-5718-1993-1192965-2).
+ Efficiency is 1.618. Less efficient, but can be faster than the [`A42`](@ref) method.
+Originally by John Travers.
 """
 struct AlefeldPotraShi <: AbstractAlefeldPotraShi end
 
@@ -897,6 +898,7 @@ end
 
 ## ----------------------------
 
+struct FalsePosition{R} <: AbstractBisection end
 """
 
     FalsePosition()
@@ -928,7 +930,7 @@ Examples
 find_zero(x -> x^5 - x - 1, (-2, 2), FalsePosition())
 ```
 """
-struct FalsePosition{R} <: AbstractBisection end
+FalsePosition
 FalsePosition(x=:anderson_bjork) = FalsePosition{x}()
 
 function update_state(method::FalsePosition, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
