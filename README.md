@@ -227,9 +227,3 @@ is passed to `find_zero` the code is specialized to the function `f`
 which means the first use of `f` will be slower due to compilation,
 but subsequent uses will be faster. For `fzero`, the code is not
 specialized to the function `f`, so the story is reversed.
-
-
-
-----
-
-Some additional documentation can be read [here](http://nbviewer.ipython.org/url/github.com/JuliaLang/Roots.jl/blob/master/doc/roots.ipynb?create=1).
