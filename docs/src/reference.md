@@ -192,7 +192,7 @@ Roots.default_tolerances
 ## Performance considerations
 
 
-The abstractions and many checks for  convergence employed by `find_zero` have a performance cost. When that is a critical concern, there are  several "simple" methods provided which can offer significantly improved performaance.
+The abstractions and many checks for  convergence employed by `find_zero` have a performance cost. When that is a critical concern, there are  several "simple" methods provided which can offer significantly improved performance.
 
 ```@docs
 Roots.secant_method
