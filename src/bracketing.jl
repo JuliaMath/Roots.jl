@@ -669,7 +669,7 @@ function update_state(M::A42, f, state::UnivariateZeroState{T,S}, options::Univa
     if abs(cb - u) > 0.5 * (b-a)
         ch = _middle(an, bn)
     end
-    fch::S = f(cb)
+    fch::S = f(ch)
     incfn(state)
     if check_zero(M, state, ch, fch)
         # tighten up bracket
