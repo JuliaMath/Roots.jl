@@ -286,6 +286,12 @@ end
 
     ## issue #178 passinig through method
     @test fzero(sin, 3, 4, Roots.Brent()) ≈ π
+
+    ## issue #188 with A42
+    f(x) = x*(1-x^2)/((x^2+a^2)*(1+a^2*x^2))
+    a,r = .18, 0.05
+    xs = (r + 1e-12, 1.0)
+    @test find_zero(x -> f(r)-f(x), xs, Roots.A42()) ≈ 0.4715797678171889
 end
 
 
