@@ -667,7 +667,7 @@ function find_zero(fs, x0, method::AbstractUnivariateZeroMethod,
     end
 
     if isnan(xstar)
-        throw(ConvergenceFailed("Stopped at: xn = $(state.xn1)"))
+        throw(ConvergenceFailed("Stopped at: xn = $(state.xn1). $(state.message)"))
     else
         return xstar
     end
