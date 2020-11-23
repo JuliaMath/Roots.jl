@@ -214,6 +214,7 @@ abstract type AbstractTracks end
 struct NullTracks <: AbstractTracks end
 # api
 log_step(s::NullTracks, M, x, init=false) = nothing
+log_step(::Nothing, M, x, init=false) = nothing
 
 mutable struct Tracks{T,S} <: AbstractTracks
 xs::Vector{T}
@@ -422,7 +423,6 @@ function show_trace(method, N, state, tracks)
     println("Trace:")
     show_tracks(tracks, method)
 end
-
 
 """
 
@@ -712,6 +712,7 @@ function find_zero(M::AbstractUnivariateZeroMethod,
 end
 
 
+## --
 
 # state has stopped, this identifies if it has converged
 function decide_convergence(M::AbstractUnivariateZeroMethod,  F, state::UnivariateZeroState{T,S}, options) where {T,S}
@@ -900,4 +901,116 @@ function find_zero(M::AbstractUnivariateZeroMethod,
     end
 
     decide_convergence(M, F, state, options)
+end
+
+
+
+
+# An alternate interface
+# create a problem, call find_zero!
+# returns NaN, not an error, if there are issues
+struct ZeroProblem{M,F,S,O,L}
+    M::M
+    F::F
+    state::S
+    options::O
+    logger::L
+end
+
+"""
+    ZeroProblem(M, fs, x0; verbose=false, kwargs...)
+
+Setup a problem for solution. Call `find_zero!` to solve.
+
+* `M`: Method. A non-hybrid method (not `Order0`).
+* `fs`: a function or for some methods a tuple of functions
+* `x0`: the initial guess
+* `verbose`: if `true`, then calling `Roots.tracks` on the output will show the steps on the algorithm
+* `kwargs`: passed to `Roots.init_options` to adjust tolerances
+"""
+function ZeroProblem(M::AbstractUnivariateZeroMethod,
+                     fs,
+                     x0;
+                     verbose=false,
+                     kwargs...)
+
+    F = callable_function(fs)
+    state = init_state(M, F, x0)
+    options = init_options(M, state; kwargs...)
+    l = verbose ? Tracks(eltype(state.xn1)[], eltype(state.fxn1)[]) : nothing
+
+    ZeroProblem(M,F,state, options, l)
+
+end
+
+# Iteration interface to handle looping
+function Base.iterate(P::ZeroProblem, state=nothing)
+
+    M, F, state, options, l = P.M, P.F, P.state, P.options, P.logger
+    assess_convergence(M, state, options)  && return  nothing
+
+    update_state(M, F, state, options)
+    log_step(l, M, state)
+    incsteps(state)
+    (state.xn1, false)
+
+end
+
+decide_convergence(P::ZeroProblem) =  decide_convergence(P.M, P.F, P.state, P.options)
+log_step(P::ZeroProblem) = log_step(P.logger, P.M, P.state)
+
+
+"""
+    tracks(P::ZeroProblem)
+
+Show trace of output when `verbose=true` is specified to the problem
+"""
+function tracks(P::ZeroProblem{M,F,S,O,L}) where {M,F,S,O,L<:Tracks}
+    show_trace(P.M, nothing, P.state, P.logger)
+end
+tracks(P::ZeroProblem) = error("Set verbose=true when specifying the problem to see the tracks")
+
+"""
+    find_zero!(P::ZeroProblem)
+
+An alternate interface to `find_zero` whereby a problem is created with `ZeroProblem` and solved
+with `find_zero!`.
+
+Returns `NaN`, not an error, when the problem can not be solved.
+
+Advantages are the `state` object is accessible after solving and may
+help in facilitating hybrid solving techniques. Disadvantage include the
+overhead of creating another object to pass to this function.
+
+```jldoctest find_zero!
+julia> P = Roots.ZeroProblem(Order1(), sin, 3, verbose=true); 
+
+julia> find_zero!(P)
+3.141592653589793
+
+julia> P.state.xstar
+3.141592653589793
+
+julia> Roots.tracks(P)
+Results of univariate zero finding:
+
+* Converged to: 3.141592653589793
+* Algorithm: Roots.Secant()
+* iterations: 4
+* function evaluations: 6
+* stopped as |f(x_n)| ≤ max(δ, max(1,|x|)⋅ϵ) using δ = atol, ϵ = rtol
+
+Trace:
+x_0 =  3.0000000000000000,	 fx_0 =  0.1411200080598672
+x_1 =  3.1425464815525403,	 fx_1 = -0.0009538278181169
+x_2 =  3.1415894805773834,	 fx_2 =  0.0000031730124098
+x_3 =  3.1415926535902727,	 fx_3 = -0.0000000000004795
+x_4 =  3.1415926535897931,	 fx_4 =  0.0000000000000001
+```
+
+"""
+function find_zero!(P::ZeroProblem)
+    log_step(P)            # initial logging
+    for _ in P end         # iterate to complection
+    decide_convergence(P)  # polish answer
 end
