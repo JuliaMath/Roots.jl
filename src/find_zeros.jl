@@ -261,7 +261,7 @@ an interval under a function `f`. If this image includes `0`, then it can look f
 Bisection, on the other hand, only will look for a zero if the two endpoints have different signs,
 a much more rigid condition for a potential zero.
 
-For example, this function is particularly tricky, as it is positive at every floating point number, but has two zeros (the asymptote is between floating point values):
+For example, this function (due to `@truculentmath`) is particularly tricky, as it is positive at every floating point number, but has two zeros (the vertical asymptote at `15//11` is negative between adjacent floating point values):
 
 ```
 julia> using IntervalArithmetic, IntervalRootFinding, Roots
