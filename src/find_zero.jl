@@ -540,7 +540,7 @@ julia> find_zero((sin, cos, x->-sin(x)), 3.0, Roots.Halley())  # use Halley's me
 
 Changing tolerances.
 
-```jldoctest find_zero
+```
 julia> fn = x -> (2x*cos(x) + x^2 - 3)^10/(x^2 + 1);
 
 julia> x0, xstar = 3.0,  2.9947567209477;
