@@ -53,7 +53,15 @@ jobs:
         with:
           version: '1'
       - run: |
-          julia --project=docs -e 'import Pkg; Pkg.add("Documenter");using Documenter: doctest; using Roots; doctest(Roots)'
+          julia --project=docs -e '
+            using Pkg
+            Pkg.develop(PackageSpec(path=pwd()))
+            Pkg.instantiate()'
+      - run: |
+          julia --project=docs -e '
+            using Documenter: doctest
+            using Roots
+            doctest(Roots)'
       - run: julia --project=docs docs/make.jl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
