@@ -524,10 +524,8 @@ julia> find_zero(sin, 3.0, Order2())              # Use Steffensen method
 julia> find_zero(sin, big(3.0), Order16())        # rapid convergence
 3.141592653589793238462643383279502884197169399375105820974944592307816406286198
 
-julia> find_zero(sin, (3, 4), Roots.A42()())      # fewer function calls than Bisection(), in this case
-ERROR: MethodError: objects of type Roots.A42 are not callable
-Stacktrace:
- [1] top-level scope at REPL[12]:1
+julia> find_zero(sin, (3, 4), Roots.A42())      # fewer function calls than Bisection(), in this case
+3.141592653589793
 
 julia> find_zero(sin, (3, 4), FalsePosition(8))   # 1 of 12 possible algorithms for false position
 3.141592653589793
@@ -542,37 +540,33 @@ julia> find_zero((sin, cos, x->-sin(x)), 3.0, Roots.Halley())  # use Halley's me
 
 Changing tolerances.
 
-```jldoctest find_zero
+```
 julia> fn = x -> (2x*cos(x) + x^2 - 3)^10/(x^2 + 1);
 
 julia> x0, xstar = 3.0,  2.9947567209477;
 
-julia> find_zero(fn, x0, Order2()) ≈ xstar       
+julia> find_zero(fn, x0, Order2()) ≈ xstar
 true
 
 julia> find_zero(fn, x0, Order2(), atol=0.0, rtol=0.0) # error: x_n ≉ x_{n-1}; just f(x_n) ≈ 0
-ERROR: Roots.ConvergenceFailed("Stopped at: xn = 2.991488255523429")
-Stacktrace:
- [1] find_zero(::Function, ::Float64, ::Order2, ::Nothing; tracks::Roots.NullTracks, verbose::Bool, kwargs::Base.Iterators.Pairs{Symbol,Float64,Tuple{Symbol,Symbol},NamedTuple{(:atol, :rtol),Tuple{Float64,Float64}}}) at /Users/verzani/julia/Roots/src/find_zero.jl:670
- [2] top-level scope at REPL[12]:1
+ERROR: Roots.ConvergenceFailed("Stopped at: xn = 2.991488255523429. Increment `Δx` has issues. ")
+[...]
 
 julia> fn = x -> (sin(x)*cos(x) - x^3 + 1)^9;
 
 julia> x0, xstar = 1.0,  1.112243913023029;
 
-julia> find_zero(fn, x0, Order2()) ≈ xstar           
+julia> find_zero(fn, x0, Order2()) ≈ xstar
 true
 
 julia> find_zero(fn, x0, Order2(), maxevals=3)    # Roots.ConvergenceFailed: 26 iterations needed, not 3
-ERROR: Roots.ConvergenceFailed("Stopped at: xn = 1.0482748172022405")
-Stacktrace:
- [1] find_zero(::Function, ::Float64, ::Order2, ::Nothing; tracks::Roots.NullTracks, verbose::Bool, kwargs::Base.Iterators.Pairs{Symbol,Int64,Tuple{Symbol},NamedTuple{(:maxevals,),Tuple{Int64}}}) at /Users/verzani/julia/Roots/src/find_zero.jl:670
- [2] top-level scope at REPL[12]:1
+ERROR: Roots.ConvergenceFailed("Stopped at: xn = 1.0482748172022405. Too many steps taken. ")
+[...]
 ```
 
 Tracing output.
 
-```jldoctest find_zero
+```
 julia> find_zero(x->sin(x), 3.0, Order2(), verbose=true)   # 3 iterations
 Results of univariate zero finding:
 
@@ -982,8 +976,10 @@ Advantages are the `state` object is accessible after solving and may
 help in facilitating hybrid solving techniques. Disadvantage include the
 overhead of creating another object to pass to this function.
 
-```jldoctest find_zero!
-julia> P = Roots.ZeroProblem(Order1(), sin, 3, verbose=true); 
+```jldoctest find_zero
+julia> using Roots
+
+julia> P = Roots.ZeroProblem(Order1(), sin, 3, verbose=true);
 
 julia> find_zero!(P)
 3.141592653589793
