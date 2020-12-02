@@ -54,6 +54,7 @@ jobs:
           version: '1'
       - run: |
           julia --project=docs -e '
+	  import Pkg; Pkg.add("Documenter");
            using Documenter: doctest
             using Roots
             doctest(Roots)' # change MYPACKAGE to the name of your package
