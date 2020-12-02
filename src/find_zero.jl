@@ -549,10 +549,10 @@ julia> find_zero(fn, x0, Order2()) ≈ xstar
 true
 
 julia> find_zero(fn, x0, Order2(), atol=0.0, rtol=0.0) # error: x_n ≉ x_{n-1}; just f(x_n) ≈ 0
-ERROR: Roots.ConvergenceFailed("Stopped at: xn = 2.991488255523429")
+ERROR: Roots.ConvergenceFailed("Stopped at: xn = 2.991488255523429. Increment `Δx` has issues. ")
 Stacktrace:
- [1] find_zero(::Function, ::Float64, ::Order2, ::Nothing; tracks::Roots.NullTracks, verbose::Bool, kwargs::Base.Iterators.Pairs{Symbol,Float64,Tuple{Symbol,Symbol},NamedTuple{(:atol, :rtol),Tuple{Float64,Float64}}}) at /Users/verzani/julia/Roots/src/find_zero.jl:670
- [2] top-level scope at REPL[12]:1
+ [1] find_zero(::Function, ::Float64, ::Order2, ::Nothing; tracks::Roots.NullTracks, verbose::Bool, kwargs::Base.Iterators.Pairs{Symbol,Float64,Tuple{Symbol,Symbol},NamedTuple{(:atol, :rtol),Tuple{Float64,Float64}}}) at /Users/verzani/julia/Roots/src/find_zero.jl:668
+ [2] top-level scope at none:1
 
 julia> fn = x -> (sin(x)*cos(x) - x^3 + 1)^9;
 
@@ -562,10 +562,10 @@ julia> find_zero(fn, x0, Order2()) ≈ xstar
 true
 
 julia> find_zero(fn, x0, Order2(), maxevals=3)    # Roots.ConvergenceFailed: 26 iterations needed, not 3
-ERROR: Roots.ConvergenceFailed("Stopped at: xn = 1.0482748172022405")
+ERROR: Roots.ConvergenceFailed("Stopped at: xn = 1.0482748172022405. Too many steps taken. ")
 Stacktrace:
- [1] find_zero(::Function, ::Float64, ::Order2, ::Nothing; tracks::Roots.NullTracks, verbose::Bool, kwargs::Base.Iterators.Pairs{Symbol,Int64,Tuple{Symbol},NamedTuple{(:maxevals,),Tuple{Int64}}}) at /Users/verzani/julia/Roots/src/find_zero.jl:670
- [2] top-level scope at REPL[12]:1
+ [1] find_zero(::Function, ::Float64, ::Order2, ::Nothing; tracks::Roots.NullTracks, verbose::Bool, kwargs::Base.Iterators.Pairs{Symbol,Int64,Tuple{Symbol},NamedTuple{(:maxevals,),Tuple{Int64}}}) at /Users/verzani/julia/Roots/src/find_zero.jl:668
+ [2] top-level scope at none:1
 ```
 
 Tracing output.
@@ -980,7 +980,9 @@ Advantages are the `state` object is accessible after solving and may
 help in facilitating hybrid solving techniques. Disadvantage include the
 overhead of creating another object to pass to this function.
 
-```jldoctest find_zero!
+```jldoctest find_zero
+julia> using Roots
+
 julia> P = Roots.ZeroProblem(Order1(), sin, 3, verbose=true);
 
 julia> find_zero!(P)
