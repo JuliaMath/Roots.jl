@@ -566,7 +566,7 @@ ERROR: Roots.ConvergenceFailed("Stopped at: xn = 1.0482748172022405. Too many st
 
 Tracing output.
 
-```jldoctest find_zero
+```
 julia> find_zero(x->sin(x), 3.0, Order2(), verbose=true)   # 3 iterations
 Results of univariate zero finding:
 
