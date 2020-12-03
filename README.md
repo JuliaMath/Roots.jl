@@ -1,3 +1,4 @@
+[![](https://img.shields.io/badge/docs-stable-blue.svg)](https://juliahub.com/docs/Roots/)
 Linux: [![Build Status](https://travis-ci.org/JuliaMath/Roots.jl.svg?branch=master)](https://travis-ci.org/JuliaMath/Roots.jl)
 Windows: [![Build status](https://ci.appveyor.com/api/projects/status/goteuptn5kypafyl?svg=true)](https://ci.appveyor.com/project/jverzani/roots-jl)
 
@@ -124,16 +125,18 @@ points of a function.
 ## mean
 using Statistics
 as = rand(5)
+
 function M(x)
   sum([(x-a)^2 for a in as])
 end
+
 find_zero(D(M), .5) - mean(as)	  # 0.0
 
 ## median
 function m(x)
   sum([abs(x-a) for a in as])
-
 end
+
 find_zero(D(m), (0, 1)) - median(as)	# 0.0
 ```
 
@@ -221,9 +224,3 @@ is passed to `find_zero` the code is specialized to the function `f`
 which means the first use of `f` will be slower due to compilation,
 but subsequent uses will be faster. For `fzero`, the code is not
 specialized to the function `f`, so the story is reversed.
-
-
-
-----
-
-Some additional documentation can be read [here](http://nbviewer.ipython.org/url/github.com/JuliaLang/Roots.jl/blob/master/doc/roots.ipynb?create=1).

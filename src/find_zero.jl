@@ -151,7 +151,7 @@ mutable struct UnivariateZeroOptions{Q,R,S,T}
 end
 
 """
-    default_tolerances(Method, [T], [S])
+    default_tolerances(M::AbstractUnivariateZeroMethod, [T], [S])
 
 The default tolerances for most methods are `xatol=eps(T)`,
 `xrtol=eps(T)`, `atol=4eps(S)`, and `rtol=4eps(S)`, with the proper
@@ -159,8 +159,7 @@ units (absolute tolerances have the units of `x` and `f(x)`; relative
 tolerances are unitless). For `Complex{T}` values, `T` is used.
 
 The number of iterations is limited by `maxevals=40`, the number of
-function evaluations is not capped, due to `maxfnevals=typemax(Int)`,
-and `strict=false`.
+function evaluations is not capped.
 
 """
 default_tolerances(M::AbstractUnivariateZeroMethod) = default_tolerances(M, Float64, Float64)
@@ -215,6 +214,7 @@ abstract type AbstractTracks end
 struct NullTracks <: AbstractTracks end
 # api
 log_step(s::NullTracks, M, x, init=false) = nothing
+log_step(::Nothing, M, x, init=false) = nothing
 
 mutable struct Tracks{T,S} <: AbstractTracks
 xs::Vector{T}
@@ -424,10 +424,9 @@ function show_trace(method, N, state, tracks)
     show_tracks(tracks, method)
 end
 
-
 """
 
-    find_zero(fs, x0, method; kwargs...)
+    find_zero(fs, x0, M, [N::AbstractBracketing]; kwargs...)
 
 Interface to one of several methods for find zeros of a univariate function.
 
@@ -481,19 +480,18 @@ convergence. See the help page for `Roots.default_tolerances(method)`
 for details on the default tolerances.
 
 In general, with floating point numbers, convergence must be
-understood as not an absolute statement. Even if mathematically x is
+understood as not an absolute statement. Even if mathematically α is
 an answer and xstar the floating point realization, it may be that
-f(xstar) - f(x) = f(xstar) ≈ f'(x) ⋅ eps(x), so tolerances must be
+`f(xstar) - f(α)  ≈ xstar ⋅  f'(α) ⋅ eps(α)`, so tolerances must be
 appreciated, and at times specified.
 
 For the `Bisection` methods, convergence is guaranteed, so the tolerances are set to be 0 by default.
 
-If a bracketing method is passed in after the method specification, if a bracket is found, the bracketing method will used to identify the zero. This is what `Order0` does by default, with a secant step initially.
+If a bracketing method is passed in after the method specification, when a bracket is found, the bracketing method will used to identify the zero. This is what `Order0` does by default, with a secant step initially and the `A42` method when a bracket is  encountered.
 
 Note: The order of the method is hinted at in the naming scheme. A
-scheme is order `q` if, with `e_n = x_n - alpha`, `e_{n+1} = C
-e_n^q`. If the error `e_n` is small enough, then essentially the error
-will gain `q` times as many leading zeros each step. However, if the
+scheme is order `r` if, with `eᵢ = xᵢ - α`, `eᵢ₊₁ = C⋅eᵢʳ`. If the error `eᵢ` is small enough, then essentially the error
+will gain `r` times as many leading zeros each step. However, if the
 error is not small, this will not be the case. Without good initial
 guesses, a high order method may still converge slowly, if at all. The
 `OrderN` methods have some heuristics employed to ensure a wider range
@@ -502,32 +500,142 @@ though those are available through unexported methods.
 
 # Examples:
 
+Default methods.
+
+```jldoctest find_zero
+julia> using Roots
+
+julia> find_zero(sin, 3)  # use Order0()
+3.141592653589793
+
+julia> find_zero(sin, (3,4)) # use Bisection()
+3.1415926535897936
 ```
-# default methods
-find_zero(sin, 3)  # use Order0()
-find_zero(sin, (3,4)) # use Bisection()
 
-# specifying a method
-find_zero(sin, (3,4), Order1())            # can specify two starting points for secant method
-find_zero(sin, 3.0, Order2())              # Use Steffensen method
-find_zero(sin, big(3.0), Order16())        # rapid convergence
-find_zero(sin, (3, 4), Roots.A42()())      # fewer function calls than Bisection(), in this case
-find_zero(sin, (3, 4), FalsePosition(8))   # 1 of 12 possible algorithms for false position
-find_zero((sin,cos), 3.0, Roots.Newton())  # use Newton's method
-find_zero((sin, cos, x->-sin(x)), 3.0, Roots.Halley())  # use Halley's method
+Specifying a method,
 
-# changing tolerances
-fn, x0, xstar = (x -> (2x*cos(x) + x^2 - 3)^10/(x^2 + 1), 3.0,  2.9806452794385368)
-find_zero(fn, x0, Order2()) - xstar        # 0.014079847201995843
-find_zero(fn, x0, Order2(), atol=0.0, rtol=0.0) # error: x_n ≉ x_{n-1}; just f(x_n) ≈ 0
-fn, x0, xstar = (x -> (sin(x)*cos(x) - x^3 + 1)^9,        1.0,  1.117078770687451)
-find_zero(fn, x0, Order2())                # 1.1122461983100858
-find_zero(fn, x0, Order2(), maxevals=3)    # Roots.ConvergenceFailed: 26 iterations needed
+```jldoctest find_zero
+julia> find_zero(sin, (3,4), Order1())            # can specify two starting points for secant method
+3.141592653589793
 
-# tracing output
-find_zero(x->sin(x), 3.0, Order2(), verbose=true)   # 3 iterations
-find_zero(x->sin(x)^5, 3.0, Order2(), verbose=true) # 22 iterations
-find_zero(x->sin(x)^5, 3.0, Roots.Order2B(), verbose=true) # 2 iterations
+julia> find_zero(sin, 3.0, Order2())              # Use Steffensen method
+3.1415926535897936
+
+julia> find_zero(sin, big(3.0), Order16())        # rapid convergence
+3.141592653589793238462643383279502884197169399375105820974944592307816406286198
+
+julia> find_zero(sin, (3, 4), Roots.A42())      # fewer function calls than Bisection(), in this case
+3.141592653589793
+
+julia> find_zero(sin, (3, 4), FalsePosition(8))   # 1 of 12 possible algorithms for false position
+3.141592653589793
+
+julia> find_zero((sin,cos), 3.0, Roots.Newton())  # use Newton's method
+3.141592653589793
+
+julia> find_zero((sin, cos, x->-sin(x)), 3.0, Roots.Halley())  # use Halley's method
+3.141592653589793
+
+```
+
+Changing tolerances.
+
+```
+julia> fn = x -> (2x*cos(x) + x^2 - 3)^10/(x^2 + 1);
+
+julia> x0, xstar = 3.0,  2.9947567209477;
+
+julia> find_zero(fn, x0, Order2()) ≈ xstar
+true
+
+julia> find_zero(fn, x0, Order2(), atol=0.0, rtol=0.0) # error: x_n ≉ x_{n-1}; just f(x_n) ≈ 0
+ERROR: Roots.ConvergenceFailed("Stopped at: xn = 2.991488255523429. Increment `Δx` has issues. ")
+[...]
+
+julia> fn = x -> (sin(x)*cos(x) - x^3 + 1)^9;
+
+julia> x0, xstar = 1.0,  1.112243913023029;
+
+julia> find_zero(fn, x0, Order2()) ≈ xstar
+true
+
+julia> find_zero(fn, x0, Order2(), maxevals=3)    # Roots.ConvergenceFailed: 26 iterations needed, not 3
+ERROR: Roots.ConvergenceFailed("Stopped at: xn = 1.0482748172022405. Too many steps taken. ")
+[...]
+```
+
+Tracing output.
+
+```
+julia> find_zero(x->sin(x), 3.0, Order2(), verbose=true)   # 3 iterations
+Results of univariate zero finding:
+
+* Converged to: 3.1415926535897936
+* Algorithm: Order2()
+* iterations: 2
+* function evaluations: 5
+* stopped as |f(x_n)| ≤ max(δ, max(1,|x|)⋅ϵ) using δ = atol, ϵ = rtol
+
+Trace:
+x_0 =  3.0000000000000000,	 fx_0 =  0.1411200080598672
+x_1 =  3.1425464815525403,	 fx_1 = -0.0009538278181169
+x_2 =  3.1415926535897936,	 fx_2 = -0.0000000000000003
+
+3.1415926535897936
+
+julia> find_zero(x->sin(x)^5, 3.0, Order2(), verbose=true) # 22 iterations
+Results of univariate zero finding:
+
+* Converged to: 3.140534939851113
+* Algorithm: Order2()
+* iterations: 22
+* function evaluations: 46
+* stopped as |f(x_n)| ≤ max(δ, max(1,|x|)⋅ϵ) using δ = atol, ϵ = rtol
+
+Trace:
+x_0 =  3.0000000000000000,	 fx_0 =  0.0000559684091879
+x_1 =  3.0285315910604353,	 fx_1 =  0.0000182783542076
+x_2 =  3.0512479368872216,	 fx_2 =  0.0000059780426727
+x_3 =  3.0693685883136541,	 fx_3 =  0.0000019566875137
+x_4 =  3.0838393517913989,	 fx_4 =  0.0000006407325974
+x_5 =  3.0954031275790856,	 fx_5 =  0.0000002098675747
+x_6 =  3.1046476918938040,	 fx_6 =  0.0000000687514870
+x_7 =  3.1120400753639790,	 fx_7 =  0.0000000225247921
+x_8 =  3.1179523212360416,	 fx_8 =  0.0000000073801574
+x_9 =  3.1226812716693950,	 fx_9 =  0.0000000024181703
+x_10 =  3.1264639996586729,	 fx_10 =  0.0000000007923528
+x_11 =  3.1294899615147704,	 fx_11 =  0.0000000002596312
+x_12 =  3.1319106162503414,	 fx_12 =  0.0000000000850746
+x_13 =  3.1338470835729701,	 fx_13 =  0.0000000000278769
+x_14 =  3.1353962361189192,	 fx_14 =  0.0000000000091346
+x_15 =  3.1366355527270868,	 fx_15 =  0.0000000000029932
+x_16 =  3.1376269806673180,	 fx_16 =  0.0000000000009808
+x_17 =  3.1384199603056921,	 fx_17 =  0.0000000000003215
+x_18 =  3.1390543962469541,	 fx_18 =  0.0000000000001054
+x_19 =  3.1395625842920500,	 fx_19 =  0.0000000000000345
+x_20 =  3.1399667213451634,	 fx_20 =  0.0000000000000114
+x_21 =  3.1402867571209034,	 fx_21 =  0.0000000000000038
+x_22 =  3.1405349398511131,	 fx_22 =  0.0000000000000013
+
+3.140534939851113
+
+julia> find_zero(x->sin(x)^5, 3.0, Roots.Order2B(), verbose=true) # 2 iterations
+Results of univariate zero finding:
+
+* Converged to: 3.1397074174874358
+* Algorithm: Roots.Order2B()
+* iterations: 2
+* function evaluations: 7
+* Note: Estimate for multiplicity had issues.
+	Algorithm stopped early, but |f(xn)| < ϵ^(1/3), where ϵ depends on xn, rtol, and atol.
+
+Trace:
+x_0 =  3.0000000000000000,	 fx_0 =  0.0000559684091879
+x_1 =  3.1397074174874358,	 fx_1 =  0.0000000000000238
+x_2 =  3.1397074174874358,	 fx_2 =  0.0000000000000238
+
+3.1397074174874358
+
 ```
 """
 function find_zero(fs, x0, method::AbstractUnivariateZeroMethod,
@@ -553,7 +661,7 @@ function find_zero(fs, x0, method::AbstractUnivariateZeroMethod,
     end
 
     if isnan(xstar)
-        throw(ConvergenceFailed("Stopped at: xn = $(state.xn1)"))
+        throw(ConvergenceFailed("Stopped at: xn = $(state.xn1). $(state.message)"))
     else
         return xstar
     end
@@ -598,6 +706,7 @@ function find_zero(M::AbstractUnivariateZeroMethod,
 end
 
 
+## --
 
 # state has stopped, this identifies if it has converged
 function decide_convergence(M::AbstractUnivariateZeroMethod,  F, state::UnivariateZeroState{T,S}, options) where {T,S}
@@ -786,4 +895,118 @@ function find_zero(M::AbstractUnivariateZeroMethod,
     end
 
     decide_convergence(M, F, state, options)
+end
+
+
+
+
+# An alternate interface
+# create a problem, call find_zero!
+# returns NaN, not an error, if there are issues
+struct ZeroProblem{M,F,S,O,L}
+    M::M
+    F::F
+    state::S
+    options::O
+    logger::L
+end
+
+"""
+    ZeroProblem(M, fs, x0; verbose=false, kwargs...)
+
+Setup a problem for solution. Call `find_zero!` to solve.
+
+* `M`: Method. A non-hybrid method (not `Order0`).
+* `fs`: a function or for some methods a tuple of functions
+* `x0`: the initial guess
+* `verbose`: if `true`, then calling `Roots.tracks` on the output will show the steps on the algorithm
+* `kwargs`: passed to `Roots.init_options` to adjust tolerances
+"""
+function ZeroProblem(M::AbstractUnivariateZeroMethod,
+                     fs,
+                     x0;
+                     verbose=false,
+                     kwargs...)
+
+    F = callable_function(fs)
+    state = init_state(M, F, x0)
+    options = init_options(M, state; kwargs...)
+    l = verbose ? Tracks(eltype(state.xn1)[], eltype(state.fxn1)[]) : nothing
+
+    ZeroProblem(M,F,state, options, l)
+
+end
+
+# Iteration interface to handle looping
+function Base.iterate(P::ZeroProblem, state=nothing)
+
+    M, F, state, options, l = P.M, P.F, P.state, P.options, P.logger
+    assess_convergence(M, state, options)  && return  nothing
+
+    update_state(M, F, state, options)
+    log_step(l, M, state)
+    incsteps(state)
+    (state.xn1, false)
+
+end
+
+decide_convergence(P::ZeroProblem) =  decide_convergence(P.M, P.F, P.state, P.options)
+log_step(P::ZeroProblem) = log_step(P.logger, P.M, P.state)
+
+
+"""
+    tracks(P::ZeroProblem)
+
+Show trace of output when `verbose=true` is specified to the problem
+"""
+function tracks(P::ZeroProblem{M,F,S,O,L}) where {M,F,S,O,L<:Tracks}
+    show_trace(P.M, nothing, P.state, P.logger)
+end
+tracks(P::ZeroProblem) = error("Set verbose=true when specifying the problem to see the tracks")
+
+"""
+    find_zero!(P::ZeroProblem)
+
+An alternate interface to `find_zero` whereby a problem is created with `ZeroProblem` and solved
+with `find_zero!`.
+
+Returns `NaN`, not an error, when the problem can not be solved.
+
+Advantages are the `state` object is accessible after solving and may
+help in facilitating hybrid solving techniques. Disadvantage include the
+overhead of creating another object to pass to this function.
+
+```jldoctest find_zero
+julia> using Roots
+
+julia> P = Roots.ZeroProblem(Order1(), sin, 3, verbose=true);
+
+julia> find_zero!(P)
+3.141592653589793
+
+julia> P.state.xstar
+3.141592653589793
+
+julia> Roots.tracks(P)
+Results of univariate zero finding:
+
+* Converged to: 3.141592653589793
+* Algorithm: Roots.Secant()
+* iterations: 4
+* function evaluations: 6
+* stopped as |f(x_n)| ≤ max(δ, max(1,|x|)⋅ϵ) using δ = atol, ϵ = rtol
+
+Trace:
+x_0 =  3.0000000000000000,	 fx_0 =  0.1411200080598672
+x_1 =  3.1425464815525403,	 fx_1 = -0.0009538278181169
+x_2 =  3.1415894805773834,	 fx_2 =  0.0000031730124098
+x_3 =  3.1415926535902727,	 fx_3 = -0.0000000000004795
+x_4 =  3.1415926535897931,	 fx_4 =  0.0000000000000001
+```
+
+"""
+function find_zero!(P::ZeroProblem)
+    log_step(P)            # initial logging
+    for _ in P end         # iterate to complection
+    decide_convergence(P)  # polish answer
 end

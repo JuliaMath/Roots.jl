@@ -96,7 +96,20 @@ end
         @test find_zero(M, g1, options, state) ≈ xstar_
     end
 
+    # alternate constructor find_zero!
+    meths = [Order1(), Roots.Order1B(), Roots.King(),
+             Order2(), Roots.Steffensen(), Roots.Order2B(), Roots.Esser(),
+             Order5(), Roots.KumarSinghAkanksha(),
+             Order8(), Roots.Thukral8(),
+             Order16(), Roots.Thukral16()]
+    g1(x) = x^5 - x - 1
+    x0_, xstar_ = 1.16, 1.1673039782614187  # need a good starting point for all to pass
+    for M in meths
+        P = Roots.ZeroProblem(M, g1, x0_)
+        @test find_zero!(P) ≈ xstar_
+    end
 
+    
     ## hybrid
     g1(x) = exp(x) - x^4
     x0_, xstar_ = (5.0, 20.0), 8.613169456441398
@@ -286,6 +299,12 @@ end
 
     ## issue #178 passinig through method
     @test fzero(sin, 3, 4, Roots.Brent()) ≈ π
+
+    ## issue #188 with A42
+    f(x) = x*(1-x^2)/((x^2+a^2)*(1+a^2*x^2))
+    a,r = .18, 0.05
+    xs = (r + 1e-12, 1.0)
+    @test find_zero(x -> f(r)-f(x), xs, Roots.A42()) ≈ 0.4715797678171889
 end
 
 
