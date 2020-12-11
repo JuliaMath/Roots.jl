@@ -314,7 +314,7 @@ end
 @inline function _is_f_approx_0(fa, a, atol, rtol, relaxed::Any)
     aa, afa = abs(a), abs(fa)
     tol = max(_unitless(atol), _unitless(aa) * rtol)
-    tol = abs(_unitless(tol))^(1/3)  # relax test
+    tol = cbrt(abs(_unitless(tol)))  # relax test
     afa < tol * oneunit(afa)
 end
 @inline function _is_f_approx_0(fa, a, atol, rtol)
