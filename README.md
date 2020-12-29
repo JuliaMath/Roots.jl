@@ -84,7 +84,7 @@ Or,
 
 ```julia
 using Polynomials
-x = variable(Int)
+x = variable()
 find_zero(x^5 - x - 1, 1.0)  # 1.1673039782614185
 ```
 

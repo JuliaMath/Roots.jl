@@ -25,7 +25,8 @@ isissue(x) = iszero(x) || isnan(x) || isinf(x)
 
 ## find a default secant step
 function _default_secant_step(x1)
-    h = eps(one(real(x1)))^(1//3)
+    ϵ = eps(one(real(x1)))
+    h = cbrt(ϵ)
     dx = h*oneunit(x1) + abs(x1)*h^2 # adjust for if eps(x1) > h
     x0 = x1 + dx
     x0
