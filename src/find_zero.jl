@@ -82,7 +82,7 @@ end
 # out = zeros(Float64, n)
 # for (i,x0) in enumerate(linspace(0.9, 1.0, n))
 #    Roots.init_state!(state, M, f1, x0)
-#    out[i] = find_zero(M, f1, options, state)
+#    out[i] = find_zero(M, f1, state, options)
 # end
 # init_state has a method call variant
 function init_state!(state::UnivariateZeroState{T,S}, x1::T, x0::T, m::Vector{T}, y1::S, y0::S, fm::Vector{S}) where {T,S}
@@ -651,9 +651,9 @@ function find_zero(fs, x0, method::AbstractUnivariateZeroMethod,
     l = (verbose && isa(tracks, NullTracks)) ? Tracks(eltype(state.xn1)[], eltype(state.fxn1)[]) : tracks
 
     if N == nothing  || isa(method, AbstractBracketing)
-        xstar = find_zero(method, F, options, state, l)
+        xstar = find_zero(method, F, state, options, l)
     else
-        xstar = find_zero(method, N, F, options, state, l)
+        xstar = find_zero(method, N, F, state, options, l)
     end
 
     if verbose
@@ -668,17 +668,47 @@ function find_zero(fs, x0, method::AbstractUnivariateZeroMethod,
 
 end
 
+# defaults when method is not specified
+# if a number, use Order0
+# O/w use a bracketing method of an assumed iterable
 find_zero(f, x0::T; kwargs...)  where {T <: Number}= find_zero(f, x0, Order0(); kwargs...)
-find_zero(f, x0::Vector; kwargs...) = find_zero(f, x0, Bisection(); kwargs...)
-find_zero(f, x0::Tuple; kwargs...) = find_zero(f, x0, Bisection(); kwargs...)
+function find_zero(f, x0; kwargs...)
+    a, s = iterate(x0)
+    b, _ = iterate(x0, s)
+    find_zero(f, (a,b), Bisection(); kwargs...)
+end
 
 # Main method
 # return a zero or NaN.
 ## Updates state, could be `find_zero!(state, M, F, options, l)...
+"""
+    find_zero(M, F, state, [options], [l])
+
+Find zero using method `M`, function(s) `F`, and initial state `state`. Returns an approximate zero or `NaN`. Useful when some part of the processing pipeline is to be adjusted.
+
+* `M::AbstractUnivariateZeroMethod` a method, such as `Secant()`
+* `F`: A callable object (or tuple of callable objects for certain methods)
+* `state`: An initial state, as created by `init_state` (or `_init_state`).
+* `options::UnivariateZeroOptions`: specification of tolerances
+* `l::AbstractTracks`: used to record steps in algorithm, when requested.
+
+# Examples
+
+```
+f(x) = sin(x)
+xs = (3.0, 4.0)
+fxs = f.(xs)
+if prod((sign∘f).(xs)) < 0 # check bracket
+    M = Bisection()
+    state = Roots._init_state(M, f, xs, fxs) # reuse fxs from test
+    find_zero(M, f, state)
+end
+```
+"""
 function find_zero(M::AbstractUnivariateZeroMethod,
                    F,
-                   options::UnivariateZeroOptions,
                    state::AbstractUnivariateZeroState,
+                   options::UnivariateZeroOptions=init_options(M, state),
                    l::AbstractTracks=NullTracks()
                    )  #where {T<:Number, S<:Number}
 
@@ -693,16 +723,6 @@ function find_zero(M::AbstractUnivariateZeroMethod,
     end
 
     return decide_convergence(M, F, state, options)
-end
-
-function find_zero(M::AbstractUnivariateZeroMethod,
-                   F,
-                   state::AbstractUnivariateZeroState,
-                   l::AbstractTracks=NullTracks()
-                   )  #where {T<:Number, S<:Number}
-
-    options = init_options(M, state)
-    find_zero(M, F, options, state, l)
 end
 
 
@@ -773,7 +793,7 @@ function run_bisection(N::AbstractBracketing, f, xs, state, options)
     state.steps += steps
     state.fnevals += fnevals # could avoid 2 fn calls, with fxs
     init_options!(options, N)
-    find_zero(N, f, options, state)
+    find_zero(N, f, state, options)
     a, b = xs
     u,v = a > b ? (b, a) : (a, b)
     state.message *= "Bracketing used over ($u, $v), those steps not shown. "
@@ -791,8 +811,8 @@ end
 function find_zero(M::AbstractUnivariateZeroMethod,
                    N::AbstractBracketing,
                    F,
-                   options::UnivariateZeroOptions,
                    state::AbstractUnivariateZeroState,
+                   options::UnivariateZeroOptions,
                    l::AbstractTracks=NullTracks()
                    )
 

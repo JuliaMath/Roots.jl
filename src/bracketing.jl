@@ -347,7 +347,7 @@ function find_zero(fs, x0, method::M;
         end
     end
 
-    find_zero(method, F, options, state, l)
+    find_zero(method, F, state, options, l)
 
     verbose && show_trace(method, nothing, state, l)
 
@@ -1019,7 +1019,7 @@ function find_bracket(fs, x0, method::M=A42(); kwargs...) where {M <: Union{Abst
     # check if tolerances are exactly 0
     iszero_tol = iszero(options.xabstol) && iszero(options.xreltol) && iszero(options.abstol) && iszero(options.reltol)
 
-    find_zero(method, F, options, state, NullTracks())
+    find_zero(method, F, state, options, NullTracks())
 
     (xstar=state.xstar, bracket=(state.xn0, state.xn1), exact=iszero(state.fxstar))
 

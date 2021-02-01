@@ -85,6 +85,7 @@ end
 
 
 @testset "find_zero internals" begin
+
     ##  init_state! method
     g1(x) = x^5 - x - 1
     x0_, xstar_ = (1.0, 2.0), 1.1673039782614187
@@ -93,7 +94,7 @@ end
     options = Roots.init_options(M, state)
     for M in (Roots.A42(), Roots.Bisection(), Roots.FalsePosition())
         Roots.init_state!(state, M, g1, x0_)
-        @test find_zero(M, g1, options, state) ≈ xstar_
+        @test find_zero(M, g1, state, options) ≈ xstar_
     end
 
     # alternate constructor find_zero!
@@ -109,6 +110,14 @@ end
         @test find_zero!(P) ≈ xstar_
     end
 
+    ## test with early evaluation of bracket
+    f(x) = sin(x)
+    xs = (3.0, 4.0)
+    fxs = f.(xs)
+    M = Bisection()
+    state = Roots._init_state(M, f, xs, fxs)
+    @test find_zero(M, f, state) ≈ π
+
     
     ## hybrid
     g1(x) = exp(x) - x^4
@@ -116,11 +125,11 @@ end
     M = Roots.Bisection()
     state = Roots.init_state(M, g1, x0_)
     options = Roots.init_options(M, state, xatol=1/2)
-    find_zero(M, g1, options, state)
+    find_zero(M, g1, state, options)
     M = Roots.Order1()
     Roots.init_state!(state, M, g1, state.m[1])
     Roots.init_options!(options, M)
-    @test find_zero(M, g1, options, state) ≈ xstar_
+    @test find_zero(M, g1, state, options) ≈ xstar_
 
 
     # test conversion between states/options
@@ -278,7 +287,7 @@ end
         F = Roots.DerivativeFree(lhs)
         state = Roots.init_state(M, F, x0)
         options = Roots.init_options(M, state)
-        find_zero(M, F, options, state)
+        find_zero(M, F, state, options)
 
         @test state.steps <= 45 # 15
     end
