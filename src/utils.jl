@@ -22,6 +22,13 @@ isissue(x) = iszero(x) || isnan(x) || isinf(x)
 @inline choose_smallest(a, b, fa, fb) = abs(fa) < abs(fb) ? (a,fa) : (b,fb)
 @inline sort_smallest(a, b, fa, fb) = abs(fa) < abs(fb) ? (a, b, fa, fb) : (b, a, fb, fa)
 
+# from an interable extract first two elements and promote to floating point values
+function x₀x₁(x)
+    x₀, x₁′ = x
+    x₁ = first(x₁′)
+    promote(float(x₀), float(x₁))
+end
+
 
 ## find a default secant step
 function _default_secant_step(x1)
