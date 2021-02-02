@@ -60,9 +60,7 @@ function init_state(method::AbstractSecant, fs, x::Number)
 end
 
 function init_state(method::AbstractSecant, fs, x)
-    x₀, x₁′ = x
-    x₁ = first(x₁′)
-    x0, x1 = promote(float(x₀), float(x₁))
+    x0, x1 = x₀x₁(x)
     fx0, fx1 = fs(x0), fs(x1)
     state = UnivariateZeroState(x1, x0, zero(x1)/zero(x1)*oneunit(x1), typeof(x1)[],
                                 fx1, fx0, fx1, typeof(fx1)[],
@@ -80,9 +78,7 @@ end
 
 
 function init_state!(state::UnivariateZeroState{T, S}, ::AbstractSecant, f, x) where {T, S}
-    x₀, x₁′ = x
-    x₁ = first(x₁′)
-    x0, x1 = promote(float(x₀), float(x₁))
+    x0, x1 = x₀x₁(x)
     fx0, fx1 = promote(f(x0), f(x1))
     init_state!(state, x1, x0, T[], fx1, fx0, S[])
     state.fnevals = 2
