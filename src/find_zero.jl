@@ -349,7 +349,7 @@ function assess_convergence(method::Any, state::UnivariateZeroState{T,S}, option
     xn0, xn1 = state.xn0, state.xn1
     fxn1 = state.fxn1
 
-    if (state.x_converged || state.f_converged || state.stopped)
+    if (state.x_converged || state.f_converged) #|| state.stopped)
         if isnan(state.xstar)
             state.xstar, state.fxstar =  xn1, fxn1
         end
@@ -1029,3 +1029,138 @@ function find_zero!(P::ZeroProblem)
     for _ in P end         # iterate to complection
     decide_convergence(P)  # polish answer
 end
+
+
+    ## -- commonsolve interface
+    ## THis has these parts
+    ## show methods for ZeroProblem
+    ## perhaps accessor methods are needed to gather xᵢs and f(xᵢ)s from ZeroProblem would be good
+    ## a new type to bundle together the functions and the x0(s).
+    ## Then init: FX -> ZeroProblem
+    ## solve! iterates over ZeroProblem
+    ## last(p) then store `xstar` (which may be NaN0
+"""
+
+## Example:
+
+```
+fx = FX(sin, 3)
+p = init(fx) # uses Order1()
+solve!(p)
+```
+
+```
+fx = FX(sin, (3,4))
+p = init(fx) # uses Bisection()
+solve!(p)
+```
+
+```
+fx = FX(sin, 3)
+p = init(fx, verbose=true)
+solve!(p)
+Roots.tracks(p) # show info
+```
+
+```
+fx = FX(sin,3)
+p = init(Fx, verbose=true)
+for xᵢ ∈ p
+  fxᵢ, fxⱼ = p.state.fxn0, p.state.fxn1
+  if sign(fxᵢ) * sign(fxⱼ) < 0
+    xs = p.state.xn0, p.state.xn1
+    p = init(FX(fx.F, xs), Roots.Bisection())
+    break
+  end
+end
+solve!(p)
+
+
+"""    
+    mutable struct FX{F,X}
+        F::F
+        x₀::X
+    end
+    ## FX0
+    function init(𝑭𝑿::FX, M::Union{Nothing,AbstractUnivariateZeroMethod}=nothing;
+                  verbose=false,
+                  kwargs...)
+        F,X = callable_function(𝑭𝑿.F), 𝑭𝑿.x₀
+        
+        if M == nothing
+            x₀,st = iterate(X)
+            M′ = st == nothing ? Order1() : Bisection()
+        else
+            M′ = M
+        end
+        
+        state = init_state(M′, F, X)
+        options = init_options(M′, state; kwargs...)
+        l = verbose ? Tracks(eltype(state.xn1)[], eltype(state.fxn1)[]) : nothing
+        ZeroProblem(M′,F,state,options,l)
+    end
+    
+    function solve!(ZP::ZeroProblem)
+        find_zero!(ZP)
+    end
+    
+    export FX
+
+
+    # To do
+    # These are methods for working with ZeroProblem
+    # * a show method (needs improvement; should be good replacement for tracks)
+    # * a `last` method to get xstar
+    # * need a method to get [xn0], xn1
+    # * need a method to get [fxn0], fxn1
+    
+    
+    # pun? Get last element in the iteration, which is xstar
+    function Base.last(p::ZeroProblem)
+        state = p.state
+        state.convergence_failed && @warn "The problem failed to converge"
+        !(state.x_converged || state.f_converged) && @warn "The problem has not converged. Try calling `solve! first"
+        state.xstar
+    end
+    function current(p::ZeroProblem)
+        M, state = p.M, p.state
+        (xᵢ = xs(M, state), fᵢ = fs(M, state))
+    end
+
+"""
+    xs(M::AbstractUnivariateZeroMethod, state)
+    fs(M::AbstractUnivariateZeroMethod, state)
+
+Return the xs values needed for the next iteration. Return the fs values used for the next iteration.
+"""  
+    xs(M::AbstractUnivariateZeroMethod, state) = state.xn1
+    xs(M::AbstractSecantMethod, state) = (state.xn0, state.xn1)
+    xs(M::AbstractBracketing, state) = [state.xn0, state.xn1]
+
+    fs(M::AbstractUnivariateZeroMethod, state) = state.fxn1
+    fs(M::AbstractSecantMethod, state) = (state.fxn0, state.fxn1)
+    fs(M::AbstractBracketing, state) = [state.fxn0, state.fxn1]
+
+    ## Show method
+    show_state(io::IO, ::Type{<:AbstractUnivariateZeroMethod}, state) =
+    print(io, @sprintf("%18.16f", float(state.xn1)))
+    show_state(io::IO, ::Type{<:AbstractBracketing}, state) =
+        print(io, @sprintf("[%18.16f, %18.16f]", float(state.xn0), float(state.xn1)))
+
+    show_converged(io::IO, ::Type{<:AbstractUnivariateZeroMethod}, state) =
+        print(io, float(state.xstar))
+
+    function Base.show(io::IO, P::ZeroProblem{M}) where {M<:AbstractUnivariateZeroMethod}
+        state = P.state
+        if state.x_converged || state.f_converged
+            print(io, "Converged to xₙ: ")
+            show_converged(io, M, state)
+        else
+            print(io, iszero(state.steps) ? "$M: xₒ = " : "step $(state.steps): xᵢ = ")
+            show_state(io, M, state)
+        end
+        println(io)            
+    end
+
+
+    
