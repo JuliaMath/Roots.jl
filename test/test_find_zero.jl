@@ -87,7 +87,7 @@ end
 @testset "find_zero internals" begin
 
     ##  init_state! method
-    g1(x) = x^5 - x - 1
+    g1 = x -> x^5 - x - 1
     x0_, xstar_ = (1.0, 2.0), 1.1673039782614187
     M = Roots.A42()
     state = Roots.init_state(M, g1, x0_)
@@ -97,21 +97,27 @@ end
         @test find_zero(M, g1, state, options) ≈ xstar_
     end
 
-    # alternate constructor find_zero!
+    # iterator interface (ZeroProblem, solve; init, solve!)
     meths = [Order1(), Roots.Order1B(), Roots.King(),
              Order2(), Roots.Steffensen(), Roots.Order2B(), Roots.Esser(),
              Order5(), Roots.KumarSinghAkanksha(),
              Order8(), Roots.Thukral8(),
              Order16(), Roots.Thukral16()]
     g1(x) = x^5 - x - 1
-    x0_, xstar_ = 1.16, 1.1673039782614187  # need a good starting point for all to pass
+    x0_, xstar_ = 1.16, 1.1673039782614187
+    fx = ZeroProblem(g1, x0_)
     for M in meths
+        @test solve(fx, M) ≈ xstar_
+        P = init(fx, M)
+        solve!(P)
+        @test last(P) ≈ xstar_
+        # these next two methods are to be deprecated:
         P = Roots.ZeroProblem(M, g1, x0_)
         @test find_zero!(P) ≈ xstar_
     end
 
     ## test with early evaluation of bracket
-    f(x) = sin(x)
+    f = x -> sin(x)
     xs = (3.0, 4.0)
     fxs = f.(xs)
     M = Bisection()
@@ -120,7 +126,7 @@ end
 
     
     ## hybrid
-    g1(x) = exp(x) - x^4
+    g1 = x -> exp(x) - x^4
     x0_, xstar_ = (5.0, 20.0), 8.613169456441398
     M = Roots.Bisection()
     state = Roots.init_state(M, g1, x0_)
@@ -142,7 +148,7 @@ end
           Order8(),
           Order16()]
 
-    g1(x) = exp(x) - x^4
+    g1 = x -> exp(x) - x^4
     x0_= (5.0, 20.0)
     M = Ms[1]
     state = Roots.init_state(M, g1, x0_)
@@ -195,7 +201,7 @@ end
         o.fxn0, o.fxn1 = fxn, fwn
     end
 
-    g1(x) = exp(x) - x^4
+    g1 = x -> exp(x) - x^4
     @test find_zero(g1, 8.3, Order3_Test()) ≈ find_zero(g1, 8.3, Order1())
 
 end
@@ -310,7 +316,7 @@ end
     @test fzero(sin, 3, 4, Roots.Brent()) ≈ π
 
     ## issue #188 with A42
-    f(x) = x*(1-x^2)/((x^2+a^2)*(1+a^2*x^2))
+    f = x -> x*(1-x^2)/((x^2+a^2)*(1+a^2*x^2))
     a,r = .18, 0.05
     xs = (r + 1e-12, 1.0)
     @test find_zero(x -> f(r)-f(x), xs, Roots.A42()) ≈ 0.4715797678171889
