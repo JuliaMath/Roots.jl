@@ -5,12 +5,15 @@ if isdefined(Base, :Experimental) && isdefined(Base.Experimental, Symbol("@optle
 end
 
 using Printf
+import CommonSolve
+import CommonSolve: solve, solve!, init
 
 export fzero,
        fzeros,
        secant_method
 
 export find_zero, find_zero!, find_zeros,
+       ZeroProblem, solve, solve!, init,
        Order0, Order1, Order2, Order5, Order8, Order16
 
 export Bisection, FalsePosition

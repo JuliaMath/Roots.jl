@@ -349,7 +349,7 @@ function assess_convergence(method::Any, state::UnivariateZeroState{T,S}, option
     xn0, xn1 = state.xn0, state.xn1
     fxn1 = state.fxn1
 
-    if (state.x_converged || state.f_converged || state.stopped)
+    if (state.x_converged || state.f_converged) #|| state.stopped)
         if isnan(state.xstar)
             state.xstar, state.fxstar =  xn1, fxn1
         end
@@ -677,9 +677,10 @@ function find_zero(f, x0; kwargs...)
     find_zero(f, (a, b), Bisection(); kwargs...)
 end
 
+
 # Main method
 # return a zero or NaN.
-## Updates state, could be `find_zero!(state, M, F, options, l)...
+## Updates state, could be `find_zero!(state, M, F, options, l)`...
 """
     find_zero(M, F, state, [options], [l])
 
@@ -917,12 +918,25 @@ function find_zero(M::AbstractUnivariateZeroMethod,
 end
 
 
-
-
-# An alternate interface
-# create a problem, call find_zero!
+## ---------------
+## Create an Iterator interface
 # returns NaN, not an error, if there are issues
-struct ZeroProblem{M,F,S,O,L}
+
+"""
+    ZeroProblem{F,X}
+
+A container for a function and initial guess passed to an iterator to be solved by `find_zero!` or `solve!`.
+"""
+mutable struct ZeroProblem{F,X}
+    F::F
+    x₀::X
+end
+
+
+
+
+## The actual iterating object
+struct ZeroProblemIterator{M,F,S,O,L}
     M::M
     F::F
     state::S
@@ -930,34 +944,27 @@ struct ZeroProblem{M,F,S,O,L}
     logger::L
 end
 
-"""
-    ZeroProblem(M, fs, x0; verbose=false, kwargs...)
+## Initialize a Zero Problem
+function init(𝑭𝑿::ZeroProblem, M::Union{Nothing,AbstractUnivariateZeroMethod}=nothing;
+              verbose=false,
+              kwargs...)
+    F,X = callable_function(𝑭𝑿.F), 𝑭𝑿.x₀
 
-Setup a problem for solution. Call `find_zero!` to solve.
+    if M == nothing
+        x₀,st = iterate(X)
+        M′ = st == nothing ? Order1() : Bisection()
+    else
+            M′ = M
+    end
 
-* `M`: Method. A non-hybrid method (not `Order0`).
-* `fs`: a function or for some methods a tuple of functions
-* `x0`: the initial guess
-* `verbose`: if `true`, then calling `Roots.tracks` on the output will show the steps on the algorithm
-* `kwargs`: passed to `Roots.init_options` to adjust tolerances
-"""
-function ZeroProblem(M::AbstractUnivariateZeroMethod,
-                     fs,
-                     x0;
-                     verbose=false,
-                     kwargs...)
-
-    F = callable_function(fs)
-    state = init_state(M, F, x0)
-    options = init_options(M, state; kwargs...)
+    state = init_state(M′, F, X)
+    options = init_options(M′, state; kwargs...)
     l = verbose ? Tracks(eltype(state.xn1)[], eltype(state.fxn1)[]) : nothing
-
-    ZeroProblem(M,F,state, options, l)
-
+    ZeroProblemIterator(M′,F,state,options,l)
 end
 
 # Iteration interface to handle looping
-function Base.iterate(P::ZeroProblem, state=nothing)
+function Base.iterate(P::ZeroProblemIterator, state=nothing)
 
     M, F, state, options, l = P.M, P.F, P.state, P.options, P.logger
     assess_convergence(M, state, options)  && return  nothing
@@ -969,44 +976,178 @@ function Base.iterate(P::ZeroProblem, state=nothing)
 
 end
 
-decide_convergence(P::ZeroProblem) =  decide_convergence(P.M, P.F, P.state, P.options)
-log_step(P::ZeroProblem) = log_step(P.logger, P.M, P.state)
+decide_convergence(P::ZeroProblemIterator) =  decide_convergence(P.M, P.F, P.state, P.options)
+log_step(P::ZeroProblemIterator) = log_step(P.logger, P.M, P.state)
+
+"Get last element in the iteration, which is xstar, or throw a warning"
+function Base.last(p::ZeroProblemIterator)
+    state = p.state
+    state.convergence_failed && @warn "The problem failed to converge"
+        !(state.x_converged || state.f_converged) && @warn "The problem has not converged. Try calling `solve! first"
+    state.xstar
+end
+
+"Get current state of Zero Problem Iterator `(xᵢ=..., fᵢ=...)`"
+function current(p::ZeroProblemIterator)
+    M, state = p.M, p.state
+    (xᵢ = xs(typeof(M), state), fᵢ = fs(typeof(M), state))
+end
 
 
 """
-    tracks(P::ZeroProblem)
+    tracks(P::ZeroProblemIterator)
 
 Show trace of output when `verbose=true` is specified to the problem
 """
-function tracks(P::ZeroProblem{M,F,S,O,L}) where {M,F,S,O,L<:Tracks}
+function tracks(P::ZeroProblemIterator{M,F,S,O,L}) where {M,F,S,O,L<:Tracks}
     show_trace(P.M, nothing, P.state, P.logger)
 end
-tracks(P::ZeroProblem) = error("Set verbose=true when specifying the problem to see the tracks")
+tracks(P::ZeroProblemIterator) = error("Set verbose=true when specifying the problem to see the tracks")
+
+## show method
+"""
+    xs(M::AbstractUnivariateZeroMethod, state)
+    fs(M::AbstractUnivariateZeroMethod, state)
+
+Return the xs values needed for the next iteration. Return the fs values used for the next iteration.
+"""
+xs(::Type{<:AbstractUnivariateZeroMethod}, state) = state.xn1
+xs(::Type{<:AbstractSecant}, state) = (state.xn0, state.xn1)
+xs(::Type{<:AbstractBracketing}, state) = [state.xn0, state.xn1]
+
+fs(::Type{<:AbstractUnivariateZeroMethod}, state) = state.fxn1
+fs(::Type{<:AbstractSecant}, state) = (state.fxn0, state.fxn1)
+fs(::Type{<:AbstractBracketing}, state) = [state.fxn0, state.fxn1]
+
+function Base.show(io::IO, P::ZeroProblemIterator{M}) where {M<:AbstractUnivariateZeroMethod}
+    state = P.state
+
+    if state.x_converged || state.f_converged
+        print(io, "Converged to x")
+        unicode_subscript(io, state.steps)
+        print(io, ": ", state.xstar)
+    elseif state.stopped
+        print(io, "Failed to converge. Last iterate: ")
+        print(io, current(P))
+    else
+        iszero(state.steps) && print(io,  "$M: ")
+        print(io, "x")
+        unicode_subscript(io, state.steps)
+        print(io, ": ")
+        print(io, xs(M, state))
+    end
+    println(io)
+end
+
+
 
 """
-    find_zero!(P::ZeroProblem)
+   solve(fx::ZeroProblem, [M]; kwargs...)
+   solve!(P::ZeroProblemIterator)
 
-An alternate interface to `find_zero` whereby a problem is created with `ZeroProblem` and solved
-with `find_zero!`.
+Solve for the zero of a function specified through a  `ZeroProblem` or `ZeroProblemIterator`
+
+
+The methods involved with this interface are:
+
+* `ZeroProblem`: used to specificy a problem with a function (or functions) and an initial guess
+* `solve`: to solve for a zero in a `ZeroProblem`
+
+The latter calls the following, which can be useful independently:
+
+* `init`: to initialize an iterator with a method for solution, any adjustments to the default tolerances, and a specification to log the steps or not.
+* `solve!` to iterate to convergence. (Also [`find_zero!`](@ref).)
 
 Returns `NaN`, not an error, when the problem can not be solved.
 
-Advantages are the `state` object is accessible after solving and may
-help in facilitating hybrid solving techniques. Disadvantage include the
-overhead of creating another object to pass to this function.
+## Examples:
+
+```
+fx = ZeroProblem(sin, 3)
+solve(fx)
+```
+
+Or, if the iterator is required
+
+```
+fx = ZeroProblem(sin, 3)
+problem = init(fx)
+solve!(fx)
+```
+
+The default method is `Order1()`, when  `x0` is a number, or `Bisection()` when `x0` is an iterable with 2 or more values.
+
+
+A second position argument for `solve` or `init` is used to specify a different method; keyword arguments can be used to adjust the default tolerances.
+
+
+```
+fx = ZeroProblem(sin,3)
+solve(fx, Order5(), atol=1/100)
+```
+
+The above is equivalent to:
+
+```
+fx = ZeroProblem(sin, 3)
+problem = init(fx, Order5(), atol=1/100)
+solve!(problem)
+```
+
+The argument `verbose=true` for `init` instructs that steps to be logged; these may be viewed with the method `Roots.tracks` for the iterator.
+
+The iterator interface allows for the creation of hybrid solutions, for example, this is essentially how `Order0` is constructed (`Order0` follows secant steps until a bracket is identified, after which is switches to a bracketing algorithm.)
+
+```
+function order0(f, x)
+    fx = ZeroProblem(f, x)
+    p = init(fx, Roots.Secant())
+    xᵢ,st = ϕ = iterate(p)
+    while ϕ != nothing
+        xᵢ, st = ϕ
+        fᵢ₋₁, fᵢ = p.state.fxn0, p.state.fxn1
+        if sign(fᵢ₋₁)*sign(fᵢ) < 0 # check for bracket
+            x0 = (p.state.xn0, p.state.xn1)
+            fx′ = ZeroProblem(f, x0)
+            p = init(fx′, Bisection())
+            solve!(p)
+            break
+        end
+        ϕ = iterate(p, st)
+    end
+    return last(p)
+end
+```
+
+"""
+function solve!(P::ZeroProblemIterator)
+    log_step(P)            # initial logging
+    for _ in P end         # iterate to completion
+    decide_convergence(P)  # polish answer
+end
+
+## -----
+## deprecate this interface at some time.
+
+"""
+    find_zero!(P::ZeroProblemIterator)
+
+An alternate interface to `find_zero` whereby a problem is created with `ZeroProblemIterator` and solved
+with `find_zero!`. The generic [`solve!`](@ref) method is recommened for familiarity.
+
 
 ```jldoctest find_zero
 julia> using Roots
 
-julia> P = Roots.ZeroProblem(Order1(), sin, 3, verbose=true);
+julia> P = ZeroProblem(Order1(), sin, 3, verbose=true);
 
 julia> find_zero!(P)
 3.141592653589793
 
-julia> P.state.xstar
+julia> last(P)
 3.141592653589793
 
-julia> Roots.tracks(P)
+julia> Roots.tracks(P) # possible when `verbose=true` is specified
 Results of univariate zero finding:
 
 * Converged to: 3.141592653589793
@@ -1022,10 +1163,42 @@ x_2 =  3.1415894805773834,	 fx_2 =  0.0000031730124098
 x_3 =  3.1415926535902727,	 fx_3 = -0.0000000000004795
 x_4 =  3.1415926535897931,	 fx_4 =  0.0000000000000001
 ```
+"""
+function find_zero!(P::ZeroProblemIterator)
+    solve!(P)
+end
+
+
 
 """
-function find_zero!(P::ZeroProblem)
-    log_step(P)            # initial logging
-    for _ in P end         # iterate to complection
-    decide_convergence(P)  # polish answer
+    ZeroProblem(M, fs, x0; verbose=false, kwargs...)
+
+Setup an interator interface for the zero problem. Call `find_zero!` or solve! to solve.
+
+* `M`: Method. A non-hybrid method (not `Order0`).
+* `fs`: a function or for some methods a tuple of functions
+* `x0`: the initial guess
+* `verbose`: if `true`, then calling `Roots.tracks` on the output will show the steps on the algorithm
+* `kwargs`: passed to `Roots.init_options` to adjust tolerances
+
+"""
+function ZeroProblem(M::AbstractUnivariateZeroMethod,
+                     fs,
+                     x0;
+                     verbose=false,
+                     kwargs...)
+
+    fx = ZeroProblem(fs, x0)
+    problem = init(fx, M; verbose=verbose, kwargs...)
+
 end
+
+
+
+
+
+
+      
+
+
+    
