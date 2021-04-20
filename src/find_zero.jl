@@ -260,10 +260,39 @@ struct SecondDerivative{F,FP,FPP} <: CallableFunction
     fpp::FPP
 end
 
+
+# (f,f',f'', f''', ...)
+struct NDerivative <: CallableFunction
+    fs
+end
+
+function Base.iterate(o::DerivativeFree, st=nothing)
+    st == nothing && return (o.f,1)
+    nothing
+end
+
+function Base.iterate(o::FirstDerivative, st=nothing)
+    st == nothing && return (o.f,1)
+    st == 1 && return (o.fp, 2)
+    nothing
+end
+
+function Base.iterate(o::SecondDerivative, st=nothing)
+    st == nothing && return (o.f,1)
+    st == 1 && return (o.fp, 2)
+    st == 2 && return (o.fp, 3)
+    nothing
+end
+
+Base.iterate(o::NDerivative) = iterate(o.fs)
+Base.iterate(o::NDerivative,st) = iterate(o.fs,st)
+
+
 (F::FnWrapper)(x::Number) = first(F.f(x))
 (F::DerivativeFree)(x::Number) = first(F.f(x))
 (F::FirstDerivative)(x::Number) = first(F.f(x))
 (F::SecondDerivative)(x::Number) = first(F.f(x))
+(F::NDerivative)(x::Number) = first(F.fs)(x)
 
 ## Return f, f/f'
 function fΔx(F::DerivativeFree, x)
@@ -304,7 +333,8 @@ function _callable_function(fs)
     if isa(fs, Tuple)
         length(fs)==1 && return DerivativeFree(fs[1])
         length(fs)==2 && return FirstDerivative(fs[1],fs[2])
-        return SecondDerivative(fs[1],fs[2],fs[3])
+        length(fs)==3 && return SecondDerivative(fs[1],fs[2],fs[3])
+        return NDerivative(fs)
     end
     DerivativeFree(fs)
 end

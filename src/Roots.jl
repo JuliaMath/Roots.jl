@@ -26,6 +26,7 @@ include("derivative_free.jl")
 include("simple.jl")
 include("find_zeros.jl")
 include("newton.jl")
+include("lith.jl")
 include("fzero.jl")
 
 
