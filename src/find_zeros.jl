@@ -149,13 +149,13 @@ Search for zeros of `f` in the interval `[a,b]`.
 julia> using Roots
 
 julia> find_zeros(x -> exp(x) - x^4, -5, 20)        # a few well-spaced zeros
-3-element Array{Float64,1}:
+3-element Vector{Float64}:
  -0.8155534188089606
   1.4296118247255556
   8.613169456441398
 
 julia> find_zeros(x -> sin(x^2) + cos(x)^2, 0, 2pi)  # many zeros
-12-element Array{Float64,1}:
+12-element Vector{Float64}:
  1.78518032659534
  2.391345462376604
  3.2852368649448853
@@ -170,7 +170,7 @@ julia> find_zeros(x -> sin(x^2) + cos(x)^2, 0, 2pi)  # many zeros
  6.039177477770888
 
 julia> find_zeros(x -> cos(x) + cos(2x), 0, 4pi)    # mix of simple, non-simple zeros
-6-element Array{Float64,1}:
+6-element Vector{Float64}:
   1.0471975511965976
   3.141592653589943
   5.235987755982988
@@ -182,7 +182,7 @@ julia> f(x) = (x-0.5) * (x-0.5001) * (x-1)          # nearby zeros
 f (generic function with 1 method)
 
 julia> find_zeros(f, 0, 2)
-3-element Array{Float64,1}:
+3-element Vector{Float64}:
  0.5
  0.5001
  1.0
@@ -191,7 +191,7 @@ julia> f(x) = (x-0.5) * (x-0.5001) * (x-4) * (x-4.001) * (x-4.2)
 f (generic function with 1 method)
 
 julia> find_zeros(f, 0, 10)
-3-element Array{Float64,1}:
+3-element Vector{Float64}:
  0.5
  0.5001
  4.2
@@ -200,7 +200,7 @@ julia> f(x) = (x-0.5)^2 * (x-0.5001)^3 * (x-4) * (x-4.001) * (x-4.2)^2  # hard t
 f (generic function with 1 method)
 
 julia> find_zeros(f, 0, 10, no_pts=21)                # too hard for default
-5-element Array{Float64,1}:
+5-element Vector{Float64}:
  0.49999999999999994
  0.5001
  4.0
