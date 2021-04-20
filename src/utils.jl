@@ -137,3 +137,12 @@ function identify_starting_point(a, b, sfxs)
     p1 = p0 + (b-a)/(2N) * sfxs[1] * sum(s for s in sfxs[2:end-1])
     p1
 end
+
+## ----
+
+function unicode_subscript(io, j)
+    a = ("⁻","","","₀","₁","₂","₃","₄","₅","₆","₇","₈","₉")
+    for i in string(j)
+        print(io, a[Int(i)-44])
+    end
+end

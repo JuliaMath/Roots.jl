@@ -13,7 +13,7 @@ using Test
     @test isapprox(xrt, pi)
 
     # secant_method
-    fpoly(x) = x^5 - x - 1
+    fpoly = x -> x^5 - x - 1
     xrt = Roots.secant_method(fpoly, 1.0)
     @test abs(fpoly(xrt)) <= 1e-15
 
@@ -22,7 +22,7 @@ using Test
 
 
     # muller
-    fpoly(x) = x^5 - x - 1
+    fpoly = x -> x^5 - x - 1
     xrt = Roots.muller(fpoly, 1.0)
     @test xrt isa Real
     @test abs(fpoly(xrt)) <= 1e-15
@@ -38,7 +38,7 @@ using Test
     @test Roots.muller(expoly, -0.7-0.5im) ≈ -1.0
     
     # dfree
-    fpoly(x) = x^5 - x - 1
+    fpoly = x -> x^5 - x - 1
     xrt = Roots.dfree(fpoly, 1.0)
     @test abs(fpoly(xrt)) <= 1e-14
 

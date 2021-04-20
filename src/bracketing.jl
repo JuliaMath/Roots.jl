@@ -875,7 +875,7 @@ function update_state(M::Brent, f, state::UnivariateZeroState{T,S}, options::Uni
         mflag = false
     end
 
-     d = c
+    d = c
     c,fc = b,fb
 
     if sign(fa) * sign(fs) < 0
