@@ -4,7 +4,8 @@
     LithBoonkkampIJzerman{S,D} <: AbstractNewtonLikeMethod 
     LithBoonkkampIJzerman(S,D)
 
-Specify a linear multistep solver with `S` steps and `D` derivatives.
+Specify a linear multistep solver with `S` steps and `D` derivatives following [Lith, Boonkkamp, and
+IJzerman](https://doi.org/10.1016/j.amc.2017.09.003).
 
 ## Examples
 
@@ -13,6 +14,19 @@ find_zero(sin, 3, Roots.LithBoonkkampIJzerman(2,0)) # the secant method
 find_zero((sin,cos), 3, Roots.LithBoonkkampIJzerman(1,1)) # Newton's method
 find_zero((sin,cos), 3, Roots.LithBoonkkampIJzerman(3,1)) # Faster convergence rate
 find_zero((sin,cos, x->-sin(x)), 3, Roots.LithBoonkkampIJzerman(1,2)) # Halley-like method
+```
+
+The method can be more robust to the intial condition. This example is from the paper (p13). Newton's method (the `S=1`, `D=1` case) fails if `|x₀| ≥ 1.089` but methods with more memory succeed.
+
+```
+fx =  ZeroProblem((tanh,x->sech(x)^2), 1.239) # zero at 0.0
+solve(fx, Roots.LithBoonkkampIJzerman(1,1)) # Nweton, NaN
+p = init(fx, Roots.LithBoonkkampIJzerman(2,1))
+solve!(p); p.state.steps # 6
+p = init(fx, Roots.LithBoonkkampIJzerman(3,1))
+solve!(p); p.state.steps # 7
+p = init(fx, Roots.LithBoonkkampIJzerman(4,1))
+solve!(p); p.state.steps # 4
 ```
 
 Multiple derivatives can be constructed automatically using automatic differentiation. For example,
@@ -26,21 +40,28 @@ function δ(f, n::Int=1)
 end
 fs(f,n) = ntuple(i->δ(f,i-1), Val(n+1))
 
-find_zero(fs(tanh,3), 1, Roots.LithBoonkkampIJzerman(2,3))
+f(x) = cbrt(x)*exp(-x^2) # cf. Table 6 in paper
+fx = ZeroProblem(fs(f,D), 0.1147)
+opts = (xatol=2eps(), xrtol=0.0, atol=0.0, rtol=0.0) # converge if |xₙ - xₙ₋₁| <= 2ϵ
+solve(fx, Roots.LithBoonkkampIJzerman(1, 1); opts...) # NaN -- no convergence
+solve(fx, Roots.LithBoonkkampIJzerman(2, 1); opts...) # converges
+solve(fx, Roots.LithBoonkkampIJzerman(3, 1); opts...) # converges
 ```
+
 
 ## Reference
 
 In [Lith, Boonkkamp, and
-IJzerman](https://doi.org/10.1016/j.amc.2017.09.003) an analysis of
-using linear multistep methods to solve `0=f(x)` using `f⁻¹(0) = x`
-when `f` is a sufficiently smooth linear function. The reformulation,
-attributed to Grau-Sanchez, finds a differntial equation for `f⁻¹`:
-`dx/dy = [f⁻¹]′(y) = 1/f′(x) = F` as `x(0) = x₀ + ∫⁰_y₀ F(x(y)) dy`.
+IJzerman](https://doi.org/10.1016/j.amc.2017.09.003) an analysis is
+given of the convergence rates when using linear multistep methods to
+solve `0=f(x)` using `f⁻¹(0) = x` when `f` is a sufficiently smooth
+linear function. The reformulation, attributed to Grau-Sanchez, finds
+a differential equation for `f⁻¹`: `dx/dy = [f⁻¹]′(y) = 1/f′(x) = F` as
+`x(0) = x₀ + ∫⁰_y₀ F(x(y)) dy`.
 
-It then uses a linear multi-step method to solve this equation
-numerically.  Let s be the number of memory steps (S= 1,2,...) and D be
-the number of derivatives then 
+A linear multi-step method is used to solve this equation
+numerically.  Let S be the number of memory steps (S= 1,2,...) and D be
+the number of derivatives employed, then, with `F(x) = dx/dy`
 `x_{n+S} = ∑_{k=0}^{S-1} aₖ x_{n+k} +∑d=1^D ∑_{k=1}^{S-1} aᵈ_{n+k}F⁽ᵈ⁾(x_{n+k})`.
  The `aₖ`s and `aᵈₖ`s are computed each step.
 
@@ -59,7 +80,9 @@ s/d  0    1    2    3    4
 ```
 
 That is, more memory leads to a higher convergence rate; more
-derivatives leads to a higher convergence rate.
+derivatives leads to a higher convergence rate. However, the 
+interval about `α`, the zero, where the convergence rate is guaranteed
+may get smaller.
 
 !!! Note:
     For the larger values of `S`, the expressions to compute the next value get quite involved. 
@@ -80,16 +103,6 @@ end
 fs(f,n) = ntuple(i->δ(f,i-1), Val(n+1))
 =#
 
-## work here
-## we need S elements of x, (D+1)*S in ys
-## our storage is redundant, but easier
-## xs S=1,2
-## xn1,xn0, T[]
-## S >= 3
-## xn1, xn0, [xs]
-## S = 1
-## fxn1, NaN, [ys⁰..., ys¹..., ys²...] of size s*(1+d)
-## S >= 3
 
 function init_state(L::LithBoonkkampIJzerman{S,D}, fs, x) where {S,D}
 
@@ -102,11 +115,11 @@ function init_state(L::LithBoonkkampIJzerman{S,D}, fs, x) where {S,D}
     state = UnivariateZeroState(xs[end],    # xₙ
                                 S >= 2 ? xs[end-1] : one(R)*NaN, # xₙ₋₁
                                 one(R)*NaN, # α, or xtar
-                                xs,         # all xs
+                                xs,         # all xs (not all but first 2)
                                 ys[1][end], # fₙ
                                 one(T)*NaN, # fₙ₋₁
                                 one(T)*NaN, # f(α)
-                                ys′,        # flattened ys
+                                ys′,        # flattened ys, as a vector
                                 0,          # no steps
                                 iszero(D) + S*(1+D), # no function calls in initialization
                                 false,false,false,false,
@@ -119,7 +132,7 @@ end
 function update_state(L::LithBoonkkampIJzerman{S,D}, fs, o::UnivariateZeroState, options) where {S,D}
 
     xs, ys′ = o.m, o.fm
-    ys = ntuple(i -> view(ys′, 1 + (i-1)*S:(i*S)), Val(1+D))
+    ys = ntuple(i -> view(ys′, 1 + (i-1)*S:(i*S)), Val(1+D)) # unflatten ys′
 
     xᵢ = lmm(L, xs, ys...)
     
@@ -258,8 +271,8 @@ end
 # S/D 0 1 2 3 4
 # 1   x ✓ ✓ ✓ ✓
 # 2   ✓ ✓ ✓ ✓ ✓
-# 3   ✓ ✓ ✓ ✓ .
-# 4   ✓ ✓ . x x
+# 3   ✓ ✓ ✓ ✓ x
+# 4   ✓ ✓ x x x
 # 5   ✓ x x x x
 # 6   ✓ x x x x
 
@@ -276,6 +289,7 @@ function lmm(::LithBoonkkampIJzerman{3,0}, xs, fs)
     f0,f1,f2 = fs
 
     (f0^2*f1*x2 - f0^2*f2*x1 - f0*f1^2*x2 + f0*f2^2*x1 + f1^2*f2*x0 - f1*f2^2*x0)/(f0^2*f1 - f0^2*f2 - f0*f1^2 + f0*f2^2 + f1^2*f2 - f1*f2^2)
+    
 end
 
 function lmm(::LithBoonkkampIJzerman{4,0},xs,fs)
@@ -303,7 +317,7 @@ x5 + (x5 - x1 - ((f5 - f1)*(x5 - x0)*((f5 - f0)^-1)) - (((f5 - f1)*((f0 - f5)^3)
 end
 
 
-## d = 1; Newton
+## d = 1; Newton-like
 function lmm(::LithBoonkkampIJzerman{1,1}, xs, fs, f′s)
     x0 = xs[1]
     f0 = fs[1]
@@ -311,16 +325,17 @@ function lmm(::LithBoonkkampIJzerman{1,1}, xs, fs, f′s)
     
     return x0 - (f0*(f′0^-1))
 
+    # from the paper
     # x1 + a0 x0 - h2 * (b0*1/fp1)
-    # a0 = -1
-    # b0, b1 = 0, 1
+    a0 = -1
+    b0, b1 = 0, 1
 
     a0 = -1
     b0 = 1
     h1 = -fs[end]
 
     Σ  = -a0*xs[end]
-    Σ += h1*(b0* f′s[end]) # we have r1, could use it here
+    Σ += h1*(b0 / f′s[end]) # we have r1, could use it here
     Σ
     
 end
@@ -331,19 +346,19 @@ function lmm(::LithBoonkkampIJzerman{2,1}, xs, fs, f′s)
     f0,f1 = fs
     f′0,f′1 = f′s
 
-    return (-f0^3*f1*f′0 + f0^3*f′0*f′1*x1 + f0^2*f1^2*f′0 - f0^2*f1^2*f′1 - 3*f0^2*f1*f′0*f′1*x1 + f0*f1^3*f′1 + 3*f0*f1^2*f′0*f′1*x0 - f1^3*f′0*f′1*x0)/(f′0*f′1*(f0^3 - 3*f0^2*f1 + 3*f0*f1^2 - f1^3))
-    
-    #x2 + a1 x1 + a0x0 = - h3 * (b1 * 1/fp1 + b0 * 1/fp0)
+#    return (-f0^3*f1*f′0 + f0^3*f′0*f′1*x1 + f0^2*f1^2*f′0 - f0^2*f1^2*f′1 - 3*f0^2*f1*f′0*f′1*x1 + f0*f1^3*f′1 + 3*f0*f1^2*f′0*f′1*x0 - f1^3*f′0*f′1*x0)/(f′0*f′1*(f0^3 - 3*f0^2*f1 + 3*f0*f1^2 - f1^3))
 
-    q = fs[end-1]/fs[end]
+    # from the paper
+    #x2 + a1 x1 + a0x0 =  h3 * (b1 * 1/fp1 + b0 * 1/fp0)
+    q = fs[1]/fs[2]
     a0 = (1-3q)/(q-1)^3
     a1 = -1 - a0
     b0 = q/(q-1)^2
     b1 = q * b0
-    h2 = -fs[end]
+    h2 = -fs[2]
 
-    Σ  = -a1 * xs[end] - a0 * xs[end-1]
-    Σ += h2 * (b1 * f′s[end] + b0 * f′s[end-1])
+    Σ  = -a1 * xs[2] - a0 * xs[1]
+    Σ += h2 * (b1 / f′s[2] + b0 / f′s[1])
     Σ
 
 end
@@ -355,24 +370,24 @@ function lmm(::LithBoonkkampIJzerman{3,1},xs, fs, f′s)
     f′0,f′1,f′2 = f′s
 
 
-    return (-f0^6*f1^3*f2*f′0*f′1 + f0^6*f1^3*f′0*f′1*f′2*x2 + f0^6*f1^2*f2^2*f′0*f′1 - f0^6*f1^2*f2^2*f′0*f′2 - 3*f0^6*f1^2*f2*f′0*f′1*f′2*x2 + f0^6*f1*f2^3*f′0*f′2 + 3*f0^6*f1*f2^2*f′0*f′1*f′2*x1 - f0^6*f2^3*f′0*f′1*f′2*x1 + 3*f0^5*f1^4*f2*f′0*f′1 - 3*f0^5*f1^4*f′0*f′1*f′2*x2 - 2*f0^5*f1^3*f2^2*f′0*f′1 + f0^5*f1^3*f2^2*f′0*f′2 + 6*f0^5*f1^3*f2*f′0*f′1*f′2*x2 - f0^5*f1^2*f2^3*f′0*f′1 + 2*f0^5*f1^2*f2^3*f′0*f′2 - 5*f0^5*f1^2*f2^2*f′0*f′1*f′2*x1 + 5*f0^5*f1^2*f2^2*f′0*f′1*f′2*x2 - 3*f0^5*f1*f2^4*f′0*f′2 - 6*f0^5*f1*f2^3*f′0*f′1*f′2*x1 + 3*f0^5*f2^4*f′0*f′1*f′2*x1 - 3*f0^4*f1^5*f2*f′0*f′1 + 3*f0^4*f1^5*f′0*f′1*f′2*x2 + 3*f0^4*f1^3*f2^3*f′0*f′1 - 3*f0^4*f1^3*f2^3*f′0*f′2 - 15*f0^4*f1^3*f2^2*f′0*f′1*f′2*x2 + 15*f0^4*f1^2*f2^3*f′0*f′1*f′2*x1 + 3*f0^4*f1*f2^5*f′0*f′2 - 3*f0^4*f2^5*f′0*f′1*f′2*x1 + f0^3*f1^6*f2*f′0*f′1 - f0^3*f1^6*f′0*f′1*f′2*x2 + 2*f0^3*f1^5*f2^2*f′0*f′1 - f0^3*f1^5*f2^2*f′1*f′2 - 6*f0^3*f1^5*f2*f′0*f′1*f′2*x2 - 3*f0^3*f1^4*f2^3*f′0*f′1 + 3*f0^3*f1^4*f2^3*f′1*f′2 + 15*f0^3*f1^4*f2^2*f′0*f′1*f′2*x2 + 3*f0^3*f1^3*f2^4*f′0*f′2 - 3*f0^3*f1^3*f2^4*f′1*f′2 - 2*f0^3*f1^2*f2^5*f′0*f′2 + f0^3*f1^2*f2^5*f′1*f′2 - 15*f0^3*f1^2*f2^4*f′0*f′1*f′2*x1 - f0^3*f1*f2^6*f′0*f′2 + 6*f0^3*f1*f2^5*f′0*f′1*f′2*x1 + f0^3*f2^6*f′0*f′1*f′2*x1 - f0^2*f1^6*f2^2*f′0*f′1 + f0^2*f1^6*f2^2*f′1*f′2 + 3*f0^2*f1^6*f2*f′0*f′1*f′2*x2 + f0^2*f1^5*f2^3*f′0*f′1 - 2*f0^2*f1^5*f2^3*f′1*f′2 + 5*f0^2*f1^5*f2^2*f′0*f′1*f′2*x0 - 5*f0^2*f1^5*f2^2*f′0*f′1*f′2*x2 - 15*f0^2*f1^4*f2^3*f′0*f′1*f′2*x0 - f0^2*f1^3*f2^5*f′0*f′2 + 2*f0^2*f1^3*f2^5*f′1*f′2 + 15*f0^2*f1^3*f2^4*f′0*f′1*f′2*x0 + f0^2*f1^2*f2^6*f′0*f′2 - f0^2*f1^2*f2^6*f′1*f′2 - 5*f0^2*f1^2*f2^5*f′0*f′1*f′2*x0 + 5*f0^2*f1^2*f2^5*f′0*f′1*f′2*x1 - 3*f0^2*f1*f2^6*f′0*f′1*f′2*x1 - f0*f1^6*f2^3*f′1*f′2 - 3*f0*f1^6*f2^2*f′0*f′1*f′2*x0 + 3*f0*f1^5*f2^4*f′1*f′2 + 6*f0*f1^5*f2^3*f′0*f′1*f′2*x0 - 3*f0*f1^4*f2^5*f′1*f′2 + f0*f1^3*f2^6*f′1*f′2 - 6*f0*f1^3*f2^5*f′0*f′1*f′2*x0 + 3*f0*f1^2*f2^6*f′0*f′1*f′2*x0 + f1^6*f2^3*f′0*f′1*f′2*x0 - 3*f1^5*f2^4*f′0*f′1*f′2*x0 + 3*f1^4*f2^5*f′0*f′1*f′2*x0 - f1^3*f2^6*f′0*f′1*f′2*x0)/(f′0*f′1*f′2*(f0^6*f1^3 - 3*f0^6*f1^2*f2 + 3*f0^6*f1*f2^2 - f0^6*f2^3 - 3*f0^5*f1^4 + 6*f0^5*f1^3*f2 - 6*f0^5*f1*f2^3 + 3*f0^5*f2^4 + 3*f0^4*f1^5 - 15*f0^4*f1^3*f2^2 + 15*f0^4*f1^2*f2^3 - 3*f0^4*f2^5 - f0^3*f1^6 - 6*f0^3*f1^5*f2 + 15*f0^3*f1^4*f2^2 - 15*f0^3*f1^2*f2^4 + 6*f0^3*f1*f2^5 + f0^3*f2^6 + 3*f0^2*f1^6*f2 - 15*f0^2*f1^4*f2^3 + 15*f0^2*f1^3*f2^4 - 3*f0^2*f1*f2^6 - 3*f0*f1^6*f2^2 + 6*f0*f1^5*f2^3 - 6*f0*f1^3*f2^5 + 3*f0*f1^2*f2^6 + f1^6*f2^3 - 3*f1^5*f2^4 + 3*f1^4*f2^5 - f1^3*f2^6))
+#    return (-f0^6*f1^3*f2*f′0*f′1 + f0^6*f1^3*f′0*f′1*f′2*x2 + f0^6*f1^2*f2^2*f′0*f′1 - f0^6*f1^2*f2^2*f′0*f′2 - 3*f0^6*f1^2*f2*f′0*f′1*f′2*x2 + f0^6*f1*f2^3*f′0*f′2 + 3*f0^6*f1*f2^2*f′0*f′1*f′2*x1 - f0^6*f2^3*f′0*f′1*f′2*x1 + 3*f0^5*f1^4*f2*f′0*f′1 - 3*f0^5*f1^4*f′0*f′1*f′2*x2 - 2*f0^5*f1^3*f2^2*f′0*f′1 + f0^5*f1^3*f2^2*f′0*f′2 + 6*f0^5*f1^3*f2*f′0*f′1*f′2*x2 - f0^5*f1^2*f2^3*f′0*f′1 + 2*f0^5*f1^2*f2^3*f′0*f′2 - 5*f0^5*f1^2*f2^2*f′0*f′1*f′2*x1 + 5*f0^5*f1^2*f2^2*f′0*f′1*f′2*x2 - 3*f0^5*f1*f2^4*f′0*f′2 - 6*f0^5*f1*f2^3*f′0*f′1*f′2*x1 + 3*f0^5*f2^4*f′0*f′1*f′2*x1 - 3*f0^4*f1^5*f2*f′0*f′1 + 3*f0^4*f1^5*f′0*f′1*f′2*x2 + 3*f0^4*f1^3*f2^3*f′0*f′1 - 3*f0^4*f1^3*f2^3*f′0*f′2 - 15*f0^4*f1^3*f2^2*f′0*f′1*f′2*x2 + 15*f0^4*f1^2*f2^3*f′0*f′1*f′2*x1 + 3*f0^4*f1*f2^5*f′0*f′2 - 3*f0^4*f2^5*f′0*f′1*f′2*x1 + f0^3*f1^6*f2*f′0*f′1 - f0^3*f1^6*f′0*f′1*f′2*x2 + 2*f0^3*f1^5*f2^2*f′0*f′1 - f0^3*f1^5*f2^2*f′1*f′2 - 6*f0^3*f1^5*f2*f′0*f′1*f′2*x2 - 3*f0^3*f1^4*f2^3*f′0*f′1 + 3*f0^3*f1^4*f2^3*f′1*f′2 + 15*f0^3*f1^4*f2^2*f′0*f′1*f′2*x2 + 3*f0^3*f1^3*f2^4*f′0*f′2 - 3*f0^3*f1^3*f2^4*f′1*f′2 - 2*f0^3*f1^2*f2^5*f′0*f′2 + f0^3*f1^2*f2^5*f′1*f′2 - 15*f0^3*f1^2*f2^4*f′0*f′1*f′2*x1 - f0^3*f1*f2^6*f′0*f′2 + 6*f0^3*f1*f2^5*f′0*f′1*f′2*x1 + f0^3*f2^6*f′0*f′1*f′2*x1 - f0^2*f1^6*f2^2*f′0*f′1 + f0^2*f1^6*f2^2*f′1*f′2 + 3*f0^2*f1^6*f2*f′0*f′1*f′2*x2 + f0^2*f1^5*f2^3*f′0*f′1 - 2*f0^2*f1^5*f2^3*f′1*f′2 + 5*f0^2*f1^5*f2^2*f′0*f′1*f′2*x0 - 5*f0^2*f1^5*f2^2*f′0*f′1*f′2*x2 - 15*f0^2*f1^4*f2^3*f′0*f′1*f′2*x0 - f0^2*f1^3*f2^5*f′0*f′2 + 2*f0^2*f1^3*f2^5*f′1*f′2 + 15*f0^2*f1^3*f2^4*f′0*f′1*f′2*x0 + f0^2*f1^2*f2^6*f′0*f′2 - f0^2*f1^2*f2^6*f′1*f′2 - 5*f0^2*f1^2*f2^5*f′0*f′1*f′2*x0 + 5*f0^2*f1^2*f2^5*f′0*f′1*f′2*x1 - 3*f0^2*f1*f2^6*f′0*f′1*f′2*x1 - f0*f1^6*f2^3*f′1*f′2 - 3*f0*f1^6*f2^2*f′0*f′1*f′2*x0 + 3*f0*f1^5*f2^4*f′1*f′2 + 6*f0*f1^5*f2^3*f′0*f′1*f′2*x0 - 3*f0*f1^4*f2^5*f′1*f′2 + f0*f1^3*f2^6*f′1*f′2 - 6*f0*f1^3*f2^5*f′0*f′1*f′2*x0 + 3*f0*f1^2*f2^6*f′0*f′1*f′2*x0 + f1^6*f2^3*f′0*f′1*f′2*x0 - 3*f1^5*f2^4*f′0*f′1*f′2*x0 + 3*f1^4*f2^5*f′0*f′1*f′2*x0 - f1^3*f2^6*f′0*f′1*f′2*x0)/(f′0*f′1*f′2*(f0^6*f1^3 - 3*f0^6*f1^2*f2 + 3*f0^6*f1*f2^2 - f0^6*f2^3 - 3*f0^5*f1^4 + 6*f0^5*f1^3*f2 - 6*f0^5*f1*f2^3 + 3*f0^5*f2^4 + 3*f0^4*f1^5 - 15*f0^4*f1^3*f2^2 + 15*f0^4*f1^2*f2^3 - 3*f0^4*f2^5 - f0^3*f1^6 - 6*f0^3*f1^5*f2 + 15*f0^3*f1^4*f2^2 - 15*f0^3*f1^2*f2^4 + 6*f0^3*f1*f2^5 + f0^3*f2^6 + 3*f0^2*f1^6*f2 - 15*f0^2*f1^4*f2^3 + 15*f0^2*f1^3*f2^4 - 3*f0^2*f1*f2^6 - 3*f0*f1^6*f2^2 + 6*f0*f1^5*f2^3 - 6*f0*f1^3*f2^5 + 3*f0*f1^2*f2^6 + f1^6*f2^3 - 3*f1^5*f2^4 + 3*f1^4*f2^5 - f1^3*f2^6))
     
-    
-    q0 = fs[end-2]/fs[end]
-    q1 = fs[end-1]/fs[end]
+    # from the paper; 
+    q0 = fs[3-2]/fs[3]
+    q1 = fs[3-1]/fs[3]
 
-    a0 = (q1^2 * (q0 * (3 + 3q1 - 5q0) - q1)) / ((q0-1)^3*(q0-q1)^3)
-    a1 = (q0^2 *  (q1 * (5q1 - 3q0 - 3)+q0)) /  ((q1-1)^3*(q0-q1)^3)
-    a2 = (q0^2*q1^2*(3q1 - q0*(q1-3) - 5)) /  ((q0-1)^3*(q1 - 1)^3)
+    a0 = (q1^2 * (q0 * (3 + 3q1 - 5q0) - q1)) /  ((q0-1)^3 * (q0-q1)^3)
+    a1 = (q0^2 *  (q1 * (5q1 - 3q0 - 3)+q0))  /  ((q1-1)^3 * (q0-q1)^3)
+    a2 = (q0^2*q1^2*(3q1 - q0*(q1-3) - 5))   /   ((q0-1)^3 * (q1-1)^3) # minor typo in (27c)
 
-    b0 = (q0*q1^2)/((q0-1)^2 * (q0-q1)^2)
-    b1 = (q0^2*q1) / ((q0-q1)^2*(q1-1)^2)
-    b2 = (q0^2*q1^2) / ((q0-1)^2*(q1-1)^2)
+    b0 = (q0*q1^2)   / ((q0-1)^2 * (q0-q1)^2)
+    b1 = (q0^2*q1)   / ((q0-q1)^2* (q1-1)^2)
+    b2 = (q0^2*q1^2) / ((q0-1)^2 * (q1-1)^2)
 
-    h3 = -fs[end]
+    h3 = -fs[3]
 
-    Σ  = -a2 * xs[end] -a1 * xs[end-1] - a0 * xs[end-2]
-    Σ += h3 * (b2 * f′s[end] + b1 *  f′s[end-1] + b0 * f′s[end-2])
+    Σ  = -a2 * xs[3] - a1 * xs[3-1] - a0 * xs[3-2]
+    Σ += h3 * (b2 / f′s[3] + b1 /  f′s[3-1] + b0 / f′s[3-2])
     Σ
 end
 
@@ -385,7 +400,7 @@ function lmm(::LithBoonkkampIJzerman{4,1},xs, fs, f′s)
 
 end
 
-## d = 2
+## d = 2; Halley-like
 function lmm(::LithBoonkkampIJzerman{1,2}, xs, fs, f′s,f′′s)
     x0 = xs[1]
     f0 = fs[1]
@@ -418,6 +433,7 @@ function lmm(::LithBoonkkampIJzerman{3,2}, xs, fs, f′s,f′′s)
 end
 
 function lmm(::LithBoonkkampIJzerman{4,2}, xs, fs, f′s,f′′s)
+    error("Not implemented")
 end
 
 ## d = 3
@@ -428,7 +444,7 @@ function lmm(::LithBoonkkampIJzerman{1,3}, xs,  fs, f′s,f′′s, f′′′s)
     f′′0 = f′′s[1]
     f′′′0 = f′′′s[1]
 
-    x0 - (f0*(f′0^-1)) - ((f0^3)*(0.5f′′0*(f′0^-5) - (0.16666666666666666f′′′0*(f′0^-4)))) - (0.5f′′0*(f0^2)*(f′0^-3))
+    (f0^3*(f′0*f′′′0 + 3*f′′0)/6 - f0^2*f′0^2*f′′0/2 - f0*f′0^4 + f′0^5*x0)/f′0^5
     
 end
 
@@ -463,7 +479,7 @@ function lmm(::LithBoonkkampIJzerman{4,3}, xs,  fs, f′s, f′′s, f′′′s
     f′′′0,f′′′1,f′′′2,f′′′3 = f′′′s
 
     
-
+    error("not implemented")
     
 end
 

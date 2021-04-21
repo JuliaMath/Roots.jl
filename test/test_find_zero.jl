@@ -14,7 +14,9 @@ struct Order3_Test <: Roots.AbstractSecant end
              Order2(), Roots.Steffensen(), Roots.Order2B(), Roots.Esser(),
              Order5(), Roots.KumarSinghAkanksha(),
              Order8(), Roots.Thukral8(),
-             Order16(), Roots.Thukral16()]
+             Order16(), Roots.Thukral16(),
+             Roots.LithBoonkkampIJzerman(3,0), Roots.LithBoonkkampIJzerman(4,0)
+             ]
 
 
     ## different types of initial values

@@ -321,7 +321,7 @@ julia> Roots.secant_method(f, 2)
 
 ```
 
-(This is like `Order1()`, but the implementation is significantly
+(This is like `Order1()`, or `Roots.Secant()`, but the implementation is
 faster, as the framework is bypassed, and fewer checks on convergence
 are used. This method can be used when speed is very important.)
 
@@ -350,12 +350,15 @@ to compute a derivative:
 ```jldoctest roots
 julia> using ForwardDiff
 
-julia> D(f) = x -> ForwardDiff.derivative(f, float(x))
-D (generic function with 1 method)
-
-julia> D(f, n) = n > 1 ? D(D(f),n-1) : D(f)
+julia> function D(f, n::Int=1)
+           n <= 0 && return f
+           n == 1 && return x -> ForwardDiff.derivative(f,float(x))
+           D(D(f,1),n-1)
+       end
 D (generic function with 2 methods)
 
+julia> dfᵏs(f,k) = ntuple(i->D(f,i-1), Val(k+1)) # (f, f′, f′′, …)
+dfᵏs (generic function with 1 method)
 ```
 
 
@@ -373,6 +376,18 @@ julia> Roots.halley(f, D(f), D(f,2), 2)
 
 ```
 
+The familiy of solvers implemented in `Roots.LithBoonkkampIJzerman(S,D)` where `S` is the number of prior points used to generate the next, and `D` is the number of derivatives used, has both the secant method (`S=2, D=0`) and Newton's method (`S=1, D=1`) as members, but also provides others. By adding more memory or adding more derivatives the convergence rate increases, at the expense of more complicated expressions or more function calls per step.
+
+```
+julia> find_zero(dfᵏs(f, 0), 2, Roots.LithBoonkkampIJzerman(3,0)) # like secant
+2.0945514815423265
+
+julia> find_zero(dfᵏs(f, 1), 2, Roots.LithBoonkkampIJzerman(2,1)) # like Newton
+2.0945514815423265
+
+julia> find_zero(dfᵏs(f, 2), 2, Roots.LithBoonkkampIJzerman(2,2)) # like Halley
+2.0945514815423265
+```
 
 ## Finding critical points
 
@@ -588,7 +603,7 @@ x^2 + 270\cdot x^3 - 405\cdot x^4 + 243\cdot x^5$. Mathematically
 these are the same, however not so when evaluated in floating
 point. Here we look at the 21 floating point numbers near $1/3$:
 
-```jldoctest roots
+```
 julia> f(x) = (3x-1)^5
 f (generic function with 1 method)
 
@@ -608,18 +623,22 @@ julia> maximum(abs.(f.(ns) - f1.(ns)))
 
 ```
 
+
 We see the function values are close for each point, as the maximum difference
 is like $10^{15}$. This is roughly as expected, where even one
 addition may introduce a relative error as big as $2\cdot 10^{-16}$ and here
 there are several such.
 
-Generally this is not even a thought, as the differences are generally
+!!! Note:
+    (These values are subject to the vagaries of floating point evaluation, so may differ depending on the underlying computer architecture.)
+
+Generally this variation is not even a thought, as the differences are generally
 negligible, but when we want to identify if a value is zero, these
 small differences might matter. Here we look at the signs of the
 function values:
 
 
-```jldoctest roots
+```
 julia> fs = sign.(f.(ns));
 
 julia> f1s = sign.(f1.(ns));
@@ -649,12 +668,13 @@ julia> [ns.-1/3 fs f1s]
 
 ```
 
+
 Parsing this shows a few surprises. First, there are two zeros of
 `f(x)` identified--not just one as expected mathematically--the
 floating point value of `1/3` and the next largest floating point
 number. 
 
-```jldoctest roots
+```
 julia> findall(iszero, fs)
 2-element Array{Int64,1}:
  11
@@ -668,7 +688,7 @@ point value for `1/3` but rather 10 floating point numbers
 away. 
 
 
-```jldoctest roots
+```
 julia> findall(iszero, f1s)
 1-element Array{Int64,1}:
  21
@@ -678,7 +698,7 @@ julia> findall(iszero, f1s)
 
 Further, there are several sign changes of the function values for `f1s`:
 
-```jldoctest roots
+```
 julia> findall(!iszero,diff(sign.(f1s)))
 6-element Array{Int64,1}:
   3
