@@ -1050,8 +1050,10 @@ tracks(P::ZeroProblemIterator) = error("Set verbose=true when specifying the pro
     xs(M::AbstractUnivariateZeroMethod, state)
     fs(M::AbstractUnivariateZeroMethod, state)
 
+
 Return the xs values needed for the next iteration. Return the fs values used for the next iteration.
 """
+
 xs(::Type{<:AbstractUnivariateZeroMethod}, state) = state.xn1
 xs(::Type{<:AbstractSecant}, state) = (state.xn0, state.xn1)
 xs(::Type{<:AbstractBracketing}, state) = [state.xn0, state.xn1]
@@ -1083,11 +1085,11 @@ end
 
 
 """
+
    solve(fx::ZeroProblem, [M]; kwargs...)
    solve!(P::ZeroProblemIterator)
 
 Solve for the zero of a function specified through a  `ZeroProblem` or `ZeroProblemIterator`
-
 
 The methods involved with this interface are:
 
