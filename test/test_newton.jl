@@ -64,11 +64,11 @@ end
     @test solve(ZeroProblem((f,fp), x₀), Roots.LithBoonkkampIJzerman(2,1)) ≈ α
     @test solve(ZeroProblem((f,fp), x₀), Roots.LithBoonkkampIJzerman(3,1)) ≈ α
 
+    @test solve(ZeroProblem((f,fp, fpp), x₀), Roots.LithBoonkkampIJzerman(1,2)) ≈ α
     @test solve(ZeroProblem((f,fp, fpp), x₀), Roots.LithBoonkkampIJzerman(2,2)) ≈ α
-    @test solve(ZeroProblem((f,fp, fpp), x₀), Roots.LithBoonkkampIJzerman(3,2)) ≈ α
 
+    @test solve(ZeroProblem((f,fp, fpp, fppp), x₀), Roots.LithBoonkkampIJzerman(1,3)) ≈ α    
     @test solve(ZeroProblem((f,fp, fpp, fppp), x₀), Roots.LithBoonkkampIJzerman(2,3)) ≈ α
-    @test solve(ZeroProblem((f,fp, fpp, fppp), x̃₀), Roots.LithBoonkkampIJzerman(3,3)) ≈ α  # needs closer
 
     @test solve(ZeroProblem((f,fp, fpp, fppp, fpppp), x₀), Roots.LithBoonkkampIJzerman(1,4)) ≈ α
     @test solve(ZeroProblem((f,fp, fpp, fppp, fpppp), x̃₀), Roots.LithBoonkkampIJzerman(2,4)) ≈ α # needs closer
