@@ -73,5 +73,8 @@ end
     @test solve(ZeroProblem((f,fp, fpp, fppp, fpppp), x₀), Roots.LithBoonkkampIJzerman(1,4)) ≈ α
     @test solve(ZeroProblem((f,fp, fpp, fppp, fpppp), x̃₀), Roots.LithBoonkkampIJzerman(2,4)) ≈ α # needs closer
 
+    # bracketing
+    @test solve(ZeroProblem((f,fp), (1,2)), Roots.LithBoonkkampIJzermanBracket()) ≈ α
+    
 end
 

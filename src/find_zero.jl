@@ -345,12 +345,12 @@ end
     aa, afa = abs(a), abs(fa)
     tol = max(_unitless(atol), _unitless(aa) * rtol)
     tol = cbrt(abs(_unitless(tol)))  # relax test
-    afa < tol * oneunit(afa)
+    afa <= tol * oneunit(afa)
 end
 @inline function _is_f_approx_0(fa, a, atol, rtol)
     aa, afa = abs(a), abs(fa)
     tol = max(_unitless(atol), _unitless(aa) * rtol)
-    afa < tol * oneunit(afa)
+    afa <= tol * oneunit(afa)
 end
 
 """
@@ -413,7 +413,6 @@ function assess_convergence(method::Any, state::UnivariateZeroState{T,S}, option
         state.x_converged = true
         return true
     end
-
 
     if state.steps > options.maxevals
         state.stopped = true
@@ -790,12 +789,14 @@ function decide_convergence(M::AbstractUnivariateZeroMethod,  F, state::Univaria
             end
         end
 
-        if options.strict
+        δ = maximum(_unitless, (options.abstol, options.reltol))
+        if options.strict || iszero(δ)
             if state.x_converged
                 state.f_converged = true
             else
                 state.convergence_failed = true
             end
+
         else
             xstar, fxstar = state.xn1, state.fxn1
             if _is_f_approx_0(fxstar, xstar, options.abstol, options.reltol, :relaxed)
@@ -811,12 +812,6 @@ function decide_convergence(M::AbstractUnivariateZeroMethod,  F, state::Univaria
 
     if state.f_converged &&
         return state.xstar
-    elseif state.x_converged
-        # usually x_converge and relaxded f_conveged. here we check for zero tolerance on f
-        tol = maximum(_unitless, (options.abstol, options.reltol))
-        if iszero(tol)
-            return state.xstar
-        end
     end
 
     nan = NaN * xn1

@@ -72,8 +72,9 @@ struct Order3_Test <: Roots.AbstractSecant end
 
     # xn increment needs atol setting for zeros near 0.0 if strict=true
     M = Order1()
-    @test_throws Roots.ConvergenceFailed find_zero(x -> x * exp(x), 1.0, M, atol=0.0, rtol=0.0, strict=true, xatol=0.0)
-    @test abs(find_zero(x -> x * exp(x), 1.0, M, atol=0.0, rtol=0.0, strict=true)) <= eps()
+    fn = x -> x * exp(x) + nextfloat(0.0)
+    @test_throws Roots.ConvergenceFailed find_zero(fn, 1.0, M, atol=0.0, rtol=0.0, strict=true, xatol=0.0)
+    @test abs(find_zero(fn, 1.0, M, atol=0.0, rtol=0.0, strict=true)) <= eps()
 
 
     ## test of extreme values for fn, bisection
