@@ -985,11 +985,21 @@ struct ZeroProblemIterator{M,F,S,O,L}
     logger::L
 end
 
+# allow parameters to be passed in
+parameter_wrap(f,p) = x -> f(x,p)
+
 ## Initialize a Zero Problem
 function init(𝑭𝑿::ZeroProblem, M::Union{Nothing,AbstractUnivariateZeroMethod}=nothing;
+              p = nothing,
               verbose=false,
               kwargs...)
-    F,X = callable_function(𝑭𝑿.F), 𝑭𝑿.x₀
+
+    X = 𝑭𝑿.x₀
+    if p == nothing
+        F = callable_function(𝑭𝑿.F)
+    else
+        F = callable_function(parameter_wrap.(𝑭𝑿.F, (p,)))
+    end
 
     if M == nothing
         x₀,st = iterate(X)
@@ -1087,7 +1097,7 @@ end
 
 """
 
-   solve(fx::ZeroProblem, [M]; kwargs...)
+   solve(fx::ZeroProblem, [M]; p=nothing, kwargs...)
    solve!(P::ZeroProblemIterator)
 
 Solve for the zero of a function specified through a  `ZeroProblem` or `ZeroProblemIterator`
@@ -1137,6 +1147,15 @@ fx = ZeroProblem(sin, 3)
 problem = init(fx, Order5(), atol=1/100)
 solve!(problem)
 ```
+
+The named argument `p` may be used if the function(s) to be solved depend on a parameter in their second positional argument (e.g., `f(x,p)`). For example
+
+```
+f(x,p) = exp(-x) - p # to solve p = exp(-x)
+fx = ZeroProblem(f, 1)
+solve(fx, p=1/2)  # log(2)
+```
+
 
 The argument `verbose=true` for `init` instructs that steps to be logged; these may be viewed with the method `Roots.tracks` for the iterator.
 
