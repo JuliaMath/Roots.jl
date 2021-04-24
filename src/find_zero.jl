@@ -493,7 +493,7 @@ If no method is specified, the default method depends on `x0`:
 The function(s) are passed as the first argument.
 
 For the few methods that use one or more derivatives (`Newton`, `Halley`,
-`Shroder`, `LithBoonkkampIJzerman(S,D)`, and optionally `Order5`) a
+`Schroder`, `LithBoonkkampIJzerman(S,D)`, and optionally `Order5`) a
 tuple of functions is used.
 
 # Optional arguments (tolerances, limit evaluations, tracing)
@@ -1051,16 +1051,17 @@ tracks(P::ZeroProblemIterator) = error("Set verbose=true when specifying the pro
     fs(M::AbstractUnivariateZeroMethod, state)
 
 
-Return the xs values needed for the next iteration. Return the fs values used for the next iteration.
-"""
+Return the xs values needed for the next iteration (sorted if a
+bracke). Return the corresponding fs values used for the next
+iteration.  """
 
 xs(::Type{<:AbstractUnivariateZeroMethod}, state) = state.xn1
 xs(::Type{<:AbstractSecant}, state) = (state.xn0, state.xn1)
-xs(::Type{<:AbstractBracketing}, state) = [state.xn0, state.xn1]
+xs(::Type{<:AbstractBracketing}, state) = [extrema([state.xn0, state.xn1])...]
 
 fs(::Type{<:AbstractUnivariateZeroMethod}, state) = state.fxn1
 fs(::Type{<:AbstractSecant}, state) = (state.fxn0, state.fxn1)
-fs(::Type{<:AbstractBracketing}, state) = [state.fxn0, state.fxn1]
+fs(::Type{<:AbstractBracketing}, state) = [state.fxn0, state.fxn1][sortperm([state.xn0, state.xn1])]
 
 function Base.show(io::IO, P::ZeroProblemIterator{M}) where {M<:AbstractUnivariateZeroMethod}
     state = P.state
@@ -1235,13 +1236,3 @@ function ZeroProblem(M::AbstractUnivariateZeroMethod,
     problem = init(fx, M; verbose=verbose, kwargs...)
 
 end
-
-
-
-
-
-
-      
-
-
-    
