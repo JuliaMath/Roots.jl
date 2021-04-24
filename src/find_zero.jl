@@ -328,7 +328,12 @@ fΔxΔΔx(F, x) = F(x)
 # specialize       slower         faster          find_zero
 # no specialize    faster         slower          fzero
 #
-callable_function(fs::Any) = _callable_function(fs)
+# allow parameters to be passed in
+parameter_wrap(f,p) = x -> f(x,p)
+function callable_function(fs::Any, p=nothing)
+    isa(p, Nothing) && return _callable_function(fs)
+    return _callable_function(parameter_wrap.(fs, (p,)))
+end
 function _callable_function(fs)
     if isa(fs, Tuple)
         length(fs)==1 && return DerivativeFree(fs[1])
@@ -679,9 +684,10 @@ function find_zero(fs, x0, method::AbstractUnivariateZeroMethod,
                    N::Union{Nothing, AbstractBracketing}=nothing;
                    tracks::AbstractTracks=NullTracks(),
                    verbose=false,
+                   p = nothing,
                    kwargs...)
 
-    F = callable_function(fs)
+    F = callable_function(fs, p)
     state = init_state(method, F, x0)
     options = init_options(method, state; kwargs...)
 
@@ -985,8 +991,6 @@ struct ZeroProblemIterator{M,F,S,O,L}
     logger::L
 end
 
-# allow parameters to be passed in
-parameter_wrap(f,p) = x -> f(x,p)
 
 ## Initialize a Zero Problem
 function init(𝑭𝑿::ZeroProblem, M::Union{Nothing,AbstractUnivariateZeroMethod}=nothing;
@@ -994,12 +998,7 @@ function init(𝑭𝑿::ZeroProblem, M::Union{Nothing,AbstractUnivariateZeroMeth
               verbose=false,
               kwargs...)
 
-    X = 𝑭𝑿.x₀
-    if p == nothing
-        F = callable_function(𝑭𝑿.F)
-    else
-        F = callable_function(parameter_wrap.(𝑭𝑿.F, (p,)))
-    end
+    F, X = callable_function(𝑭𝑿.F,p), 𝑭𝑿.x₀
 
     if M == nothing
         x₀,st = iterate(X)
