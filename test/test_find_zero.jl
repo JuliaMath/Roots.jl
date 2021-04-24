@@ -119,6 +119,15 @@ end
         @test find_zero!(P) ≈ xstar_
     end
 
+    # solve and parameters
+    g2 = (x,p) -> cos(x) - x/p
+    fx = ZeroProblem(g2, (0,pi/2))
+    @test solve(fx, p=2) ≈ find_zero(x -> cos(x) - x/2, (0, pi/2))
+    @test solve(fx, p=3) ≈ find_zero(x -> cos(x) - x/3, (0, pi/2))
+    g3 = (x, p) -> cos(x) + p[1]*x - p[2]
+    fx = ZeroProblem(g3, (0,pi/2))
+    @test solve(fx, p=[-1/10, 1/10]) ≈ find_zero(x -> cos(x) - x/10 - 1/10, (0, pi/2))
+
     ## test with early evaluation of bracket
     f = x -> sin(x)
     xs = (3.0, 4.0)
