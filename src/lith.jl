@@ -95,18 +95,6 @@ may get smaller.
 struct LithBoonkkampIJzerman{S,D} <: AbstractNewtonLikeMethod end
 LithBoonkkampIJzerman(s,d) = LithBoonkkampIJzerman{s,d}()
 
-## Example helper function
-#=
-using ForwardDiff
-function δ(f, n::Int=1)
-    n <= 0 && return f
-    n == 1 && return x -> ForwardDiff.derivative(f,float(x))
-    δ(δ(f,1),n-1)
-end
-fs(f,n) = ntuple(i->δ(f,i-1), Val(n+1))
-=#
-
-
 function init_state(L::LithBoonkkampIJzerman{S,D}, fs, x) where {S,D}
 
     xs, ys = init_lith(L, fs, x) # [x₀,x₁,…,xₛ₋₁], ...
@@ -157,8 +145,6 @@ function update_state(L::LithBoonkkampIJzerman{S,D}, fs, o::UnivariateZeroState,
 
     nothing
 
-
-
 end
 
 # manufacture initial xs, ys
@@ -200,11 +186,16 @@ end
 """
     LithBoonkkampIJzermanBracket()
 
-A bracketing method which is a modification of Brent's method due to Lith, Boonkkamp, and IJzerman. The best possible convergence rate is 2.91.
+A bracketing method which is a modification of Brent's method due to
+[Lith, Boonkkamp, and
+IJzerman](https://doi.org/10.1016/j.amc.2017.09.003). The best
+possible convergence rate is 2.91.
 
 A function, its derivative, and a bracketing interval need to be specified.
 
-The state includes the 3 points: a bracket `[a,b]` (`b=xₙ` has `f(b)`  closest to `0`) and `c=xₙ₋₁` and the corresponding values for the function and its derivative at these three points.
+The state includes the 3 points -- a bracket `[a,b]` (`b=xₙ` has
+`f(b)` closest to `0`) and `c=xₙ₋₁` -- and the corresponding values
+for the function and its derivative at these three points.
 
 The next proposed step is either a S=2 or S=3 selection for the
 [`LithBoonkkampIJzerman`](@ref) methods with derivative information
@@ -549,34 +540,6 @@ function lmm(L::LithBoonkkampIJzerman{S,1}, xs, fs, f′s) where {S}
     -sum(as[i] * xs[i] for i ∈ 1:S) + h * sum(bs[i] * Fs[i] for i ∈ 1:S )
 
 end
-
-# function lmm(::LithBoonkkampIJzerman{1,1}, xs, fs, f′s)
-#     x0 = xs[1]
-#     f0 = fs[1]
-#     f′0 = f′s[1]
-    
-#     return -f0/f′0 + x0
-# end
-
-# function lmm(::LithBoonkkampIJzerman{2,1}, xs, fs, f′s)
-
-#     x0,x1 = xs
-#     f0,f1 = fs
-#     f′0,f′1 = f′s
-
-#      return (-f0^3*f1*f′0 + f0^3*f′0*f′1*x1 + f0^2*f1^2*f′0 - f0^2*f1^2*f′1 - 3*f0^2*f1*f′0*f′1*x1 + f0*f1^3*f′1 + 3*f0*f1^2*f′0*f′1*x0 - f1^3*f′0*f′1*x0)/(f′0*f′1*(f0^3 - 3*f0^2*f1 + 3*f0*f1^2 - f1^3))
-
-# end
-
-# function lmm(::LithBoonkkampIJzerman{3,1},xs, fs, f′s)
-
-#     x0,x1,x2 = xs
-#     f0,f1,f2 = fs
-#     f′0,f′1,f′2 = f′s
-
-#     return (-f0^6*f1^3*f2*f′0*f′1 + f0^6*f1^3*f′0*f′1*f′2*x2 + f0^6*f1^2*f2^2*f′0*f′1 - f0^6*f1^2*f2^2*f′0*f′2 - 3*f0^6*f1^2*f2*f′0*f′1*f′2*x2 + f0^6*f1*f2^3*f′0*f′2 + 3*f0^6*f1*f2^2*f′0*f′1*f′2*x1 - f0^6*f2^3*f′0*f′1*f′2*x1 + 3*f0^5*f1^4*f2*f′0*f′1 - 3*f0^5*f1^4*f′0*f′1*f′2*x2 - 2*f0^5*f1^3*f2^2*f′0*f′1 + f0^5*f1^3*f2^2*f′0*f′2 + 6*f0^5*f1^3*f2*f′0*f′1*f′2*x2 - f0^5*f1^2*f2^3*f′0*f′1 + 2*f0^5*f1^2*f2^3*f′0*f′2 - 5*f0^5*f1^2*f2^2*f′0*f′1*f′2*x1 + 5*f0^5*f1^2*f2^2*f′0*f′1*f′2*x2 - 3*f0^5*f1*f2^4*f′0*f′2 - 6*f0^5*f1*f2^3*f′0*f′1*f′2*x1 + 3*f0^5*f2^4*f′0*f′1*f′2*x1 - 3*f0^4*f1^5*f2*f′0*f′1 + 3*f0^4*f1^5*f′0*f′1*f′2*x2 + 3*f0^4*f1^3*f2^3*f′0*f′1 - 3*f0^4*f1^3*f2^3*f′0*f′2 - 15*f0^4*f1^3*f2^2*f′0*f′1*f′2*x2 + 15*f0^4*f1^2*f2^3*f′0*f′1*f′2*x1 + 3*f0^4*f1*f2^5*f′0*f′2 - 3*f0^4*f2^5*f′0*f′1*f′2*x1 + f0^3*f1^6*f2*f′0*f′1 - f0^3*f1^6*f′0*f′1*f′2*x2 + 2*f0^3*f1^5*f2^2*f′0*f′1 - f0^3*f1^5*f2^2*f′1*f′2 - 6*f0^3*f1^5*f2*f′0*f′1*f′2*x2 - 3*f0^3*f1^4*f2^3*f′0*f′1 + 3*f0^3*f1^4*f2^3*f′1*f′2 + 15*f0^3*f1^4*f2^2*f′0*f′1*f′2*x2 + 3*f0^3*f1^3*f2^4*f′0*f′2 - 3*f0^3*f1^3*f2^4*f′1*f′2 - 2*f0^3*f1^2*f2^5*f′0*f′2 + f0^3*f1^2*f2^5*f′1*f′2 - 15*f0^3*f1^2*f2^4*f′0*f′1*f′2*x1 - f0^3*f1*f2^6*f′0*f′2 + 6*f0^3*f1*f2^5*f′0*f′1*f′2*x1 + f0^3*f2^6*f′0*f′1*f′2*x1 - f0^2*f1^6*f2^2*f′0*f′1 + f0^2*f1^6*f2^2*f′1*f′2 + 3*f0^2*f1^6*f2*f′0*f′1*f′2*x2 + f0^2*f1^5*f2^3*f′0*f′1 - 2*f0^2*f1^5*f2^3*f′1*f′2 + 5*f0^2*f1^5*f2^2*f′0*f′1*f′2*x0 - 5*f0^2*f1^5*f2^2*f′0*f′1*f′2*x2 - 15*f0^2*f1^4*f2^3*f′0*f′1*f′2*x0 - f0^2*f1^3*f2^5*f′0*f′2 + 2*f0^2*f1^3*f2^5*f′1*f′2 + 15*f0^2*f1^3*f2^4*f′0*f′1*f′2*x0 + f0^2*f1^2*f2^6*f′0*f′2 - f0^2*f1^2*f2^6*f′1*f′2 - 5*f0^2*f1^2*f2^5*f′0*f′1*f′2*x0 + 5*f0^2*f1^2*f2^5*f′0*f′1*f′2*x1 - 3*f0^2*f1*f2^6*f′0*f′1*f′2*x1 - f0*f1^6*f2^3*f′1*f′2 - 3*f0*f1^6*f2^2*f′0*f′1*f′2*x0 + 3*f0*f1^5*f2^4*f′1*f′2 + 6*f0*f1^5*f2^3*f′0*f′1*f′2*x0 - 3*f0*f1^4*f2^5*f′1*f′2 + f0*f1^3*f2^6*f′1*f′2 - 6*f0*f1^3*f2^5*f′0*f′1*f′2*x0 + 3*f0*f1^2*f2^6*f′0*f′1*f′2*x0 + f1^6*f2^3*f′0*f′1*f′2*x0 - 3*f1^5*f2^4*f′0*f′1*f′2*x0 + 3*f1^4*f2^5*f′0*f′1*f′2*x0 - f1^3*f2^6*f′0*f′1*f′2*x0)/(f′0*f′1*f′2*(f0^6*f1^3 - 3*f0^6*f1^2*f2 + 3*f0^6*f1*f2^2 - f0^6*f2^3 - 3*f0^5*f1^4 + 6*f0^5*f1^3*f2 - 6*f0^5*f1*f2^3 + 3*f0^5*f2^4 + 3*f0^4*f1^5 - 15*f0^4*f1^3*f2^2 + 15*f0^4*f1^2*f2^3 - 3*f0^4*f2^5 - f0^3*f1^6 - 6*f0^3*f1^5*f2 + 15*f0^3*f1^4*f2^2 - 15*f0^3*f1^2*f2^4 + 6*f0^3*f1*f2^5 + f0^3*f2^6 + 3*f0^2*f1^6*f2 - 15*f0^2*f1^4*f2^3 + 15*f0^2*f1^3*f2^4 - 3*f0^2*f1*f2^6 - 3*f0*f1^6*f2^2 + 6*f0*f1^5*f2^3 - 6*f0*f1^3*f2^5 + 3*f0*f1^2*f2^6 + f1^6*f2^3 - 3*f1^5*f2^4 + 3*f1^4*f2^5 - f1^3*f2^6))
-    
-# end
 
 function lmm(::LithBoonkkampIJzerman{4,1},xs, fs, f′s)
     x0,x1,x2,x3 = xs
