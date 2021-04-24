@@ -5,6 +5,8 @@ continuous scalar functions of a single real variable.  A zero of $f$
 is a value $c$ where $f(c) = 0$.  The basic interface is through the
 function `find_zero`, which through multiple dispatch can handle many different cases.
 
+The [NonlinearSolve](https://github.com/JuliaComputing/NonlinearSolve.jl) package provides an alternative.
+
 In the following, we will use `Plots` for plotting and `ForwardDiff`
 to take derivatives.
 
@@ -744,7 +746,7 @@ julia> F(prevfloat(x)), F(x), F(nextfloat(x))
 However, the value of `f(x)` is not as small as one might initially
 expect for a zero:
 
-```jldoctest roots
+```
 julia> f(x), abs(f(x)/eps(x))
 (-2.7284841053187847e-12, 1536.0)
 
@@ -991,3 +993,38 @@ julia> find_zeros(f, 0, 1)
 Combinations of large (even) multiplicity zeros or very nearby
 zeros, can lead to misidentification.  
 
+### IntervalRootFinding
+
+The [IntervalRootFinding](https://github.com/JuliaIntervals/IntervalRootFinding.jl) package rigorously identifies isolating intervals for the zeros of a function. This example, from that package's README, is used to illustrate the differences:
+
+```
+julia> using IntervalArithmetic, IntervalRootFinding
+
+julia> f(x) = sin(x) - 0.1*x^2 + 1
+f (generic function with 1 method)
+
+julia> rts = roots(f, -10..10)
+4-element Vector{Root{Interval{Float64}}}:
+ Root([3.14959, 3.1496], :unique)
+ Root([-4.42654, -4.42653], :unique)
+ Root([-3.10682, -3.10681], :unique)
+ Root([-1.08205, -1.08204], :unique)
+
+julia> find_zeros(f, -10, 10)
+4-element Vector{Float64}:
+ -4.426534982071949
+ -3.1068165552293254
+ -1.0820421327607177
+  3.1495967624505226
+```
+
+Using that in this case, the intervals are bracketing intervals for `f`, we can find the zeros from the `roots` ouput with the following:
+
+```
+julia> [find_zero(f, (interval(u).lo, interval(u).hi)) for u ∈ rts if u.status == :unique]
+4-element Vector{Float64}:
+  3.1495967624505226
+ -4.426534982071949
+ -3.1068165552293254
+ -1.082042132760718
+```
