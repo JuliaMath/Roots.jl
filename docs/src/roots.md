@@ -215,10 +215,10 @@ julia> f(x) = 2x - exp(-x)
 f (generic function with 1 method)
 
 julia> x = find_zero(f, 1, Order1())      # also fzero(f, 1, order=1)
-0.35173371124919584
+0.3517337112491958
 
 julia> x, f(x)
-(0.35173371124919584, 0.0)
+(0.3517337112491958, -1.1102230246251565e-16)
 
 ```
 
@@ -842,7 +842,7 @@ julia> a, b = -10, 10
 (-10, 10)
 
 julia> zs = find_zeros(f, a, b)
-3-element Array{Float64,1}:
+3-element Vector{Float64}:
  -0.8155534188089606
   1.4296118247255556
   8.613169456441398
@@ -953,7 +953,7 @@ julia> f(x) =  (x-0.5)^3 * (x-0.499)^3
 f (generic function with 1 method)
 
 julia> find_zeros(f, 0, 1)
-1-element Array{Float64,1}:
+1-element Vector{Float64}:
  0.5
 
 ```
@@ -969,7 +969,7 @@ julia> f(x) =  (x-0.5)^2 * (x-0.499)^2
 f (generic function with 1 method)
 
 julia> find_zeros(f, 0, 1)
-2-element Array{Float64,1}:
+2-element Vector{Float64}:
  0.49899999999999994
  0.5
 
@@ -982,7 +982,7 @@ julia> f(x) = (x-0.5) * (x - 0.49999)
 f (generic function with 1 method)
 
 julia> find_zeros(f, 0, 1)
-2-element Array{Float64,1}:
+2-element Vector{Float64}:
  0.49999
  0.5
 
