@@ -260,10 +260,39 @@ struct SecondDerivative{F,FP,FPP} <: CallableFunction
     fpp::FPP
 end
 
+
+# (f,f',f'', f''', ...)
+struct NDerivative <: CallableFunction
+    fs
+end
+
+function Base.iterate(o::DerivativeFree, st=nothing)
+    st == nothing && return (o.f,1)
+    nothing
+end
+
+function Base.iterate(o::FirstDerivative, st=nothing)
+    st == nothing && return (o.f,1)
+    st == 1 && return (o.fp, 2)
+    nothing
+end
+
+function Base.iterate(o::SecondDerivative, st=nothing)
+    st == nothing && return (o.f,1)
+    st == 1 && return (o.fp, 2)
+    st == 2 && return (o.fp, 3)
+    nothing
+end
+
+Base.iterate(o::NDerivative) = iterate(o.fs)
+Base.iterate(o::NDerivative,st) = iterate(o.fs,st)
+
+
 (F::FnWrapper)(x::Number) = first(F.f(x))
 (F::DerivativeFree)(x::Number) = first(F.f(x))
 (F::FirstDerivative)(x::Number) = first(F.f(x))
 (F::SecondDerivative)(x::Number) = first(F.f(x))
+(F::NDerivative)(x::Number) = first(F.fs)(x)
 
 ## Return f, f/f'
 function fΔx(F::DerivativeFree, x)
@@ -299,12 +328,18 @@ fΔxΔΔx(F, x) = F(x)
 # specialize       slower         faster          find_zero
 # no specialize    faster         slower          fzero
 #
-callable_function(fs::Any) = _callable_function(fs)
+# allow parameters to be passed in
+parameter_wrap(f,p) = x -> f(x,p)
+function callable_function(fs::Any, p=nothing)
+    isa(p, Nothing) && return _callable_function(fs)
+    return _callable_function(parameter_wrap.(fs, (p,)))
+end
 function _callable_function(fs)
     if isa(fs, Tuple)
         length(fs)==1 && return DerivativeFree(fs[1])
         length(fs)==2 && return FirstDerivative(fs[1],fs[2])
-        return SecondDerivative(fs[1],fs[2],fs[3])
+        length(fs)==3 && return SecondDerivative(fs[1],fs[2],fs[3])
+        return NDerivative(fs)
     end
     DerivativeFree(fs)
 end
@@ -315,12 +350,12 @@ end
     aa, afa = abs(a), abs(fa)
     tol = max(_unitless(atol), _unitless(aa) * rtol)
     tol = cbrt(abs(_unitless(tol)))  # relax test
-    afa < tol * oneunit(afa)
+    afa <= tol * oneunit(afa)
 end
 @inline function _is_f_approx_0(fa, a, atol, rtol)
     aa, afa = abs(a), abs(fa)
     tol = max(_unitless(atol), _unitless(aa) * rtol)
-    afa < tol * oneunit(afa)
+    afa <= tol * oneunit(afa)
 end
 
 """
@@ -384,6 +419,13 @@ function assess_convergence(method::Any, state::UnivariateZeroState{T,S}, option
         return true
     end
 
+    check_steps_fnevals(state, options) && return true
+
+    return false
+end
+
+## too many steps or function evaluations
+function check_steps_fnevals(state, options)
 
     if state.steps > options.maxevals
         state.stopped = true
@@ -443,13 +485,15 @@ For bracketing intervals, `x0` is specified as a tuple or a vector. A bracketing
 
 A method is specified to indicate which algorithm to employ:
 
-* There are methods for bisection where a bracket is specified: `Bisection`, `Roots.A42`, `FalsePosition`
+* There are methods for bisection where a bracket is specified: [`Bisection`](@ref), [`Roots.A42`](@ref), [`Roots.AlefeldPotraShi`](@ref), [`FalsePosition`](@ref)
 
-* There are several derivative-free methods: cf. `Order0`, `Order1` (secant method), `Order2` (Steffensen), `Order5`, `Order8`, and `Order16`, where the number indicates the order of the convergence. Methods `Roots.Order1B` and `Roots.Order2B` implement methods useful when the desired zero has a multiplicity.
+* There are several derivative-free methods: cf. [`Order0`](@ref), [`Order1`](@ref) (secant method), [`Order2`](@ref) ([`Roots.Steffensen`](@ref)), [`Order5`](@ref), [`Order8`](@ref), and [`Order16`](@ref), where the number indicates the order of the convergence. Methods [`Roots.Order1B`](@ref) and [`Roots.Order2B`](@ref) implement methods useful when the desired zero has a multiplicity.
 
-* There are some classical methods where derivatives are required: `Roots.Newton`, `Roots.Halley`, `Roots.Schroder`. (The are not exported.)
+* There are some classical methods where derivatives are required: [`Roots.Newton`](@ref), [`Roots.Halley`](@ref), [`Roots.Schroder`](@ref). 
 
-For more detail, see the help page for each method (e.g., `?Order1`).
+* The family [`Roots.LithBoonkkampIJzerman{S,D}`](@ref) for different `S` and `D` uses a linear multistep method root finder. The (2,0) method is the secant method, (1,1) is Newton's methods.
+
+For more detail, see the help page for each method (e.g., `?Order1`). Many methods are not exported, so much be qualified with module name, as in `?Roots.Schroder`.
 
 If no method is specified, the default method depends on `x0`:
 
@@ -461,8 +505,9 @@ If no method is specified, the default method depends on `x0`:
 
 The function(s) are passed as the first argument.
 
-For the few methods that use a derivative (`Newton`, `Halley`, `Shroder`, and
-optionally `Order5`) a tuple of functions is used.
+For the few methods that use one or more derivatives (`Newton`, `Halley`,
+`Schroder`, `LithBoonkkampIJzerman(S,D)`, and optionally `Order5`) a
+tuple of functions is used.
 
 # Optional arguments (tolerances, limit evaluations, tracing)
 
@@ -490,12 +535,13 @@ For the `Bisection` methods, convergence is guaranteed, so the tolerances are se
 If a bracketing method is passed in after the method specification, when a bracket is found, the bracketing method will used to identify the zero. This is what `Order0` does by default, with a secant step initially and the `A42` method when a bracket is  encountered.
 
 Note: The order of the method is hinted at in the naming scheme. A
-scheme is order `r` if, with `eᵢ = xᵢ - α`, `eᵢ₊₁ = C⋅eᵢʳ`. If the error `eᵢ` is small enough, then essentially the error
-will gain `r` times as many leading zeros each step. However, if the
-error is not small, this will not be the case. Without good initial
-guesses, a high order method may still converge slowly, if at all. The
-`OrderN` methods have some heuristics employed to ensure a wider range
-for convergence at the cost of not faithfully implementing the method,
+scheme is order `r` if, with `eᵢ = xᵢ - α`, `eᵢ₊₁ = C⋅eᵢʳ`. If the
+error `eᵢ` is small enough, then essentially the error will gain `r`
+times as many leading zeros each step. However, if the error is not
+small, this will not be the case. Without good initial guesses, a high
+order method may still converge slowly, if at all. The `OrderN`
+methods have some heuristics employed to ensure a wider range for
+convergence at the cost of not faithfully implementing the method,
 though those are available through unexported methods.
 
 # Examples:
@@ -637,14 +683,19 @@ x_2 =  3.1397074174874358,	 fx_2 =  0.0000000000000238
 3.1397074174874358
 
 ```
+
+!!! Note:
+    See [`ZeroProblem`](@ref) for an interator interface to the underlying algorithms.
+
 """
 function find_zero(fs, x0, method::AbstractUnivariateZeroMethod,
                    N::Union{Nothing, AbstractBracketing}=nothing;
                    tracks::AbstractTracks=NullTracks(),
                    verbose=false,
+                   p = nothing,
                    kwargs...)
 
-    F = callable_function(fs)
+    F = callable_function(fs, p)
     state = init_state(method, F, x0)
     options = init_options(method, state; kwargs...)
 
@@ -684,7 +735,9 @@ end
 """
     find_zero(M, F, state, [options], [l])
 
-Find zero using method `M`, function(s) `F`, and initial state `state`. Returns an approximate zero or `NaN`. Useful when some part of the processing pipeline is to be adjusted.
+Find zero using method `M`, function(s) `F`, and initial state
+`state`. Returns an approximate zero or `NaN`. Useful when some part
+of the processing pipeline is to be adjusted.
 
 * `M::AbstractUnivariateZeroMethod` a method, such as `Secant()`
 * `F`: A callable object (or tuple of callable objects for certain methods)
@@ -750,12 +803,14 @@ function decide_convergence(M::AbstractUnivariateZeroMethod,  F, state::Univaria
             end
         end
 
-        if options.strict
+        δ = maximum(_unitless, (options.abstol, options.reltol))
+        if options.strict || iszero(δ)
             if state.x_converged
                 state.f_converged = true
             else
                 state.convergence_failed = true
             end
+
         else
             xstar, fxstar = state.xn1, state.fxn1
             if _is_f_approx_0(fxstar, xstar, options.abstol, options.reltol, :relaxed)
@@ -769,7 +824,7 @@ function decide_convergence(M::AbstractUnivariateZeroMethod,  F, state::Univaria
         end
     end
 
-    if state.f_converged
+    if state.f_converged &&
         return state.xstar
     end
 
@@ -944,11 +999,14 @@ struct ZeroProblemIterator{M,F,S,O,L}
     logger::L
 end
 
+
 ## Initialize a Zero Problem
 function init(𝑭𝑿::ZeroProblem, M::Union{Nothing,AbstractUnivariateZeroMethod}=nothing;
+              p = nothing,
               verbose=false,
               kwargs...)
-    F,X = callable_function(𝑭𝑿.F), 𝑭𝑿.x₀
+
+    F, X = callable_function(𝑭𝑿.F,p), 𝑭𝑿.x₀
 
     if M == nothing
         x₀,st = iterate(X)
@@ -1009,15 +1067,18 @@ tracks(P::ZeroProblemIterator) = error("Set verbose=true when specifying the pro
     xs(M::AbstractUnivariateZeroMethod, state)
     fs(M::AbstractUnivariateZeroMethod, state)
 
-Return the xs values needed for the next iteration. Return the fs values used for the next iteration.
-"""
+
+Return the xs values needed for the next iteration (sorted if a
+bracke). Return the corresponding fs values used for the next
+iteration.  """
+
 xs(::Type{<:AbstractUnivariateZeroMethod}, state) = state.xn1
 xs(::Type{<:AbstractSecant}, state) = (state.xn0, state.xn1)
-xs(::Type{<:AbstractBracketing}, state) = [state.xn0, state.xn1]
+xs(::Type{<:AbstractBracketing}, state) = [extrema([state.xn0, state.xn1])...]
 
 fs(::Type{<:AbstractUnivariateZeroMethod}, state) = state.fxn1
 fs(::Type{<:AbstractSecant}, state) = (state.fxn0, state.fxn1)
-fs(::Type{<:AbstractBracketing}, state) = [state.fxn0, state.fxn1]
+fs(::Type{<:AbstractBracketing}, state) = [state.fxn0, state.fxn1][sortperm([state.xn0, state.xn1])]
 
 function Base.show(io::IO, P::ZeroProblemIterator{M}) where {M<:AbstractUnivariateZeroMethod}
     state = P.state
@@ -1042,11 +1103,11 @@ end
 
 
 """
-   solve(fx::ZeroProblem, [M]; kwargs...)
+
+   solve(fx::ZeroProblem, [M]; p=nothing, kwargs...)
    solve!(P::ZeroProblemIterator)
 
 Solve for the zero of a function specified through a  `ZeroProblem` or `ZeroProblemIterator`
-
 
 The methods involved with this interface are:
 
@@ -1093,6 +1154,15 @@ fx = ZeroProblem(sin, 3)
 problem = init(fx, Order5(), atol=1/100)
 solve!(problem)
 ```
+
+The named argument `p` may be used if the function(s) to be solved depend on a parameter in their second positional argument (e.g., `f(x,p)`). For example
+
+```
+f(x,p) = exp(-x) - p # to solve p = exp(-x)
+fx = ZeroProblem(f, 1)
+solve(fx, p=1/2)  # log(2)
+```
+
 
 The argument `verbose=true` for `init` instructs that steps to be logged; these may be viewed with the method `Roots.tracks` for the iterator.
 
@@ -1192,13 +1262,3 @@ function ZeroProblem(M::AbstractUnivariateZeroMethod,
     problem = init(fx, M; verbose=verbose, kwargs...)
 
 end
-
-
-
-
-
-
-      
-
-
-    

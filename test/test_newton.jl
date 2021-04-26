@@ -48,3 +48,33 @@ import Roots.newton, Roots.halley
     @test find_zero(x -> (x^2 -2, (x^2-2)/2x), 1.0, Roots.Newton(), Roots.Bisection()) ≈ sqrt(2)
 
 end
+
+@testset "Lith Boonkkamp IJzerman methods" begin
+
+    x₀, x̃₀, α = 1.0, 1.1, 1.1673039782614187
+    f(x) = x^5 - x - 1
+    fp(x) = 5x^4 - 1
+    fpp(x) = 20x^3
+    fppp(x) = 60x
+    fpppp(x) = 60
+
+    @test solve(ZeroProblem((f,), x₀), Roots.LithBoonkkampIJzerman(3,0)) ≈ α
+    @test solve(ZeroProblem((f,), x₀), Roots.LithBoonkkampIJzerman(4,0)) ≈ α
+
+    @test solve(ZeroProblem((f,fp), x₀), Roots.LithBoonkkampIJzerman(2,1)) ≈ α
+    @test solve(ZeroProblem((f,fp), x₀), Roots.LithBoonkkampIJzerman(3,1)) ≈ α
+
+    @test solve(ZeroProblem((f,fp, fpp), x₀), Roots.LithBoonkkampIJzerman(1,2)) ≈ α
+    @test solve(ZeroProblem((f,fp, fpp), x₀), Roots.LithBoonkkampIJzerman(2,2)) ≈ α
+
+    @test solve(ZeroProblem((f,fp, fpp, fppp), x₀), Roots.LithBoonkkampIJzerman(1,3)) ≈ α    
+    @test solve(ZeroProblem((f,fp, fpp, fppp), x₀), Roots.LithBoonkkampIJzerman(2,3)) ≈ α
+
+    @test solve(ZeroProblem((f,fp, fpp, fppp, fpppp), x₀), Roots.LithBoonkkampIJzerman(1,4)) ≈ α
+    @test solve(ZeroProblem((f,fp, fpp, fppp, fpppp), x̃₀), Roots.LithBoonkkampIJzerman(2,4)) ≈ α # needs closer
+
+    # bracketing
+    @test solve(ZeroProblem((f,fp), (1,2)), Roots.LithBoonkkampIJzermanBracket()) ≈ α
+    
+end
+

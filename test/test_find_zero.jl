@@ -14,7 +14,9 @@ struct Order3_Test <: Roots.AbstractSecant end
              Order2(), Roots.Steffensen(), Roots.Order2B(), Roots.Esser(),
              Order5(), Roots.KumarSinghAkanksha(),
              Order8(), Roots.Thukral8(),
-             Order16(), Roots.Thukral16()]
+             Order16(), Roots.Thukral16(),
+             Roots.LithBoonkkampIJzerman(3,0), Roots.LithBoonkkampIJzerman(4,0)
+             ]
 
 
     ## different types of initial values
@@ -70,8 +72,9 @@ struct Order3_Test <: Roots.AbstractSecant end
 
     # xn increment needs atol setting for zeros near 0.0 if strict=true
     M = Order1()
-    @test_throws Roots.ConvergenceFailed find_zero(x -> x * exp(x), 1.0, M, atol=0.0, rtol=0.0, strict=true, xatol=0.0)
-    @test abs(find_zero(x -> x * exp(x), 1.0, M, atol=0.0, rtol=0.0, strict=true)) <= eps()
+    fn = x -> x * exp(x) + nextfloat(0.0)
+    @test_throws Roots.ConvergenceFailed find_zero(fn, 1.0, M, atol=0.0, rtol=0.0, strict=true, xatol=0.0)
+    @test abs(find_zero(fn, 1.0, M, atol=0.0, rtol=0.0, strict=true)) <= eps()
 
 
     ## test of extreme values for fn, bisection
@@ -115,6 +118,15 @@ end
         P = Roots.ZeroProblem(M, g1, x0_)
         @test find_zero!(P) ≈ xstar_
     end
+
+    # solve and parameters
+    g2 = (x,p) -> cos(x) - x/p
+    fx = ZeroProblem(g2, (0,pi/2))
+    @test solve(fx, p=2) ≈ find_zero(x -> cos(x) - x/2, (0, pi/2))
+    @test solve(fx, p=3) ≈ find_zero(x -> cos(x) - x/3, (0, pi/2))
+    g3 = (x, p) -> cos(x) + p[1]*x - p[2]
+    fx = ZeroProblem(g3, (0,pi/2))
+    @test solve(fx, p=[-1/10, 1/10]) ≈ find_zero(x -> cos(x) - x/10 - 1/10, (0, pi/2))
 
     ## test with early evaluation of bracket
     f = x -> sin(x)

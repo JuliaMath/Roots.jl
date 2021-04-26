@@ -5,6 +5,8 @@ continuous scalar functions of a single real variable.  A zero of $f$
 is a value $c$ where $f(c) = 0$.  The basic interface is through the
 function `find_zero`, which through multiple dispatch can handle many different cases.
 
+The [NonlinearSolve](https://github.com/JuliaComputing/NonlinearSolve.jl) package provides an alternative.
+
 In the following, we will use `Plots` for plotting and `ForwardDiff`
 to take derivatives.
 
@@ -215,10 +217,10 @@ julia> f(x) = 2x - exp(-x)
 f (generic function with 1 method)
 
 julia> x = find_zero(f, 1, Order1())      # also fzero(f, 1, order=1)
-0.35173371124919584
+0.3517337112491958
 
 julia> x, f(x)
-(0.35173371124919584, 0.0)
+(0.3517337112491958, -1.1102230246251565e-16)
 
 ```
 
@@ -321,7 +323,7 @@ julia> Roots.secant_method(f, 2)
 
 ```
 
-(This is like `Order1()`, but the implementation is significantly
+(This is like `Order1()`, or `Roots.Secant()`, but the implementation is
 faster, as the framework is bypassed, and fewer checks on convergence
 are used. This method can be used when speed is very important.)
 
@@ -350,12 +352,15 @@ to compute a derivative:
 ```jldoctest roots
 julia> using ForwardDiff
 
-julia> D(f) = x -> ForwardDiff.derivative(f, float(x))
-D (generic function with 1 method)
-
-julia> D(f, n) = n > 1 ? D(D(f),n-1) : D(f)
+julia> function D(f, n::Int=1)
+           n <= 0 && return f
+           n == 1 && return x -> ForwardDiff.derivative(f,float(x))
+           D(D(f,1),n-1)
+       end
 D (generic function with 2 methods)
 
+julia> dfᵏs(f,k) = ntuple(i->D(f,i-1), Val(k+1)) # (f, f′, f′′, …)
+dfᵏs (generic function with 1 method)
 ```
 
 
@@ -373,6 +378,18 @@ julia> Roots.halley(f, D(f), D(f,2), 2)
 
 ```
 
+The familiy of solvers implemented in `Roots.LithBoonkkampIJzerman(S,D)` where `S` is the number of prior points used to generate the next, and `D` is the number of derivatives used, has both the secant method (`S=2, D=0`) and Newton's method (`S=1, D=1`) as members, but also provides others. By adding more memory or adding more derivatives the convergence rate increases, at the expense of more complicated expressions or more function calls per step.
+
+```
+julia> find_zero(dfᵏs(f, 0), 2, Roots.LithBoonkkampIJzerman(3,0)) # like secant
+2.0945514815423265
+
+julia> find_zero(dfᵏs(f, 1), 2, Roots.LithBoonkkampIJzerman(2,1)) # like Newton
+2.0945514815423265
+
+julia> find_zero(dfᵏs(f, 2), 2, Roots.LithBoonkkampIJzerman(2,2)) # like Halley
+2.0945514815423265
+```
 
 ## Finding critical points
 
@@ -588,7 +605,7 @@ x^2 + 270\cdot x^3 - 405\cdot x^4 + 243\cdot x^5$. Mathematically
 these are the same, however not so when evaluated in floating
 point. Here we look at the 21 floating point numbers near $1/3$:
 
-```jldoctest roots
+```
 julia> f(x) = (3x-1)^5
 f (generic function with 1 method)
 
@@ -608,18 +625,22 @@ julia> maximum(abs.(f.(ns) - f1.(ns)))
 
 ```
 
+
 We see the function values are close for each point, as the maximum difference
 is like $10^{15}$. This is roughly as expected, where even one
 addition may introduce a relative error as big as $2\cdot 10^{-16}$ and here
 there are several such.
 
-Generally this is not even a thought, as the differences are generally
+!!! Note:
+    (These values are subject to the vagaries of floating point evaluation, so may differ depending on the underlying computer architecture.)
+
+Generally this variation is not even a thought, as the differences are generally
 negligible, but when we want to identify if a value is zero, these
 small differences might matter. Here we look at the signs of the
 function values:
 
 
-```jldoctest roots
+```
 julia> fs = sign.(f.(ns));
 
 julia> f1s = sign.(f1.(ns));
@@ -649,12 +670,13 @@ julia> [ns.-1/3 fs f1s]
 
 ```
 
+
 Parsing this shows a few surprises. First, there are two zeros of
 `f(x)` identified--not just one as expected mathematically--the
 floating point value of `1/3` and the next largest floating point
 number. 
 
-```jldoctest roots
+```
 julia> findall(iszero, fs)
 2-element Array{Int64,1}:
  11
@@ -668,7 +690,7 @@ point value for `1/3` but rather 10 floating point numbers
 away. 
 
 
-```jldoctest roots
+```
 julia> findall(iszero, f1s)
 1-element Array{Int64,1}:
  21
@@ -678,7 +700,7 @@ julia> findall(iszero, f1s)
 
 Further, there are several sign changes of the function values for `f1s`:
 
-```jldoctest roots
+```
 julia> findall(!iszero,diff(sign.(f1s)))
 6-element Array{Int64,1}:
   3
@@ -724,7 +746,7 @@ julia> F(prevfloat(x)), F(x), F(nextfloat(x))
 However, the value of `f(x)` is not as small as one might initially
 expect for a zero:
 
-```jldoctest roots
+```
 julia> f(x), abs(f(x)/eps(x))
 (-2.7284841053187847e-12, 1536.0)
 
@@ -822,7 +844,7 @@ julia> a, b = -10, 10
 (-10, 10)
 
 julia> zs = find_zeros(f, a, b)
-3-element Array{Float64,1}:
+3-element Vector{Float64}:
  -0.8155534188089606
   1.4296118247255556
   8.613169456441398
@@ -933,7 +955,7 @@ julia> f(x) =  (x-0.5)^3 * (x-0.499)^3
 f (generic function with 1 method)
 
 julia> find_zeros(f, 0, 1)
-1-element Array{Float64,1}:
+1-element Vector{Float64}:
  0.5
 
 ```
@@ -949,7 +971,7 @@ julia> f(x) =  (x-0.5)^2 * (x-0.499)^2
 f (generic function with 1 method)
 
 julia> find_zeros(f, 0, 1)
-2-element Array{Float64,1}:
+2-element Vector{Float64}:
  0.49899999999999994
  0.5
 
@@ -962,7 +984,7 @@ julia> f(x) = (x-0.5) * (x - 0.49999)
 f (generic function with 1 method)
 
 julia> find_zeros(f, 0, 1)
-2-element Array{Float64,1}:
+2-element Vector{Float64}:
  0.49999
  0.5
 
@@ -971,3 +993,38 @@ julia> find_zeros(f, 0, 1)
 Combinations of large (even) multiplicity zeros or very nearby
 zeros, can lead to misidentification.  
 
+### IntervalRootFinding
+
+The [IntervalRootFinding](https://github.com/JuliaIntervals/IntervalRootFinding.jl) package rigorously identifies isolating intervals for the zeros of a function. This example, from that package's README, is used to illustrate the differences:
+
+```
+julia> using IntervalArithmetic, IntervalRootFinding
+
+julia> f(x) = sin(x) - 0.1*x^2 + 1
+f (generic function with 1 method)
+
+julia> rts = roots(f, -10..10)
+4-element Vector{Root{Interval{Float64}}}:
+ Root([3.14959, 3.1496], :unique)
+ Root([-4.42654, -4.42653], :unique)
+ Root([-3.10682, -3.10681], :unique)
+ Root([-1.08205, -1.08204], :unique)
+
+julia> find_zeros(f, -10, 10)
+4-element Vector{Float64}:
+ -4.426534982071949
+ -3.1068165552293254
+ -1.0820421327607177
+  3.1495967624505226
+```
+
+Using that in this case, the intervals are bracketing intervals for `f`, we can find the zeros from the `roots` ouput with the following:
+
+```
+julia> [find_zero(f, (interval(u).lo, interval(u).hi)) for u ∈ rts if u.status == :unique]
+4-element Vector{Float64}:
+  3.1495967624505226
+ -4.426534982071949
+ -3.1068165552293254
+ -1.082042132760718
+```
