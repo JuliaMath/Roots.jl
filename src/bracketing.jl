@@ -294,6 +294,7 @@ function assess_convergence(M::BisectionExact, state::UnivariateZeroState{T,S}, 
 end
 
 
+
 ##################################################
 
 
@@ -355,6 +356,77 @@ function find_zero(fs, x0, method::M;
 
 end
 
+## --------------------------------------------------
+##
+# assume int[xn0,xn1] is a bracket in state
+function assess_convergence(method::AbstractBracketing, state::UnivariateZeroState{T,S}, options) where {T,S}
+
+    if state.stopped || state.x_converged || state.f_converged
+        return true
+    end
+
+    check_steps_fnevals(state, options) && return true
+
+    a,b,fa,fb = state.xn0, state.xn1, state.fxn0, state.fxn1
+
+    if isnan(a) || isnan(b)
+        state.convergence_failed = true
+        state.message *= "NaN produced by algorithm. "
+        return true
+    end
+
+    M = maximum(abs, (a,b))
+    δₓ = maximum(promote(options.xabstol, M * options.xreltol, sign(options.xreltol) *   eps(M)))
+
+    if abs(b-a) <= 2δₓ
+        state.x_converged = true
+    end
+
+    # check f
+    u,fu = choose_smallest(a,b,fa,fb)
+    δ = maximum(promote(options.abstol, M * options.reltol * (oneunit(fu) / oneunit(u))))
+    if abs(fu) <= δ
+        state.f_converged = true
+        if iszero(fu)
+            state.x_converged
+            state.message *= "Exact zero found. "
+        end
+    end
+
+    if state.f_converged || state.x_converged
+        state.xstar = u
+        state.fxstar = fu
+        return true
+    end
+
+    return false
+end
+
+## convergence is much different here
+function check_zero(::AbstractBracketing, state, c, fc)
+    if isnan(c)
+        state.stopped = true
+        #state.xn1 = c
+        state.xstar = c
+        state.fxstar =fc
+        state.message *= "NaN encountered. "
+        return true
+    elseif isinf(c)
+        state.stopped = true
+        #state.xn1 = c
+        state.xstar = c
+        state.fxstar =fc
+        state.message *= "Inf encountered. "
+        return true
+    elseif iszero(fc)
+        state.f_converged=true
+        state.message *= "Exact zero found. "
+        state.xstar = c
+        state.fxstar =  fc
+        return true
+    end
+    return false
+end
 
 ###################################################
 #
@@ -534,87 +606,6 @@ end
 
 
 
-## convergence is much different here
-function check_zero(::AbstractBracketing, state, c, fc)
-    if isnan(c)
-        state.stopped = true
-        #state.xn1 = c
-        state.xstar = c
-        state.fxstar =fc
-        state.message *= "NaN encountered. "
-        return true
-    elseif isinf(c)
-        state.stopped = true
-        #state.xn1 = c
-        state.xstar = c
-        state.fxstar =fc
-        state.message *= "Inf encountered. "
-        return true
-    elseif iszero(fc)
-        state.f_converged=true
-        state.message *= "Exact zero found. "
-        state.xstar = c
-        state.fxstar =  fc
-#        state.xn1 = c
-#        state.fxn1 = fc
-        return true
-    end
-    return false
-end
-
-function assess_convergence(method::AbstractAlefeldPotraShi, state::UnivariateZeroState{T,S}, options) where {T,S}
-
-    if state.stopped || state.x_converged || state.f_converged
-        ## if isnan(state.xstar)
-        ##     state.xstar, state.fxstar = state.xn1, state.fxn1
-        ## end
-        return true
-    end
-
-    if state.steps > options.maxevals
-        state.stopped = true
-        state.message *= "Too many steps taken. "
-        return true
-    end
-
-    if state.fnevals > options.maxfnevals
-        state.stopped=true
-        state.message *= "Too many function evaluations taken. "
-        return true
-    end
-
-    # check f
-    u,fu = choose_smallest(state.xn0, state.xn1, state.fxn0, state.fxn1)
-    #u,fu = choose_smallest(u, state.m[1], fu, state.fm[1])
-
-    if abs(fu) <= maximum(promote(options.abstol, abs(u) * oneunit(fu) / oneunit(u) * options.reltol))
-        state.f_converged = true
-        state.xstar=u
-        state.fxstar=fu
-        if iszero(fu)
-
-            state.x_converged
-            state.message *= "Exact zero found. "
-        end
-        return true
-    end
-
-    a,b = state.xn0, state.xn1
-    mx = max(abs(a), abs(b))
-    tol = maximum(promote(options.xabstol, mx * options.xreltol, sign(options.xreltol) *   eps(mx)))
-
-    if abs(b-a) <= 2tol
-        # use smallest of a,b,m
-        state.xstar = u
-        state.fxstar = fu
-        state.x_converged = true
-        return true
-    end
-
-
-
-    return false
-end
 
 ## initial step, needs to log a,b,d
 function log_step(l::Tracks, M::AbstractAlefeldPotraShi, state, ::Any)
@@ -932,6 +923,11 @@ find_zero(x -> x^5 - x - 1, (-2, 2), FalsePosition())
 """
 FalsePosition
 FalsePosition(x=:anderson_bjork) = FalsePosition{x}()
+
+# use fallback for derivative free
+function assess_convergence(method::FalsePosition, state::UnivariateZeroState{T,S}, options) where {T,S}
+    assess_convergence(Any, state, options) 
+end
 
 function update_state(method::FalsePosition, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
 

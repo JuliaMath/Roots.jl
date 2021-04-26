@@ -419,6 +419,14 @@ function assess_convergence(method::Any, state::UnivariateZeroState{T,S}, option
         return true
     end
 
+    check_steps_fnevals(state, options) && return true
+
+    return false
+end
+
+## too many steps or function evaluations
+function check_steps_fnevals(state, options)
+
     if state.steps > options.maxevals
         state.stopped = true
         state.message *= "Too many steps taken. "
