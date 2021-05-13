@@ -366,7 +366,7 @@ dfᵏs (generic function with 1 method)
 
 ```jldoctest roots
 julia> Roots.newton(f, D(f), 2)
-2.0945514815423265
+3.141592653589793
 
 ```
 
@@ -374,7 +374,7 @@ Or, for Halley's method:
 
 ```jldoctest roots
 julia> Roots.halley(f, D(f), D(f,2), 2)
-2.0945514815423265
+3.141592653589793
 
 ```
 
@@ -605,7 +605,7 @@ x^2 + 270\cdot x^3 - 405\cdot x^4 + 243\cdot x^5$. Mathematically
 these are the same, however not so when evaluated in floating
 point. Here we look at the 21 floating point numbers near $1/3$:
 
-```
+```jldoctest
 julia> f(x) = (3x-1)^5
 f (generic function with 1 method)
 
@@ -621,7 +621,7 @@ julia> u=1/3; for i in 1:10 (global  u=prevfloat(u);push!(ns, u)) end
 julia> sort!(ns);
 
 julia> maximum(abs.(f.(ns) - f1.(ns)))
-1.887379141862766e-15
+1.5543122344752192e-15
 
 ```
 
@@ -646,10 +646,10 @@ julia> fs = sign.(f.(ns));
 julia> f1s = sign.(f1.(ns));
 
 julia> [ns.-1/3 fs f1s]
-21×3 Array{Float64,2}:
+21×3 Matrix{Float64}:
  -5.55112e-16  -1.0  -1.0
  -4.996e-16    -1.0  -1.0
- -4.44089e-16  -1.0  -1.0
+ -4.44089e-16  -1.0   1.0
  -3.88578e-16  -1.0   1.0
  -3.33067e-16  -1.0   1.0
  -2.77556e-16  -1.0   1.0
@@ -657,15 +657,16 @@ julia> [ns.-1/3 fs f1s]
  -1.66533e-16  -1.0  -1.0
  -1.11022e-16  -1.0   1.0
  -5.55112e-17  -1.0   1.0
-  ⋮
+  0.0           0.0  -1.0
+  5.55112e-17   0.0   1.0
   1.11022e-16   1.0   1.0
-  1.66533e-16   1.0   1.0
+  1.66533e-16   1.0  -1.0
   2.22045e-16   1.0  -1.0
   2.77556e-16   1.0  -1.0
   3.33067e-16   1.0   1.0
   3.88578e-16   1.0   1.0
   4.44089e-16   1.0   1.0
-  4.996e-16     1.0   1.0
+  4.996e-16     1.0  -1.0
   5.55112e-16   1.0   0.0
 
 ```
@@ -676,9 +677,9 @@ Parsing this shows a few surprises. First, there are two zeros of
 floating point value of `1/3` and the next largest floating point
 number. 
 
-```
+```jldoctest
 julia> findall(iszero, fs)
-2-element Array{Int64,1}:
+2-element Vector{Int64}:
  11
  12
 ```
@@ -690,9 +691,9 @@ point value for `1/3` but rather 10 floating point numbers
 away. 
 
 
-```
+```jldoctest
 julia> findall(iszero, f1s)
-1-element Array{Int64,1}:
+1-element Vector{Int64}:
  21
 ```
 
@@ -700,14 +701,17 @@ julia> findall(iszero, f1s)
 
 Further, there are several sign changes of the function values for `f1s`:
 
-```
+```jldoctest
 julia> findall(!iszero,diff(sign.(f1s)))
-6-element Array{Int64,1}:
-  3
+9-element Vector{Int64}:
+  2
   6
   8
- 14
+ 10
+ 11
+ 13
  16
+ 19
  20
 
 ```
@@ -997,7 +1001,7 @@ zeros, can lead to misidentification.
 
 The [IntervalRootFinding](https://github.com/JuliaIntervals/IntervalRootFinding.jl) package rigorously identifies isolating intervals for the zeros of a function. This example, from that package's README, is used to illustrate the differences:
 
-```
+```jldoctest
 julia> using IntervalArithmetic, IntervalRootFinding
 
 julia> f(x) = sin(x) - 0.1*x^2 + 1
@@ -1020,7 +1024,7 @@ julia> find_zeros(f, -10, 10)
 
 Using that in this case, the intervals are bracketing intervals for `f`, we can find the zeros from the `roots` ouput with the following:
 
-```
+```jldoctest
 julia> [find_zero(f, (interval(u).lo, interval(u).hi)) for u ∈ rts if u.status == :unique]
 4-element Vector{Float64}:
   3.1495967624505226
