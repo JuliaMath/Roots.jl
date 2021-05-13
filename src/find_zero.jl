@@ -592,7 +592,7 @@ julia> fn = x -> (2x*cos(x) + x^2 - 3)^10/(x^2 + 1);
 julia> x0, xstar = 3.0,  2.9947567209477;
 
 julia> find_zero(fn, x0, Order2()) ≈ xstar
-false
+true
 
 julia> find_zero(fn, x0, Order2(), atol=0.0, rtol=0.0) # error: x_n ≉ x_{n-1}; just f(x_n) ≈ 0
 ERROR: Roots.ConvergenceFailed("Stopped at: xn = 2.9921081308371615. Too many steps taken. ")

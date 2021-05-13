@@ -366,7 +366,7 @@ dfᵏs (generic function with 1 method)
 
 ```jldoctest roots
 julia> Roots.newton(f, D(f), 2)
-3.141592653589793
+2.0945514815423265
 
 ```
 
@@ -374,7 +374,7 @@ Or, for Halley's method:
 
 ```jldoctest roots
 julia> Roots.halley(f, D(f), D(f,2), 2)
-3.141592653589793
+2.0945514815423265
 
 ```
 
