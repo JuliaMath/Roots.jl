@@ -640,7 +640,7 @@ small differences might matter. Here we look at the signs of the
 function values:
 
 
-```
+```jldoctest
 julia> fs = sign.(f.(ns));
 
 julia> f1s = sign.(f1.(ns));
@@ -668,7 +668,6 @@ julia> [ns.-1/3 fs f1s]
   4.44089e-16   1.0   1.0
   4.996e-16     1.0  -1.0
   5.55112e-16   1.0   0.0
-
 ```
 
 
@@ -1002,7 +1001,7 @@ zeros, can lead to misidentification.
 The [IntervalRootFinding](https://github.com/JuliaIntervals/IntervalRootFinding.jl) package rigorously identifies isolating intervals for the zeros of a function. This example, from that package's README, is used to illustrate the differences:
 
 ```jldoctest
-julia> using IntervalArithmetic, IntervalRootFinding
+julia> using IntervalArithmetic, IntervalRootFinding, Roots
 
 julia> f(x) = sin(x) - 0.1*x^2 + 1
 f (generic function with 1 method)
@@ -1024,7 +1023,7 @@ julia> find_zeros(f, -10, 10)
 
 Using that in this case, the intervals are bracketing intervals for `f`, we can find the zeros from the `roots` ouput with the following:
 
-```jldoctest
+```jldoctest roots
 julia> [find_zero(f, (interval(u).lo, interval(u).hi)) for u ∈ rts if u.status == :unique]
 4-element Vector{Float64}:
   3.1495967624505226
