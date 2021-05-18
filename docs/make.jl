@@ -1,6 +1,8 @@
 using Documenter
 using Roots
 
+DocMeta.setdocmeta!(Roots, :DocTestSetup, :(using Roots); recursive=true)
+
 makedocs(
     sitename = "Roots",
     format = Documenter.HTML(),

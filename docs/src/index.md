@@ -52,7 +52,7 @@ converge for continuous functions by the intermediate value
 theorem. A bracketing algorithm will be used when the initial data is
 passed as a tuple:
 
-```julia
+```jldoctest
 julia> using Roots
 
 julia> f(x) =  x^5 - x + 1/2
@@ -66,7 +66,7 @@ The default algorithm is guaranteed to have an  answer nearly as accurate as is 
 
 For the zeros "near" a point,  a non-bracketing method is often used, as generally  the algorithms are more efficient and can be  used in cases where a zero does  not. Passing just  the initial point will dispatch to  such a method:
 
-```julia
+```jjdoctest find_zero
 julia> find_zero(f,  0.6)
 0.550606579334135
 ```
@@ -74,9 +74,9 @@ julia> find_zero(f,  0.6)
 
 This finds  the answer  to the left of the starting point. To get the other nearby zero, a starting point closer to the answer cana be used.  However,  an initial graph might convince one  that any of the upto 5 reaal  roots  will   occur between `-5`  and `5`.  The `find_zeros` function uses  heuristics and a few of the  algorithms to  identify  all zeros between the specified range. Here  we see  there  are 3:
 
-```julia
+```jldoctest find_zero
 julia> find_zeros(f, -5,  5)
-3-element Array{Float64,1}:
+3-element Vector{Float64}:
  -1.0983313019186334
   0.550606579334135
   0.7690997031778959
