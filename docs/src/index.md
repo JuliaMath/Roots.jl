@@ -35,16 +35,16 @@ specification of a method. These include:
   `Roots.Newton` and `Roots.Halley`.  `Roots.Schroder` provides a
   quadratic method, like Newton's method, which is independent of the
   multiplicity of the zero.
-  
-  
-  
+
+
+
 ## Basic usage
 
-Consider  the polynomial   function  $f(x) = x^5 - x + 1/2$. As a polynomial,  its roots, or  zeros, could  be identified with the  `roots` function of  the `Polynomials` package. However, even  that function uses a numeric method to identify   the values, as no  solution with radicals is available. That is, even for polynomials, non-linear root finders are needed to solve $f(x)=0$. 
+Consider  the polynomial   function  $f(x) = x^5 - x + 1/2$. As a polynomial,  its roots, or  zeros, could  be identified with the  `roots` function of  the `Polynomials` package. However, even  that function uses a numeric method to identify   the values, as no  solution with radicals is available. That is, even for polynomials, non-linear root finders are needed to solve $f(x)=0$.
 
 The `Roots` package provides a variety algorithms for this  task. In this overview, only the  default ones  are illustrated.
 
-For  the function $f(x) = x^5 - x + 1/2$ a simple plot will show a zero  somewhere between $-1.2$ and $-1.0$ and two zeros near $0.6$. 
+For  the function $f(x) = x^5 - x + 1/2$ a simple plot will show a zero  somewhere between $-1.2$ and $-1.0$ and two zeros near $0.6$.
 
 For the zero between two values at which the function changes sign, a
 bracketing method is useful, as bracketing methods are guaranteed to
@@ -52,7 +52,7 @@ converge for continuous functions by the intermediate value
 theorem. A bracketing algorithm will be used when the initial data is
 passed as a tuple:
 
-```jldoctest
+```jldoctest find_zero
 julia> using Roots
 
 julia> f(x) =  x^5 - x + 1/2
@@ -62,7 +62,7 @@ julia> find_zero(f, (-1.2,  -1))
 -1.0983313019186334
 ```
 
-The default algorithm is guaranteed to have an  answer nearly as accurate as is  possible  given the limitations of floating point  computations. 
+The default algorithm is guaranteed to have an  answer nearly as accurate as is  possible  given the limitations of floating point  computations.
 
 For the zeros "near" a point,  a non-bracketing method is often used, as generally  the algorithms are more efficient and can be  used in cases where a zero does  not. Passing just  the initial point will dispatch to  such a method:
 

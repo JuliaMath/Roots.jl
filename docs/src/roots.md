@@ -420,7 +420,7 @@ julia> function flight(x, theta)
          tand(theta)*x + (b/a)*x - b*log(a/(a-x))
        end
 flight (generic function with 1 method)
-	   
+
 ```
 
 
@@ -436,8 +436,8 @@ julia> function howfar(theta)
          find_zero(x -> flight(x, theta), a-5)
         end
 howfar (generic function with 1 method)
-	   
-```	 
+
+```
 
 To visualize the trajectory if shot at 45 degrees, we have:
 
@@ -477,7 +477,7 @@ julia> tstar = find_zero(howfarp, 45)
 This graph shows the differences in the trajectories:
 
 ```@example roots
-plot(x -> flight(x, 45), 0, howfar(45))  
+plot(x -> flight(x, 45), 0, howfar(45))
 plot!(x -> flight(x, tstar), 0, howfar(tstar))
 savefig("flight-2.svg"); nothing #hide
 ```
@@ -558,7 +558,7 @@ julia> try find_zero(f, x0)  catch err  "Convergence failed" end
 
 ```
 
-Whereas, 
+Whereas,
 
 ```jldoctest roots
 julia> try find_zero(f, x0, Order2())  catch err  "Convergence failed" end
@@ -605,7 +605,7 @@ x^2 + 270\cdot x^3 - 405\cdot x^4 + 243\cdot x^5$. Mathematically
 these are the same, however not so when evaluated in floating
 point. Here we look at the 21 floating point numbers near $1/3$:
 
-```jldoctest
+```jldoctest roots
 julia> f(x) = (3x-1)^5
 f (generic function with 1 method)
 
@@ -640,7 +640,7 @@ small differences might matter. Here we look at the signs of the
 function values:
 
 
-```jldoctest
+```jldoctest roots
 julia> fs = sign.(f.(ns));
 
 julia> f1s = sign.(f1.(ns));
@@ -674,9 +674,9 @@ julia> [ns.-1/3 fs f1s]
 Parsing this shows a few surprises. First, there are two zeros of
 `f(x)` identified--not just one as expected mathematically--the
 floating point value of `1/3` and the next largest floating point
-number. 
+number.
 
-```jldoctest
+```jldoctest roots
 julia> findall(iszero, fs)
 2-element Vector{Int64}:
  11
@@ -687,10 +687,10 @@ julia> findall(iszero, fs)
 
 For `f1(x)` there is only one zero, but it isn't the floating
 point value for `1/3` but rather 10 floating point numbers
-away. 
+away.
 
 
-```jldoctest
+```jldoctest roots
 julia> findall(iszero, f1s)
 1-element Vector{Int64}:
  21
@@ -700,7 +700,7 @@ julia> findall(iszero, f1s)
 
 Further, there are several sign changes of the function values for `f1s`:
 
-```jldoctest
+```jldoctest roots
 julia> findall(!iszero,diff(sign.(f1s)))
 9-element Vector{Int64}:
   2
@@ -994,7 +994,7 @@ julia> find_zeros(f, 0, 1)
 ```
 
 Combinations of large (even) multiplicity zeros or very nearby
-zeros, can lead to misidentification.  
+zeros, can lead to misidentification.
 
 ### IntervalRootFinding
 
@@ -1023,7 +1023,7 @@ julia> find_zeros(f, -10, 10)
 
 Using that in this case, the intervals are bracketing intervals for `f`, we can find the zeros from the `roots` ouput with the following:
 
-```jldoctest roots
+```jldoctest
 julia> [find_zero(f, (interval(u).lo, interval(u).hi)) for u ∈ rts if u.status == :unique]
 4-element Vector{Float64}:
   3.1495967624505226
