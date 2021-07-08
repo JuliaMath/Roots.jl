@@ -627,7 +627,7 @@ x_2 =  3.1415926535897936,	 fx_2 = -0.0000000000000003
 3.1415926535897936
 ```
 
-```jldoctest
+```jldoctest find_zero
 julia> find_zero(x->sin(x)^5, 3.0, Order2(), verbose=true) # 22 iterations
 Results of univariate zero finding:
 
