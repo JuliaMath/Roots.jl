@@ -581,7 +581,6 @@ julia> find_zero((sin,cos), 3.0, Roots.Newton())  # use Newton's method
 
 julia> find_zero((sin, cos, x->-sin(x)), 3.0, Roots.Halley())  # use Halley's method
 3.141592653589793
-
 ```
 
 Changing tolerances.
@@ -718,12 +717,10 @@ x_40 =  3.1397074174874358,	 fx_40 =  0.0000000000000238
 x_41 =  3.1397074174874358,	 fx_41 =  0.0000000000000238
  
 3.1397074174874358
-
 ```
 
-!!! Note:
+!!! note
     See [`ZeroProblem`](@ref) for an interator interface to the underlying algorithms.
-
 """
 function find_zero(fs, x0, method::AbstractUnivariateZeroMethod,
                    N::Union{Nothing, AbstractBracketing}=nothing;
