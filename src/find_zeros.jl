@@ -255,18 +255,17 @@ The algorithm is derived from one in a
 
 
 !!! Note
-The `IntervalRootFinding` package provides a rigorous alternative to this heuristic one. 
+The `IntervalRootFinding` package provides a rigorous alternative to this heuristic one.
 That package use interval arithmetic, so can compute bounds on the size of the image of
-an interval under a function `f`. If this image includes `0`, then it can look for the zero. 
+an interval under a function `f`. If this image includes `0`, then it can look for the zero.
 Bisection, on the other hand, only will look for a zero if the two endpoints have different signs,
 a much more rigid condition for a potential zero.
 
 For example, this function (due to `@truculentmath`) is particularly tricky, as it is positive at every floating point number, but has two zeros (the vertical asymptote at `15//11` is negative between adjacent floating point values):
 
-```jldoctest
+```jldoctest interval_root_finding
 julia> using IntervalArithmetic, IntervalRootFinding, Roots
-[ Info: Precompiling Roots [f2b01f46-fcfa-551c-844a-d8ac1e96c665]
-^[[A
+
 julia> g(x) = x^2 + 1 +log(abs( 11*x-15 ))/99
 g (generic function with 1 method)
 
@@ -280,7 +279,7 @@ julia> IntervalRootFinding.roots(g, -3..3, IntervalRootFinding.Bisection)
 
 A less extreme usage might be the following, where `unique` indicates Bisection could be useful and indeed `find_zeros` will identify these values:
 
-```jldoctest
+```jldoctest interval_root_finding
 julia> g(x) = exp(x) - x^5
 g (generic function with 1 method)
 

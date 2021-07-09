@@ -27,7 +27,7 @@ it into two intervals `[a,c]` and `[c,b]`, If `c` is not a zero, then
 one of these two will be a bracketing interval and the process
 continues. The computation of `c` is done by `_middle`, which
 reinterprets floating point values as unsigned integers and splits
-there. It was contributed  by  [Jason Merrill](https://gist.github.com/jwmerrill/9012954). 
+there. It was contributed  by  [Jason Merrill](https://gist.github.com/jwmerrill/9012954).
 This method avoids floating point issues and when the
 tolerances are set to zero (the default) guarantees a "best" solution
 (one where a zero is found or the bracketing interval is of the type
@@ -552,7 +552,9 @@ function init_state(M::AbstractAlefeldPotraShi, f, xs)
 end
 
 # secant step, then bracket for initial setup
-function init_state!(state::UnivariateZeroState{T,S}, ::AbstractAlefeldPotraShi, f, xs::Union{Tuple, Vector}, compute_fx=true) where {T, S}
+# can pass instructions to compute fx
+# can pass in value for initial middle
+function init_state!(state::UnivariateZeroState{T,S}, ::AbstractAlefeldPotraShi, f, xs::Union{Tuple, Vector}, compute_fx=true, middle=nothing) where {T, S}
 
     if !compute_fx
         a, b = state.xn0, state.xn1
@@ -567,7 +569,7 @@ function init_state!(state::UnivariateZeroState{T,S}, ::AbstractAlefeldPotraShi,
         isbracket(fa, fb) || throw(ArgumentError(bracketing_error))
     end
 
-    c::T = _middle(a, b)
+    c::T = (middle != nothing && a < middle < b) ? middle : _middle(a,b)
     fc::S = f(c)
     incfn(state)
 
@@ -926,7 +928,7 @@ FalsePosition(x=:anderson_bjork) = FalsePosition{x}()
 
 # use fallback for derivative free
 function assess_convergence(method::FalsePosition, state::UnivariateZeroState{T,S}, options) where {T,S}
-    assess_convergence(Any, state, options) 
+    assess_convergence(Any, state, options)
 end
 
 function update_state(method::FalsePosition, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
