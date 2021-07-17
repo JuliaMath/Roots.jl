@@ -226,14 +226,16 @@ function muller(f, oldest::T, older::T, old::T;
     xatol=nothing, xrtol=nothing, maxevals=300) where {T}
     @assert old ≠ older ≠ oldest ≠ old # we want q to be non-degenerate
     xᵢ₋₂, xᵢ₋₁, xᵢ = oldest, older, old
+    fxᵢ₋₂, fxᵢ₋₁ = f(xᵢ₋₂), f(xᵢ₋₁) 
 
     RT = typeof(abs(oldest))
     atol = xatol !== nothing ? xatol : oneunit(RT) * (eps(one(RT)))^(4/5)
     rtol = xrtol !== nothing ? xrtol : eps(one(RT))^(4/5)
 
     for i in 1:maxevals÷3
-        # three evaluations per iteration
-        x = muller_step(xᵢ₋₂, xᵢ₋₁, xᵢ, f(xᵢ₋₂), f(xᵢ₋₁), f(xᵢ))
+        # one evaluation per iteration
+        fxᵢ = f(xᵢ)
+        x = muller_step(xᵢ₋₂, xᵢ₋₁, xᵢ, fxᵢ₋₂, fxᵢ₋₁, fxᵢ)
 
         if isnan(x)
             @warn "The algorithm might not have converged, stopping at i=$i:" abs(xᵢ - xᵢ₋₁)
@@ -242,6 +244,7 @@ function muller(f, oldest::T, older::T, old::T;
 
         # @debug "Iteration $i:" xᵢ₋₂ xᵢ₋₁ xᵢ x abs(x-xᵢ)
         xᵢ₋₂, xᵢ₋₁, xᵢ = xᵢ₋₁, xᵢ, x
+        fxᵢ₋₂, fxᵢ₋₁ = fxᵢ₋₁, fxᵢ
         #stopping criterion
         isapprox(xᵢ, xᵢ₋₁, atol=atol, rtol=rtol) && return xᵢ
     end
