@@ -115,6 +115,12 @@ end
     @test length(find_zeros(p -> p * (1-p), 0, 1)) == 2
     @test length(find_zeros(sin, 0, 5pi)) == 5+1
 
+    # test different ways to specify an interval (just need `extrema` defined)
+    @test find_zeros(sin, (3,4)) ≈ [float(pi)]
+    @test find_zeros(sin, [3,4]) ≈ [float(pi)]
+    @test find_zeros(sin, 3:4) ≈ [float(pi)]
+    @test find_zeros(sin, SomeInterval(3,4)) ≈ [float(pi)]
+    @test find_zeros(sin, range(3,stop=4, length=20)) ≈ [float(pi)]
 
 end
 

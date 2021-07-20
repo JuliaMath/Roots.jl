@@ -48,8 +48,9 @@ savefig("plot-f-1.svg"); nothing #hide
 ![](plot-f-1.svg)
 
 The `Roots` package includes the bisection algorithm through
-`find_zero`. We use a vector or tuple to specify the initial condition
-and `Bisection()` to specify the algorithm:
+`find_zero`. We use a structure for which `extrema` returns `(a,b)`
+with `a < b`, such as a vector or tuple, to specify the initial
+condition and `Bisection()` to specify the algorithm:
 
 ```jldoctest roots
 julia> f(x) = cos(x) - x
@@ -854,9 +855,11 @@ julia> zs = find_zeros(f, a, b)
 
 ```
 
-The  search interval, $(a,b)$, is specified through two arguments. It is
-assumed that neither endpoint is a zero. Here we see the result of the
-search graphically:
+The search interval, $(a,b)$, is specified either through two
+arguments or through a single argument using a structure, such as a
+tuple or vector, where `extrema` returns two distinct values in
+increasing order.  It is assumed that neither endpoint is a zero. Here
+we see the result of the search graphically:
 
 ```@example roots
 f(x) = exp(x) - x^4; nothing

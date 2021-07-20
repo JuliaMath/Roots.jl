@@ -23,6 +23,15 @@ isissue(x) = iszero(x) || isnan(x) || isinf(x)
 @inline sort_smallest(a, b, fa, fb) = abs(fa) < abs(fb) ? (a, b, fa, fb) : (b, a, fb, fa)
 
 # from an interable extract first two elements and promote to floating point values
+# used when an interval is desired
+_extrema(x::Number) = throw(ArgumentError("Need extrema to return two distinct values"))
+function _extrema(x)
+    a, b = extrema(x)
+    a == b && throw(ArgumentError("Need extrema to return two distinct values"))
+    (a,b)
+end
+
+# used by secant. Get x₀, x₁ for x
 function x₀x₁(x)
     x₀, x₁′ = x
     x₁ = first(x₁′)
