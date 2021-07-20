@@ -706,8 +706,8 @@ end
 # O/w use a bracketing method of an assumed iterable
 find_zero(f, x0::T; kwargs...)  where {T <: Number}= find_zero(f, x0, Order0(); kwargs...)
 function find_zero(f, x0; kwargs...)
-    a, b = x₀x₁(x0)
-    find_zero(f, (a, b), Bisection(); kwargs...)
+    ab = promote(float.(_extrema(x0))...)
+    find_zero(f, ab, Bisection(); kwargs...)
 end
 
 

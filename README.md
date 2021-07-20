@@ -45,11 +45,11 @@ Some examples:
 using Roots
 f(x) = exp(x) - x^4
 
-# a bisection method has the bracket specified with a tuple, vector, or iterable
+# a bisection method has the bracket specified with a structure where `extrema` returns (a,b), a < b
 julia> find_zero(f, (8,9), Bisection())
 8.613169456441398
 
-julia> find_zero(f, (-10, 0))  # Bisection is default if x is a tuple and no method
+julia> find_zero(f, (-10, 0))  # Bisection is default if x in `find_zero(f,x)` is not a number
 -0.8155534188089606
 
 
@@ -214,7 +214,7 @@ ZeroProblem{typeof(sin), Tuple{Int64, Int64}}(sin, (3, 4))
 julia> p = init(fx, Roots.A42())
 Roots.A42: x₀: [3.0, 3.5]
 
-julia> 
+julia>
 
 julia> for _ ∈ p; @show p; end
 p = x₁: [3.14156188905231, 3.1416247553172956]
@@ -237,6 +237,13 @@ results should be confirmed by other means.
 ```julia
 f(x) = exp(x) - x^4
 find_zeros(f, -10, 10)  # -0.815553…,  1.42961…,  8.61317…
+```
+
+The interval can also be specified using a structure with `extrema` defined, where `extrema` return two different values:
+
+```julia
+using IntervalSets
+find_zeros(f, -10..10)
 ```
 
 (For tougher problems, the [IntervalRootFinding](https://github.com/JuliaIntervals/IntervalRootFinding.jl) package gives guaranteed results, rather than the heuristically identified values returned by `find_zeros`.)

@@ -138,9 +138,12 @@ end
 
 
 """
-    find_zeros(f, a, b; [no_pts=12, k=8, naive=false, xatol, xrtol, atol, rtol])
+    find_zeros(f, a, b=nothing; [no_pts=12, k=8, naive=false, xatol, xrtol, atol, rtol])
 
-Search for zeros of `f` in the interval `[a,b]`.
+Search for zeros of `f` in the interval `[a,b]`. This interval can be
+specified with two values or using a single value, such as a tuple or
+vector, for which `extrema` returns two distinct values in increasing
+order.
 
 
 # Examples
@@ -169,7 +172,7 @@ julia> find_zeros(x -> sin(x^2) + cos(x)^2, 0, 2pi)  # many zeros
  5.974560835055425
  6.039177477770888
 
-julia> find_zeros(x -> cos(x) + cos(2x), 0, 4pi)    # mix of simple, non-simple zeros
+julia> find_zeros(x -> cos(x) + cos(2x), (0, 4pi))    # mix of simple, non-simple zeros
 6-element Vector{Float64}:
   1.0471975511965976
   3.141592653589943
@@ -295,12 +298,16 @@ julia> find_zeros(g, -20, 20)
 ```
 
 """
-function find_zeros(f, a, b; no_pts = 12, k=8,
+function find_zeros(f, a, b=nothing; no_pts = 12, k=8,
                     naive = false,
                     kwargs...
                     )
 
-    a0, b0 = promote(float(a), float(b))
+    if b === nothing
+        a0, b0 = promote(float.(_extrema(a))...)
+    else
+        a0, b0 = promote(float(a), float(b))
+    end
     a0 = isinf(a0) ? nextfloat(a0) : a0
     b0 = isinf(b0) ? prevfloat(b0) : b0
 

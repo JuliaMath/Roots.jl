@@ -84,6 +84,23 @@ struct Order3_Test <: Roots.AbstractSecant end
 
     fn = x -> Inf * x/abs(x) # stop at NaN values
     find_zero(fn, (-Inf, Inf)) ≈ 0
+
+    bracketing_meths = (Roots.Bisection(),
+                        Roots.A42(), Roots.AlefeldPotraShi(),
+                        Roots.Brent(),
+                        Roots.FalsePosition(), Roots.FalsePosition(2)
+                        )
+
+    # test flexbility in interval specification
+    for M ∈ bracketing_meths
+        @test find_zero(sin, (3,4)) ≈ pi
+        @test find_zero(sin, [3,4]) ≈ pi
+        @test find_zero(sin, 3:4) ≈ pi
+        @test find_zero(sin, SomeInterval(3,4)) ≈ pi
+        @test find_zero(sin, range(3,stop=4, length=20)) ≈ pi
+    end
+
+
 end
 
 
@@ -136,7 +153,7 @@ end
     state = Roots._init_state(M, f, xs, fxs)
     @test find_zero(M, f, state) ≈ π
 
-    
+
     ## hybrid
     g1 = x -> exp(x) - x^4
     x0_, xstar_ = (5.0, 20.0), 8.613169456441398

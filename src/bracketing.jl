@@ -64,7 +64,7 @@ end
 
 ## helper function
 function adjust_bracket(x0)
-    u, v = float.(promote(x0...))
+    u, v = float.(promote(_extrema(x0)...))
     if u > v
         u,v = v,u
     end
@@ -535,7 +535,7 @@ end
 
 # (todo: DRY up?)
 function init_state(M::AbstractAlefeldPotraShi, f, xs)
-    u, v = promote(float(xs[1]), float(xs[2]))
+    u,v = promote(float.(_extrema(xs))...)
     if u > v
         u, v = v, u
     end
@@ -787,7 +787,7 @@ end
 
 #
 function init_state(M::Brent, f, xs)
-    u, v = promote(float(xs[1]), float(xs[2]))
+    u,v = promote(float.(_extrema(xs))...)
     fu, fv = promote(f(u), f(v))
     isbracket(fu, fv) || throw(ArgumentError(bracketing_error))
 
