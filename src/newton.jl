@@ -15,12 +15,13 @@
 
 ## Newton
 abstract type AbstractNewtonLikeMethod <: AbstractUnivariateZeroMethod end
+fn_argout(::AbstractNewtonLikeMethod) = 2
 struct Newton <: AbstractNewtonLikeMethod end
 """
 
     Roots.Newton()
 
-Implements Newton's [method](http://tinyurl.com/b4d7vls): 
+Implements Newton's [method](http://tinyurl.com/b4d7vls):
 `xᵢ₊₁ =  xᵢ - f(xᵢ)/f'(xᵢ)`.  This is a quadratically convergent method requiring
 one derivative. Two function calls per step.
 
@@ -46,10 +47,10 @@ Newton
 
 function init_state(method::AbstractNewtonLikeMethod, fs, x)
 
-    x1 = float(x)
+    x1 = float(first(x))
     T = eltype(x1)
-    tmp = fΔx(fs, x1)
-    fx1, Δ::T = tmp[1], tmp[2] # faster to pass in fx, fx/f'(x) than (fx, f'(x)) and compute
+#    fx1, Δ::T = fΔx(fs, x1)  # f, f/f'
+    fx1, Δ::T = fs(x1)  # f, f/f'
 
     fnevals = 1
     S = eltype(fx1)
@@ -65,8 +66,7 @@ end
 
 function init_state!(state::UnivariateZeroState{T,S}, M::Newton, fs, x) where {T,S}
     x1::T = float(x)
-    tmp = fΔx(fs, x)
-    fx1::S, Δ::T = tmp[1], tmp[2]
+    fx1::S, Δ::T = fs(x)
 
      init_state!(state, x1, oneunit(x1) * (0*x1)/(0*x1), [Δ],
                 fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[])
@@ -85,13 +85,14 @@ function update_state(method::Newton, fs, o::UnivariateZeroState{T,S}, options) 
 
     xn1 = xn - r1
 
-    tmp = fΔx(fs, xn1)
-    fxn1::S, r1::T = tmp[1], tmp[2]
+#    tmp = fΔx(fs, xn1)
+#    fxn1::S, r1::T = tmp[1], tmp[2]
+    fxn1::S, r1::T = fs(xn1)
     incfn(o,2)
 
     o.xn0, o.xn1 = xn, xn1
     o.fxn0, o.fxn1 = fxn, fxn1
-    empty!(o.m); push!(o.m, r1)
+    o.m[1] = r1
 
     nothing
 
@@ -125,6 +126,7 @@ newton(f, fp, x0; kwargs...) = find_zero((f, fp), x0, Newton(); kwargs...)
 
 ## Halley
 abstract type AbstractHalleyLikeMethod <: AbstractUnivariateZeroMethod end
+fn_argout(::AbstractHalleyLikeMethod) = 3
 
 """
     Roots.Halley()
@@ -159,10 +161,10 @@ end
 
 function init_state(method::AbstractHalleyLikeMethod, fs, x)
 
-    x1 = float(x)
+    x1 = float(first(x))
     T = eltype(x1)
-    tmp = fΔxΔΔx(fs, x1)
-    fx1, Δ::T, ΔΔ::T = tmp[1], tmp[2], tmp[3]
+    #tmp = fΔxΔΔx(fs, x1)
+    fx1, Δ::T, ΔΔ::T = fs(x1)
     S = eltype(fx1)
     fnevals = 3
 
@@ -176,9 +178,10 @@ function init_state(method::AbstractHalleyLikeMethod, fs, x)
 end
 
 function init_state!(state::UnivariateZeroState{T,S}, M::AbstractHalleyLikeMethod, fs, x) where {T,S}
-    x1::T = float(x)
-    tmp = fΔxΔΔx(fs, x)
-    fx1::S, Δ::T, ΔΔ::T = tmp[1], tmp[2], tmp[3]
+    x1::T = float(first(x))
+#    tmp = fΔxΔΔx(fs, x)
+    #    fx1::S, Δ::T, ΔΔ::T = tmp[1], tmp[2], tmp[3]
+    fx1::S, Δ::T, ΔΔ::T = fs(x)
 
      init_state!(state, x1, oneunit(x1) * (0*x1)/(0*x1), [Δ, ΔΔ],
                 fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[])
@@ -191,13 +194,14 @@ function update_state(method::Halley, fs, o::UnivariateZeroState{T,S}, options::
 
     xn1::T = xn - 2*r2/(2r2 - r1) * r1
 
-    tmp = fΔxΔΔx(fs, xn1)
-    fxn1::S, r1::T, r2::T = tmp[1], tmp[2], tmp[3]
+    #tmp = fΔxΔΔx(fs, xn1)
+    #fxn1::S, r1::T, r2::T = tmp[1], tmp[2], tmp[3]
+    fxn1::S, r1::T, r2::T = fs(xn1)
     incfn(o,3)
 
     o.xn0, o.xn1 = xn, xn1
     o.fxn0, o.fxn1 = fxn, fxn1
-    empty!(o.m); append!(o.m, (r1, r2))
+    o.m[1], o.m[2] = r1, r2
 end
 
 """
@@ -290,8 +294,9 @@ function update_state(method::Schroder, fs, o::UnivariateZeroState{T,S}, options
 
     xn1::T = xn - delta
 
-    tmp = fΔxΔΔx(fs, xn1)
-    fxn1::S, r1::T, r2::T = tmp[1], tmp[2], tmp[3]
+    #    tmp = fΔxΔΔx(fs, xn1)
+    #    fxn1::S, r1::T, r2::T = tmp[1], tmp[2], tmp[3]
+    fxn1::S, r1::T, r2::T = fs(xn1)
     incfn(o,3)
 
     o.xn0, o.xn1 = xn, xn1

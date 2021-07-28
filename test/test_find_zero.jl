@@ -137,8 +137,10 @@ end
     end
 
     # solve and parameters
+    # should be positional, but named supported for now
     g2 = (x,p) -> cos(x) - x/p
     fx = ZeroProblem(g2, (0,pi/2))
+    @test solve(fx, 2) ≈ find_zero(x -> cos(x) - x/2, (0, pi/2))
     @test solve(fx, p=2) ≈ find_zero(x -> cos(x) - x/2, (0, pi/2))
     @test solve(fx, p=3) ≈ find_zero(x -> cos(x) - x/3, (0, pi/2))
     g3 = (x, p) -> cos(x) + p[1]*x - p[2]
@@ -312,14 +314,14 @@ end
         I_sintan(x) = tan(x)/2cos(x) - atanh(tan(x/2))
         I_sintan(x, y) = I_sintan(y) - I_sintan(x)
         function lhs(θ)
-        tRem = (vy - T/α*(sec(θ1) - sec(θ))) / g
+            tRem = (vy - T/α*(sec(θ1) - sec(θ))) / g
             val = -yf + y + vy*tRem - 0.5g*tRem^2 - T/α^2*I_sintan(θ, θ1)
             val
         end
 
         M = Roots.FalsePosition()
-        f, x0 = lhs, [atan(α*tf), atan(α*(tf-t1))]
-        F = Roots.DerivativeFree(lhs)
+        x0 = [atan(α*tf), atan(α*(tf-t1))]
+        F = Roots.Callable_Function(M, lhs, nothing) #Roots.DerivativeFree(lhs)
         state = Roots.init_state(M, F, x0)
         options = Roots.init_options(M, state)
         find_zero(M, F, state, options)

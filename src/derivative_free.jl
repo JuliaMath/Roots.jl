@@ -60,7 +60,7 @@ function init_state(method::AbstractSecant, fs, x::Number)
 end
 
 function init_state(method::AbstractSecant, fs, x)
-    x0, x1 = x₀x₁(x)
+    x0, x1 = x₀x₁(x);
     fx0, fx1 = fs(x0), fs(x1)
     state = UnivariateZeroState(x1, x0, zero(x1)/zero(x1)*oneunit(x1), typeof(x1)[],
                                 fx1, fx0, fx1, typeof(fx1)[],
@@ -114,13 +114,14 @@ superlinear, and relatively robust to non-reasonable starting points.
 struct Order0 <: AbstractSecant end
 
 function find_zero(fs, x0, method::Order0;
+                   p=nothing,
                    tracks::AbstractTracks=NullTracks(),
                    verbose=false,
                    kwargs...)
     M = Order1()
     N = AlefeldPotraShi()
-
-    find_zero(callable_function(fs), x0, M, N; tracks=tracks,verbose=verbose, kwargs...)
+    F = Callable_Function(M, fs, p)
+    find_zero(F, x0, M, N; tracks=tracks,verbose=verbose, kwargs...)
 end
 
 ##################################################
@@ -462,47 +463,47 @@ end
 
 
 
-## If we have a derivative, we have this. (Deprecate?)
-function update_state(method::Order5, fs::Union{FirstDerivative,SecondDerivative},
-                      o::UnivariateZeroState{T,S}, options)  where {T, S}
+# ## If we have a derivative, we have this. (Deprecate?)
+# function update_state(method::Order5, fs::Union{FirstDerivative,SecondDerivative},
+#                       o::UnivariateZeroState{T,S}, options)  where {T, S}
 
 
-    xn, fxn = o.xn1, o.fxn1
-    a::T, b::S = fΔx(fs, xn)
-    fpxn = a/b
-    incfn(o)
+#     xn, fxn = o.xn1, o.fxn1
+#     a::T, b::S = fΔx(fs, xn)
+#     fpxn = a/b
+#     incfn(o)
 
-    if isissue(fpxn)
-        o.stopped  = true
-        return
-    end
+#     if isissue(fpxn)
+#         o.stopped  = true
+#         return
+#     end
 
-    yn::T = xn - fxn / fpxn
-    fyn::S, Δyn::T = fΔx(fs, yn)
-    fpyn = fyn / Δyn
-    incfn(o, 2)
+#     yn::T = xn - fxn / fpxn
+#     fyn::S, Δyn::T = fΔx(fs, yn)
+#     fpyn = fyn / Δyn
+#     incfn(o, 2)
 
-    if isissue(fpyn)
-        o.xn0, o.xn1 = xn, yn
-        o.fxn0, o.fxn1 = fxn, fyn
-        o.stopped  = true
-        return
-    end
+#     if isissue(fpyn)
+#         o.xn0, o.xn1 = xn, yn
+#         o.fxn0, o.fxn1 = fxn, fyn
+#         o.stopped  = true
+#         return
+#     end
 
 
-    zn::T = xn  - (fxn + fyn) / fpxn
-    fzn::S = fs(zn)
-    incfn(o, 1)
+#     zn::T = xn  - (fxn + fyn) / fpxn
+#     fzn::S = fs(zn)
+#     incfn(o, 1)
 
-    xn1 = zn - fzn / fpyn
-    fxn1 = fs(xn1)
-    incfn(o, 1)
+#     xn1 = zn - fzn / fpyn
+#     fxn1 = fs(xn1)
+#     incfn(o, 1)
 
-    o.xn0, o.xn1 = xn, xn1
-    o.fxn0, o.fxn1 = fxn, fxn1
+#     o.xn0, o.xn1 = xn, xn1
+#     o.fxn0, o.fxn1 = fxn, fxn1
 
-    nothing
-end
+#     nothing
+# end
 
 ##################################################
 
@@ -610,7 +611,7 @@ this method generally isn't faster (fewer function calls/steps) over
 other methods when using `Float64` values, but may be useful for
 solving over `BigFloat`.
 
-The error, `eᵢ = xᵢ - α`, is expressed as `eᵢ₊₁ = K⋅eᵢ¹⁶` for an explicit `K` 
+The error, `eᵢ = xᵢ - α`, is expressed as `eᵢ₊₁ = K⋅eᵢ¹⁶` for an explicit `K`
 in equation (50) of the paper.
 
 """
