@@ -1,8 +1,16 @@
 # [Lith, Boonkkamp, and IJzerman](https://doi.org/10.1016/j.amc.2017.09.003)
 # A family of different methods that includes the secant method and Newton's method
 
+function evalf(F::Callable_Function{S,T,𝑭, P}, x, i) where {N,S<:Val{N}, T<:Val{true}, 𝑭, P}
+    F.f[i](x)
+end
+function evalf(F::Callable_Function{S,T,𝑭, P}, x, i) where {S<:Val{1}, T<:Val{false}, 𝑭, P}
+    F.f(x)
+end
+evalf(::Callable_Function, x, i) = throw(ArgumentError("LithBoonkkampIJzerman expects functions to be defined singly or as tuples"))
+
 """
-    LithBoonkkampIJzerman{S,D} <: AbstractNewtonLikeMethod 
+    LithBoonkkampIJzerman{S,D} <: AbstractNewtonLikeMethod
     LithBoonkkampIJzerman(S,D)
 
 Specify a linear multistep solver with `S` steps and `D` derivatives following [Lith, Boonkkamp, and
@@ -26,8 +34,6 @@ p = init(fx, Roots.LithBoonkkampIJzerman(2,1))
 solve!(p); p.state.steps # 6
 p = init(fx, Roots.LithBoonkkampIJzerman(3,1))
 solve!(p); p.state.steps # 7
-p = init(fx, Roots.LithBoonkkampIJzerman(4,1), verbose=true)
-solve!(p); Roots.tracks(p) # 4 iterations, 16 function evaluations
 ```
 
 Multiple derivatives can be constructed automatically using automatic differentiation. For example,
@@ -83,17 +89,18 @@ s/d  0    1    2    3    4
 ```
 
 That is, more memory leads to a higher convergence rate; more
-derivatives leads to a higher convergence rate. However, the 
+derivatives leads to a higher convergence rate. However, the
 interval about `α`, the zero, where the convergence rate is guaranteed
 may get smaller.
 
 !!! Note:
-    For the larger values of `S`, the expressions to compute the next value get quite involved. 
+    For the larger values of `S`, the expressions to compute the next value get quite involved.
     The higher convergence rate is likely only to be of help for finding solutions to high precision.
 
 """
 struct LithBoonkkampIJzerman{S,D} <: AbstractNewtonLikeMethod end
 LithBoonkkampIJzerman(s,d) = LithBoonkkampIJzerman{s,d}()
+fn_argout(::LithBoonkkampIJzerman{S,D}) where {S, D} = 1+D
 
 function init_state(L::LithBoonkkampIJzerman{S,D}, fs, x) where {S,D}
 
@@ -120,7 +127,7 @@ function init_state(L::LithBoonkkampIJzerman{S,D}, fs, x) where {S,D}
 end
 
 
-function update_state(L::LithBoonkkampIJzerman{S,D}, fs, o::UnivariateZeroState, options) where {S,D}
+function update_state(L::LithBoonkkampIJzerman{S,D}, F::Callable_Function, o::UnivariateZeroState, options) where {S,D}
 
     xs, ys′ = o.m, o.fm
     ys = ntuple(i -> view(ys′, 1 + (i-1)*S:(i*S)), Val(1+D)) # unflatten ys′
@@ -132,12 +139,20 @@ function update_state(L::LithBoonkkampIJzerman{S,D}, fs, o::UnivariateZeroState,
     end
     xs[end] = xᵢ
 
-    for (i,fⁱ) ∈ enumerate(fs)
+
+    for i ∈ 1:fn_argout(L)
         for j ∈ 1:S-1
             ys[i][j] = ys[i][j+1]
         end
-        ys[i][end] = fⁱ(xᵢ)
+        ys[i][end] = evalf(F, xᵢ, i)
     end
+
+    # for (i,fⁱ) ∈ enumerate(F.f)
+    #     for j ∈ 1:S-1
+    #         ys[i][j] = ys[i][j+1]
+    #     end
+    #     ys[i][end] = fⁱ(xᵢ)
+    # end
 
     o.xn0, o.xn1 = o.xn1, xᵢ
     o.fxn0, o.fxn1 = o.fxn1, ys[1][end]
@@ -149,19 +164,25 @@ end
 
 # manufacture initial xs, ys
 # use lower memory terms to boot strap up. Secant uses initial default step
-function init_lith(L::LithBoonkkampIJzerman{S,D}, fs, x₀) where {S,D}
+#function init_lith(L::LithBoonkkampIJzerman{S,D}, F::Callable_Function{Si,Tup,𝑭,P}, x₀) where {S,D,Si, Tup <: Val{true}, 𝑭, P}
+function init_lith(L::LithBoonkkampIJzerman{S,D}, F::Callable_Function{Si,Tup,𝑭,P}, x₀) where {S,D,Si, Tup, 𝑭, P}
     # initialize xs, ys
-    x̃₀ = float(x₀)
+    x̃₀ = float(first(x₀))
     R = eltype(x̃₀)
-    f = first(fs)
-    T = promote_type(R, eltype(f(x̃₀)))
+    #f = first(fs)
+    # T = promote_type(R, eltype(f(x̃₀)))
+    f̃₀ = evalf(F, x̃₀, 1)
+    T =  promote_type(R, eltype(f̃₀))
 
     xs = Vector{T}(undef,S)
-    ys = ntuple(i -> Vector{T}(undef,S), D+1) 
+    ys = ntuple(i -> Vector{T}(undef,S), D+1)
     xs[1] = x̃₀
-    for (i,fⁱ) ∈ enumerate(fs)
-        ys[i][1] = fⁱ(x̃₀)
+    for i ∈ 1:fn_argout(L)#enumerate(F.f) ## Error if not a Tuple
+        ys[i][1] = evalf(F, x̃₀, i)
     end
+#    for (i,fⁱ) ∈ enumerate(F.f) ## Error if not a Tuple
+#        ys[i][1] = fⁱ(x̃₀)
+#    end
 
     # build up to get S of them
     N = 1
@@ -169,15 +190,18 @@ function init_lith(L::LithBoonkkampIJzerman{S,D}, fs, x₀) where {S,D}
         x₀ = _default_secant_step(x̃₀)
         xs[2] = xs[1] # shift to first
         xs[1] = x₀
-        ys[1][2] = f(x₀)
+        ys[1][2] = evalf(F,x₀,1)
         N += 1
     end
     for (i,S′) ∈ enumerate(N:S-1)
         xᵢ = lmm(LithBoonkkampIJzerman(S′,D), xs, ys...)
         xs[N+i] = xᵢ
-        for (j,fʲ) ∈ enumerate(fs)
-            ys[j][N+i] = fʲ(xᵢ)
+        for j ∈ 1:fn_argout(L)
+            ys[j][N+i] = evalf(F, xᵢ, j)
         end
+#        for (j,fʲ) ∈ enumerate(F.f) # XXX
+#            ys[j][N+i] = fʲ(xᵢ)
+#        end
     end
 
     xs, ys
@@ -208,9 +232,9 @@ the next step.
 """
 struct LithBoonkkampIJzermanBracket <: AbstractBracketing end
 
-function init_state(::LithBoonkkampIJzermanBracket, F::FirstDerivative, xs)
+function init_state(::LithBoonkkampIJzermanBracket, F::Callable_Function{S,Tup,𝑭,P}, xs) where {S, Tup <: Val{true}, 𝑭, P}
     u, v = promote(float.(xs)...)
-    fu,fv = F.f(u), F.f(v)
+    fu,fv = F.f[1](u), F.f[1](v)
     isbracket(fu, fv) || throw(ArgumentError(bracketing_error))
 
     if abs(fu) < abs(fv)
@@ -218,7 +242,7 @@ function init_state(::LithBoonkkampIJzermanBracket, F::FirstDerivative, xs)
     else
         a,b,fa,fb = u,v,fu,fv
     end
-    f′a,f′b = F.fp(a), F.fp(b)
+    f′a,f′b = F.f[2](a), F.f[2](b) # F.fp(a), F.fp(b)
     c,fc,f′c = a,fa,f′a
 
     # keep bracket, int[a,b] as xn1, xn0, m=[c]
@@ -236,14 +260,14 @@ function update_state(M::LithBoonkkampIJzermanBracket, F, state::UnivariateZeroS
     fb::S,fc::S,fa::S = state.fxn1, state.fm[1], state.fxn0
     f′a::S, f′c::S, f′b::S = state.fm[2],state.fm[3],state.fm[4]
 
-        
+
     # Get next interpolating step
     # decide on S and D;
     # S is 3 if a,b,c are distinct; D=1 unless all derivative info will be of the wrong sign.
     s::Int = ((a == c) || (b == c)) ? 2 : 3
 
     # which derivatives do we include
-    sₘ = sign((fb-fa)/(b-a))         
+    sₘ = sign((fb-fa)/(b-a))
     mc, mb = sign(f′c) == sₘ, sign(f′b) == sₘ
 
     d₀::S = zero(S)
@@ -252,12 +276,12 @@ function update_state(M::LithBoonkkampIJzermanBracket, F, state::UnivariateZeroS
             # D = 1
             as, bs = lmm_coefficients(LithBoonkkampIJzerman{s,1}(), (c,b), (fc, fb))
             h = -fb
-            
+
             d₀ = -sum(as .* (c,b))
             mb && (d₀ += h * bs[2]/f′b)
             mc && (d₀ += h * bs[1]/f′c)
         else
-            d₀ = lmm(LithBoonkkampIJzerman{s, 0}(), (c,b), (fc, fb))            
+            d₀ = lmm(LithBoonkkampIJzerman{s, 0}(), (c,b), (fc, fb))
         end
     else
         ma = sign(f′a) == sₘ
@@ -265,16 +289,16 @@ function update_state(M::LithBoonkkampIJzermanBracket, F, state::UnivariateZeroS
             # D = 1
             as, bs = lmm_coefficients(LithBoonkkampIJzerman{3,1}(),(a,c,b), (fa,fc,fb))
             h = -fb
-            
+
             d₀ = -sum(as .* (a,c,b))
             mb && (d₀ += h * bs[end]/f′b) # only when helpful
-            mc && (d₀ += h * bs[end-1]/f′c)                
+            mc && (d₀ += h * bs[end-1]/f′c)
             ma && (d₀ += h * bs[end-2]/f′a)
         else
             d₀ = lmm(LithBoonkkampIJzerman{3, 0}(), (a,c,b), (fa, fc,fb))
         end
     end
-    
+
     # If the step is smaller than the tolerance, use the tolerance as step size.
     xatol, xrtol = options.xabstol, options.xreltol
     δ = xatol + abs(b) * xrtol
@@ -285,16 +309,16 @@ function update_state(M::LithBoonkkampIJzermanBracket, F, state::UnivariateZeroS
 
     # compare to bisection step; extra function evalution
     d₁ = a + (b-a)* (0.5) #_middle(a, b)
-    f₀, f₁ = F.f(d₀), F.f(d₁)
-    
+    f₀, f₁ = F.f[1](d₀), F.f[1](d₁) # F.f(d₀), F.f(d₁)
+
     # interpolation outside a,b or bisection better use that
     d::T,fd::S,f′d::S = zero(T), zero(S), zero(S)
     if (abs(f₀) < abs(f₁)) && (min(a,b) < d₀ < max(a,b))
-        d,fd,f′d = d₀,f₀,F.fp(d₀) # interp
+        d,fd,f′d = d₀,f₀, F.f[2](d₀) #F.fp(d₀) # interp
     else
-        d,fd,f′d = d₁,f₁,F.fp(d₁)  # bisection
+        d,fd,f′d = d₁,f₁, F.f[2](d₁) #F.fp(d₁)  # bisection
     end
-    
+
     # either [a,d] a bracket or [d,b]
     # [a < d] < b ...c -- b -> d, c-> b (update?)
     # a < [d < b] ...c -- a -> d (update?)
@@ -304,20 +328,20 @@ function update_state(M::LithBoonkkampIJzermanBracket, F, state::UnivariateZeroS
     else
         a,fa,f′a = d, fd, f′d
     end
-    
+
     # a,b bracket; keep |fb| ≤ |fa|
     if abs(fa) < abs(fb)
         c, fc,f′c = b, fb, f′b
         a,b,fa,fb,f′a,f′b = b,a,fb,fa,f′b,f′a
     end
-    
+
     state.xn1,state.xn0, state.m[1] = b,a,c
     state.fxn1,state.fxn0 = fb, fa
     state.fm .= (fc, f′a, f′c, f′b)
 
     incfn(state, 3)
     nothing
-    
+
 end
 
 function default_tolerances(::M, ::Type{T}, ::Type{S}) where {M<:LithBoonkkampIJzermanBracket,T,S}
@@ -485,14 +509,14 @@ end
 ## d = 1; Newton-like
 
 # return (as, bs⁰,[bs¹,...,bsⁿ⁻¹])
-# where -∑ aᵢ xᵢ + h ⋅ ∑ₙ (∑ bsʲᵢ Fʲᵢ)l 
+# where -∑ aᵢ xᵢ + h ⋅ ∑ₙ (∑ bsʲᵢ Fʲᵢ)l
 function lmm_coefficients(::LithBoonkkampIJzerman{1,1}, xs, fs)
     a0 = -one(xs[1])
     b0 = one(fs[1])
 
-    return (a0,), (b0,)    
+    return (a0,), (b0,)
 
-end     
+end
 
 function lmm_coefficients(::LithBoonkkampIJzerman{2,1}, xs, fs)
     q = fs[1]/fs[2]
@@ -506,7 +530,7 @@ function lmm_coefficients(::LithBoonkkampIJzerman{2,1}, xs, fs)
 
     return (a0,a1), (b0,b1)
 
-end     
+end
 
 
 function lmm_coefficients(::LithBoonkkampIJzerman{3,1}, xs, fs)
@@ -524,7 +548,7 @@ function lmm_coefficients(::LithBoonkkampIJzerman{3,1}, xs, fs)
     b2 = (q0^2*q1^2) / ((q0-1)^2 * (q1-1)^2)
 
     return (a0,a1,a2), (b0,b1,b2)
-end     
+end
 
 function lmm_coefficients(::LithBoonkkampIJzerman{S,1}, xs, fs) where {S}
     error("not computed")
@@ -557,9 +581,9 @@ function lmm(::LithBoonkkampIJzerman{1,2}, xs, fs, f′s,f′′s)
     f0 = fs[1]
     f′0 = f′s[1]
     f′′0 = f′′s[1]
-    
+
     -f0^2*f′′0/(2*f′0^3) - f0/f′0 + x0
-    
+
 end
 
 
@@ -582,7 +606,7 @@ function lmm(::LithBoonkkampIJzerman{3,2}, xs, fs, f′s,f′′s)
 
     ## can get from script, but too long for inclusion here
     error("not implemented")
-    
+
 end
 
 function lmm(::LithBoonkkampIJzerman{4,2}, xs, fs, f′s,f′′s)
@@ -599,7 +623,7 @@ function lmm(::LithBoonkkampIJzerman{1,3}, xs,  fs, f′s,f′′s, f′′′s)
 
     (f0^3*(f′0*f′′′0 - 3*f′′0^2)/6 - f0^2*f′0^2*f′′0/2 - f0*f′0^4 + f′0^5*x0)/f′0^5
 
-    
+
 end
 
 function lmm(::LithBoonkkampIJzerman{2,3}, xs,  fs, f′s, f′′s, f′′′s)
@@ -622,7 +646,7 @@ function lmm(::LithBoonkkampIJzerman{3,3} ,xs,  fs, f′s, f′′s, f′′′s
 
     # can get from script, but too long for inclusion here
     error("not implemented")
-    
+
 end
 
 function lmm(::LithBoonkkampIJzerman{4,3}, xs,  fs, f′s, f′′s, f′′′s)
@@ -631,7 +655,7 @@ function lmm(::LithBoonkkampIJzerman{4,3}, xs,  fs, f′s, f′′s, f′′′s
     f′0,f′1,f′2,f′3 = f′s
     f′′0,f′′1,f′′2,f′′3 = f′′s
     f′′′0,f′′′1,f′′′2,f′′′3 = f′′′s
-    
+
     error("not computed")
 end
 
@@ -658,7 +682,7 @@ function lmm(::LithBoonkkampIJzerman{2,4}, xs, fs, f′s, f′′s, f′′′s,
     f′′′′0,f′′′′1 = f′′′′s
 
     (-f0^9*f1^4*f′0^7*f′1^2*f′′′′1 - 10*f0^9*f1^4*f′0^7*f′1*f′′1*f′′′1 - 15*f0^9*f1^4*f′0^7*f′′1^2 + 4*f0^9*f1^3*f′0^7*f′1^3*f′′′1 - 12*f0^9*f1^3*f′0^7*f′1^2*f′′1^2 - 12*f0^9*f1^2*f′0^7*f′1^4*f′′1 - 24*f0^9*f1*f′0^7*f′1^6 + 24*f0^9*f′0^7*f′1^7*x1 + 4*f0^8*f1^5*f′0^7*f′1^2*f′′′′1 + 40*f0^8*f1^5*f′0^7*f′1*f′′1*f′′′1 + 60*f0^8*f1^5*f′0^7*f′′1^2 + f0^8*f1^5*f′0^2*f′1^7*f′′′′0 + 10*f0^8*f1^5*f′0*f′1^7*f′′0*f′′′0 + 15*f0^8*f1^5*f′1^7*f′′0^2 - 36*f0^8*f1^4*f′0^7*f′1^3*f′′′1 + 108*f0^8*f1^4*f′0^7*f′1^2*f′′1^2 + 108*f0^8*f1^3*f′0^7*f′1^4*f′′1 + 216*f0^8*f1^2*f′0^7*f′1^6 - 216*f0^8*f1*f′0^7*f′1^7*x1 - 6*f0^7*f1^6*f′0^7*f′1^2*f′′′′1 - 60*f0^7*f1^6*f′0^7*f′1*f′′1*f′′′1 - 90*f0^7*f1^6*f′0^7*f′′1^2 - 4*f0^7*f1^6*f′0^2*f′1^7*f′′′′0 - 40*f0^7*f1^6*f′0*f′1^7*f′′0*f′′′0 - 60*f0^7*f1^6*f′1^7*f′′0^2 + 84*f0^7*f1^5*f′0^7*f′1^3*f′′′1 - 252*f0^7*f1^5*f′0^7*f′1^2*f′′1^2 - 24*f0^7*f1^5*f′0^3*f′1^7*f′′′0 + 72*f0^7*f1^5*f′0^2*f′1^7*f′′0^2 - 432*f0^7*f1^4*f′0^7*f′1^4*f′′1 - 864*f0^7*f1^3*f′0^7*f′1^6 + 864*f0^7*f1^2*f′0^7*f′1^7*x1 + 4*f0^6*f1^7*f′0^7*f′1^2*f′′′′1 + 40*f0^6*f1^7*f′0^7*f′1*f′′1*f′′′1 + 60*f0^6*f1^7*f′0^7*f′′1^2 + 6*f0^6*f1^7*f′0^2*f′1^7*f′′′′0 + 60*f0^6*f1^7*f′0*f′1^7*f′′0*f′′′0 + 90*f0^6*f1^7*f′1^7*f′′0^2 - 76*f0^6*f1^6*f′0^7*f′1^3*f′′′1 + 228*f0^6*f1^6*f′0^7*f′1^2*f′′1^2 + 76*f0^6*f1^6*f′0^3*f′1^7*f′′′0 - 228*f0^6*f1^6*f′0^2*f′1^7*f′′0^2 + 588*f0^6*f1^5*f′0^7*f′1^4*f′′1 + 252*f0^6*f1^5*f′0^4*f′1^7*f′′0 + 2016*f0^6*f1^4*f′0^7*f′1^6 - 2016*f0^6*f1^3*f′0^7*f′1^7*x1 - f0^5*f1^8*f′0^7*f′1^2*f′′′′1 - 10*f0^5*f1^8*f′0^7*f′1*f′′1*f′′′1 - 15*f0^5*f1^8*f′0^7*f′′1^2 - 4*f0^5*f1^8*f′0^2*f′1^7*f′′′′0 - 40*f0^5*f1^8*f′0*f′1^7*f′′0*f′′′0 - 60*f0^5*f1^8*f′1^7*f′′0^2 + 24*f0^5*f1^7*f′0^7*f′1^3*f′′′1 - 72*f0^5*f1^7*f′0^7*f′1^2*f′′1^2 - 84*f0^5*f1^7*f′0^3*f′1^7*f′′′0 + 252*f0^5*f1^7*f′0^2*f′1^7*f′′0^2 - 252*f0^5*f1^6*f′0^7*f′1^4*f′′1 - 588*f0^5*f1^6*f′0^4*f′1^7*f′′0 - 1344*f0^5*f1^5*f′0^7*f′1^6 + 1344*f0^5*f1^5*f′0^6*f′1^7 + 3024*f0^5*f1^4*f′0^7*f′1^7*x1 + f0^4*f1^9*f′0^2*f′1^7*f′′′′0 + 10*f0^4*f1^9*f′0*f′1^7*f′′0*f′′′0 + 15*f0^4*f1^9*f′1^7*f′′0^2 + 36*f0^4*f1^8*f′0^3*f′1^7*f′′′0 - 108*f0^4*f1^8*f′0^2*f′1^7*f′′0^2 + 432*f0^4*f1^7*f′0^4*f′1^7*f′′0 - 2016*f0^4*f1^6*f′0^6*f′1^7 - 3024*f0^4*f1^5*f′0^7*f′1^7*x0 - 4*f0^3*f1^9*f′0^3*f′1^7*f′′′0 + 12*f0^3*f1^9*f′0^2*f′1^7*f′′0^2 - 108*f0^3*f1^8*f′0^4*f′1^7*f′′0 + 864*f0^3*f1^7*f′0^6*f′1^7 + 2016*f0^3*f1^6*f′0^7*f′1^7*x0 + 12*f0^2*f1^9*f′0^4*f′1^7*f′′0 - 216*f0^2*f1^8*f′0^6*f′1^7 - 864*f0^2*f1^7*f′0^7*f′1^7*x0 + 24*f0*f1^9*f′0^6*f′1^7 + 216*f0*f1^8*f′0^7*f′1^7*x0 - 24*f1^9*f′0^7*f′1^7*x0)/(24*f′0^7*f′1^7*(f0^9 - 9*f0^8*f1 + 36*f0^7*f1^2 - 84*f0^6*f1^3 + 126*f0^5*f1^4 - 126*f0^4*f1^5 + 84*f0^3*f1^6 - 36*f0^2*f1^7 + 9*f0*f1^8 - f1^9))
-    
+
 end
 
 function lmm(::LithBoonkkampIJzerman{3,4}, xs, fs, f′s, f′′s, f′′′s, f′′′′s)

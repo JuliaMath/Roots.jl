@@ -137,8 +137,10 @@ end
     end
 
     # solve and parameters
+    # should be positional, but named supported for now
     g2 = (x,p) -> cos(x) - x/p
     fx = ZeroProblem(g2, (0,pi/2))
+    @test solve(fx, 2) ≈ find_zero(x -> cos(x) - x/2, (0, pi/2))
     @test solve(fx, p=2) ≈ find_zero(x -> cos(x) - x/2, (0, pi/2))
     @test solve(fx, p=3) ≈ find_zero(x -> cos(x) - x/3, (0, pi/2))
     g3 = (x, p) -> cos(x) + p[1]*x - p[2]
@@ -233,6 +235,40 @@ end
     g1 = x -> exp(x) - x^4
     @test find_zero(g1, 8.3, Order3_Test()) ≈ find_zero(g1, 8.3, Order1())
 
+    # test many different calling styles
+    f(x) = (sin(x), sin(x)/cos(x)) # x -> (f(x), f(x)/f′(x))
+    fs(x) = (sin, cos) # (f, f′)
+    x0 = (3,4)
+    g(x,p) = begin
+        fx = cos(x) - x/p
+        (fx, fx/(-sin(x) - 1/p))
+    end
+    x0a = (0.0, pi/2)
+    α₂, α₃ = 1.0298665293222589, 1.1701209500026262
+    @test find_zero(f, x0) ≈ π
+    @test find_zero(f, first(x0)) ≈ π
+    @test find_zero(g, x0a, p=2) ≈ α₂
+    @test find_zero(g, first(x0a), p=2) ≈ α₂
+    Z = ZeroProblem(f, x0)
+    Za = ZeroProblem(g, x0a)
+    @test solve(Z) ≈ π
+    @test solve(Za, 3) ≈ α₃
+    @test solve(Za, p=2) ≈ α₂
+    @test solve!(init(Z)) ≈ π
+    @test solve!(init(Za, 3)) ≈ α₃
+    @test solve!(init(Za, p=3)) ≈ α₃
+    Ms = (Roots.Secant(), Roots.Bisection(), Roots.Newton())
+    for M ∈ Ms
+        @test find_zero(f, x0, M) ≈ π
+        @test solve(Z, M) ≈ π
+        @test solve!(init(Z, M)) ≈ π
+        @test find_zero(g, x0a, M, p=2) ≈ α₂
+        @test solve(Za, M, 2) ≈ α₂
+        @test solve(Za, M, p=2) ≈ α₂
+        @test solve!(init(Za, M, 2)) ≈ α₂
+    end
+
+
 end
 
 @testset "find_zero issue tests" begin
@@ -312,14 +348,14 @@ end
         I_sintan(x) = tan(x)/2cos(x) - atanh(tan(x/2))
         I_sintan(x, y) = I_sintan(y) - I_sintan(x)
         function lhs(θ)
-        tRem = (vy - T/α*(sec(θ1) - sec(θ))) / g
+            tRem = (vy - T/α*(sec(θ1) - sec(θ))) / g
             val = -yf + y + vy*tRem - 0.5g*tRem^2 - T/α^2*I_sintan(θ, θ1)
             val
         end
 
         M = Roots.FalsePosition()
-        f, x0 = lhs, [atan(α*tf), atan(α*(tf-t1))]
-        F = Roots.DerivativeFree(lhs)
+        x0 = [atan(α*tf), atan(α*(tf-t1))]
+        F = Roots.Callable_Function(M, lhs, nothing) #Roots.DerivativeFree(lhs)
         state = Roots.init_state(M, F, x0)
         options = Roots.init_options(M, state)
         find_zero(M, F, state, options)

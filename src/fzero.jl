@@ -4,6 +4,11 @@
 ## * fzeros(f, ...) to attempt to find all zeros of f, a univariate function
 ## unlike `find_zero` these do not specialize on f, so
 ## will be faster the first use, and slower for subsequent uses (for the same f)
+struct FnWrapper
+    f
+end
+(F::FnWrapper)(x::Number) = first(F.f(x))
+
 
 """
     fzero(f, x0; order=0; kwargs...)

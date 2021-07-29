@@ -59,7 +59,9 @@ end
     fpppp(x) = 60
 
     @test solve(ZeroProblem((f,), x₀), Roots.LithBoonkkampIJzerman(3,0)) ≈ α
+    @test solve(ZeroProblem(f, x₀), Roots.LithBoonkkampIJzerman(3,0)) ≈ α
     @test solve(ZeroProblem((f,), x₀), Roots.LithBoonkkampIJzerman(4,0)) ≈ α
+    @test solve(ZeroProblem(f, x₀), Roots.LithBoonkkampIJzerman(4,0)) ≈ α
 
     @test solve(ZeroProblem((f,fp), x₀), Roots.LithBoonkkampIJzerman(2,1)) ≈ α
     @test solve(ZeroProblem((f,fp), x₀), Roots.LithBoonkkampIJzerman(3,1)) ≈ α
@@ -67,7 +69,7 @@ end
     @test solve(ZeroProblem((f,fp, fpp), x₀), Roots.LithBoonkkampIJzerman(1,2)) ≈ α
     @test solve(ZeroProblem((f,fp, fpp), x₀), Roots.LithBoonkkampIJzerman(2,2)) ≈ α
 
-    @test solve(ZeroProblem((f,fp, fpp, fppp), x₀), Roots.LithBoonkkampIJzerman(1,3)) ≈ α    
+    @test solve(ZeroProblem((f,fp, fpp, fppp), x₀), Roots.LithBoonkkampIJzerman(1,3)) ≈ α
     @test solve(ZeroProblem((f,fp, fpp, fppp), x₀), Roots.LithBoonkkampIJzerman(2,3)) ≈ α
 
     @test solve(ZeroProblem((f,fp, fpp, fppp, fpppp), x₀), Roots.LithBoonkkampIJzerman(1,4)) ≈ α
@@ -75,6 +77,5 @@ end
 
     # bracketing
     @test solve(ZeroProblem((f,fp), (1,2)), Roots.LithBoonkkampIJzermanBracket()) ≈ α
-    
-end
 
+end

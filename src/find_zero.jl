@@ -33,9 +33,13 @@ abstract type AbstractBracketing <: AbstractUnivariateZeroMethod end
 abstract type AbstractNonBracketing <: AbstractUnivariateZeroMethod end
 abstract type AbstractSecant <: AbstractNonBracketing end
 
+# indicate if we expect f() to return one or multiple values (e.g. Newton)
+fn_argout(::AbstractUnivariateZeroMethod) = 1
+
 
 ### States
 abstract type  AbstractUnivariateZeroState end
+
 mutable struct UnivariateZeroState{T,S} <: AbstractUnivariateZeroState where {T,S}
     xn1::T
     xn0::T
@@ -221,6 +225,8 @@ xs::Vector{T}
 fs::Vector{S}
 end
 Tracks(s::UnivariateZeroState{T,S}) where {T, S} = Tracks(T[],S[])
+Tracks(verbose, tracks, state) = (verbose && isa(tracks, NullTracks)) ? Tracks(state) : tracks
+
 
 log_step(s::Tracks, M::Any, o, ::Any) = log_step(s, M, o)
 
@@ -239,110 +245,72 @@ end
 
 
 ### Functions
-abstract type CallableFunction end
-
-struct FnWrapper <: CallableFunction
-   f
-end
-
-struct DerivativeFree{F} <: CallableFunction
+# A hacky means to call a function so that parameters can be passed as desired
+# and the correct number of outputs are computed
+struct Callable_Function{Single, Tup, F, P}
     f::F
-end
-
-struct FirstDerivative{F,FP} <: CallableFunction
-    f::F
-    fp::FP
-end
-
-struct SecondDerivative{F,FP,FPP} <: CallableFunction
-    f::F
-    fp::FP
-    fpp::FPP
-end
-
-
-# (f,f',f'', f''', ...)
-struct NDerivative <: CallableFunction
-    fs
-end
-
-function Base.iterate(o::DerivativeFree, st=nothing)
-    st == nothing && return (o.f,1)
-    nothing
-end
-
-function Base.iterate(o::FirstDerivative, st=nothing)
-    st == nothing && return (o.f,1)
-    st == 1 && return (o.fp, 2)
-    nothing
-end
-
-function Base.iterate(o::SecondDerivative, st=nothing)
-    st == nothing && return (o.f,1)
-    st == 1 && return (o.fp, 2)
-    st == 2 && return (o.fp, 3)
-    nothing
-end
-
-Base.iterate(o::NDerivative) = iterate(o.fs)
-Base.iterate(o::NDerivative,st) = iterate(o.fs,st)
-
-
-(F::FnWrapper)(x::Number) = first(F.f(x))
-(F::DerivativeFree)(x::Number) = first(F.f(x))
-(F::FirstDerivative)(x::Number) = first(F.f(x))
-(F::SecondDerivative)(x::Number) = first(F.f(x))
-(F::NDerivative)(x::Number) = first(F.fs)(x)
-
-## Return f, f/f'
-function fΔx(F::DerivativeFree, x)
-    F.f(x)
-end
-
-function fΔx(F::Union{FirstDerivative, SecondDerivative},x)
-    fx, fpx = F.f(x), F.fp(x)
-    fx, fx/fpx
-end
-function fΔx(F, x)
-    F(x)
-end
-
-# return f, f/f', f'/f'' (types T, S, S)
-fΔxΔΔx(F::DerivativeFree, x) = F.f(x)
-fΔxΔΔx(F::FirstDerivative, x) = error("no second derivative defined")
-function fΔxΔΔx(F::SecondDerivative, x)
-    fx, fp, fpp = F.f(x), F.fp(x), F.fpp(x)
-    (fx, fx/fp, fp/fpp)
-end
-fΔxΔΔx(F, x) = F(x)
-
-
-# allows override for function, if desired
-# the default for this specializes on the function passed
-# in. When specialization occurs there is overhead due to compilation
-# costs which can be amortized over subsequent calls to `find_zero`.
-# However, if a function is only used once, then using `fzero` will be
-# faster. (The difference is clear between `@time` and `@btime` to measure
-# execution time)
-#                 first call    subsequent calls  default for
-# specialize       slower         faster          find_zero
-# no specialize    faster         slower          fzero
-#
-# allow parameters to be passed in
-parameter_wrap(f,p) = x -> f(x,p)
-function callable_function(fs::Any, p=nothing)
-    isa(p, Nothing) && return _callable_function(fs)
-    return _callable_function(parameter_wrap.(fs, (p,)))
-end
-function _callable_function(fs)
-    if isa(fs, Tuple)
-        length(fs)==1 && return DerivativeFree(fs[1])
-        length(fs)==2 && return FirstDerivative(fs[1],fs[2])
-        length(fs)==3 && return SecondDerivative(fs[1],fs[2],fs[3])
-        return NDerivative(fs)
+    p::P
+    function Callable_Function(M, f, p=nothing)
+        Single = Val{fn_argout(M)}
+        Tup = Val{isa(f, Tuple)}
+        F = typeof(f)
+        P = typeof(p)
+        new{Single, Tup, F, P}(f, p)
     end
-    DerivativeFree(fs)
 end
+function CallableFunction(M,F::Callable_Function, p=F.p)
+    CallableFunction(M, F.f, p)
+end
+
+
+# Callable_Function(output_arity, input_arity, F, p)
+(F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{1}, T <: Val{false}, 𝑭, P<:Nothing} =
+    first(F.f(x))
+(F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{1}, T <: Val{false}, 𝑭, P} =
+    first(F.f(x, F.p))
+
+(F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{1}, T <: Val{true}, 𝑭, P<:Nothing} =
+    first(F.f)(x)
+(F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{1}, T <: Val{true}, 𝑭, P} =
+    first(F.f)(x, F.p)
+
+(F::Callable_Function{S,T,𝑭,P})(x) where {N, S <: Val{N}, T <: Val{false}, 𝑭, P<:Nothing} =
+    F.f(x)[1:N]
+(F::Callable_Function{S,T,𝑭,P})(x) where {N, S <: Val{N}, T <: Val{false}, 𝑭, P} =
+    F.f(x, F.p)[1:N]
+
+(F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{2}, T <: Val{true}, 𝑭, P<:Nothing} = begin
+    f, f′ = (F.f[1])(x), (F.f[2])(x)
+    (f, f/f′)
+end
+(F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{2}, T <: Val{true}, 𝑭, P} = begin
+    f, f′ = (F.f[1])(x, F.p), (F.f[2])(x, F.p)
+    (f, f/f′)
+end
+
+(F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{3}, T <: Val{true}, 𝑭, P<:Nothing} = begin
+    f, f′, f′′ = (F.f[1])(x), (F.f[2])(x), (F.f[3])(x)
+    (f, f/f′, f′/f′′)
+end
+(F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{3}, T <: Val{true}, 𝑭, P} = begin
+    f, f′ = (F.f[1])(x, F.p), (F.f[2])(x, F.p), (F.f[3])(x, F.p)
+    (f, f/f′, f′/f′′)
+end
+
+_apply(f,x) = f(x)
+_apply(f,x, p) = f(x, p)
+
+
+(F::Callable_Function{S,T,𝑭,P})(x) where {𝐍, S <: Val{𝐍}, T <: Val{true}, 𝑭, P<:Nothing} = begin
+    fs = _apply.(F.f, Ref(x))
+    Tuple(iszero(i) ? fs[1] : fs[i]/fs[i+1] for i ∈ 0:length(fs)-1)
+end
+
+(F::Callable_Function{S,T,𝑭,P})(x) where {𝐍, S <: Val{𝐍}, T <: Val{true}, 𝑭, P} = begin
+    fs = _apply.(F.f, Ref(x), Ref(p))
+    Tuple(iszero(i) ? fs[1] : fs[i]/fs[i+1] for i ∈ 0:length(fs)-1)
+end
+
 
 
 ## Assess convergence
@@ -442,6 +410,59 @@ function check_steps_fnevals(state, options)
     return false
 end
 
+# state has stopped, this identifies if it has converged
+function decide_convergence(M::AbstractUnivariateZeroMethod,  F, state::UnivariateZeroState{T,S}, options) where {T,S}
+    xn1 = state.xstar
+    fxn1 = state.fxstar
+
+    if (state.stopped || state.x_converged) && !(state.f_converged)
+        ## stopped is a heuristic, x_converged can mask issues
+        ## if strict == false, this will also check f(xn) ~ - with a relaxed
+        ## tolerance
+
+        ## are we at a crossing values?
+        ## seems worth a check for 2 fn evals.
+        if T <: Real && S <: Real
+            for u in (prevfloat(xn1), nextfloat(xn1))
+                fu = first(F(u))
+                if iszero(fu) || _unitless(fu * fxn1) < 0
+                    state.message *= "Change of sign at xn identified. "
+                    state.f_converged = true
+                end
+            end
+        end
+
+        δ = maximum(_unitless, (options.abstol, options.reltol))
+        if options.strict || iszero(δ)
+            if state.x_converged
+                state.f_converged = true
+            else
+                state.convergence_failed = true
+            end
+
+        else
+            xstar, fxstar = state.xn1, state.fxn1
+            if _is_f_approx_0(fxstar, xstar, options.abstol, options.reltol, :relaxed)
+                state.xstar, state.fxstar = xstar, fxstar
+                msg = "Algorithm stopped early, but |f(xn)| < ϵ^(1/3), where ϵ depends on xn, rtol, and atol. "
+                state.message = state.message == "" ? msg : state.message * "\n\t" * msg
+                state.f_converged = true
+            else
+                state.convergence_failed = true
+            end
+        end
+    end
+
+    if !state.f_converged
+        state.xstar, state.fxstar = NaN*xn1, NaN*fxn1
+    end
+
+    state.xstar
+
+end
+
+## ----
+
 function show_trace(method, N, state, tracks)
     converged = state.x_converged || state.f_converged
     println("Results of univariate zero finding:\n")
@@ -506,7 +527,7 @@ If no method is specified, the default method depends on `x0`:
 The function(s) are passed as the first argument.
 
 For the few methods that use one or more derivatives (`Newton`, `Halley`,
-`Schroder`, `LithBoonkkampIJzerman(S,D)`, and optionally `Order5`) a
+`Schroder`, `LithBoonkkampIJzerman(S,D)`, and  `Order5Derivative`) a
 tuple of functions is used.
 
 # Optional arguments (tolerances, limit evaluations, tracing)
@@ -594,7 +615,12 @@ julia> fn(find_zero(fn, x0, Order2())) <= 1e-14  # f(xₙ) ≈ 0, but Δxₙ can
 true
 
 julia> find_zero(fn, x0, Order2(), atol=0.0, rtol=0.0) # error: x_n ≉ x_{n-1}; just f(x_n) ≈ 0
-ERROR: Roots.ConvergenceFailed("Stopped at: xn = 2.9921081308371615. Too many steps taken. ")
+ERROR: Roots.ConvergenceFailed("Stopped at: xn = 2.991488255523429. Increment `Δx` has issues. Too many steps taken. ")
+Stacktrace:
+ [1] find_zero(fs::Function, x0::Float64, M::Order2; p::Nothing, verbose::Bool, tracks::Roots.NullTracks, kwargs::Base.Iterators.Pairs{Symbol, Float64, Tuple{Symbol, Symbol}, NamedTuple{(:atol, :rtol), Tuple{Float64, Float64}}})
+   @ Roots ~/julia/Roots/src/find_zero.jl:672
+ [2] top-level scope
+   @ none:1
 
 julia> fn = x -> (sin(x)*cos(x) - x^3 + 1)^9;
 
@@ -607,10 +633,10 @@ julia> find_zero(fn, x0, Order2(), maxevals=3)    # Roots.ConvergenceFailed: 26 
 ERROR: Roots.ConvergenceFailed("Stopped at: xn = 1.0482748172022405. Too many steps taken. ")
 ```
 
-Tracing output.
+Passing `verbose=true` will show details on the steps of the algorithm:
 
 ```jldoctest find_zero
-julia> find_zero(x->sin(x), 3.0, Order2(), verbose=true)   # 3 iterations
+julia> find_zero(x->sin(x), 3.0, Order2(), verbose=true)   # 2 iterations
 Results of univariate zero finding:
 
 * Converged to: 3.1415926535897936
@@ -627,92 +653,61 @@ x_2 =  3.1415926535897936,	 fx_2 = -0.0000000000000003
 3.1415926535897936
 ```
 
-```jldoctest find_zero
-julia> find_zero(x->sin(x)^5, 3.0, Order2(), verbose=true) # 22 iterations
-Results of univariate zero finding:
-
-* Converged to: 3.1405349388309682
-* Algorithm: Order2()
-* iterations: 22
-* function evaluations: 46
-* stopped as |f(x_n)| ≤ max(δ, max(1,|x|)⋅ϵ) using δ = atol, ϵ = rtol
-
-Trace:
-x_0 =  3.0000000000000000,	 fx_0 =  0.0000559684091879
-x_1 =  3.0285315910604353,	 fx_1 =  0.0000182783542076
-x_2 =  3.0512479368872216,	 fx_2 =  0.0000059780426727
-[...]
-x_21 =  3.1402867582538070,	 fx_21 =  0.0000000000000038
-x_22 =  3.1405349388309682,	 fx_22 =  0.0000000000000013
-
-3.1405349388309682
-
-julia> find_zero(x->sin(x)^5, 3.0, Roots.Order2B(), verbose=true) # 2 iterations
-Results of univariate zero finding:
-
-* Converged to: 3.1397074174874358
-* Algorithm: Roots.Order2B()
-* iterations: 41
-* function evaluations: 85
-* Note: Estimate for multiplicity had issues. Too many steps taken.
-	  Algorithm stopped early, but |f(xn)| < ϵ^(1/3), where ϵ depends on xn, rtol, and atol.
-
-Trace:
-x_0 =  3.0000000000000000,	 fx_0 =  0.0000559684091879
-x_1 =  3.1397074174874358,	 fx_1 =  0.0000000000000238
-[...]
-x_40 =  3.1397074174874358,	 fx_40 =  0.0000000000000238
-x_41 =  3.1397074174874358,	 fx_41 =  0.0000000000000238
-
-3.1397074174874358
-```
-
 !!! note
-    See [`ZeroProblem`](@ref) for an interator interface to the underlying algorithms.
+    See [`solve`](@ref) and [`ZeroProblem`](@ref) for an alternate interface.
 """
-function find_zero(fs, x0, method::AbstractUnivariateZeroMethod,
-                   N::Union{Nothing, AbstractBracketing}=nothing;
-                   tracks::AbstractTracks=NullTracks(),
-                   verbose=false,
+function find_zero(fs, x0, M::AbstractUnivariateZeroMethod;
                    p = nothing,
+                   verbose=false,
+                   tracks::AbstractTracks=NullTracks(),
                    kwargs...)
 
-    F = callable_function(fs, p)
-    state = init_state(method, F, x0)
-    options = init_options(method, state; kwargs...)
+    Z = ZeroProblem(fs, x0)
+    ZPI = init(Z, M, p;
+               verbose=verbose, tracks=tracks,
+               kwargs...)
 
-    l = (verbose && isa(tracks, NullTracks)) ? Tracks(eltype(state.xn1)[], eltype(state.fxn1)[]) : tracks
+    xstar = solve!(ZPI)
+    verbose && show_trace(M, nothing, ZPI.state, ZPI.logger)
+    isnan(xstar) && throw(ConvergenceFailed("Stopped at: xn = $(ZPI.state.xn1). $(ZPI.state.message)"))
 
-    if N == nothing  || isa(method, AbstractBracketing)
-        xstar = find_zero(method, F, state, options, l)
-    else
-        xstar = find_zero(method, N, F, state, options, l)
-    end
-
-    if verbose
-        show_trace(method, N, state, l)
-    end
-
-    if isnan(xstar)
-        throw(ConvergenceFailed("Stopped at: xn = $(state.xn1). $(state.message)"))
-    else
-        return xstar
-    end
+    return xstar
 
 end
 
 # defaults when method is not specified
 # if a number, use Order0
 # O/w use a bracketing method of an assumed iterable
-find_zero(f, x0::T; kwargs...)  where {T <: Number}= find_zero(f, x0, Order0(); kwargs...)
-function find_zero(f, x0; kwargs...)
-    ab = promote(float.(_extrema(x0))...)
-    find_zero(f, ab, Bisection(); kwargs...)
+find_zero(f, x0::T; kwargs...)  where {T <: Number} = find_zero(f, x0, Order0(); kwargs...)
+find_zero(f, x0; kwargs...) = find_zero(f, x0, Bisection(); kwargs...)
+
+# todo: consolidate this with find_zero(M,N,f, x0)...
+function find_zero(fs, x0,
+                   M::AbstractUnivariateZeroMethod,
+                   N::AbstractBracketing;
+                   p = nothing,
+                   tracks::AbstractTracks=NullTracks(),
+                   verbose=false,
+                   kwargs...)
+
+    F = Callable_Function(M, fs, p)
+    state = init_state(M, F, x0)
+    options = init_options(M, state; kwargs...)
+    l = Tracks(verbose, tracks, state)
+
+    xstar = find_zero(M, N, F, state, options, l)
+    verbose &&  show_trace(M, N, state, l)
+
+    isnan(xstar) && throw(ConvergenceFailed("Stopped at: xn = $(state.xn1). $(state.message)"))
+
+    return xstar
+
 end
 
 
-# Main method
-# return a zero or NaN.
+
+
+## find_zero implementation
 ## Updates state, could be `find_zero!(state, M, F, options, l)`...
 """
     find_zero(M, F, state, [options], [l])
@@ -739,104 +734,18 @@ if prod((sign∘f).(xs)) < 0 # check bracket
     find_zero(M, f, state)
 end
 ```
+
+!!! note
+    To be deprecated
 """
 function find_zero(M::AbstractUnivariateZeroMethod,
                    F,
                    state::AbstractUnivariateZeroState,
                    options::UnivariateZeroOptions=init_options(M, state),
                    l::AbstractTracks=NullTracks()
-                   )  #where {T<:Number, S<:Number}
-
-    log_step(l, M, state, :init)
-
-    while true
-        val = assess_convergence(M, state, options)
-        val && break
-        update_state(M, F, state, options)
-        log_step(l, M, state)
-        incsteps(state)
-    end
-
-    return decide_convergence(M, F, state, options)
+                   )
+    solve!(init(M, F, state, options, l))
 end
-
-
-## --
-
-# state has stopped, this identifies if it has converged
-function decide_convergence(M::AbstractUnivariateZeroMethod,  F, state::UnivariateZeroState{T,S}, options) where {T,S}
-    xn1 = state.xstar
-    fxn1 = state.fxstar
-
-    if (state.stopped || state.x_converged) && !(state.f_converged)
-        ## stopped is a heuristic, x_converged can mask issues
-        ## if strict == false, this will also check f(xn) ~ - with a relaxed
-        ## tolerance
-
-        ## are we at a crossing values?
-        ## seems worth a check for 2 fn evals.
-        if T <: Real && S <: Real
-            for u in (prevfloat(xn1), nextfloat(xn1))
-                fu = first(F(u))
-                if iszero(fu) || _unitless(fu * fxn1) < 0
-                    state.message *= "Change of sign at xn identified. "
-                    state.f_converged = true
-                end
-            end
-        end
-
-        δ = maximum(_unitless, (options.abstol, options.reltol))
-        if options.strict || iszero(δ)
-            if state.x_converged
-                state.f_converged = true
-            else
-                state.convergence_failed = true
-            end
-
-        else
-            xstar, fxstar = state.xn1, state.fxn1
-            if _is_f_approx_0(fxstar, xstar, options.abstol, options.reltol, :relaxed)
-                state.xstar, state.fxstar = xstar, fxstar
-                msg = "Algorithm stopped early, but |f(xn)| < ϵ^(1/3), where ϵ depends on xn, rtol, and atol. "
-                state.message = state.message == "" ? msg : state.message * "\n\t" * msg
-                state.f_converged = true
-            else
-                state.convergence_failed = true
-            end
-        end
-    end
-
-    if state.f_converged &&
-        return state.xstar
-    end
-
-    nan = NaN * xn1
-    if state.convergence_failed
-        return nan
-    end
-    return nan
-
-end
-
-
-# Switch to bracketing method
-#M = Bisection()  # exact for floating point
-#M = AlefeldPotraShi() # *usually* exact
-#M = Brent()          # a bit faster, but not always convergent, as implemented (cf. RootTesting)
-run_bisection(f, xs, state, options) = run_bisection(AlefeldPotraShi(), f, xs, state, options)
-function run_bisection(N::AbstractBracketing, f, xs, state, options)
-    steps, fnevals = state.steps, state.fnevals
-    init_state!(state, N, f, xs)
-    state.steps += steps
-    state.fnevals += fnevals # could avoid 2 fn calls, with fxs
-    init_options!(options, N)
-    find_zero(N, f, state, options)
-    a, b = xs
-    u,v = a > b ? (b, a) : (a, b)
-    state.message *= "Bracketing used over ($u, $v), those steps not shown. "
-    return nothing
-end
-
 
 # Robust version using some tricks: idea from algorithm described in
 # [The SOLVE button from the
@@ -955,7 +864,33 @@ function find_zero(M::AbstractUnivariateZeroMethod,
 end
 
 
+## --
+
+
+## ---- Hybrid Method ----
+# Switch to bracketing method
+#M = Bisection()  # exact for floating point
+#M = AlefeldPotraShi() # *usually* exact
+#M = Brent()          # a bit faster, but not always convergent, as implemented (cf. RootTesting)
+run_bisection(f, xs, state, options) = run_bisection(AlefeldPotraShi(), f, xs, state, options)
+function run_bisection(N::AbstractBracketing, f, xs, state, options)
+    steps, fnevals = state.steps, state.fnevals
+    f = Callable_Function(N, f)
+    init_state!(state, N, f, xs)
+    state.steps += steps
+    state.fnevals += fnevals # could avoid 2 fn calls, with fxs
+    init_options!(options, N)
+    find_zero(N, f, state, options)
+    a, b = xs
+    u,v = a > b ? (b, a) : (a, b)
+    state.message *= "Bracketing used over ($u, $v), those steps not shown. "
+    return nothing
+end
+
+
+
 ## ---------------
+
 ## Create an Iterator interface
 # returns NaN, not an error, if there are issues
 
@@ -964,11 +899,10 @@ end
 
 A container for a function and initial guess passed to an iterator to be solved by `find_zero!` or `solve!`.
 """
-mutable struct ZeroProblem{F,X}
+struct ZeroProblem{F,X}
     F::F
     x₀::X
 end
-
 
 
 
@@ -981,33 +915,47 @@ struct ZeroProblemIterator{M,F,S,O,L}
     logger::L
 end
 
-
-## Initialize a Zero Problem
-function init(𝑭𝑿::ZeroProblem, M::Union{Nothing,AbstractUnivariateZeroMethod}=nothing;
+## Initialize a Zero Problem Iterator
+## init(Z,p)
+## init(Z,M,p)
+## init(M,F,state, [options], [logger])
+## want p to be positional, not named⁺
+function init(𝑭𝑿::ZeroProblem, M::AbstractUnivariateZeroMethod, p′ = nothing;
               p = nothing,
               verbose=false,
+              tracks = NullTracks(),
               kwargs...)
 
-    F, X = callable_function(𝑭𝑿.F,p), 𝑭𝑿.x₀
+    F = Callable_Function(M, 𝑭𝑿.F, p === nothing ? p′ : p)  #⁺
+    state = init_state(M, F, 𝑭𝑿.x₀)
+    options = init_options(M, state; kwargs...)
+    l = Tracks(verbose, tracks, state)
+    ZeroProblemIterator(M,F,state,options,l)
 
-    if M == nothing
-        x₀,st = iterate(X)
-        M′ = st == nothing ? Order1() : Bisection()
-    else
-            M′ = M
-    end
+end
 
-    state = init_state(M′, F, X)
-    options = init_options(M′, state; kwargs...)
-    l = verbose ? Tracks(eltype(state.xn1)[], eltype(state.fxn1)[]) : nothing
-    ZeroProblemIterator(M′,F,state,options,l)
+function init(𝑭𝑿::ZeroProblem, p′=nothing; kwargs...)
+    M = length(𝑭𝑿.x₀) == 1 ? Secant() : Bisection()
+    init(𝑭𝑿, M, p′; kwargs...)
+end
+
+function init(M::AbstractUnivariateZeroMethod, F,
+              state::AbstractUnivariateZeroState,
+              options::UnivariateZeroOptions=init_options(M, state),
+              l::AbstractTracks=NullTracks())
+    ZeroProblemIterator(M, Callable_Function(M,F), state, options, l)
 end
 
 # Iteration interface to handle looping
-function Base.iterate(P::ZeroProblemIterator, state=nothing)
+function Base.iterate(P::ZeroProblemIterator, st=nothing)
 
     M, F, state, options, l = P.M, P.F, P.state, P.options, P.logger
-    assess_convergence(M, state, options)  && return  nothing
+    st == nothing && log_step(l, M, state, :init)
+
+    if assess_convergence(M, state, options)
+        decide_convergence(M,F,state,options)
+        return  nothing
+    end
 
     update_state(M, F, state, options)
     log_step(l, M, state)
@@ -1016,23 +964,15 @@ function Base.iterate(P::ZeroProblemIterator, state=nothing)
 
 end
 
-decide_convergence(P::ZeroProblemIterator) =  decide_convergence(P.M, P.F, P.state, P.options)
 log_step(P::ZeroProblemIterator) = log_step(P.logger, P.M, P.state)
+decide_convergence(P::ZeroProblemIterator) =  decide_convergence(P.M, P.F, P.state, P.options)
 
 "Get last element in the iteration, which is xstar, or throw a warning"
-function Base.last(p::ZeroProblemIterator)
-    state = p.state
-    state.convergence_failed && @warn "The problem failed to converge"
-        !(state.x_converged || state.f_converged) && @warn "The problem has not converged. Try calling `solve! first"
-    state.xstar
+function Base.last(P::ZeroProblemIterator)
+#    state.convergence_failed && @warn "The problem failed to converge"
+    #    !(state.x_converged || state.f_converged) && @warn "The problem has not converged. Try calling `solve! first"
+    P.state.xstar
 end
-
-"Get current state of Zero Problem Iterator `(xᵢ=..., fᵢ=...)`"
-function current(p::ZeroProblemIterator)
-    M, state = p.M, p.state
-    (xᵢ = xs(typeof(M), state), fᵢ = fs(typeof(M), state))
-end
-
 
 """
     tracks(P::ZeroProblemIterator)
@@ -1040,54 +980,16 @@ end
 Show trace of output when `verbose=true` is specified to the problem
 """
 function tracks(P::ZeroProblemIterator{M,F,S,O,L}) where {M,F,S,O,L<:Tracks}
-    show_trace(P.M, nothing, P.state, P.logger)
+     show_trace(P.M, nothing, P.state, P.logger)
 end
 tracks(P::ZeroProblemIterator) = error("Set verbose=true when specifying the problem to see the tracks")
 
-## show method
 """
-    xs(M::AbstractUnivariateZeroMethod, state)
-    fs(M::AbstractUnivariateZeroMethod, state)
-
-
-Return the xs values needed for the next iteration (sorted if a
-bracke). Return the corresponding fs values used for the next
-iteration.  """
-
-xs(::Type{<:AbstractUnivariateZeroMethod}, state) = state.xn1
-xs(::Type{<:AbstractSecant}, state) = (state.xn0, state.xn1)
-xs(::Type{<:AbstractBracketing}, state) = [extrema([state.xn0, state.xn1])...]
-
-fs(::Type{<:AbstractUnivariateZeroMethod}, state) = state.fxn1
-fs(::Type{<:AbstractSecant}, state) = (state.fxn0, state.fxn1)
-fs(::Type{<:AbstractBracketing}, state) = [state.fxn0, state.fxn1][sortperm([state.xn0, state.xn1])]
-
-function Base.show(io::IO, P::ZeroProblemIterator{M}) where {M<:AbstractUnivariateZeroMethod}
-    state = P.state
-
-    if state.x_converged || state.f_converged
-        print(io, "Converged to x")
-        unicode_subscript(io, state.steps)
-        print(io, ": ", state.xstar)
-    elseif state.stopped
-        print(io, "Failed to converge. Last iterate: ")
-        print(io, current(P))
-    else
-        iszero(state.steps) && print(io,  "$M: ")
-        print(io, "x")
-        unicode_subscript(io, state.steps)
-        print(io, ": ")
-        print(io, xs(M, state))
-    end
-    println(io)
-end
-
-
-
-"""
-
-   solve(fx::ZeroProblem, [M]; p=nothing, kwargs...)
-   solve!(P::ZeroProblemIterator)
+    solve(fx::ZeroProblem, [p=nothing]; kwargs...)
+    solve(fx::ZeroProblem, M, [p=nothing]; kwargs...)
+    init(fx::ZeroProblem, [M], [p=nothing];
+         verbose=false, tracks=NullTracks(), kwargs...)
+    solve!(P::ZeroProblemIterator)
 
 Solve for the zero of a function specified through a  `ZeroProblem` or `ZeroProblemIterator`
 
@@ -1137,14 +1039,15 @@ problem = init(fx, Order5(), atol=1/100)
 solve!(problem)
 ```
 
-The named argument `p` may be used if the function(s) to be solved depend on a parameter in their second positional argument (e.g., `f(x,p)`). For example
+The  argument `p` may be used if the function(s) to be solved depend on a parameter in their second positional argument (e.g., `f(x,p)`). For example
 
 ```
 f(x,p) = exp(-x) - p # to solve p = exp(-x)
 fx = ZeroProblem(f, 1)
-solve(fx, p=1/2)  # log(2)
+solve(fx, 1/2)  # log(2)
 ```
 
+This would be recommended, as there is no recompilation due to the function changing.
 
 The argument `verbose=true` for `init` instructs that steps to be logged; these may be viewed with the method `Roots.tracks` for the iterator.
 
@@ -1173,74 +1076,74 @@ end
 
 """
 function solve!(P::ZeroProblemIterator)
-    log_step(P)            # initial logging
     for _ in P end         # iterate to completion
-    decide_convergence(P)  # polish answer
+    last(P)
 end
+
 
 ## -----
 ## deprecate this interface at some time.
+@deprecate find_zero!(P::ZeroProblemIterator) solve!(P)
+# """
+#     find_zero!(P::ZeroProblemIterator)
 
-"""
-    find_zero!(P::ZeroProblemIterator)
-
-An alternate interface to `find_zero` whereby a problem is created with `ZeroProblemIterator` and solved
-with `find_zero!`. The generic [`solve!`](@ref) method is recommened for familiarity.
-
-
-```jldoctest find_zero
-julia> using Roots
-
-julia> P = ZeroProblem(Order1(), sin, 3, verbose=true);
-
-julia> find_zero!(P)
-3.141592653589793
-
-julia> last(P)
-3.141592653589793
-
-julia> Roots.tracks(P) # possible when `verbose=true` is specified
-Results of univariate zero finding:
-
-* Converged to: 3.141592653589793
-* Algorithm: Roots.Secant()
-* iterations: 4
-* function evaluations: 6
-* stopped as |f(x_n)| ≤ max(δ, max(1,|x|)⋅ϵ) using δ = atol, ϵ = rtol
-
-Trace:
-x_0 =  3.0000000000000000,	 fx_0 =  0.1411200080598672
-x_1 =  3.1425464815525403,	 fx_1 = -0.0009538278181169
-x_2 =  3.1415894805773834,	 fx_2 =  0.0000031730124098
-x_3 =  3.1415926535902727,	 fx_3 = -0.0000000000004795
-x_4 =  3.1415926535897931,	 fx_4 =  0.0000000000000001
-```
-"""
-function find_zero!(P::ZeroProblemIterator)
-    solve!(P)
-end
+# An alternate interface to `find_zero` whereby a problem is created with `ZeroProblemIterator` and solved
+# with `find_zero!`. The generic [`solve!`](@ref) method is recommened for familiarity.
 
 
+# ```jldoctest find_zero
+# julia> using Roots
 
-"""
-    ZeroProblem(M, fs, x0; verbose=false, kwargs...)
+# julia> P = ZeroProblem(Order1(), sin, 3, verbose=true);
 
-Setup an interator interface for the zero problem. Call `find_zero!` or solve! to solve.
+# julia> find_zero!(P)
+# 3.141592653589793
 
-* `M`: Method. A non-hybrid method (not `Order0`).
-* `fs`: a function or for some methods a tuple of functions
-* `x0`: the initial guess
-* `verbose`: if `true`, then calling `Roots.tracks` on the output will show the steps on the algorithm
-* `kwargs`: passed to `Roots.init_options` to adjust tolerances
+# julia> last(P)
+# 3.141592653589793
 
-"""
-function ZeroProblem(M::AbstractUnivariateZeroMethod,
-                     fs,
-                     x0;
-                     verbose=false,
-                     kwargs...)
+# julia> Roots.tracks(P) # possible when `verbose=true` is specified
+# Results of univariate zero finding:
 
-    fx = ZeroProblem(fs, x0)
-    problem = init(fx, M; verbose=verbose, kwargs...)
+# * Converged to: 3.141592653589793
+# * Algorithm: Roots.Secant()
+# * iterations: 4
+# * function evaluations: 6
+# * stopped as |f(x_n)| ≤ max(δ, max(1,|x|)⋅ϵ) using δ = atol, ϵ = rtol
 
-end
+# Trace:
+# x_0 =  3.0000000000000000,	 fx_0 =  0.1411200080598672
+# x_1 =  3.1425464815525403,	 fx_1 = -0.0009538278181169
+# x_2 =  3.1415894805773834,	 fx_2 =  0.0000031730124098
+# x_3 =  3.1415926535902727,	 fx_3 = -0.0000000000004795
+# x_4 =  3.1415926535897931,	 fx_4 =  0.0000000000000001
+# ```
+# """
+#function find_zero!(P::ZeroProblemIterator)
+#    solve!(P)
+#end
+
+
+@deprecate ZeroProblem(M::AbstractUnivariateZeroMethod,fs,x0;kwargs...) init(ZeroProblem(fs, x0), M;kwargs...)
+
+# """
+#     ZeroProblem(M, fs, x0; verbose=false, kwargs...)
+
+# Setup an interator interface for the zero problem. Call `find_zero!` or solve! to solve.
+
+# * `M`: Method. A non-hybrid method (not `Order0`).
+# * `fs`: a function or for some methods a tuple of functions
+# * `x0`: the initial guess
+# * `verbose`: if `true`, then calling `Roots.tracks` on the output will show the steps on the algorithm
+# * `kwargs`: passed to `Roots.init_options` to adjust tolerances
+
+# """
+# function ZeroProblem(M::AbstractUnivariateZeroMethod,
+#                      fs,
+#                      x0;
+#                      verbose=false,
+#                      kwargs...)
+#     fx = ZeroProblem(fs, x0)
+#     problem = init(fx, M; verbose=verbose, kwargs...)
+
+# end

@@ -8,13 +8,9 @@ Consider a different bracket or try fzero(f, c) with an initial guess c.
 """
 
 
-# pushed this into both __middle and bisection(f,a,b)
-@deprecate bisection64(f, a, b) Roots.bisection(f, a, b)
-
-
-
 
 abstract type AbstractBisection <: AbstractBracketing end
+fn_argout(::AbstractBracketing) = 1
 
 """
 
@@ -76,7 +72,6 @@ end
 # In init_state the bracketing interval is left as (a,b) with
 # a,b both finite and of the same sign
 function init_state(method::AbstractBisection, fs, x)
-    length(x) > 1 || throw(ArgumentError(bracketing_error))
 
     x0, x1 = adjust_bracket(x) # now finite, right order
     fx0, fx1 = promote(fs(x0), fs(x1))
@@ -325,32 +320,35 @@ end
 ## for zero tolerance, we have either BisectionExact or A42 methods
 ## for non-zero tolerances, we have use thegeneral Bisection method
 function find_zero(fs, x0, method::M;
+                   p=nothing,
                    tracks = NullTracks(),
                    verbose=false,
                    kwargs...) where {M <: Union{Bisection}}
 
-    x = adjust_bracket(x0)
-    T = eltype(x[1])
-    F = callable_function(fs)
-    state = init_state(method, F, x)
+#    x = adjust_bracket(x0)
+#    T = eltype(x[1])
+
+    F = Callable_Function(method, fs, p)
+    state = init_state(method, F, x0)
+    x = (state.xn0, state.xn1)
     options = init_options(method, state; kwargs...)
+    l = Tracks(verbose, tracks, state)
 
     # check if tolerances are exactly 0
     iszero_tol = iszero(options.xabstol) && iszero(options.xreltol) && iszero(options.abstol) && iszero(options.reltol)
 
-    l = (verbose && isa(tracks, NullTracks)) ? Tracks(eltype(state.xn1)[], eltype(state.fxn1)[]) : tracks
 
     if iszero_tol
-        if T <: FloatNN
+        if eltype(state.xn1) <: FloatNN
             return find_zero(F, x, BisectionExact(); tracks=l, verbose=verbose, kwargs...)
         else
             return find_zero(F, x, A42(); tracks=l, verbose=verbose, kwargs...)
         end
     end
 
-    find_zero(method, F, state, options, l)
-
-    verbose && show_trace(method, nothing, state, l)
+    ZPI = ZeroProblemIterator(method, F, state, options, l)
+    solve!(ZPI)
+    verbose && tracks(ZPI)
 
     state.xstar
 
@@ -1010,14 +1008,15 @@ With the default tolerances, one  of these should be the case: `exact`  is `true
 function find_bracket(fs, x0, method::M=A42(); kwargs...) where {M <: Union{AbstractAlefeldPotraShi, BisectionExact}}
     x = adjust_bracket(x0)
     T = eltype(x[1])
-    F = callable_function(fs)
+    F = Callable_Function(method, fs) #callable_function(fs)
     state = init_state(method, F, x)
     options = init_options(method, state; kwargs...)
 
     # check if tolerances are exactly 0
     iszero_tol = iszero(options.xabstol) && iszero(options.xreltol) && iszero(options.abstol) && iszero(options.reltol)
 
-    find_zero(method, F, state, options, NullTracks())
+    ZPI = ZeroProblemIterator(method, F, state, options, NullTracks())
+    solve!(ZPI)
 
     (xstar=state.xstar, bracket=(state.xn0, state.xn1), exact=iszero(state.fxstar))
 

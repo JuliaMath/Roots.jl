@@ -43,10 +43,8 @@ end
 # check if we should guard against step for method M; call N if yes, P if not
 function update_state_guarded(M::AbstractSecant,N::AbstractUnivariateZeroMethod, P::AbstractUnivariateZeroMethod, fs, o, options)
     if do_guarded_step(M, o)
-        #@debug "do secant step"
         return update_state(N, fs, o, options)
     else
-        #@debug "do $N step"
         update_state(P, fs, o, options)
     end
 end
@@ -60,8 +58,8 @@ function init_state(method::AbstractSecant, fs, x::Number)
 end
 
 function init_state(method::AbstractSecant, fs, x)
-    x0, x1 = x₀x₁(x)
-    fx0, fx1 = fs(x0), fs(x1)
+    x0, x1 = x₀x₁(x);
+    fx0, fx1 = first(fs(x0)), first(fs(x1))
     state = UnivariateZeroState(x1, x0, zero(x1)/zero(x1)*oneunit(x1), typeof(x1)[],
                                 fx1, fx0, fx1, typeof(fx1)[],
                                 0, 2,
@@ -114,13 +112,14 @@ superlinear, and relatively robust to non-reasonable starting points.
 struct Order0 <: AbstractSecant end
 
 function find_zero(fs, x0, method::Order0;
+                   p=nothing,
                    tracks::AbstractTracks=NullTracks(),
                    verbose=false,
                    kwargs...)
     M = Order1()
     N = AlefeldPotraShi()
-
-    find_zero(callable_function(fs), x0, M, N; tracks=tracks,verbose=verbose, kwargs...)
+    F = Callable_Function(M, fs, p)
+    find_zero(F, x0, M, N; tracks=tracks,verbose=verbose, kwargs...)
 end
 
 ##################################################
@@ -460,15 +459,14 @@ function update_state(M::Union{Order5, KumarSinghAkanksha}, fs, o::UnivariateZer
     nothing
 end
 
-
-
-## If we have a derivative, we have this. (Deprecate?)
-function update_state(method::Order5, fs::Union{FirstDerivative,SecondDerivative},
+struct Order5Derivative <: AbstractSecant end
+fn_argout(::Order5Derivative) = 2
+function update_state(method::Order5Derivative, f,
                       o::UnivariateZeroState{T,S}, options)  where {T, S}
 
 
     xn, fxn = o.xn1, o.fxn1
-    a::T, b::S = fΔx(fs, xn)
+    a::T, b::S = f(xn)
     fpxn = a/b
     incfn(o)
 
@@ -478,7 +476,7 @@ function update_state(method::Order5, fs::Union{FirstDerivative,SecondDerivative
     end
 
     yn::T = xn - fxn / fpxn
-    fyn::S, Δyn::T = fΔx(fs, yn)
+    fyn::S, Δyn::T = f(yn)
     fpyn = fyn / Δyn
     incfn(o, 2)
 
@@ -491,12 +489,12 @@ function update_state(method::Order5, fs::Union{FirstDerivative,SecondDerivative
 
 
     zn::T = xn  - (fxn + fyn) / fpxn
-    fzn::S = fs(zn)
-    incfn(o, 1)
+    fzn::S, _ = f(zn)
+    incfn(o, 2)
 
     xn1 = zn - fzn / fpyn
-    fxn1 = fs(xn1)
-    incfn(o, 1)
+    fxn1,_ = f(xn1)
+    incfn(o, 2)
 
     o.xn0, o.xn1 = xn, xn1
     o.fxn0, o.fxn1 = fxn, fxn1
@@ -610,7 +608,7 @@ this method generally isn't faster (fewer function calls/steps) over
 other methods when using `Float64` values, but may be useful for
 solving over `BigFloat`.
 
-The error, `eᵢ = xᵢ - α`, is expressed as `eᵢ₊₁ = K⋅eᵢ¹⁶` for an explicit `K` 
+The error, `eᵢ = xᵢ - α`, is expressed as `eᵢ₊₁ = K⋅eᵢ¹⁶` for an explicit `K`
 in equation (50) of the paper.
 
 """

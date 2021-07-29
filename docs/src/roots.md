@@ -15,6 +15,7 @@ julia> using Roots
 
 julia> using Plots, ForwardDiff
 
+
 ```
 
 ## Bracketing
@@ -622,7 +623,7 @@ julia> u=1/3; for i in 1:10 (global  u=prevfloat(u);push!(ns, u)) end
 julia> sort!(ns);
 
 julia> maximum(abs.(f.(ns) - f1.(ns)))
-1.5543122344752192e-15
+1.887379141862766e-15
 
 ```
 
@@ -632,16 +633,16 @@ is like $10^{15}$. This is roughly as expected, where even one
 addition may introduce a relative error as big as $2\cdot 10^{-16}$ and here
 there are several such.
 
-!!! Note:
+!!! note
     (These values are subject to the vagaries of floating point evaluation, so may differ depending on the underlying computer architecture.)
 
 Generally this variation is not even a thought, as the differences are generally
 negligible, but when we want to identify if a value is zero, these
 small differences might matter. Here we look at the signs of the
-function values:
+function values for a run of the above:
 
 
-```jldoctest roots
+```
 julia> fs = sign.(f.(ns));
 
 julia> f1s = sign.(f1.(ns));
@@ -677,7 +678,7 @@ Parsing this shows a few surprises. First, there are two zeros of
 floating point value of `1/3` and the next largest floating point
 number.
 
-```jldoctest roots
+```
 julia> findall(iszero, fs)
 2-element Vector{Int64}:
  11
@@ -691,7 +692,7 @@ point value for `1/3` but rather 10 floating point numbers
 away.
 
 
-```jldoctest roots
+```
 julia> findall(iszero, f1s)
 1-element Vector{Int64}:
  21
@@ -701,7 +702,7 @@ julia> findall(iszero, f1s)
 
 Further, there are several sign changes of the function values for `f1s`:
 
-```jldoctest roots
+```
 julia> findall(!iszero,diff(sign.(f1s)))
 9-element Vector{Int64}:
   2
