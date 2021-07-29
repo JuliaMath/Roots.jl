@@ -15,6 +15,7 @@ julia> using Roots
 
 julia> using Plots, ForwardDiff
 
+
 ```
 
 ## Bracketing
@@ -622,7 +623,7 @@ julia> u=1/3; for i in 1:10 (global  u=prevfloat(u);push!(ns, u)) end
 julia> sort!(ns);
 
 julia> maximum(abs.(f.(ns) - f1.(ns)))
-1.5543122344752192e-15
+1.887379141862766e-15
 
 ```
 

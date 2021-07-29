@@ -615,7 +615,12 @@ julia> fn(find_zero(fn, x0, Order2())) <= 1e-14  # f(xₙ) ≈ 0, but Δxₙ can
 true
 
 julia> find_zero(fn, x0, Order2(), atol=0.0, rtol=0.0) # error: x_n ≉ x_{n-1}; just f(x_n) ≈ 0
-ERROR: Roots.ConvergenceFailed("Stopped at: xn = 2.9921081308371615. Too many steps taken. ")
+ERROR: Roots.ConvergenceFailed("Stopped at: xn = 2.991488255523429. Increment `Δx` has issues. Too many steps taken. ")
+Stacktrace:
+ [1] find_zero(fs::Function, x0::Float64, M::Order2; p::Nothing, verbose::Bool, tracks::Roots.NullTracks, kwargs::Base.Iterators.Pairs{Symbol, Float64, Tuple{Symbol, Symbol}, NamedTuple{(:atol, :rtol), Tuple{Float64, Float64}}})
+   @ Roots ~/julia/Roots/src/find_zero.jl:672
+ [2] top-level scope
+   @ none:1
 
 julia> fn = x -> (sin(x)*cos(x) - x^3 + 1)^9;
 
