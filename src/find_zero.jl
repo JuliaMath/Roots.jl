@@ -631,7 +631,7 @@ ERROR: Roots.ConvergenceFailed("Stopped at: xn = 1.0482748172022405. Too many st
 Passing `verbose=true` will show details on the steps of the algorithm:
 
 ```jldoctest find_zero
-julia> find_zero(x->sin(x), 3.0, Order2(), verbose=true)   # 3 iterations
+julia> find_zero(x->sin(x), 3.0, Order2(), verbose=true)   # 2 iterations
 Results of univariate zero finding:
 
 * Converged to: 3.1415926535897936
@@ -1071,7 +1071,6 @@ end
 
 """
 function solve!(P::ZeroProblemIterator)
-    log_step(P)            # initial logging
     for _ in P end         # iterate to completion
     last(P)
 end
