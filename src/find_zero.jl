@@ -527,7 +527,7 @@ If no method is specified, the default method depends on `x0`:
 The function(s) are passed as the first argument.
 
 For the few methods that use one or more derivatives (`Newton`, `Halley`,
-`Schroder`, `LithBoonkkampIJzerman(S,D)`, and optionally `Order5`) a
+`Schroder`, `LithBoonkkampIJzerman(S,D)`, and  `Order5Derivative`) a
 tuple of functions is used.
 
 # Optional arguments (tolerances, limit evaluations, tracing)
@@ -628,7 +628,7 @@ julia> find_zero(fn, x0, Order2(), maxevals=3)    # Roots.ConvergenceFailed: 26 
 ERROR: Roots.ConvergenceFailed("Stopped at: xn = 1.0482748172022405. Too many steps taken. ")
 ```
 
-Tracing output.
+Passing `verbose=true` will show details on the steps of the algorithm:
 
 ```jldoctest find_zero
 julia> find_zero(x->sin(x), 3.0, Order2(), verbose=true)   # 3 iterations
@@ -648,48 +648,8 @@ x_2 =  3.1415926535897936,	 fx_2 = -0.0000000000000003
 3.1415926535897936
 ```
 
-```jldoctest find_zero
-julia> find_zero(x->sin(x)^5, 3.0, Order2(), verbose=true) # 22 iterations
-Results of univariate zero finding:
-
-* Converged to: 3.1405349388309682
-* Algorithm: Order2()
-* iterations: 22
-* function evaluations: 46
-* stopped as |f(x_n)| ≤ max(δ, max(1,|x|)⋅ϵ) using δ = atol, ϵ = rtol
-
-Trace:
-x_0 =  3.0000000000000000,	 fx_0 =  0.0000559684091879
-x_1 =  3.0285315910604353,	 fx_1 =  0.0000182783542076
-x_2 =  3.0512479368872216,	 fx_2 =  0.0000059780426727
-[...]
-x_21 =  3.1402867582538070,	 fx_21 =  0.0000000000000038
-x_22 =  3.1405349388309682,	 fx_22 =  0.0000000000000013
-
-3.1405349388309682
-
-julia> find_zero(x->sin(x)^5, 3.0, Roots.Order2B(), verbose=true) # 2 iterations
-Results of univariate zero finding:
-
-* Converged to: 3.1397074174874358
-* Algorithm: Roots.Order2B()
-* iterations: 41
-* function evaluations: 85
-* Note: Estimate for multiplicity had issues. Too many steps taken.
-	  Algorithm stopped early, but |f(xn)| < ϵ^(1/3), where ϵ depends on xn, rtol, and atol.
-
-Trace:
-x_0 =  3.0000000000000000,	 fx_0 =  0.0000559684091879
-x_1 =  3.1397074174874358,	 fx_1 =  0.0000000000000238
-[...]
-x_40 =  3.1397074174874358,	 fx_40 =  0.0000000000000238
-x_41 =  3.1397074174874358,	 fx_41 =  0.0000000000000238
-
-3.1397074174874358
-```
-
 !!! note
-    See [`ZeroProblem`](@ref) for an interator interface to the underlying algorithms.
+    See [`solve`](@ref) and [`ZeroProblem`](@ref) for an alternate interface.
 """
 function find_zero(fs, x0, M::AbstractUnivariateZeroMethod;
                    p = nothing,
