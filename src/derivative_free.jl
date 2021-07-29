@@ -43,10 +43,8 @@ end
 # check if we should guard against step for method M; call N if yes, P if not
 function update_state_guarded(M::AbstractSecant,N::AbstractUnivariateZeroMethod, P::AbstractUnivariateZeroMethod, fs, o, options)
     if do_guarded_step(M, o)
-        #@debug "do secant step"
         return update_state(N, fs, o, options)
     else
-        #@debug "do $N step"
         update_state(P, fs, o, options)
     end
 end
@@ -61,7 +59,7 @@ end
 
 function init_state(method::AbstractSecant, fs, x)
     x0, x1 = x₀x₁(x);
-    fx0, fx1 = fs(x0), fs(x1)
+    fx0, fx1 = first(fs(x0)), first(fs(x1))
     state = UnivariateZeroState(x1, x0, zero(x1)/zero(x1)*oneunit(x1), typeof(x1)[],
                                 fx1, fx0, fx1, typeof(fx1)[],
                                 0, 2,
@@ -461,49 +459,48 @@ function update_state(M::Union{Order5, KumarSinghAkanksha}, fs, o::UnivariateZer
     nothing
 end
 
+struct Order5Derivative <: AbstractSecant end
+fn_argout(::Order5Derivative) = 2
+function update_state(method::Order5Derivative, f,
+                      o::UnivariateZeroState{T,S}, options)  where {T, S}
 
 
-# ## If we have a derivative, we have this. (Deprecate?)
-# function update_state(method::Order5, fs::Union{FirstDerivative,SecondDerivative},
-#                       o::UnivariateZeroState{T,S}, options)  where {T, S}
+    xn, fxn = o.xn1, o.fxn1
+    a::T, b::S = f(xn)
+    fpxn = a/b
+    incfn(o)
+
+    if isissue(fpxn)
+        o.stopped  = true
+        return
+    end
+
+    yn::T = xn - fxn / fpxn
+    fyn::S, Δyn::T = f(yn)
+    fpyn = fyn / Δyn
+    incfn(o, 2)
+
+    if isissue(fpyn)
+        o.xn0, o.xn1 = xn, yn
+        o.fxn0, o.fxn1 = fxn, fyn
+        o.stopped  = true
+        return
+    end
 
 
-#     xn, fxn = o.xn1, o.fxn1
-#     a::T, b::S = fΔx(fs, xn)
-#     fpxn = a/b
-#     incfn(o)
+    zn::T = xn  - (fxn + fyn) / fpxn
+    fzn::S, _ = f(zn)
+    incfn(o, 2)
 
-#     if isissue(fpxn)
-#         o.stopped  = true
-#         return
-#     end
+    xn1 = zn - fzn / fpyn
+    fxn1,_ = f(xn1)
+    incfn(o, 2)
 
-#     yn::T = xn - fxn / fpxn
-#     fyn::S, Δyn::T = fΔx(fs, yn)
-#     fpyn = fyn / Δyn
-#     incfn(o, 2)
+    o.xn0, o.xn1 = xn, xn1
+    o.fxn0, o.fxn1 = fxn, fxn1
 
-#     if isissue(fpyn)
-#         o.xn0, o.xn1 = xn, yn
-#         o.fxn0, o.fxn1 = fxn, fyn
-#         o.stopped  = true
-#         return
-#     end
-
-
-#     zn::T = xn  - (fxn + fyn) / fpxn
-#     fzn::S = fs(zn)
-#     incfn(o, 1)
-
-#     xn1 = zn - fzn / fpyn
-#     fxn1 = fs(xn1)
-#     incfn(o, 1)
-
-#     o.xn0, o.xn1 = xn, xn1
-#     o.fxn0, o.fxn1 = fxn, fxn1
-
-#     nothing
-# end
+    nothing
+end
 
 ##################################################
 

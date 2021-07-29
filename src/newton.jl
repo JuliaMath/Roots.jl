@@ -49,7 +49,7 @@ function init_state(method::AbstractNewtonLikeMethod, fs, x)
 
     x1 = float(first(x))
     T = eltype(x1)
-#    fx1, Δ::T = fΔx(fs, x1)  # f, f/f'
+    #    fx1, Δ::T = fΔx(fs, x1)  # f, f/f'
     fx1, Δ::T = fs(x1)  # f, f/f'
 
     fnevals = 1
