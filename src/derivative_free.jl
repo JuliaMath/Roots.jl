@@ -50,6 +50,58 @@ function update_state_guarded(M::AbstractSecant,N::AbstractUnivariateZeroMethod,
 end
 
 ##################################################
+function initial_steps(::AbstractSecant, x::Number)
+    x₁ = float(x)
+    x₀ = _default_secant_step(x₁)
+    promote(x₀, x₁)
+end
+initial_steps(::AbstractSecant) = 2
+
+# Init_state sets x₀,x₁,fx₀,fx₁ and sets up state
+function Init_state(M::AbstractSecant, F::Callable_Function, x; kwargs...)
+    x₀,x₁ =  x₀x₁(x)
+    fx₀, fx₁ = promote(float(first(F(x₀))), float(first(F(x₁))))
+    state::UnivariateZeroState = Init_state(M, x₀, x₁, fx₀, fx₁;
+                                            steps = initial_steps(M),
+                                            kwargs...)
+    Init_state!(state, M, F)
+    state
+end
+
+Init_state(M::AbstractUnivariateZeroMethod, x₀::T, x₁::T, fx₀::S, fx₁::S; kwargs...) where {T,S} =
+    _Init_state(x₀::T, x₁::T, fx₀::S, fx₁::S; kwargs...)
+
+
+# Main constructor with no defaults
+function _Init_state(
+    x₀::T, x₁::T, fx₀::S, fx₁::S;
+    m=T[],
+    fm=S[],
+    xstar = nan(T)*oneunit(T),
+    fxstar = nan(S)*oneunit(S),
+    steps = 0,
+    fnevals= 0,
+    stopped=false,
+    x_converged=false, f_converged=false,
+    convergence_failed=false,
+    message::String="") where {T,S}
+
+    UnivariateZeroState(x₁, x₀, xstar, m,
+                        fx₁, fx₀, fxstar, fm,
+                        steps, fnevals,
+                        stopped, x_converged, f_converged,
+                        convergence_failed,
+                        message)
+
+end
+
+# used to modify a state for a given method
+Init_state!(state, M::AbstractUnivariateZeroMethod, F) = nothing
+
+
+
+# we only change state to bracketing, and we should call that convert
+
 
 function init_state(method::AbstractSecant, fs, x::Number)
     x1 = float(x)

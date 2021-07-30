@@ -45,6 +45,21 @@ The error, `eᵢ = xᵢ - α`, can be expressed as `eᵢ₊₁ = f[xᵢ,xᵢ,α]
 Newton
 
 
+function Init_state(M::AbstractNewtonLikeMethod, F, x)
+    x0 = float(first(x))
+    T = eltype(x0)
+    fx0, Δ = F(x0)  # f, f/f'
+    x0, x1 = promote(x0, x0 - Δ)
+    fx1, Δ = F(x1)
+    state =_Init_state(x0, x1, promote(fx0, fx1)..., m=[Δ])
+    Init_state!(state, M, F)
+    state
+end
+
+
+
+
+
 function init_state(method::AbstractNewtonLikeMethod, fs, x)
 
     x1 = float(first(x))
@@ -156,6 +171,15 @@ The error, `eᵢ = xᵢ - α`, satisfies
 
 """
 struct Halley <: AbstractHalleyLikeMethod
+end
+
+function Init_state(M::AbstractHalleyLikeMethod, F, x)
+    x1 = float(first(x))
+    fx1, Δ, ΔΔ = F(x1)
+
+    state = _Init_state(nan(x1)*x1, x1, promote(nan(fx1)*fx1, fx1)..., m=[Δ,ΔΔ])
+    Init_state!(state, M, F)
+    state
 end
 
 

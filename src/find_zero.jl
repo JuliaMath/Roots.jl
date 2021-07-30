@@ -170,8 +170,8 @@ default_tolerances(M::AbstractUnivariateZeroMethod) = default_tolerances(M, Floa
 function default_tolerances(::AbstractUnivariateZeroMethod, ::Type{T}, ::Type{S}) where {T, S}
     xatol = eps(real(T)) * oneunit(real(T))
     xrtol = eps(real(T))  # unitless
-    atol = 4.0 * eps(real(float(S))) * oneunit(real(S))
-    rtol = 4.0 * eps(real(float(S))) * one(real(S))
+    atol = 4 * eps(real(float(S))) * oneunit(real(S))
+    rtol = 4 * eps(real(float(S))) * one(real(S))
     maxevals = 40
     maxfnevals = typemax(Int)
     strict = false
@@ -691,7 +691,8 @@ function find_zero(fs, x0,
                    kwargs...)
 
     F = Callable_Function(M, fs, p)
-    state = init_state(M, F, x0)
+    #    state = init_state(M, F, x0)
+    state = Init_state(M, F, x0)
     options = init_options(M, state; kwargs...)
     l = Tracks(verbose, tracks, state)
 
@@ -805,7 +806,7 @@ function find_zero(M::AbstractUnivariateZeroMethod,
         elseif Δr  <= ts *  Δx
             adj = true
             r = b + sign(r - b) * ts * Δx
-            fr = F(r)
+            fr = first(F(r))
             incfn(state)
             state0.xn1 = r
             state0.fxn1 = fr
@@ -876,7 +877,8 @@ run_bisection(f, xs, state, options) = run_bisection(AlefeldPotraShi(), f, xs, s
 function run_bisection(N::AbstractBracketing, f, xs, state, options)
     steps, fnevals = state.steps, state.fnevals
     f = Callable_Function(N, f)
-    init_state!(state, N, f, xs)
+    #    init_state!(state, N, f, xs)
+    Init_state!(state, N, f)
     state.steps += steps
     state.fnevals += fnevals # could avoid 2 fn calls, with fxs
     init_options!(options, N)
@@ -927,7 +929,8 @@ function init(𝑭𝑿::ZeroProblem, M::AbstractUnivariateZeroMethod, p′ = not
               kwargs...)
 
     F = Callable_Function(M, 𝑭𝑿.F, p === nothing ? p′ : p)  #⁺
-    state = init_state(M, F, 𝑭𝑿.x₀)
+    #state = init_state(M, F, 𝑭𝑿.x₀)
+    state = Init_state(M, F, 𝑭𝑿.x₀)
     options = init_options(M, state; kwargs...)
     l = Tracks(verbose, tracks, state)
     ZeroProblemIterator(M,F,state,options,l)

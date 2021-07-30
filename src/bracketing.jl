@@ -75,10 +75,82 @@ function init_state(method::AbstractBisection, fs, x)
 
     x0, x1 = adjust_bracket(x) # now finite, right order
     fx0, fx1 = promote(fs(x0), fs(x1))
-    sign(fx0) * sign(fx1) > 0 && throw(ArgumentError(bracketing_error))
+    assert_bracket(fx0, fx1)
 
-    _init_state(method, fs, (x0, x1), (fx0, fx1))
+
+
+    state = _init_state(method, fs, (x0, x1), (fx0, fx1))
+    state
+
 end
+
+function Init_state(M::AbstractBracketing, F::Callable_Function, x; kwargs...)
+    x₀, x₁ = adjust_bracket(x)
+    fx₀, fx₁ = promote(float(first(F(x₀))), float(first(F(x₁))))
+    #sign(fx₀) * sign(fx₁) > 0 && throw(ArgumentError(bracketing_error))
+    state::UnivariateZeroState = Init_state(M, x₀, x₁, fx₀, fx₁;
+                                            steps = initial_steps(M),
+                                            kwargs...)
+    Init_state!(state, M, F)
+    state
+end
+initial_steps(::Roots.AbstractBracketing) = 2
+
+function Init_state!(state, M::AbstractBisection, F::Callable_Function)
+    x0, x1 = state.xn0, state.xn1
+    fx0, fx1 = state.fxn0, state.fxn1
+
+    if x0 > x1
+        x0, x1, fx0, fx1 = x1, x0, fx1, fx0
+    end
+
+    fx0fx1 = sign(fx0) * sign(fx1)
+    if iszero(fx0fx1)
+        # should be an error -- not bracketing, but we have a zero, so return it.
+        m,fm = iszero(fx0) ? (x0,fx0) : (x1, fx1)
+        state.x_converged = true
+        state.f_converged = true
+        state.xstar  = m
+        state.fxstar =  fm
+        return state
+    end
+
+    if isnan(fx0fx1)
+        m,fm = isnan(fx0) ? (x0,fx0) : (x1, fx1)
+        state.x_converged = true
+        state.f_converged = true
+        state.message = "NaN encountered. "
+        state.xstar  = m
+        state.fxstar =  fm
+        return state
+    end
+
+
+    assert_bracket(fx0, fx1)
+
+    # we want a,b to be same sign, finite
+    if sign(x0) * sign(x1) < 0
+        m = zero(x1)
+        fm = F(m) # iszero(fm) caught in assess_convergence
+        incfn(state)
+        if sign(fx0) * sign(fm) < 0
+            x1, fx1 = m, fm
+        else  sign(fx0) * sign(fm) > 0
+            x0, fx0 = m, fm
+        end
+    end
+
+    m = __middle(x0, x1)
+    fm = F(m)
+    incfn(state)
+
+    state.xn0, state.xn1 = x0, x1
+    state.fxn0, state.fxn1 = fx0, fx1
+    empty!(state.m); empty!(state.fm)
+    push!(state.m, m), push!(state.fm, fm)
+    nothing
+end
+
 
 # assume xs, fxs, have all been checked so that we have a bracket
 # gives an  entry for the case where the endpoints are expensive to compute
@@ -329,7 +401,8 @@ function find_zero(fs, x0, method::M;
 #    T = eltype(x[1])
 
     F = Callable_Function(method, fs, p)
-    state = init_state(method, F, x0)
+    #state = init_state(method, F, x0)
+    state = Init_state(method, F, x0)
     x = (state.xn0, state.xn1)
     options = init_options(method, state; kwargs...)
     l = Tracks(verbose, tracks, state)
@@ -340,10 +413,13 @@ function find_zero(fs, x0, method::M;
 
     if iszero_tol
         if eltype(state.xn1) <: FloatNN
-            return find_zero(F, x, BisectionExact(); tracks=l, verbose=verbose, kwargs...)
+            method = BisectionExact()
+                        #return find_zero(F, x, BisectionExact(); tracks=l, verbose=verbose, kwargs...)
         else
-            return find_zero(F, x, A42(); tracks=l, verbose=verbose, kwargs...)
+            method = A42()
+            #return find_zero(F, x, A42(); tracks=l, verbose=verbose, kwargs...)
         end
+        #end
     end
 
     ZPI = ZeroProblemIterator(method, F, state, options, l)
@@ -447,6 +523,7 @@ struct A42 <: AbstractAlefeldPotraShi end
 
 ## put in utils?
 @inline isbracket(fa,fb) = sign(fa) * sign(fb) < 0
+assert_bracket(fx0, fx1) = isbracket(fx0, fx1) || throw(ArgumentError(bracketing_error))
 
 # f[a, b]
 @inline f_ab(a,b,fa,fb) = (fb - fa) / (b-a)
@@ -538,7 +615,7 @@ function init_state(M::AbstractAlefeldPotraShi, f, xs)
         u, v = v, u
     end
     fu, fv = promote(f(u), f(v))
-    isbracket(fu, fv) || throw(ArgumentError(bracketing_error))
+    assert_bracket(fu, fv)
     state = UnivariateZeroState(v, u, zero(v)/zero(v)*oneunit(v), [v, v], ## x1, x0, d, [ee]
                                 fv, fu, fv, [fv,fv], ## fx1, fx0, d, [fe]
                                 0, 2,
@@ -548,6 +625,33 @@ function init_state(M::AbstractAlefeldPotraShi, f, xs)
     init_state!(state, M, f, (u,v), false)
     state
 end
+
+function Init_state!(state::UnivariateZeroState{T,S}, M::AbstractAlefeldPotraShi, F::Callable_Function;
+                     middle=nothing) where {T,S}
+
+
+    a,b,fa,fb = state.xn0, state.xn1, state.fxn0, state.fxn1
+
+    if a > b
+        a,b,fa,fb = b,a,fb,fa
+    end
+
+
+
+    c::T = (middle != nothing && a < middle < b) ? middle : _middle(a,b)
+    fc::S = F(c)
+    incfn(state)
+
+    a,b,d,fa,fb,fd = bracket(a,b,c,fa,fb,fc)
+    ee, fe = d, fd
+
+    state.xn0, state.xn1, state.fxn0, state.fxn1 = a,b,fa,fb
+    empty!(state.m), empty!(state.fm)
+    append!(state.m, (d,ee)), append!(state.fm, (fd, fe))
+
+    nothing
+end
+
 
 # secant step, then bracket for initial setup
 # can pass instructions to compute fx
@@ -785,7 +889,8 @@ end
 
 #
 function init_state(M::Brent, f, xs)
-    u,v = promote(float.(_extrema(xs))...)
+    a, b = _extrema(xs)
+    u,v = promote(float(a), float(b))
     fu, fv = promote(f(u), f(v))
     isbracket(fu, fv) || throw(ArgumentError(bracketing_error))
 
@@ -804,6 +909,24 @@ function init_state(M::Brent, f, xs)
                                 false, false, false, false,
                                 "")
     state
+end
+
+# we store mflag as -1, or +1 in state.m[2]
+function Init_state!(state::UnivariateZeroState{T,S}, ::Brent, F) where {T,S}
+
+    u, v, fu, fv = state.xn0, state.xn1, state.fxn0, state.fxn1
+
+    empty!(state.m); empty!(state.fm)
+    # brent store b as smaller of |fa|, |fb|
+    if abs(fu) > abs(fv)
+        state.xn0, state.xn1, state.fxn0, state.fxn1 = u, v, fu, fv
+        append!(state.m, (u,u)); append!(state.fm, (fu, one(fu)))
+    else
+        state.xn0, state.xn1, state.fxn0, state.fxn1 = v, u, fv, fu
+        append!(state.m, (v,v)); append!(state.fm, (fv, one(fv)))
+    end
+
+    return nothing
 end
 
 # we store mflag as -1, or +1 in state.m[2]
