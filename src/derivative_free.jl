@@ -68,57 +68,26 @@ function Init_state(M::AbstractSecant, F::Callable_Function, x; kwargs...)
     state
 end
 
-Init_state(M::AbstractUnivariateZeroMethod, x₀::T, x₁::T, fx₀::S, fx₁::S; kwargs...) where {T,S} =
-    _Init_state(x₀::T, x₁::T, fx₀::S, fx₁::S; kwargs...)
-
-
-# Main constructor with no defaults
-function _Init_state(
-    x₀::T, x₁::T, fx₀::S, fx₁::S;
-    m=T[],
-    fm=S[],
-    xstar = nan(T)*oneunit(T),
-    fxstar = nan(S)*oneunit(S),
-    steps = 0,
-    fnevals= 0,
-    stopped=false,
-    x_converged=false, f_converged=false,
-    convergence_failed=false,
-    message::String="") where {T,S}
-
-    UnivariateZeroState(x₁, x₀, xstar, m,
-                        fx₁, fx₀, fxstar, fm,
-                        steps, fnevals,
-                        stopped, x_converged, f_converged,
-                        convergence_failed,
-                        message)
-
-end
-
-# used to modify a state for a given method
-Init_state!(state, M::AbstractUnivariateZeroMethod, F) = nothing
-
-
 
 # we only change state to bracketing, and we should call that convert
 
 
-function init_state(method::AbstractSecant, fs, x::Number)
-    x1 = float(x)
-    x0 = _default_secant_step(x1)
-    init_state(method, fs, (x0, x1))
-end
+# function init_state(method::AbstractSecant, fs, x::Number)
+#     x1 = float(x)
+#     x0 = _default_secant_step(x1)
+#     init_state(method, fs, (x0, x1))
+# end
 
-function init_state(method::AbstractSecant, fs, x)
-    x0, x1 = x₀x₁(x);
-    fx0, fx1 = first(fs(x0)), first(fs(x1))
-    state = UnivariateZeroState(x1, x0, zero(x1)/zero(x1)*oneunit(x1), typeof(x1)[],
-                                fx1, fx0, fx1, typeof(fx1)[],
-                                0, 2,
-                                false, false, false, false, "")
+# function init_state(method::AbstractSecant, fs, x)
+#     x0, x1 = x₀x₁(x);
+#     fx0, fx1 = first(fs(x0)), first(fs(x1))
+#     state = UnivariateZeroState(x1, x0, zero(x1)/zero(x1)*oneunit(x1), typeof(x1)[],
+#                                 fx1, fx0, fx1, typeof(fx1)[],
+#                                 0, 2,
+#                                 false, false, false, false, "")
 
-    state
-end
+#     state
+# end
 
 function init_state!(state::UnivariateZeroState{T, S}, method::AbstractSecant, fs, x::Number) where {T, S}
     x1::T = float(x)

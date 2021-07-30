@@ -60,24 +60,24 @@ end
 
 
 
-function init_state(method::AbstractNewtonLikeMethod, fs, x)
+# function init_state(method::AbstractNewtonLikeMethod, fs, x)
 
-    x1 = float(first(x))
-    T = eltype(x1)
-    #    fx1, Δ::T = fΔx(fs, x1)  # f, f/f'
-    fx1, Δ::T = fs(x1)  # f, f/f'
+#     x1 = float(first(x))
+#     T = eltype(x1)
+#     #    fx1, Δ::T = fΔx(fs, x1)  # f, f/f'
+#     fx1, Δ::T = fs(x1)  # f, f/f'
 
-    fnevals = 1
-    S = eltype(fx1)
+#     fnevals = 1
+#     S = eltype(fx1)
 
-    zT, zS = oneunit(x1) * (0*x1)/(0*x1), oneunit(fx1) * (0*fx1)/(0*fx1)
-    state = UnivariateZeroState(x1, zT, zT/zT*oneunit(x1), [Δ],
-                                fx1, zS, zS, S[],
-                                0, fnevals,
-                                false, false, false, false,
-                                "")
-    state
-end
+#     zT, zS = oneunit(x1) * (0*x1)/(0*x1), oneunit(fx1) * (0*fx1)/(0*fx1)
+#     state = UnivariateZeroState(x1, zT, zT/zT*oneunit(x1), [Δ],
+#                                 fx1, zS, zS, S[],
+#                                 0, fnevals,
+#                                 false, false, false, false,
+#                                 "")
+#     state
+# end
 
 function init_state!(state::UnivariateZeroState{T,S}, M::Newton, fs, x) where {T,S}
     x1::T = float(x)
@@ -183,23 +183,23 @@ function Init_state(M::AbstractHalleyLikeMethod, F, x)
 end
 
 
-function init_state(method::AbstractHalleyLikeMethod, fs, x)
+# function init_state(method::AbstractHalleyLikeMethod, fs, x)
 
-    x1 = float(first(x))
-    T = eltype(x1)
-    #tmp = fΔxΔΔx(fs, x1)
-    fx1, Δ::T, ΔΔ::T = fs(x1)
-    S = eltype(fx1)
-    fnevals = 3
+#     x1 = float(first(x))
+#     T = eltype(x1)
+#     #tmp = fΔxΔΔx(fs, x1)
+#     fx1, Δ::T, ΔΔ::T = fs(x1)
+#     S = eltype(fx1)
+#     fnevals = 3
 
-    zT, zS =  oneunit(x1) * (0*x1)/(0*x1), oneunit(fx1) * (0*fx1)/(0*fx1)
-    state = UnivariateZeroState(x1, zT, zT/zT*oneunit(x1), [Δ,ΔΔ],
-                                fx1, zS, zS, S[],
-                                0, fnevals,
-                                false, false, false, false,
-                                "")
-    state
-end
+#     zT, zS =  oneunit(x1) * (0*x1)/(0*x1), oneunit(fx1) * (0*fx1)/(0*fx1)
+#     state = UnivariateZeroState(x1, zT, zT/zT*oneunit(x1), [Δ,ΔΔ],
+#                                 fx1, zS, zS, S[],
+#                                 0, fnevals,
+#                                 false, false, false, false,
+#                                 "")
+#     state
+# end
 
 function init_state!(state::UnivariateZeroState{T,S}, M::AbstractHalleyLikeMethod, fs, x) where {T,S}
     x1::T = float(first(x))

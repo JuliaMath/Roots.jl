@@ -58,23 +58,57 @@ mutable struct UnivariateZeroState{T,S} <: AbstractUnivariateZeroState where {T,
     message::String
 end
 
+
+Init_state(M::AbstractUnivariateZeroMethod, F, x) = nothing
+Init_state(M::AbstractUnivariateZeroMethod, x₀::T, x₁::T, fx₀::S, fx₁::S; kwargs...) where {T,S} =
+    _Init_state(x₀::T, x₁::T, fx₀::S, fx₁::S; kwargs...)
+
+# used to modify a state for a given method
+Init_state!(state, M::AbstractUnivariateZeroMethod, F) = nothing
+
+
+# Main constructor with no defaults
+function _Init_state(
+    x₀::T, x₁::T, fx₀::S, fx₁::S;
+    m=T[],
+    fm=S[],
+    xstar = nan(T)*oneunit(T),
+    fxstar = nan(S)*oneunit(S),
+    steps = 0,
+    fnevals= 0,
+    stopped=false,
+    x_converged=false, f_converged=false,
+    convergence_failed=false,
+    message::String="") where {T,S}
+
+    UnivariateZeroState(x₁, x₀, xstar, m,
+                        fx₁, fx₀, fxstar, fm,
+                        steps, fnevals,
+                        stopped, x_converged, f_converged,
+                        convergence_failed,
+                        message)
+
+end
+
+
+
 incfn(o::AbstractUnivariateZeroState, k=1)    = o.fnevals += k
 incsteps(o::AbstractUnivariateZeroState, k=1) = o.steps += k
 
 # initialize state for most methods
-function init_state(method::Any, fs, x)
+# function init_state(method::Any, fs, x)
 
-    x1 = float(x)
-    fx1 = fs(x1); fnevals = 1
-    T, S = eltype(x1), eltype(fx1)
-    zT, zS =  oneunit(x1) * (0*x1)/(0*x1), oneunit(fx1) * (0*fx1)/(0*fx1)
-    state = UnivariateZeroState(x1, zT, zT/Zt*oneunit(x1), T[],
-                                fx1, zS, zS, S[],
-                                0, fnevals,
-                                false, false, false, false,
-                                "")
-    state
-end
+#     x1 = float(x)
+#     fx1 = fs(x1); fnevals = 1
+#     T, S = eltype(x1), eltype(fx1)
+#     zT, zS =  oneunit(x1) * (0*x1)/(0*x1), oneunit(fx1) * (0*fx1)/(0*fx1)
+#     state = UnivariateZeroState(x1, zT, zT/Zt*oneunit(x1), T[],
+#                                 fx1, zS, zS, S[],
+#                                 0, fnevals,
+#                                 false, false, false, false,
+#                                 "")
+#     state
+# end
 
 ## This function is used to reset the state to an initial value
 ## As initializing a state is somewhat costly, this can be useful when many
@@ -89,59 +123,59 @@ end
 #    out[i] = find_zero(M, f1, state, options)
 # end
 # init_state has a method call variant
-function init_state!(state::UnivariateZeroState{T,S}, x1::T, x0::T, m::Vector{T}, y1::S, y0::S, fm::Vector{S}) where {T,S}
-    state.xn1 = x1
-    state.xn0 = x0
-    empty!(state.m); append!(state.m,  m)
-    state.m = m
-    state.fxn1 = y1
-    state.fxn0 = y0
-    empty!(state.fm); append!(state.fm,fm)
-    state.steps = 0
-    state.fnevals = 2
-    state.stopped = false
-    state.x_converged = false
-    state.f_converged = false
-    state.convergence_failed = false
-    state.message = ""
+# function init_state!(state::UnivariateZeroState{T,S}, x1::T, x0::T, m::Vector{T}, y1::S, y0::S, fm::Vector{S}) where {T,S}
+#     state.xn1 = x1
+#     state.xn0 = x0
+#     empty!(state.m); append!(state.m,  m)
+#     state.m = m
+#     state.fxn1 = y1
+#     state.fxn0 = y0
+#     empty!(state.fm); append!(state.fm,fm)
+#     state.steps = 0
+#     state.fnevals = 2
+#     state.stopped = false
+#     state.x_converged = false
+#     state.f_converged = false
+#     state.convergence_failed = false
+#     state.message = ""
 
-    nothing
-end
+#     nothing
+# end
 
-function init_state!(state::UnivariateZeroState{T,S}, ::AbstractUnivariateZeroMethod, fs, x) where {T, S}
-    x1 = float(x)
-    fx1 = fs(x1)
+# function init_state!(state::UnivariateZeroState{T,S}, ::AbstractUnivariateZeroMethod, fs, x) where {T, S}
+#     x1 = float(x)
+#     fx1 = fs(x1)
 
-    init_state!(state, x1, oneunit(x1) * (0*x1)/(0*x1), T[],
-                fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[])
-end
+#     init_state!(state, x1, oneunit(x1) * (0*x1)/(0*x1), T[],
+#                 fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[])
+# end
 
 
-function Base.copy(state::UnivariateZeroState{T,S}) where {T, S}
-    UnivariateZeroState(state.xn1, state.xn0, state.xstar, copy(state.m),
-                        state.fxn1, state.fxn0, state.fxstar, copy(state.fm),
-                        state.steps, state.fnevals,
-                        state.stopped, state.x_converged,
-                        state.f_converged, state.convergence_failed,
-                        state.message)
-end
+# function Base.copy(state::UnivariateZeroState{T,S}) where {T, S}
+#     UnivariateZeroState(state.xn1, state.xn0, state.xstar, copy(state.m),
+#                         state.fxn1, state.fxn0, state.fxstar, copy(state.fm),
+#                         state.steps, state.fnevals,
+#                         state.stopped, state.x_converged,
+#                         state.f_converged, state.convergence_failed,
+#                         state.message)
+# end
 
-function Base.copy!(dst::UnivariateZeroState{T,S}, src::UnivariateZeroState{T,S}) where {T,S}
-    dst.xn1 = src.xn1
-    dst.xn0 = src.xn0
-    empty!(dst.m); append!(dst.m, src.m)
-    dst.fxn1 = src.fxn1
-    dst.fxn0 = src.fxn0
-    empty!(dst.fm); append!(dst.fm, src.fm)
-    dst.steps = src.steps
-    dst.fnevals = src.fnevals
-    dst.stopped = src.stopped
-    dst.x_converged = src.x_converged
-    dst.f_converged = src.f_converged
-    dst.convergence_failed = src.convergence_failed
-    dst.message = src.message
-    nothing
-end
+# function Base.copy!(dst::UnivariateZeroState{T,S}, src::UnivariateZeroState{T,S}) where {T,S}
+#     dst.xn1 = src.xn1
+#     dst.xn0 = src.xn0
+#     empty!(dst.m); append!(dst.m, src.m)
+#     dst.fxn1 = src.fxn1
+#     dst.fxn0 = src.fxn0
+#     empty!(dst.fm); append!(dst.fm, src.fm)
+#     dst.steps = src.steps
+#     dst.fnevals = src.fnevals
+#     dst.stopped = src.stopped
+#     dst.x_converged = src.x_converged
+#     dst.f_converged = src.f_converged
+#     dst.convergence_failed = src.convergence_failed
+#     dst.message = src.message
+#     nothing
+# end
 
 ### Options
 mutable struct UnivariateZeroOptions{Q,R,S,T}
