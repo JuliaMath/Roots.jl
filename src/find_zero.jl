@@ -64,8 +64,16 @@ Init_state(M::AbstractUnivariateZeroMethod, x₀::T, x₁::T, fx₀::S, fx₁::S
     _Init_state(x₀::T, x₁::T, fx₀::S, fx₁::S; kwargs...)
 
 # used to modify a state for a given method
-Init_state!(state, M::AbstractUnivariateZeroMethod, F) = nothing
-
+function Init_state!(state, M::AbstractUnivariateZeroMethod, F; clear=true)
+    clear && clear_convergence_flags!(state)
+    nothing
+end
+# convert to a different state, e.g. with bracketing
+function clear_convergence_flags!(state)
+    state.x_converged = state.f_converged = state.stopped = state.convergence_failed = false
+    nothing
+end
+convert_state!(state, M::AbstractUnivariateZeroMethod, F) = nothing
 
 # Main constructor with no defaults
 function _Init_state(
@@ -91,7 +99,7 @@ function _Init_state(
 end
 
 
-
+initial_steps(M::AbstractUnivariateZeroState) = @warn "initial_steps fix $M"
 incfn(o::AbstractUnivariateZeroState, k=1)    = o.fnevals += k
 incsteps(o::AbstractUnivariateZeroState, k=1) = o.steps += k
 
@@ -151,31 +159,31 @@ incsteps(o::AbstractUnivariateZeroState, k=1) = o.steps += k
 # end
 
 
-# function Base.copy(state::UnivariateZeroState{T,S}) where {T, S}
-#     UnivariateZeroState(state.xn1, state.xn0, state.xstar, copy(state.m),
-#                         state.fxn1, state.fxn0, state.fxstar, copy(state.fm),
-#                         state.steps, state.fnevals,
-#                         state.stopped, state.x_converged,
-#                         state.f_converged, state.convergence_failed,
-#                         state.message)
-# end
+function Base.copy(state::UnivariateZeroState{T,S}) where {T, S}
+    UnivariateZeroState(state.xn1, state.xn0, state.xstar, copy(state.m),
+                        state.fxn1, state.fxn0, state.fxstar, copy(state.fm),
+                        state.steps, state.fnevals,
+                        state.stopped, state.x_converged,
+                        state.f_converged, state.convergence_failed,
+                        state.message)
+end
 
-# function Base.copy!(dst::UnivariateZeroState{T,S}, src::UnivariateZeroState{T,S}) where {T,S}
-#     dst.xn1 = src.xn1
-#     dst.xn0 = src.xn0
-#     empty!(dst.m); append!(dst.m, src.m)
-#     dst.fxn1 = src.fxn1
-#     dst.fxn0 = src.fxn0
-#     empty!(dst.fm); append!(dst.fm, src.fm)
-#     dst.steps = src.steps
-#     dst.fnevals = src.fnevals
-#     dst.stopped = src.stopped
-#     dst.x_converged = src.x_converged
-#     dst.f_converged = src.f_converged
-#     dst.convergence_failed = src.convergence_failed
-#     dst.message = src.message
-#     nothing
-# end
+function Base.copy!(dst::UnivariateZeroState{T,S}, src::UnivariateZeroState{T,S}) where {T,S}
+    dst.xn1 = src.xn1
+    dst.xn0 = src.xn0
+    empty!(dst.m); append!(dst.m, src.m)
+    dst.fxn1 = src.fxn1
+    dst.fxn0 = src.fxn0
+    empty!(dst.fm); append!(dst.fm, src.fm)
+    dst.steps = src.steps
+    dst.fnevals = src.fnevals
+    dst.stopped = src.stopped
+    dst.x_converged = src.x_converged
+    dst.f_converged = src.f_converged
+    dst.convergence_failed = src.convergence_failed
+    dst.message = src.message
+    nothing
+end
 
 ### Options
 mutable struct UnivariateZeroOptions{Q,R,S,T}
@@ -912,7 +920,7 @@ function run_bisection(N::AbstractBracketing, f, xs, state, options)
     steps, fnevals = state.steps, state.fnevals
     f = Callable_Function(N, f)
     #    init_state!(state, N, f, xs)
-    Init_state!(state, N, f)
+    Init_state!(state, N, f; clear=true)
     state.steps += steps
     state.fnevals += fnevals # could avoid 2 fn calls, with fxs
     init_options!(options, N)

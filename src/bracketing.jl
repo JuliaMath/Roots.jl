@@ -91,12 +91,12 @@ function Init_state(M::AbstractBracketing, F::Callable_Function, x; kwargs...)
     state::UnivariateZeroState = Init_state(M, x₀, x₁, fx₀, fx₁;
                                             steps = initial_steps(M),
                                             kwargs...)
-    Init_state!(state, M, F)
+    Init_state!(state, M, F, clear=false)
     state
 end
 initial_steps(::Roots.AbstractBracketing) = 2
 
-function Init_state!(state, M::AbstractBisection, F::Callable_Function)
+function Init_state!(state, M::AbstractBisection, F::Callable_Function; clear=true)
     x0, x1 = state.xn0, state.xn1
     fx0, fx1 = state.fxn0, state.fxn1
 
@@ -125,7 +125,6 @@ function Init_state!(state, M::AbstractBisection, F::Callable_Function)
         return state
     end
 
-
     assert_bracket(fx0, fx1)
 
     # we want a,b to be same sign, finite
@@ -148,10 +147,13 @@ function Init_state!(state, M::AbstractBisection, F::Callable_Function)
     state.fxn0, state.fxn1 = fx0, fx1
     empty!(state.m); empty!(state.fm)
     push!(state.m, m), push!(state.fm, fm)
+
+    clear && clear_convergence_flags!(state)
     nothing
 end
 
 
+## XX this would now be Init_state(xs..., fs...); Init_state!(state, M, F)
 # assume xs, fxs, have all been checked so that we have a bracket
 # gives an  entry for the case where the endpoints are expensive to compute
 # as requested in issue #156 by @greimel
@@ -608,26 +610,26 @@ function newton_quadratic(a::T, b, d, fa, fb, fd, k::Int, delta=zero(T)) where {
 
 end
 
-# (todo: DRY up?)
-function init_state(M::AbstractAlefeldPotraShi, f, xs)
-    u,v = promote(float.(_extrema(xs))...)
-    if u > v
-        u, v = v, u
-    end
-    fu, fv = promote(f(u), f(v))
-    assert_bracket(fu, fv)
-    state = UnivariateZeroState(v, u, zero(v)/zero(v)*oneunit(v), [v, v], ## x1, x0, d, [ee]
-                                fv, fu, fv, [fv,fv], ## fx1, fx0, d, [fe]
-                                0, 2,
-                                false, false, false, false,
-                                "")
+# # (todo: DRY up?)
+# function init_state(M::AbstractAlefeldPotraShi, f, xs)
+#     u,v = promote(float.(_extrema(xs))...)
+#     if u > v
+#         u, v = v, u
+#     end
+#     fu, fv = promote(f(u), f(v))
+#     assert_bracket(fu, fv)
+#     state = UnivariateZeroState(v, u, zero(v)/zero(v)*oneunit(v), [v, v], ## x1, x0, d, [ee]
+#                                 fv, fu, fv, [fv,fv], ## fx1, fx0, d, [fe]
+#                                 0, 2,
+#                                 false, false, false, false,
+#                                 "")
 
-    init_state!(state, M, f, (u,v), false)
-    state
-end
+#     init_state!(state, M, f, (u,v), false)
+#     state
+# end
 
 function Init_state!(state::UnivariateZeroState{T,S}, M::AbstractAlefeldPotraShi, F::Callable_Function;
-                     middle=nothing) where {T,S}
+                     middle=nothing, clear=true) where {T,S}
 
 
     a,b,fa,fb = state.xn0, state.xn1, state.fxn0, state.fxn1
@@ -649,6 +651,8 @@ function Init_state!(state::UnivariateZeroState{T,S}, M::AbstractAlefeldPotraShi
     empty!(state.m), empty!(state.fm)
     append!(state.m, (d,ee)), append!(state.fm, (fd, fe))
 
+    clear && clear_convergence_flags!(state)
+
     nothing
 end
 
@@ -656,34 +660,34 @@ end
 # secant step, then bracket for initial setup
 # can pass instructions to compute fx
 # can pass in value for initial middle
-function init_state!(state::UnivariateZeroState{T,S}, ::AbstractAlefeldPotraShi, f, xs::Union{Tuple, Vector}, compute_fx=true, middle=nothing) where {T, S}
+# function init_state!(state::UnivariateZeroState{T,S}, ::AbstractAlefeldPotraShi, f, xs::Union{Tuple, Vector}, compute_fx=true, middle=nothing) where {T, S}
 
-    if !compute_fx
-        a, b = state.xn0, state.xn1
-        fa, fb = state.fxn0, state.fxn1
-    else
-        a, b = promote(float(xs[1]), float(xs[2]))
-        if a > b
-            a, b = b, a
-        end
-        fa, fb = f(a), f(b)
-        state.fnevals = 2
-        isbracket(fa, fb) || throw(ArgumentError(bracketing_error))
-    end
+#     if !compute_fx
+#         a, b = state.xn0, state.xn1
+#         fa, fb = state.fxn0, state.fxn1
+#     else
+#         a, b = promote(float(xs[1]), float(xs[2]))
+#         if a > b
+#             a, b = b, a
+#         end
+#         fa, fb = f(a), f(b)
+#         state.fnevals = 2
+#         isbracket(fa, fb) || throw(ArgumentError(bracketing_error))
+#     end
 
-    c::T = (middle != nothing && a < middle < b) ? middle : _middle(a,b)
-    fc::S = f(c)
-    incfn(state)
+#     c::T = (middle != nothing && a < middle < b) ? middle : _middle(a,b)
+#     fc::S = f(c)
+#     incfn(state)
 
-    a,b,d,fa,fb,fd = bracket(a,b,c,fa,fb,fc)
-    ee, fe = d, fd
+#     a,b,d,fa,fb,fd = bracket(a,b,c,fa,fb,fc)
+#     ee, fe = d, fd
 
-    init_state!(state, b, a, [d,ee], fb, fa, [fd,fe])
-    state.steps = 0
-    state.stopped = state.x_converged = state.f_converged = state.convergence_failed = false
+#     init_state!(state, b, a, [d,ee], fb, fa, [fd,fe])
+#     state.steps = 0
+#     state.stopped = state.x_converged = state.f_converged = state.convergence_failed = false
 
-    return nothing
-end
+#     return nothing
+# end
 
 # for A42, the defaults are reltol=eps(), atol=0; 45 evals and strict=true
 # this *basically* follows the tol in the paper (2|u|*rtol + atol)
@@ -912,7 +916,7 @@ function init_state(M::Brent, f, xs)
 end
 
 # we store mflag as -1, or +1 in state.m[2]
-function Init_state!(state::UnivariateZeroState{T,S}, ::Brent, F) where {T,S}
+function Init_state!(state::UnivariateZeroState{T,S}, ::Brent, F; clear=true) where {T,S}
 
     u, v, fu, fv = state.xn0, state.xn1, state.fxn0, state.fxn1
 
@@ -925,7 +929,7 @@ function Init_state!(state::UnivariateZeroState{T,S}, ::Brent, F) where {T,S}
         state.xn0, state.xn1, state.fxn0, state.fxn1 = v, u, fv, fu
         append!(state.m, (v,v)); append!(state.fm, (fv, one(fv)))
     end
-
+    clear && clear_convergence_flags!(state)
     return nothing
 end
 
@@ -1132,7 +1136,8 @@ function find_bracket(fs, x0, method::M=A42(); kwargs...) where {M <: Union{Abst
     x = adjust_bracket(x0)
     T = eltype(x[1])
     F = Callable_Function(method, fs) #callable_function(fs)
-    state = init_state(method, F, x)
+    ##state = init_state(method, F, x)
+    state = Init_state(method, F, x)
     options = init_options(method, state; kwargs...)
 
     # check if tolerances are exactly 0

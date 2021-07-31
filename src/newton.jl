@@ -52,10 +52,21 @@ function Init_state(M::AbstractNewtonLikeMethod, F, x)
     x0, x1 = promote(x0, x0 - Δ)
     fx1, Δ = F(x1)
     state =_Init_state(x0, x1, promote(fx0, fx1)..., m=[Δ])
-    Init_state!(state, M, F)
+    Init_state!(state, M, F, compute_fx=false, clear=false)
     state
 end
 
+function Init_state!(state, ::Newton, F::Callable_Function;
+                     compute_fx=false, clear=true)
+    if compute_fx
+        x1 = state.xn1
+        f, Δ = F(x1)
+        empty!(state.m)
+        append!(state.m, (Δ,))
+    end
+    clear && clear_convergence_flags!(state)
+    state
+end
 
 
 
@@ -79,13 +90,13 @@ end
 #     state
 # end
 
-function init_state!(state::UnivariateZeroState{T,S}, M::Newton, fs, x) where {T,S}
-    x1::T = float(x)
-    fx1::S, Δ::T = fs(x)
+# function init_state!(state::UnivariateZeroState{T,S}, M::Newton, fs, x) where {T,S}
+#     x1::T = float(x)
+#     fx1::S, Δ::T = fs(x)
 
-     init_state!(state, x1, oneunit(x1) * (0*x1)/(0*x1), [Δ],
-                fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[])
-end
+#      init_state!(state, x1, oneunit(x1) * (0*x1)/(0*x1), [Δ],
+#                 fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[])
+# end
 
 
 function update_state(method::Newton, fs, o::UnivariateZeroState{T,S}, options) where {T, S}
@@ -178,10 +189,22 @@ function Init_state(M::AbstractHalleyLikeMethod, F, x)
     fx1, Δ, ΔΔ = F(x1)
 
     state = _Init_state(nan(x1)*x1, x1, promote(nan(fx1)*fx1, fx1)..., m=[Δ,ΔΔ])
-    Init_state!(state, M, F)
+    Init_state!(state, M, F; compute_fx=true, clear=false)
     state
 end
 
+# halley
+function Init_state!(state, ::AbstractHalleyLikeMethod, F::Callable_Function;
+                     compute_fx=false, clear=true)
+    if compute_fx
+        x1 = state.xn1
+        f, Δ, ΔΔ = F(x1)
+        empty!(state.m)
+        append!(state.m, (Δ, ΔΔ))
+    end
+    clear && clear_convergence_flags!(state)
+    state
+end
 
 # function init_state(method::AbstractHalleyLikeMethod, fs, x)
 
@@ -201,15 +224,15 @@ end
 #     state
 # end
 
-function init_state!(state::UnivariateZeroState{T,S}, M::AbstractHalleyLikeMethod, fs, x) where {T,S}
-    x1::T = float(first(x))
-#    tmp = fΔxΔΔx(fs, x)
-    #    fx1::S, Δ::T, ΔΔ::T = tmp[1], tmp[2], tmp[3]
-    fx1::S, Δ::T, ΔΔ::T = fs(x)
+# function init_state!(state::UnivariateZeroState{T,S}, M::AbstractHalleyLikeMethod, fs, x) where {T,S}
+#     x1::T = float(first(x))
+# #    tmp = fΔxΔΔx(fs, x)
+#     #    fx1::S, Δ::T, ΔΔ::T = tmp[1], tmp[2], tmp[3]
+#     fx1::S, Δ::T, ΔΔ::T = fs(x)
 
-     init_state!(state, x1, oneunit(x1) * (0*x1)/(0*x1), [Δ, ΔΔ],
-                fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[])
-end
+#      init_state!(state, x1, oneunit(x1) * (0*x1)/(0*x1), [Δ, ΔΔ],
+#                 fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[])
+# end
 
 function update_state(method::Halley, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
     xn = o.xn1

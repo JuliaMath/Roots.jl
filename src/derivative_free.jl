@@ -58,15 +58,18 @@ end
 initial_steps(::AbstractSecant) = 2
 
 # Init_state sets x₀,x₁,fx₀,fx₁ and sets up state
+# then calls init_state!(state, M, F) for customizing for method
+# init_state! should be able to swap states (e.g. for hybrid use)
 function Init_state(M::AbstractSecant, F::Callable_Function, x; kwargs...)
     x₀,x₁ =  x₀x₁(x)
     fx₀, fx₁ = promote(float(first(F(x₀))), float(first(F(x₁))))
     state::UnivariateZeroState = Init_state(M, x₀, x₁, fx₀, fx₁;
                                             steps = initial_steps(M),
                                             kwargs...)
-    Init_state!(state, M, F)
+    Init_state!(state, M, F, clear=false)
     state
 end
+
 
 
 # we only change state to bracketing, and we should call that convert
@@ -89,20 +92,20 @@ end
 #     state
 # end
 
-function init_state!(state::UnivariateZeroState{T, S}, method::AbstractSecant, fs, x::Number) where {T, S}
-    x1::T = float(x)
-    x0::T = _default_secant_step(x1)
-    init_state!(state, method, fs, (x0, x1))
-end
+# function init_state!(state::UnivariateZeroState{T, S}, method::AbstractSecant, fs, x::Number) where {T, S}
+#     x1::T = float(x)
+#     x0::T = _default_secant_step(x1)
+#     init_state!(state, method, fs, (x0, x1))
+# end
 
 
-function init_state!(state::UnivariateZeroState{T, S}, ::AbstractSecant, f, x) where {T, S}
-    x0, x1 = x₀x₁(x)
-    fx0, fx1 = promote(f(x0), f(x1))
-    init_state!(state, x1, x0, T[], fx1, fx0, S[])
-    state.fnevals = 2
-    nothing
-end
+# function init_state!(state::UnivariateZeroState{T, S}, ::AbstractSecant, f, x) where {T, S}
+#     x0, x1 = x₀x₁(x)
+#     fx0, fx1 = promote(f(x0), f(x1))
+#     init_state!(state, x1, x0, T[], fx1, fx0, S[])
+#     state.fnevals = 2
+#     nothing
+# end
 
 ##################################################
 
