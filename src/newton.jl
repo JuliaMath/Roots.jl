@@ -45,18 +45,20 @@ The error, `eᵢ = xᵢ - α`, can be expressed as `eᵢ₊₁ = f[xᵢ,xᵢ,α]
 Newton
 
 
-function Init_state(M::AbstractNewtonLikeMethod, F, x)
+function init_state(M::AbstractNewtonLikeMethod, F, x;
+                    fnevals = initial_fnevals(M),
+                    kwargs...)
     x0 = float(first(x))
-    T = eltype(x0)
     fx0, Δ = F(x0)  # f, f/f'
     x0, x1 = promote(x0, x0 - Δ)
     fx1, Δ = F(x1)
-    state =_Init_state(x0, x1, promote(fx0, fx1)..., m=[Δ])
-    Init_state!(state, M, F, compute_fx=false, clear=false)
+    state = init_state(M, x0, x1, promote(fx0, fx1)..., m=[Δ], fnevals=fnevals, kwargs...)
+    init_state!(state, M, F, compute_fx=false, clear=false)
     state
 end
+initial_fnevals(M::Newton) = 2
 
-function Init_state!(state, ::Newton, F::Callable_Function;
+function init_state!(state, ::Newton, F::Callable_Function;
                      compute_fx=false, clear=true)
     if compute_fx
         x1 = state.xn1
@@ -71,32 +73,6 @@ end
 
 
 
-# function init_state(method::AbstractNewtonLikeMethod, fs, x)
-
-#     x1 = float(first(x))
-#     T = eltype(x1)
-#     #    fx1, Δ::T = fΔx(fs, x1)  # f, f/f'
-#     fx1, Δ::T = fs(x1)  # f, f/f'
-
-#     fnevals = 1
-#     S = eltype(fx1)
-
-#     zT, zS = oneunit(x1) * (0*x1)/(0*x1), oneunit(fx1) * (0*fx1)/(0*fx1)
-#     state = UnivariateZeroState(x1, zT, zT/zT*oneunit(x1), [Δ],
-#                                 fx1, zS, zS, S[],
-#                                 0, fnevals,
-#                                 false, false, false, false,
-#                                 "")
-#     state
-# end
-
-# function init_state!(state::UnivariateZeroState{T,S}, M::Newton, fs, x) where {T,S}
-#     x1::T = float(x)
-#     fx1::S, Δ::T = fs(x)
-
-#      init_state!(state, x1, oneunit(x1) * (0*x1)/(0*x1), [Δ],
-#                 fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[])
-# end
 
 
 function update_state(method::Newton, fs, o::UnivariateZeroState{T,S}, options) where {T, S}
@@ -111,8 +87,6 @@ function update_state(method::Newton, fs, o::UnivariateZeroState{T,S}, options) 
 
     xn1 = xn - r1
 
-#    tmp = fΔx(fs, xn1)
-#    fxn1::S, r1::T = tmp[1], tmp[2]
     fxn1::S, r1::T = fs(xn1)
     incfn(o,2)
 
@@ -184,17 +158,20 @@ The error, `eᵢ = xᵢ - α`, satisfies
 struct Halley <: AbstractHalleyLikeMethod
 end
 
-function Init_state(M::AbstractHalleyLikeMethod, F, x)
+function init_state(M::AbstractHalleyLikeMethod, F, x,
+    fnevals = initial_fnevals(M),
+    kwargs...
+    )
     x1 = float(first(x))
     fx1, Δ, ΔΔ = F(x1)
 
-    state = _Init_state(nan(x1)*x1, x1, promote(nan(fx1)*fx1, fx1)..., m=[Δ,ΔΔ])
-    Init_state!(state, M, F; compute_fx=true, clear=false)
+    state = _init_state(nan(x1)*x1, x1, promote(nan(fx1)*fx1, fx1)..., m=[Δ,ΔΔ], fnevals=fnevals, kwargs...)
+    init_state!(state, M, F; compute_fx=true, clear=false)
     state
 end
-
+initial_fnevals(M::AbstractHalleyLikeMethod) = 3
 # halley
-function Init_state!(state, ::AbstractHalleyLikeMethod, F::Callable_Function;
+function init_state!(state, ::AbstractHalleyLikeMethod, F::Callable_Function;
                      compute_fx=false, clear=true)
     if compute_fx
         x1 = state.xn1
@@ -206,34 +183,6 @@ function Init_state!(state, ::AbstractHalleyLikeMethod, F::Callable_Function;
     state
 end
 
-# function init_state(method::AbstractHalleyLikeMethod, fs, x)
-
-#     x1 = float(first(x))
-#     T = eltype(x1)
-#     #tmp = fΔxΔΔx(fs, x1)
-#     fx1, Δ::T, ΔΔ::T = fs(x1)
-#     S = eltype(fx1)
-#     fnevals = 3
-
-#     zT, zS =  oneunit(x1) * (0*x1)/(0*x1), oneunit(fx1) * (0*fx1)/(0*fx1)
-#     state = UnivariateZeroState(x1, zT, zT/zT*oneunit(x1), [Δ,ΔΔ],
-#                                 fx1, zS, zS, S[],
-#                                 0, fnevals,
-#                                 false, false, false, false,
-#                                 "")
-#     state
-# end
-
-# function init_state!(state::UnivariateZeroState{T,S}, M::AbstractHalleyLikeMethod, fs, x) where {T,S}
-#     x1::T = float(first(x))
-# #    tmp = fΔxΔΔx(fs, x)
-#     #    fx1::S, Δ::T, ΔΔ::T = tmp[1], tmp[2], tmp[3]
-#     fx1::S, Δ::T, ΔΔ::T = fs(x)
-
-#      init_state!(state, x1, oneunit(x1) * (0*x1)/(0*x1), [Δ, ΔΔ],
-#                 fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[])
-# end
-
 function update_state(method::Halley, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
     xn = o.xn1
     fxn = o.fxn1
@@ -241,8 +190,6 @@ function update_state(method::Halley, fs, o::UnivariateZeroState{T,S}, options::
 
     xn1::T = xn - 2*r2/(2r2 - r1) * r1
 
-    #tmp = fΔxΔΔx(fs, xn1)
-    #fxn1::S, r1::T, r2::T = tmp[1], tmp[2], tmp[3]
     fxn1::S, r1::T, r2::T = fs(xn1)
     incfn(o,3)
 
@@ -341,8 +288,6 @@ function update_state(method::Schroder, fs, o::UnivariateZeroState{T,S}, options
 
     xn1::T = xn - delta
 
-    #    tmp = fΔxΔΔx(fs, xn1)
-    #    fxn1::S, r1::T, r2::T = tmp[1], tmp[2], tmp[3]
     fxn1::S, r1::T, r2::T = fs(xn1)
     incfn(o,3)
 

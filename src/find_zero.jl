@@ -58,25 +58,8 @@ mutable struct UnivariateZeroState{T,S} <: AbstractUnivariateZeroState where {T,
     message::String
 end
 
-
-Init_state(M::AbstractUnivariateZeroMethod, F, x) = nothing
-Init_state(M::AbstractUnivariateZeroMethod, x₀::T, x₁::T, fx₀::S, fx₁::S; kwargs...) where {T,S} =
-    _Init_state(x₀::T, x₁::T, fx₀::S, fx₁::S; kwargs...)
-
-# used to modify a state for a given method
-function Init_state!(state, M::AbstractUnivariateZeroMethod, F; clear=true)
-    clear && clear_convergence_flags!(state)
-    nothing
-end
-# convert to a different state, e.g. with bracketing
-function clear_convergence_flags!(state)
-    state.x_converged = state.f_converged = state.stopped = state.convergence_failed = false
-    nothing
-end
-convert_state!(state, M::AbstractUnivariateZeroMethod, F) = nothing
-
 # Main constructor with no defaults
-function _Init_state(
+function _init_state(
     x₀::T, x₁::T, fx₀::S, fx₁::S;
     m=T[],
     fm=S[],
@@ -98,65 +81,70 @@ function _Init_state(
 
 end
 
+# init_state(M, F, x; kwargs...)
+# init_state(M, xs..., fs...; kwargs...);
+# init_state!(state, M, F)
+# init_state!(state, M, F, x0; kwargs...) for backward compatability
+#
+# The state holds
+#
+# * the values xₙ₋₁, xₙ and f(xₙ₋₁), f(xₙ) along with
+# * fields for the converged value (xstar, fxstar),
+# * storage space for some algorithms, m, fm
+# * storage to count function evaluations, algorithm steps `steps`, `fnevals`
+# * convergence flags
+# * a message field
+#
+# A state is initialized with `init_state(M, F, x)` which sets up xₙ₋₁, xₙ, f(xₙ₋₁), f(xₙ)
+# which then calls `init_state!(state, M, F, clear=false, )` to finish the initializatoin
+# This should allow a state object for method M to be repurposed for method N by `init_state!(state,N,F)`
+#
+# !!! note:
+# in [NonlinearSolve](https://github.com/SciML/NonlinearSolve.jl), the state object is immutable
+# and the `Setfield` package modifes the immutable state
+# this may have performance benefits
+#
+init_state(M::AbstractUnivariateZeroMethod, F, x;
+           fnevals=initial_fnevals(M), kwargs...) = nothing
+init_state(M::AbstractUnivariateZeroMethod, x₀::T, x₁::T, fx₀::S, fx₁::S; kwargs...) where {T,S} =
+    _init_state(x₀::T, x₁::T, fx₀::S, fx₁::S; kwargs...)
 
-initial_steps(M::AbstractUnivariateZeroState) = @warn "initial_steps fix $M"
-incfn(o::AbstractUnivariateZeroState, k=1)    = o.fnevals += k
-incsteps(o::AbstractUnivariateZeroState, k=1) = o.steps += k
+function init_state!(state, M::AbstractUnivariateZeroMethod, F; clear=true, kwargs...)
+    clear && clear_convergence_flags!(state)
 
-# initialize state for most methods
-# function init_state(method::Any, fs, x)
+    for (k,v) ∈ kwargs
+        setproperty!(state, k, v)
+    end
 
-#     x1 = float(x)
-#     fx1 = fs(x1); fnevals = 1
-#     T, S = eltype(x1), eltype(fx1)
-#     zT, zS =  oneunit(x1) * (0*x1)/(0*x1), oneunit(fx1) * (0*fx1)/(0*fx1)
-#     state = UnivariateZeroState(x1, zT, zT/Zt*oneunit(x1), T[],
-#                                 fx1, zS, zS, S[],
-#                                 0, fnevals,
-#                                 false, false, false, false,
-#                                 "")
-#     state
-# end
+    nothing
+end
 
 ## This function is used to reset the state to an initial value
 ## As initializing a state is somewhat costly, this can be useful when many
 ## function calls would be used.
-## An example usage, might be:
-# M = Order1()
-# state = Roots.init_state(M, f1, 0.9)
-# options = Roots.init_options(M, state)
-# out = zeros(Float64, n)
-# for (i,x0) in enumerate(linspace(0.9, 1.0, n))
-#    Roots.init_state!(state, M, f1, x0)
-#    out[i] = find_zero(M, f1, state, options)
-# end
-# init_state has a method call variant
-# function init_state!(state::UnivariateZeroState{T,S}, x1::T, x0::T, m::Vector{T}, y1::S, y0::S, fm::Vector{S}) where {T,S}
-#     state.xn1 = x1
-#     state.xn0 = x0
-#     empty!(state.m); append!(state.m,  m)
-#     state.m = m
-#     state.fxn1 = y1
-#     state.fxn0 = y0
-#     empty!(state.fm); append!(state.fm,fm)
-#     state.steps = 0
-#     state.fnevals = 2
-#     state.stopped = false
-#     state.x_converged = false
-#     state.f_converged = false
-#     state.convergence_failed = false
-#     state.message = ""
+function init_state!(state, M::AbstractUnivariateZeroMethod, F, x0; clear=true, kwargs...) where {T,S}
+    x₀, x₁ = x₀x₁(x0)
+    fx₀, fx₁  = first(F(x₀)), first(F(x₁))
+    state.xn0, state.fxn0 = x₀, fx₀
+    state.xn1, state.fxn1 = x₁, fx₁
+    state.fnevals += 2*fn_argout(M)
+    init_state!(state, M, F; clear=clear, kwargs...)
 
-#     nothing
-# end
+    nothing
+end
 
-# function init_state!(state::UnivariateZeroState{T,S}, ::AbstractUnivariateZeroMethod, fs, x) where {T, S}
-#     x1 = float(x)
-#     fx1 = fs(x1)
+# convert to a different state, e.g. with bracketing
+function clear_convergence_flags!(state)
+    state.x_converged = state.f_converged = state.stopped = state.convergence_failed = false
+    nothing
+end
 
-#     init_state!(state, x1, oneunit(x1) * (0*x1)/(0*x1), T[],
-#                 fx1, oneunit(fx1) * (0*fx1)/(0*fx1), S[])
-# end
+# how many function evaluations in init_state
+initial_fnevals(M::AbstractUnivariateZeroState) = @warn "initial_fnevals fix $M"
+incfn(o::AbstractUnivariateZeroState, k=1)    = o.fnevals += k
+incsteps(o::AbstractUnivariateZeroState, k=1) = o.steps += k
+xType(::UnivariateZeroState{T,S}) where {T,S} = T
+fxType(::UnivariateZeroState{T,S}) where {T,S} = S
 
 
 function Base.copy(state::UnivariateZeroState{T,S}) where {T, S}
@@ -186,7 +174,7 @@ function Base.copy!(dst::UnivariateZeroState{T,S}, src::UnivariateZeroState{T,S}
 end
 
 ### Options
-mutable struct UnivariateZeroOptions{Q,R,S,T}
+struct UnivariateZeroOptions{Q,R,S,T}
     xabstol::Q
     xreltol::R
     abstol::S
@@ -220,11 +208,12 @@ function default_tolerances(::AbstractUnivariateZeroMethod, ::Type{T}, ::Type{S}
     (xatol, xrtol, atol, rtol, maxevals, maxfnevals, strict)
 end
 
-function init_options(M::AbstractUnivariateZeroMethod,
+init_options(M::AbstractUnivariateZeroMethod,
                       state::UnivariateZeroState{T,S};
                       kwargs...
-                      ) where {T, S}
+             ) where {T, S} = init_options(M, T, S; kwargs...)
 
+function init_options(M, T=Float64, S=Float64; kwargs...)
     d = kwargs
 
     defs = default_tolerances(M, T, S)
@@ -238,20 +227,22 @@ function init_options(M::AbstractUnivariateZeroMethod,
     options
 end
 
-# reset options to default values
-function init_options!(options::UnivariateZeroOptions{Q,R,S,T}, M::AbstractUnivariateZeroMethod) where {Q, R, S, T}
+# # reset options to default values
+@deprecate init_options!(options, M) init_options(M)
+# just use options = init_options(M, state) or init_options(M, xType(state), fxType(state); kwargs...)
+# function init_options!(options::UnivariateZeroOptions{Q,R,S,T}, M::AbstractUnivariateZeroMethod) where {Q, R, S, T}
 
-    defs = default_tolerances(M, Q, S)
-    options.xabstol = defs[1]
-    options.xreltol = defs[2]
-    options.abstol = defs[3]
-    options.reltol = defs[4]
-    options.maxevals = defs[5]
-    options.maxfnevals = defs[6]
-    options.strict = defs[7]
+#     defs = default_tolerances(M, Q, S)
+#     options.xabstol = defs[1]
+#     options.xreltol = defs[2]
+#     options.abstol = defs[3]
+#     options.reltol = defs[4]
+#     options.maxevals = defs[5]
+#     options.maxfnevals = defs[6]
+#     options.strict = defs[7]
 
-    nothing
-end
+#     nothing
+# end
 
 
 ## Tracks (for logging actual steps)
@@ -734,7 +725,7 @@ function find_zero(fs, x0,
 
     F = Callable_Function(M, fs, p)
     #    state = init_state(M, F, x0)
-    state = Init_state(M, F, x0)
+    state = init_state(M, F, x0)
     options = init_options(M, state; kwargs...)
     l = Tracks(verbose, tracks, state)
 
@@ -920,11 +911,10 @@ function run_bisection(N::AbstractBracketing, f, xs, state, options)
     steps, fnevals = state.steps, state.fnevals
     f = Callable_Function(N, f)
     #    init_state!(state, N, f, xs)
-    Init_state!(state, N, f; clear=true)
+    init_state!(state, N, f; clear=true)
     state.steps += steps
     state.fnevals += fnevals # could avoid 2 fn calls, with fxs
-    init_options!(options, N)
-    find_zero(N, f, state, options)
+    find_zero(N, f, state, init_options(N, state))
     a, b = xs
     u,v = a > b ? (b, a) : (a, b)
     state.message *= "Bracketing used over ($u, $v), those steps not shown. "
@@ -972,7 +962,7 @@ function init(𝑭𝑿::ZeroProblem, M::AbstractUnivariateZeroMethod, p′ = not
 
     F = Callable_Function(M, 𝑭𝑿.F, p === nothing ? p′ : p)  #⁺
     #state = init_state(M, F, 𝑭𝑿.x₀)
-    state = Init_state(M, F, 𝑭𝑿.x₀)
+    state = init_state(M, F, 𝑭𝑿.x₀)
     options = init_options(M, state; kwargs...)
     l = Tracks(verbose, tracks, state)
     ZeroProblemIterator(M,F,state,options,l)

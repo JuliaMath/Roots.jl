@@ -50,62 +50,24 @@ function update_state_guarded(M::AbstractSecant,N::AbstractUnivariateZeroMethod,
 end
 
 ##################################################
-function initial_steps(::AbstractSecant, x::Number)
-    x₁ = float(x)
-    x₀ = _default_secant_step(x₁)
-    promote(x₀, x₁)
-end
-initial_steps(::AbstractSecant) = 2
+initial_fnevals(::AbstractSecant) = 2
 
-# Init_state sets x₀,x₁,fx₀,fx₁ and sets up state
+# init_state sets x₀,x₁,fx₀,fx₁ and sets up state
 # then calls init_state!(state, M, F) for customizing for method
 # init_state! should be able to swap states (e.g. for hybrid use)
-function Init_state(M::AbstractSecant, F::Callable_Function, x; kwargs...)
+function init_state(M::AbstractSecant, F::Callable_Function, x;
+                    fnevals = initial_fnevals(M),
+                    kwargs...)
     x₀,x₁ =  x₀x₁(x)
     fx₀, fx₁ = promote(float(first(F(x₀))), float(first(F(x₁))))
-    state::UnivariateZeroState = Init_state(M, x₀, x₁, fx₀, fx₁;
-                                            steps = initial_steps(M),
+    state::UnivariateZeroState = init_state(M, x₀, x₁, fx₀, fx₁;
+                                            fnevals = initial_fnevals(M),
                                             kwargs...)
-    Init_state!(state, M, F, clear=false)
+    init_state!(state, M, F, clear=false)
     state
 end
 
 
-
-# we only change state to bracketing, and we should call that convert
-
-
-# function init_state(method::AbstractSecant, fs, x::Number)
-#     x1 = float(x)
-#     x0 = _default_secant_step(x1)
-#     init_state(method, fs, (x0, x1))
-# end
-
-# function init_state(method::AbstractSecant, fs, x)
-#     x0, x1 = x₀x₁(x);
-#     fx0, fx1 = first(fs(x0)), first(fs(x1))
-#     state = UnivariateZeroState(x1, x0, zero(x1)/zero(x1)*oneunit(x1), typeof(x1)[],
-#                                 fx1, fx0, fx1, typeof(fx1)[],
-#                                 0, 2,
-#                                 false, false, false, false, "")
-
-#     state
-# end
-
-# function init_state!(state::UnivariateZeroState{T, S}, method::AbstractSecant, fs, x::Number) where {T, S}
-#     x1::T = float(x)
-#     x0::T = _default_secant_step(x1)
-#     init_state!(state, method, fs, (x0, x1))
-# end
-
-
-# function init_state!(state::UnivariateZeroState{T, S}, ::AbstractSecant, f, x) where {T, S}
-#     x0, x1 = x₀x₁(x)
-#     fx0, fx1 = promote(f(x0), f(x1))
-#     init_state!(state, x1, x0, T[], fx1, fx0, S[])
-#     state.fnevals = 2
-#     nothing
-# end
 
 ##################################################
 

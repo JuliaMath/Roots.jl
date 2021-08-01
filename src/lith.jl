@@ -102,7 +102,6 @@ struct LithBoonkkampIJzerman{S,D} <: AbstractNewtonLikeMethod end
 LithBoonkkampIJzerman(s,d) = LithBoonkkampIJzerman{s,d}()
 fn_argout(::LithBoonkkampIJzerman{S,D}) where {S, D} = 1+D
 
-Init_state(L::LithBoonkkampIJzerman{S,D}, fs, x) where {S, D} = init_state(L,fs,x)
 function init_state(L::LithBoonkkampIJzerman{S,D}, fs, x) where {S,D}
 
     xs, ys = init_lith(L, fs, x) # [x₀,x₁,…,xₛ₋₁], ...
@@ -233,7 +232,6 @@ the next step.
 """
 struct LithBoonkkampIJzermanBracket <: AbstractBracketing end
 
-Init_state(L::LithBoonkkampIJzermanBracket, F::Callable_Function, xs) = init_state(L,F,xs)
 function init_state(::LithBoonkkampIJzermanBracket, F::Callable_Function{S,Tup,𝑭,P}, xs) where {S, Tup <: Val{true}, 𝑭, P}
     u, v = promote(float.(xs)...)
     fu,fv = F.f[1](u), F.f[1](v)

@@ -69,34 +69,19 @@ function adjust_bracket(x0)
     u, v
 end
 
-# In init_state the bracketing interval is left as (a,b) with
-# a,b both finite and of the same sign
-function init_state(method::AbstractBisection, fs, x)
 
-    x0, x1 = adjust_bracket(x) # now finite, right order
-    fx0, fx1 = promote(fs(x0), fs(x1))
-    assert_bracket(fx0, fx1)
-
-
-
-    state = _init_state(method, fs, (x0, x1), (fx0, fx1))
-    state
-
-end
-
-function Init_state(M::AbstractBracketing, F::Callable_Function, x; kwargs...)
+function init_state(M::AbstractBracketing, F::Callable_Function, x; kwargs...)
     x₀, x₁ = adjust_bracket(x)
     fx₀, fx₁ = promote(float(first(F(x₀))), float(first(F(x₁))))
-    #sign(fx₀) * sign(fx₁) > 0 && throw(ArgumentError(bracketing_error))
-    state::UnivariateZeroState = Init_state(M, x₀, x₁, fx₀, fx₁;
-                                            steps = initial_steps(M),
+    state::UnivariateZeroState = init_state(M, x₀, x₁, fx₀, fx₁;
+                                            fnevals = initial_fnevals(M),
                                             kwargs...)
-    Init_state!(state, M, F, clear=false)
+    init_state!(state, M, F, clear=false)
     state
 end
-initial_steps(::Roots.AbstractBracketing) = 2
+initial_fnevals(::Roots.AbstractBracketing) = 2
 
-function Init_state!(state, M::AbstractBisection, F::Callable_Function; clear=true)
+function init_state!(state, M::AbstractBisection, F::Callable_Function; clear=true)
     x0, x1 = state.xn0, state.xn1
     fx0, fx1 = state.fxn0, state.fxn1
 
@@ -153,84 +138,6 @@ function Init_state!(state, M::AbstractBisection, F::Callable_Function; clear=tr
 end
 
 
-## XX this would now be Init_state(xs..., fs...); Init_state!(state, M, F)
-# assume xs, fxs, have all been checked so that we have a bracket
-# gives an  entry for the case where the endpoints are expensive to compute
-# as requested in issue #156 by @greimel
-function _init_state(method::AbstractBisection, fs, xs, fxs)
-
-    x0, x1 = xs
-    fx0, fx1 = fxs
-
-    state = UnivariateZeroState(x1, x0, zero(x1)/zero(x1)*oneunit(x1), [x1],
-                                fx1, fx0, fx1, [fx1],
-                                0, 2,
-                                false, false, false, false,
-                                "")
-
-    init_state!(state, method, fs, (x0, x1), (fx0, fx1))
-    state
-end
-
-function init_state!(state::UnivariateZeroState{T,S}, M::AbstractBisection, fs,
-                     xs::Union{Tuple, Vector}) where {T, S}
-
-    x0::T, x1::T = adjust_bracket(xs) # now finite, right order
-    fx0::S, fx1::S = promote(fs(x0), fs(x1))
-    init_state!(state, M, fs, (x0,x1), (fx0, fx1))
-
-end
-
-function init_state!(state::UnivariateZeroState{T,S}, M::AbstractBisection, fs,
-                     xs::Union{Tuple, Vector}, fxs::Union{Tuple, Vector}) where {T, S}
-    x0, x1 = xs
-    fx0, fx1 = fxs
-
-    sign(fx0) * sign(fx1) > 0 && throw(ArgumentError(bracketing_error))
-
-    if iszero(sign(fx0) * sign(fx1))
-        # should be an error -- not bracketing, but we have a zero, so return it.
-        if iszero(fx0)
-            m, fm = x0, fx0
-        else
-            m, fm = x1, fx1
-        end
-        state.f_converged = true
-        state.xstar  = m
-        state.fxstar =  fm
-        #state.xn1 = m
-        #state.fxn1 = fm
-        return state
-    end
-
-
-    # we need a,b to be same sign, finite
-    if sign(x0) * sign(x1) < 0
-        m = zero(x1)
-        fm::S = fs(m) # iszero(fm) caught in assess_convergence
-        incfn(state)
-        if sign(fx0) * sign(fm) < 0
-            x1, fx1 = m, fm
-        elseif  sign(fx0) * sign(fm) > 0
-            x0, fx0 = m, fm
-        else
-            state.message = "Exact zero found"
-            state.xstar = m
-            state.fxstar = fm
-            state.f_converged = true
-            state.x_converged = true
-            return state
-        end
-    end
-
-    m = __middle(x0, x1)
-    fm = fs(m)
-    incfn(state)
-
-    y0, y1, ym = promote(fx0, fx1, fm)
-
-    init_state!(state, x1, x0, [m], y1, y0, [ym])
-end
 
 # for Bisection, the defaults are zero tolerances and strict=true
 """
@@ -399,33 +306,20 @@ function find_zero(fs, x0, method::M;
                    verbose=false,
                    kwargs...) where {M <: Union{Bisection}}
 
-#    x = adjust_bracket(x0)
-#    T = eltype(x[1])
-
     F = Callable_Function(method, fs, p)
-    #state = init_state(method, F, x0)
-    state = Init_state(method, F, x0)
-    x = (state.xn0, state.xn1)
+    state = init_state(method, F, x0)
     options = init_options(method, state; kwargs...)
     l = Tracks(verbose, tracks, state)
 
     # check if tolerances are exactly 0
     iszero_tol = iszero(options.xabstol) && iszero(options.xreltol) && iszero(options.abstol) && iszero(options.reltol)
 
-
-    if iszero_tol
-        if eltype(state.xn1) <: FloatNN
-            method = BisectionExact()
-                        #return find_zero(F, x, BisectionExact(); tracks=l, verbose=verbose, kwargs...)
-        else
-            method = A42()
-            #return find_zero(F, x, A42(); tracks=l, verbose=verbose, kwargs...)
-        end
-        #end
-    end
+    # zero_tol and use either exact or A42
+    iszero_tol && (method = xType(state) <: FloatNN ? BisectionExact() : A42())
 
     ZPI = ZeroProblemIterator(method, F, state, options, l)
     solve!(ZPI)
+
     verbose && tracks(ZPI)
 
     state.xstar
@@ -610,25 +504,7 @@ function newton_quadratic(a::T, b, d, fa, fb, fd, k::Int, delta=zero(T)) where {
 
 end
 
-# # (todo: DRY up?)
-# function init_state(M::AbstractAlefeldPotraShi, f, xs)
-#     u,v = promote(float.(_extrema(xs))...)
-#     if u > v
-#         u, v = v, u
-#     end
-#     fu, fv = promote(f(u), f(v))
-#     assert_bracket(fu, fv)
-#     state = UnivariateZeroState(v, u, zero(v)/zero(v)*oneunit(v), [v, v], ## x1, x0, d, [ee]
-#                                 fv, fu, fv, [fv,fv], ## fx1, fx0, d, [fe]
-#                                 0, 2,
-#                                 false, false, false, false,
-#                                 "")
-
-#     init_state!(state, M, f, (u,v), false)
-#     state
-# end
-
-function Init_state!(state::UnivariateZeroState{T,S}, M::AbstractAlefeldPotraShi, F::Callable_Function;
+function init_state!(state::UnivariateZeroState{T,S}, M::AbstractAlefeldPotraShi, F::Callable_Function;
                      middle=nothing, clear=true) where {T,S}
 
 
@@ -657,37 +533,6 @@ function Init_state!(state::UnivariateZeroState{T,S}, M::AbstractAlefeldPotraShi
 end
 
 
-# secant step, then bracket for initial setup
-# can pass instructions to compute fx
-# can pass in value for initial middle
-# function init_state!(state::UnivariateZeroState{T,S}, ::AbstractAlefeldPotraShi, f, xs::Union{Tuple, Vector}, compute_fx=true, middle=nothing) where {T, S}
-
-#     if !compute_fx
-#         a, b = state.xn0, state.xn1
-#         fa, fb = state.fxn0, state.fxn1
-#     else
-#         a, b = promote(float(xs[1]), float(xs[2]))
-#         if a > b
-#             a, b = b, a
-#         end
-#         fa, fb = f(a), f(b)
-#         state.fnevals = 2
-#         isbracket(fa, fb) || throw(ArgumentError(bracketing_error))
-#     end
-
-#     c::T = (middle != nothing && a < middle < b) ? middle : _middle(a,b)
-#     fc::S = f(c)
-#     incfn(state)
-
-#     a,b,d,fa,fb,fd = bracket(a,b,c,fa,fb,fc)
-#     ee, fe = d, fd
-
-#     init_state!(state, b, a, [d,ee], fb, fa, [fd,fe])
-#     state.steps = 0
-#     state.stopped = state.x_converged = state.f_converged = state.convergence_failed = false
-
-#     return nothing
-# end
 
 # for A42, the defaults are reltol=eps(), atol=0; 45 evals and strict=true
 # this *basically* follows the tol in the paper (2|u|*rtol + atol)
@@ -891,32 +736,9 @@ function log_step(l::Tracks, M::Brent, state)
     push!(l.xs, b) # we store [ai,bi, ai+1, bi+1, ...]
 end
 
-#
-function init_state(M::Brent, f, xs)
-    a, b = _extrema(xs)
-    u,v = promote(float(a), float(b))
-    fu, fv = promote(f(u), f(v))
-    isbracket(fu, fv) || throw(ArgumentError(bracketing_error))
-
-    # brent store b as smaller of |fa|, |fb|
-    if abs(fu) > abs(fv)
-        a, b, fa, fb = u, v, fu, fv
-    else
-        a, b, fa, fb = v, u, fv, fu
-    end
-
-
-
-    state = UnivariateZeroState(b, a, zero(b)/zero(b)*oneunit(b), [a, a], ## x1, x0, c, d
-                                fb, fa, fb, [fa, one(fa)], ## fx1, fx0, fc, mflag
-                                0, 2,
-                                false, false, false, false,
-                                "")
-    state
-end
 
 # we store mflag as -1, or +1 in state.m[2]
-function Init_state!(state::UnivariateZeroState{T,S}, ::Brent, F; clear=true) where {T,S}
+function init_state!(state::UnivariateZeroState{T,S}, ::Brent, F; clear=true) where {T,S}
 
     u, v, fu, fv = state.xn0, state.xn1, state.fxn0, state.fxn1
 
@@ -933,25 +755,6 @@ function Init_state!(state::UnivariateZeroState{T,S}, ::Brent, F; clear=true) wh
     return nothing
 end
 
-# we store mflag as -1, or +1 in state.m[2]
-function init_state!(state::UnivariateZeroState{T,S}, ::Brent, f, xs::Union{Tuple, Vector}) where {T, S}
-    u::T, v::T = promote(float(xs[1]), float(xs[2]))
-    fu::S, fv::S = promote(f(u), f(v))
-    isbracket(fu, fv) || throw(ArgumentError(bracketing_error))
-
-    # brent store b as smaller of |fa|, |fb|
-    if abs(fu) > abs(fv)
-        a, b, fa, fb = u, v, fu, fv
-    else
-        a, b, fa, fb = v, u, fv, fu
-    end
-
-    init_state!(state, b,a,[a,a], fb,fa, [fa, one(fa)])
-    state.steps = 0
-    state.stopped = state.x_converged = state.f_converged = state.convergence_failed = false
-
-    return nothing
-end
 
 function update_state(M::Brent, f, state::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
     mflag = state.fm[2] > 0
@@ -1134,10 +937,8 @@ With the default tolerances, one  of these should be the case: `exact`  is `true
 """
 function find_bracket(fs, x0, method::M=A42(); kwargs...) where {M <: Union{AbstractAlefeldPotraShi, BisectionExact}}
     x = adjust_bracket(x0)
-    T = eltype(x[1])
     F = Callable_Function(method, fs) #callable_function(fs)
-    ##state = init_state(method, F, x)
-    state = Init_state(method, F, x)
+    state = init_state(method, F, x)
     options = init_options(method, state; kwargs...)
 
     # check if tolerances are exactly 0
