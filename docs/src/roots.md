@@ -564,7 +564,30 @@ savefig("flight-2.svg"); nothing #hide
 ![](flight-2.svg)
 
 
+## ForwardDiff
 
+We have seen that `ForwardDiff` can be used to specify functions to pass to `find_zero`. This example shows what is necessary to use `ForwardDiff` to differentiate a problem which internally calls `find_zero`. It comes from [stackoverflow](https://stackoverflow.com/questions/68485811/julia-roots-find-zero-with-forwarddiff-dual-type). The main issue is technical. When `find_zero` sets up a problem, it creates a state which specifies types for the ``x`` and ``f(x)`` values. These types are found from the initial `x0` values passed to `find_zero(f, x0, M)`, *after* calling `float`, and the corresponding `f(x)` values. In the following, it is necessary to ensure the type for the `x0` value is the underlying type for forward differentiation by `ForwardDiff`. This is the working solution:
+
+```julia
+julia> using Distributions, Roots, StatsFuns, ForwardDiff
+
+julia> function test_fun(θ::AbstractVector{T}) where T
+           μ,σ,p = θ;
+           x0 = zero(eltype(θ)) # <<<--- not 0.0, which will error
+           z_star = find_zero(z -> logistic(z) - p, x0)
+           return pdf(Normal(μ,σ), z_star)
+       end
+test_fun (generic function with 1 method)
+
+julia> test_fun([0.0,1.0,0.75])
+0.2181847684199842
+
+julia> ForwardDiff.gradient(test_fun,[0.0,1.0,0.75])
+3-element Vector{Float64}:
+  0.23970046778640028
+  0.045153111089649756
+ -1.2784024948607997
+```
 
 
 
