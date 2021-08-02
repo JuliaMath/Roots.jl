@@ -393,6 +393,83 @@ julia> find_zero(dfᵏs(f, 2), 2, Roots.LithBoonkkampIJzerman(2,2)) # like Halle
 2.0945514815423265
 ```
 
+## The problem-algorithm-solve interface
+
+The problem-algorithm-solve interface is a pattern popularized in `Julia` by the `DifferentialEquations.jl` suite of packages. The pattern consists of setting up a *problem* then *solving* the problem by specifying an *algorithm*. This is very similar to what is specified in the `find_zero(f, x0, M)` interface where `f` and `x0` specify the problem, `M` the algorithm, and `find_zero` calls the solver.
+
+To break this up into steps, `Roots` has methods `ZeroProblem` and `init`, `solve`, and `solve!` from the `CommonSolve.jl` package.
+
+Consider solving ``\sin(x) = 0`` using the `Secant` method starting with the interval ``[3,4]``.
+
+```jldoctest roots
+julia> f(x) = sin(x)
+f (generic function with 1 method)
+
+julia> x0 = (3, 4)
+(3, 4)
+
+julia> M = Roots.Secant()
+Roots.Secant()
+
+julia> Z = ZeroProblem(f, x0)
+ZeroProblem{typeof(f), Tuple{Int64, Int64}}(f, (3, 4))
+
+julia> solve(Z, M)
+3.141592653589793
+```
+
+Changing the method is easy:
+
+```jldoctest rotos
+julia> solve(Z, Roots.Order2())
+3.1415926535897944
+```
+
+The `solve` interface works with parameterized functions, as well:
+
+```jldoctest roots
+julia> g(x,p) = cos(x) - x/p
+g (generic function with 1 method)
+
+julia> Z = ZeroProblem(g, (0.0, pi/2))
+ZeroProblem{typeof(g), Tuple{Float64, Float64}}(g, (0.0, 1.5707963267948966))
+
+julia> solve(Z, Roots.Secant(), 2) # p=2
+1.0298665293222589
+
+julia> solve(Z, Bisection(), 3)
+1.1701209500026262
+```
+
+Behind the scenes an iterator is created, then iterated to convergence. This iterator can be exposed programatically, which might be of use if details of the algorithm are desired:
+
+```jldoctest roots
+julia> prob = init(Z, M);  # A ZeroProblemIterator instance
+
+julia> solve!(prob)
+3.141592653589793
+
+julia> prob.state.fnevals
+7
+```
+
+Or more explicitly:
+
+```jldoctest roots
+julia> prob = init(Z, M);
+
+julia> steps = 0
+0
+
+ulia> for _ in prob; steps += 1; end
+
+julia> steps, last(prob)
+(5, 3.141592653589793)
+```
+
+
+
+
 ## Finding critical points
 
 The `D` function, defined above, makes it straightforward to find critical points
