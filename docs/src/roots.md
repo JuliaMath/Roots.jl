@@ -420,7 +420,7 @@ julia> solve(Z, M)
 
 Changing the method is easy:
 
-```jldoctest rotos
+```jldoctest roots
 julia> solve(Z, Roots.Order2())
 3.1415926535897944
 ```
@@ -444,6 +444,8 @@ julia> solve(Z, Bisection(), 3)
 Behind the scenes an iterator is created, then iterated to convergence. This iterator can be exposed programatically, which might be of use if details of the algorithm are desired:
 
 ```jldoctest roots
+julia> Z = ZeroProblem(sin, (3, 4));
+
 julia> prob = init(Z, M);  # A ZeroProblemIterator instance
 
 julia> solve!(prob)
