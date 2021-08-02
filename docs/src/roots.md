@@ -444,7 +444,7 @@ julia> solve(Z, Bisection(), 3)
 Behind the scenes an iterator is created, then iterated to convergence. This iterator can be exposed programatically, which might be of use if details of the algorithm are desired:
 
 ```jldoctest roots
-julia> Z = ZeroProblem(sin, (3, 4));
+julia> Z, M = ZeroProblem(sin, (3, 4)), Roots.Secant();
 
 julia> prob = init(Z, M);  # A ZeroProblemIterator instance
 
@@ -463,7 +463,7 @@ julia> prob = init(Z, M);
 julia> steps = 0
 0
 
-ulia> for _ in prob; steps += 1; end
+julia> for _ in prob; steps += 1; end
 
 julia> steps, last(prob)
 (5, 3.141592653589793)
