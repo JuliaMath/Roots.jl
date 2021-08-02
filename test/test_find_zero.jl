@@ -278,7 +278,21 @@ end
         @test solve!(init(Za, M, 2)) ≈ α₂
     end
 
-
+    ## test counting of `steps`, `fnevals` in `state`
+    wrapper(f) = begin
+        cnt = 0; x -> (cnt += 1; f(x))
+    end
+    Ms = (Roots.Secant(), Roots.Order2(), Roots.Bisection(), Roots.A42())
+    for M ∈ Ms
+        F = wrapper(sin)
+        prob = init(ZeroProblem(F, (3,4)))
+        steps = 0
+        for _ in prob
+            steps += 1
+        end
+        @test steps == prob.state.steps
+        @test F.cnt.contents == prob.state.fnevals
+    end
 end
 
 @testset "find_zero issue tests" begin

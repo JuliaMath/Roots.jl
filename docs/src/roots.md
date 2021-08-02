@@ -121,7 +121,7 @@ floating point values is a modification of the bisection method. For big float v
 algorithm due to Alefeld, Potra, and Shi is used.
 
 ```jldoctest roots
-julia> find_zero(sin, (big(3), big(4)))    # uses a different algorithm then for (3,4)
+julia> find_zero(sin, (big(3), big(4)))    # uses a different algorithm than for (3,4)
 3.141592653589793238462643383279502884197169399375105820974944592307816406286198
 
 

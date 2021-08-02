@@ -68,46 +68,6 @@ function init_state(M::AbstractSecant, F::Callable_Function, x;
 end
 
 
-
-##################################################
-
-## Order0 and Secant are related
-"""
-    Order0()
-
-
-The `Order0` method is engineered to be a more robust, though possibly
-slower, alternative to the other derivative-free root-finding
-methods. The implementation roughly follows the algorithm described in
-*Personal Calculator Has Key to Solve Any Equation f(x) = 0*, the
-SOLVE button from the
-[HP-34C](http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1979-12.pdf).
-The basic idea is to use a secant step. If along the way a bracket is
-found, switch to bisection, using `AlefeldPotraShi`.  If the secant
-step fails to decrease the function value, a quadratic step is used up
-to 4 times.
-
-This is not really 0-order: the secant method has order
-1.6...[Wikipedia](https://en.wikipedia.org/wiki/Secant_method#Comparison_with_other_root-finding_methods_
-and the the bracketing method has order
-1.6180...[Wikipedia](http://www.ams.org/journals/mcom/1993-61-204/S0025-5718-1993-1192965-2/S0025-5718-1993-1192965-2.pdf)
-so for reasonable starting points, this algorithm should be
-superlinear, and relatively robust to non-reasonable starting points.
-
-"""
-struct Order0 <: AbstractSecant end
-
-function find_zero(fs, x0, method::Order0;
-                   p=nothing,
-                   tracks::AbstractTracks=NullTracks(),
-                   verbose=false,
-                   kwargs...)
-    M = Order1()
-    N = AlefeldPotraShi()
-    F = Callable_Function(M, fs, p)
-    find_zero(F, x0, M, N; tracks=tracks,verbose=verbose, kwargs...)
-end
-
 ##################################################
 
 ## Secant

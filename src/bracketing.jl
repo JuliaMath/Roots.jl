@@ -300,29 +300,23 @@ end
 ## Bisection has special cases
 ## for zero tolerance, we have either BisectionExact or A42 methods
 ## for non-zero tolerances, we have use thegeneral Bisection method
-function find_zero(fs, x0, method::M;
+function find_zero(fs, x0, method::Bisection;
                    p=nothing,
                    tracks = NullTracks(),
                    verbose=false,
                    kwargs...) where {M <: Union{Bisection}}
 
-    F = Callable_Function(method, fs, p)
-    state = init_state(method, F, x0)
-    options = init_options(method, state; kwargs...)
-    l = Tracks(verbose, tracks, state)
+    _options = init_options(Bisection(), Float64, Float64; kwargs...)
+    iszero_tol = all(iszero, (_options.xabstol, _options.xreltol, _options.abstol, _options.reltol))
+    if iszero_tol
+        method = (typeof(float(first(extrema(x0)))) <: FloatNN) ? BisectionExact() : A42()
+    end
 
-    # check if tolerances are exactly 0
-    iszero_tol = iszero(options.xabstol) && iszero(options.xreltol) && iszero(options.abstol) && iszero(options.reltol)
-
-    # zero_tol and use either exact or A42
-    iszero_tol && (method = xType(state) <: FloatNN ? BisectionExact() : A42())
-
-    ZPI = ZeroProblemIterator(method, F, state, options, l)
+    ZPI = init(ZeroProblem(fs, x0), method, p; verbose=verbose, tracks=tracks, kwargs...)
     solve!(ZPI)
 
-    verbose && tracks(ZPI)
-
-    state.xstar
+    verbose && show_trace(ZPI)
+    last(ZPI) # no error thrown?
 
 end
 

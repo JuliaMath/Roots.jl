@@ -147,31 +147,6 @@ xType(::UnivariateZeroState{T,S}) where {T,S} = T
 fxType(::UnivariateZeroState{T,S}) where {T,S} = S
 
 
-function Base.copy(state::UnivariateZeroState{T,S}) where {T, S}
-    UnivariateZeroState(state.xn1, state.xn0, state.xstar, copy(state.m),
-                        state.fxn1, state.fxn0, state.fxstar, copy(state.fm),
-                        state.steps, state.fnevals,
-                        state.stopped, state.x_converged,
-                        state.f_converged, state.convergence_failed,
-                        state.message)
-end
-
-function Base.copy!(dst::UnivariateZeroState{T,S}, src::UnivariateZeroState{T,S}) where {T,S}
-    dst.xn1 = src.xn1
-    dst.xn0 = src.xn0
-    empty!(dst.m); append!(dst.m, src.m)
-    dst.fxn1 = src.fxn1
-    dst.fxn0 = src.fxn0
-    empty!(dst.fm); append!(dst.fm, src.fm)
-    dst.steps = src.steps
-    dst.fnevals = src.fnevals
-    dst.stopped = src.stopped
-    dst.x_converged = src.x_converged
-    dst.f_converged = src.f_converged
-    dst.convergence_failed = src.convergence_failed
-    dst.message = src.message
-    nothing
-end
 
 ### Options
 struct UnivariateZeroOptions{Q,R,S,T}
@@ -458,6 +433,7 @@ function decide_convergence(M::AbstractUnivariateZeroMethod,  F, state::Univaria
         if T <: Real && S <: Real
             for u in (prevfloat(xn1), nextfloat(xn1))
                 fu = first(F(u))
+                incfn(state)
                 if iszero(fu) || _unitless(fu * fxn1) < 0
                     state.message *= "Change of sign at xn identified. "
                     state.f_converged = true
@@ -586,7 +562,11 @@ appreciated, and at times specified.
 
 For the `Bisection` methods, convergence is guaranteed, so the tolerances are set to be 0 by default.
 
-If a bracketing method is passed in after the method specification, when a bracket is found, the bracketing method will used to identify the zero. This is what `Order0` does by default, with a secant step initially and the `A42` method when a bracket is  encountered.
+If a bracketing method is passed in after the method specification, if
+a bracket is identified during the algorithm, the bracketing method
+will then be used to identify the zero. This is what `Order0` does by
+default, with initials secant steps and then `AlefeldPotraShi` steps
+should a bracket be encountered.
 
 Note: The order of the method is hinted at in the naming scheme. A
 scheme is order `r` if, with `eᵢ = xᵢ - α`, `eᵢ₊₁ = C⋅eᵢʳ`. If the
@@ -714,35 +694,7 @@ end
 find_zero(f, x0::T; kwargs...)  where {T <: Number} = find_zero(f, x0, Order0(); kwargs...)
 find_zero(f, x0; kwargs...) = find_zero(f, x0, Bisection(); kwargs...)
 
-# todo: consolidate this with find_zero(M,N,f, x0)...
-function find_zero(fs, x0,
-                   M::AbstractUnivariateZeroMethod,
-                   N::AbstractBracketing;
-                   p = nothing,
-                   tracks::AbstractTracks=NullTracks(),
-                   verbose=false,
-                   kwargs...)
 
-    F = Callable_Function(M, fs, p)
-    #    state = init_state(M, F, x0)
-    state = init_state(M, F, x0)
-    options = init_options(M, state; kwargs...)
-    l = Tracks(verbose, tracks, state)
-
-    xstar = find_zero(M, N, F, state, options, l)
-    verbose &&  show_trace(M, N, state, l)
-
-    isnan(xstar) && throw(ConvergenceFailed("Stopped at: xn = $(state.xn1). $(state.message)"))
-
-    return xstar
-
-end
-
-
-
-
-## find_zero implementation
-## Updates state, could be `find_zero!(state, M, F, options, l)`...
 """
     find_zero(M, F, state, [options], [l])
 
@@ -779,146 +731,6 @@ function find_zero(M::AbstractUnivariateZeroMethod,
                    l::AbstractTracks=NullTracks()
                    )
     solve!(init(M, F, state, options, l))
-end
-
-# Robust version using some tricks: idea from algorithm described in
-# [The SOLVE button from the
-# HP-34]C(http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1979-12.pdf).
-# * use bracketing method if one identifed
-# * limit steps so as not too far or too near the previous one
-# * if not decreasing, use a quad step upto 4 times to bounce out of trap, if possible
-# First uses M, then N if bracket is identified
-function find_zero(M::AbstractUnivariateZeroMethod,
-                   N::AbstractBracketing,
-                   F,
-                   state::AbstractUnivariateZeroState,
-                   options::UnivariateZeroOptions,
-                   l::AbstractTracks=NullTracks()
-                   )
-
-
-    log_step(l, M, state, :init)
-    state0 = copy(state)
-    quad_ctr = 0
-
-    while true
-
-        if assess_convergence(M, state, options)
-            break
-        end
-
-        copy!(state0, state)
-        update_state(M, F, state0, options) # state0 is proposed step
-
-        adj = false
-        ## did we find a zero or a bracketing interval?
-        if iszero(state0.fxn1)
-            copy!(state, state0)
-            state.xstar, state.fxstar = state.xn1, state.fxn1
-            state.f_converged = true
-            break
-        elseif sign(state0.fxn0) * sign(state0.fxn1) < 0
-            copy!(state, state0)
-            a, b = state0.xn0, state0.xn1 # could save some fn calls here
-            run_bisection(N, F, (a, b), state, options)
-            break
-        end
-
-
-        ## did we move too far?
-        r, a, b = state0.xn1, state.xn0, state.xn1
-        Δr = abs(r - b)
-        Δx = abs(b - a)
-        ts,TB = 1e-3, 1e2 # too small, too big
-        if  Δr >= TB * Δx
-            adj = true
-            r = b + sign(r-b) * TB * Δx  ## too big
-            state0.xn1 = r
-            state0.fxn1 = F(r)
-            incfn(state)
-        elseif Δr  <= ts *  Δx
-            adj = true
-            r = b + sign(r - b) * ts * Δx
-            fr = first(F(r))
-            incfn(state)
-            state0.xn1 = r
-            state0.fxn1 = fr
-        end
-
-        # a sign change after shortening?
-        if sign(state.fxn1) * sign(state0.fxn1) < 0
-            state.xn0, state.fxn0 = state.xn1, state.fxn1
-            state.xn1, state.fxn1 = state0.xn1, state0.fxn1
-            a, b = state.xn0, state.xn1
-            run_bisection(N, F, (a, b), state, options)
-            break
-        end
-
-
-        ## did we improve?
-        if adj || abs(state0.fxn1) < abs(state.fxn1)
-            if isnan(state0.xn1) || isnan(state0.fxn1) || isinf(state0.xn1) || isinf(state0.fxn1)
-                break
-            end
-            copy!(state, state0)
-            log_step(l, M, state)
-            incsteps(state)
-            quad_ctr = 0
-            continue
-        end
-
-        ## try quad_vertex, unless that has gotten old
-        if quad_ctr > 4
-            copy!(state, state0)
-            state.stopped = true
-            break
-        else
-            quad_ctr += 1
-            r = quad_vertex(state0.xn1, state0.fxn1, state.xn1, state.fxn1, state.xn0, state.fxn0)
-
-            if isnan(r) || isinf(r)
-                copy!(state, state0)
-            else
-
-                fr = F(r)
-                incfn(state)
-
-                state0.xn1 = r
-                state0.fxn1 = fr
-                incfn(state)
-                copy!(state, state0)
-            end
-        end
-
-        log_step(l, M, state)
-        incsteps(state)
-    end
-
-    decide_convergence(M, F, state, options)
-end
-
-
-## --
-
-
-## ---- Hybrid Method ----
-# Switch to bracketing method
-#M = Bisection()  # exact for floating point
-#M = AlefeldPotraShi() # *usually* exact
-#M = Brent()          # a bit faster, but not always convergent, as implemented (cf. RootTesting)
-run_bisection(f, xs, state, options) = run_bisection(AlefeldPotraShi(), f, xs, state, options)
-function run_bisection(N::AbstractBracketing, f, xs, state, options)
-    steps, fnevals = state.steps, state.fnevals
-    f = Callable_Function(N, f)
-    #    init_state!(state, N, f, xs)
-    init_state!(state, N, f; clear=true)
-    state.steps += steps
-    state.fnevals += fnevals # could avoid 2 fn calls, with fxs
-    find_zero(N, f, state, init_options(N, state))
-    a, b = xs
-    u,v = a > b ? (b, a) : (a, b)
-    state.message *= "Bracketing used over ($u, $v), those steps not shown. "
-    return nothing
 end
 
 
@@ -1018,7 +830,9 @@ function tracks(P::ZeroProblemIterator{M,F,S,O,L}) where {M,F,S,O,L<:Tracks}
      show_trace(P.M, nothing, P.state, P.logger)
 end
 tracks(P::ZeroProblemIterator) = error("Set verbose=true when specifying the problem to see the tracks")
-
+function show_trace(P::ZeroProblemIterator{M,F,S,O,L}) where {M,F,S,O,L<:Tracks}
+     show_trace(P.M, nothing, P.state, P.logger)
+end
 """
     solve(fx::ZeroProblem, [p=nothing]; kwargs...)
     solve(fx::ZeroProblem, M, [p=nothing]; kwargs...)
