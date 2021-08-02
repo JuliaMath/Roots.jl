@@ -110,7 +110,8 @@ end
     g1 = x -> x^5 - x - 1
     x0_, xstar_ = (1.0, 2.0), 1.1673039782614187
     M = Roots.A42()
-    state = Roots.init_state(M, g1, x0_)
+    G1 = Roots.Callable_Function(M, g1)
+    state = Roots.init_state(M, G1, x0_)
     options = Roots.init_options(M, state)
     for M in (Roots.A42(), Roots.Bisection(), Roots.FalsePosition())
         Roots.init_state!(state, M, g1, x0_)
@@ -152,7 +153,8 @@ end
     xs = (3.0, 4.0)
     fxs = f.(xs)
     M = Bisection()
-    state = Roots._init_state(M, f, xs, fxs)
+    #XXX    state = Roots._init_state(M, f, xs, fxs)
+    state = Roots.init_state(M, xs..., fxs..., m=[3.5], fm=[f(3.5)])
     @test find_zero(M, f, state) ≈ π
 
 
@@ -160,12 +162,15 @@ end
     g1 = x -> exp(x) - x^4
     x0_, xstar_ = (5.0, 20.0), 8.613169456441398
     M = Roots.Bisection()
-    state = Roots.init_state(M, g1, x0_)
+    G1 = Roots.Callable_Function(M, g1)
+    state = Roots.init_state(M, G1, x0_)
     options = Roots.init_options(M, state, xatol=1/2)
     find_zero(M, g1, state, options)
     M = Roots.Order1()
-    Roots.init_state!(state, M, g1, state.m[1])
-    Roots.init_options!(options, M)
+    #Roots.init_state!(state, M, g1, state.m[1])
+    Roots.init_state!(state, M, G1)
+    #Roots.init_options!(options, M)
+    options = Roots.init_options(M, state)
     @test find_zero(M, g1, state, options) ≈ xstar_
 
 
@@ -182,22 +187,27 @@ end
     g1 = x -> exp(x) - x^4
     x0_= (5.0, 20.0)
     M = Ms[1]
-    state = Roots.init_state(M, g1, x0_)
+    G1 = Roots.Callable_Function(M,g1)
+    state = Roots.init_state(M, G1, x0_)
     options = Roots.init_options(M, state)
 
     for M in Ms
-        @test Roots.init_state!(state, M, g1, x0_) == nothing
-        @test Roots.init_options!(options, M) == nothing
-        @test Roots.update_state(M, g1, state, options) == nothing
+        G1 = Roots.Callable_Function(M,g1)
+        @test Roots.init_state!(state, M, G1, x0_) == nothing
+        #@test Roots.init_options!(options, M) == nothing
+        options = Roots.init_options(M, state)
+        @test Roots.update_state(M, G1, state, options) == nothing
         @test Roots.assess_convergence(M, state, options) == false # none in just 1 step
     end
 
     x0_ = 8.0
     xstars = find_zeros(g1, -20.0, 20.0)
     for M in Ns
-        @test Roots.init_state!(state, M, g1, x0_) == nothing
-        @test Roots.init_options!(options, M) == nothing
-        @test Roots.update_state(M, g1, state, options)  == nothing
+        G1 = Roots.Callable_Function(M,g1)
+        @test Roots.init_state!(state, M, G1, x0_) == nothing
+        #@test Roots.init_options!(options, M) == nothing
+        options = Roots.init_options(M, state)
+        @test Roots.update_state(M, G1, state, options)  == nothing
         @test Roots.assess_convergence(M, state, options) == false  # none in 1 step
     end
 
@@ -268,7 +278,21 @@ end
         @test solve!(init(Za, M, 2)) ≈ α₂
     end
 
-
+    ## test counting of `steps`, `fnevals` in `state`
+    wrapper(f) = begin
+        cnt = 0; x -> (cnt += 1; f(x))
+    end
+    Ms = (Roots.Secant(), Roots.Order2(), Roots.Bisection(), Roots.A42())
+    for M ∈ Ms
+        F = wrapper(sin)
+        prob = init(ZeroProblem(F, (3,4)))
+        steps = 0
+        for _ in prob
+            steps += 1
+        end
+        @test steps == prob.state.steps
+        @test F.cnt.contents == prob.state.fnevals
+    end
 end
 
 @testset "find_zero issue tests" begin

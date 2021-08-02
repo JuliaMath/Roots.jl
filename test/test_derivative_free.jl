@@ -361,15 +361,15 @@ if !isinteractive()
         end
 
         for T in Ts
-            xstar = Roots.find_zero((fn,D(fn)), T(x0), Roots.Newton())
+            xstar = Roots.find_zero((fn,D(fn,sqrt(eps(T)))), T(x0), Roots.Newton())
             @test xstar ≈ T(alpha)  atol=max(sqrt(eps(T)), eps())
             @test isa(xstar, T)
 
-            xstar = Roots.find_zero((fn,D(fn),D2(fn)), T(x0), Roots.Halley())
+            xstar = Roots.find_zero((fn,D(fn,sqrt(eps(T))),D2(fn,sqrt(eps(T)))), T(x0), Roots.Halley())
             @test xstar ≈ T(alpha) atol=max(sqrt(eps(T)), eps())
             @test isa(xstar, T)
 
-            xstar = Roots.find_zero((fn,D(fn),D2(fn)), T(x0), Roots.Schroder())
+            xstar = Roots.find_zero((fn,D(fn,sqrt(eps(T))),D2(fn,sqrt(eps(T)))), T(x0), Roots.Schroder())
             @test xstar ≈ T(alpha) atol=max(sqrt(eps(T)), eps())
             @test isa(xstar, T)
         end

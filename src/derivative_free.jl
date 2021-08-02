@@ -50,77 +50,23 @@ function update_state_guarded(M::AbstractSecant,N::AbstractUnivariateZeroMethod,
 end
 
 ##################################################
+initial_fnevals(::AbstractSecant) = 2
 
-function init_state(method::AbstractSecant, fs, x::Number)
-    x1 = float(x)
-    x0 = _default_secant_step(x1)
-    init_state(method, fs, (x0, x1))
-end
-
-function init_state(method::AbstractSecant, fs, x)
-    x0, x1 = x₀x₁(x);
-    fx0, fx1 = first(fs(x0)), first(fs(x1))
-    state = UnivariateZeroState(x1, x0, zero(x1)/zero(x1)*oneunit(x1), typeof(x1)[],
-                                fx1, fx0, fx1, typeof(fx1)[],
-                                0, 2,
-                                false, false, false, false, "")
-
+# init_state sets x₀,x₁,fx₀,fx₁ and sets up state
+# then calls init_state!(state, M, F) for customizing for method
+# init_state! should be able to swap states (e.g. for hybrid use)
+function init_state(M::AbstractSecant, F::Callable_Function, x;
+                    fnevals = initial_fnevals(M),
+                    kwargs...)
+    x₀,x₁ =  x₀x₁(x)
+    fx₀, fx₁ = promote(float(first(F(x₀))), float(first(F(x₁))))
+    state::UnivariateZeroState = init_state(M, x₀, x₁, fx₀, fx₁;
+                                            fnevals = initial_fnevals(M),
+                                            kwargs...)
+    init_state!(state, M, F, clear=false)
     state
 end
 
-function init_state!(state::UnivariateZeroState{T, S}, method::AbstractSecant, fs, x::Number) where {T, S}
-    x1::T = float(x)
-    x0::T = _default_secant_step(x1)
-    init_state!(state, method, fs, (x0, x1))
-end
-
-
-function init_state!(state::UnivariateZeroState{T, S}, ::AbstractSecant, f, x) where {T, S}
-    x0, x1 = x₀x₁(x)
-    fx0, fx1 = promote(f(x0), f(x1))
-    init_state!(state, x1, x0, T[], fx1, fx0, S[])
-    state.fnevals = 2
-    nothing
-end
-
-##################################################
-
-## Order0 and Secant are related
-"""
-    Order0()
-
-
-The `Order0` method is engineered to be a more robust, though possibly
-slower, alternative to the other derivative-free root-finding
-methods. The implementation roughly follows the algorithm described in
-*Personal Calculator Has Key to Solve Any Equation f(x) = 0*, the
-SOLVE button from the
-[HP-34C](http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1979-12.pdf).
-The basic idea is to use a secant step. If along the way a bracket is
-found, switch to bisection, using `AlefeldPotraShi`.  If the secant
-step fails to decrease the function value, a quadratic step is used up
-to 4 times.
-
-This is not really 0-order: the secant method has order
-1.6...[Wikipedia](https://en.wikipedia.org/wiki/Secant_method#Comparison_with_other_root-finding_methods_
-and the the bracketing method has order
-1.6180...[Wikipedia](http://www.ams.org/journals/mcom/1993-61-204/S0025-5718-1993-1192965-2/S0025-5718-1993-1192965-2.pdf)
-so for reasonable starting points, this algorithm should be
-superlinear, and relatively robust to non-reasonable starting points.
-
-"""
-struct Order0 <: AbstractSecant end
-
-function find_zero(fs, x0, method::Order0;
-                   p=nothing,
-                   tracks::AbstractTracks=NullTracks(),
-                   verbose=false,
-                   kwargs...)
-    M = Order1()
-    N = AlefeldPotraShi()
-    F = Callable_Function(M, fs, p)
-    find_zero(F, x0, M, N; tracks=tracks,verbose=verbose, kwargs...)
-end
 
 ##################################################
 

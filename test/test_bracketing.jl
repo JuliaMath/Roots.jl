@@ -244,7 +244,7 @@ avg(x) = sum(x)/length(x)
     maxresidual = maximum([result.maxresidual for result in results])
     cnts = [result.evalcount for result in results]
     @test maxfailures <= 10
-    @test maxresidual <= 1e-6
+    @test maxresidual <= 1e-5
     @test avg(cnts) <= 2500
 
 

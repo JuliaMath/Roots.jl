@@ -121,7 +121,7 @@ floating point values is a modification of the bisection method. For big float v
 algorithm due to Alefeld, Potra, and Shi is used.
 
 ```jldoctest roots
-julia> find_zero(sin, (big(3), big(4)))    # uses a different algorithm then for (3,4)
+julia> find_zero(sin, (big(3), big(4)))    # uses a different algorithm than for (3,4)
 3.141592653589793238462643383279502884197169399375105820974944592307816406286198
 
 
@@ -393,6 +393,85 @@ julia> find_zero(dfᵏs(f, 2), 2, Roots.LithBoonkkampIJzerman(2,2)) # like Halle
 2.0945514815423265
 ```
 
+## The problem-algorithm-solve interface
+
+The problem-algorithm-solve interface is a pattern popularized in `Julia` by the `DifferentialEquations.jl` suite of packages. The pattern consists of setting up a *problem* then *solving* the problem by specifying an *algorithm*. This is very similar to what is specified in the `find_zero(f, x0, M)` interface where `f` and `x0` specify the problem, `M` the algorithm, and `find_zero` calls the solver.
+
+To break this up into steps, `Roots` has methods `ZeroProblem` and `init`, `solve`, and `solve!` from the `CommonSolve.jl` package.
+
+Consider solving ``\sin(x) = 0`` using the `Secant` method starting with the interval ``[3,4]``.
+
+```jldoctest roots
+julia> f(x) = sin(x)
+f (generic function with 1 method)
+
+julia> x0 = (3, 4)
+(3, 4)
+
+julia> M = Roots.Secant()
+Roots.Secant()
+
+julia> Z = ZeroProblem(f, x0)
+ZeroProblem{typeof(f), Tuple{Int64, Int64}}(f, (3, 4))
+
+julia> solve(Z, M)
+3.141592653589793
+```
+
+Changing the method is easy:
+
+```jldoctest roots
+julia> solve(Z, Roots.Order2())
+3.1415926535897944
+```
+
+The `solve` interface works with parameterized functions, as well:
+
+```jldoctest roots
+julia> g(x,p) = cos(x) - x/p
+g (generic function with 1 method)
+
+julia> Z = ZeroProblem(g, (0.0, pi/2))
+ZeroProblem{typeof(g), Tuple{Float64, Float64}}(g, (0.0, 1.5707963267948966))
+
+julia> solve(Z, Roots.Secant(), 2) # p=2
+1.0298665293222589
+
+julia> solve(Z, Bisection(), 3)
+1.1701209500026262
+```
+
+Behind the scenes an iterator is created, then iterated to convergence. This iterator can be exposed programatically, which might be of use if details of the algorithm are desired:
+
+```jldoctest roots
+julia> Z, M = ZeroProblem(sin, (3, 4)), Roots.Secant();
+
+julia> prob = init(Z, M);  # A ZeroProblemIterator instance
+
+julia> solve!(prob)
+3.141592653589793
+
+julia> prob.state.fnevals
+7
+```
+
+Or more explicitly:
+
+```jldoctest roots
+julia> prob = init(Z, M);
+
+julia> steps = 0
+0
+
+julia> for _ in prob; steps += 1; end
+
+julia> steps, last(prob)
+(5, 3.141592653589793)
+```
+
+
+
+
 ## Finding critical points
 
 The `D` function, defined above, makes it straightforward to find critical points
@@ -487,7 +566,30 @@ savefig("flight-2.svg"); nothing #hide
 ![](flight-2.svg)
 
 
+## ForwardDiff
 
+We have seen that `ForwardDiff` can be used to specify functions to pass to `find_zero`. This example shows what is necessary to use `ForwardDiff` to differentiate a problem which internally calls `find_zero`. It comes from [stackoverflow](https://stackoverflow.com/questions/68485811/julia-roots-find-zero-with-forwarddiff-dual-type). The main issue is technical. When `find_zero` sets up a problem, it creates a state which specifies types for the ``x`` and ``f(x)`` values. These types are found from the initial `x0` values passed to `find_zero(f, x0, M)`, *after* calling `float`, and the corresponding `f(x)` values. In the following, it is necessary to ensure the type for the `x0` value is the underlying type for forward differentiation by `ForwardDiff`. This is the working solution:
+
+```julia
+julia> using Distributions, Roots, StatsFuns, ForwardDiff
+
+julia> function test_fun(θ::AbstractVector{T}) where T
+           μ,σ,p = θ;
+           x0 = zero(eltype(θ)) # <<<--- not 0.0, which will error
+           z_star = find_zero(z -> logistic(z) - p, x0)
+           return pdf(Normal(μ,σ), z_star)
+       end
+test_fun (generic function with 1 method)
+
+julia> test_fun([0.0,1.0,0.75])
+0.2181847684199842
+
+julia> ForwardDiff.gradient(test_fun,[0.0,1.0,0.75])
+3-element Vector{Float64}:
+  0.23970046778640028
+  0.045153111089649756
+ -1.2784024948607997
+```
 
 
 

@@ -15,6 +15,13 @@ end
 
 _unitless(x) = x / oneunit(x)
 
+# NaN of correct type
+nan(::Type{Float16}) = NaN16
+nan(::Type{Float32}) = NaN32
+nan(::Type{Float64}) = NaN
+nan(x::T) where {T <: Real} = nan(T)
+nan(::Any) = NaN
+
 ## issue with approx derivative
 isissue(x) = iszero(x) || isnan(x) || isinf(x)
 
@@ -32,6 +39,11 @@ function _extrema(x)
 end
 
 # used by secant. Get x₀, x₁ for x
+function x₀x₁(x::Number)
+    x₁ = float(x)
+    promote(_default_secant_step(x₁), x₁)
+end
+
 function x₀x₁(x)
     x₀, x₁′ = x
     x₁ = first(x₁′)
