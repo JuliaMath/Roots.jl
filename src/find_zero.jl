@@ -500,7 +500,7 @@ end
 
     find_zero(fs, x0, M, [N::AbstractBracketing]; kwargs...)
 
-Interface to one of several methods for find zeros of a univariate function.
+Interface to one of several methods for finding zeros of a univariate function, e.g. solving ``f(x)=0``.
 
 # Initial starting value
 
@@ -509,19 +509,19 @@ in the iterative procedure. (Secant methods can have a tuple specify
 their initial values.) Values must be a subtype of `Number` and have
 methods for `float`, `real`, and `oneunit` defined.
 
-For bracketing intervals, `x0` is specified as a tuple or a vector. A bracketing interval, (a,b), is one where f(a) and f(b) have different signs.
+For bracketing intervals, `x0` is specified using a tuple, a vector, or any iterable with `extrema` defined. A bracketing interval, ``[a,b]``, is one where f(a) and f(b) have different signs.
 
 # Specifying a method
 
 A method is specified to indicate which algorithm to employ:
 
-* There are methods for bisection where a bracket is specified: [`Bisection`](@ref), [`Roots.A42`](@ref), [`Roots.AlefeldPotraShi`](@ref), [`FalsePosition`](@ref)
+* There are methods for bisection where a bracket is specified: [`Bisection`](@ref), [`Roots.A42`](@ref), [`Roots.AlefeldPotraShi`](@ref), [`Roots.Brent`](@ref), and [`FalsePosition`](@ref)
 
-* There are several derivative-free methods: cf. [`Order0`](@ref), [`Order1`](@ref) (secant method), [`Order2`](@ref) ([`Roots.Steffensen`](@ref)), [`Order5`](@ref), [`Order8`](@ref), and [`Order16`](@ref), where the number indicates the order of the convergence. Methods [`Roots.Order1B`](@ref) and [`Roots.Order2B`](@ref) implement methods useful when the desired zero has a multiplicity.
+* There are several derivative-free methods: cf. [`Order0`](@ref), [`Order1`](@ref) (also [`Roots.Secant`](@ref)), [`Order2`](@ref) (also [`Roots.Steffensen`](@ref)), [`Order5`](@ref), [`Order8`](@ref), and [`Order16`](@ref), where the number indicates the order of the convergence. Methods [`Roots.Order1B`](@ref) and [`Roots.Order2B`](@ref) implement methods useful when the desired zero has a multiplicity.
 
 * There are some classical methods where derivatives are required: [`Roots.Newton`](@ref), [`Roots.Halley`](@ref), [`Roots.Schroder`](@ref).
 
-* The family [`Roots.LithBoonkkampIJzerman{S,D}`](@ref) for different `S` and `D` uses a linear multistep method root finder. The (2,0) method is the secant method, (1,1) is Newton's methods.
+* The family [`Roots.LithBoonkkampIJzerman{S,D}`](@ref) for different `S` and `D` uses a linear multistep method root finder. The `(2,0)` method is the secant method, `(1,1)` is Newton's methods.
 
 For more detail, see the help page for each method (e.g., `?Order1`). Many methods are not exported, so much be qualified with module name, as in `?Roots.Schroder`.
 
@@ -529,7 +529,7 @@ If no method is specified, the default method depends on `x0`:
 
 * If `x0` is a scalar, the default is the slower, but more robust `Order0` method.
 
-* If `x0` is a tuple or vector indicating a *bracketing* interval, the `Bisection` method is used. (The exact algorithm depends on the number type, the tolerances, and `verbose`.)
+* If `x0` is a tuple, vector, or iterable with `extrema` defined indicating a *bracketing* interval, the `Bisection` method is used. (The exact algorithm depends on the number type and the tolerances.)
 
 # Specifying the function
 
@@ -537,7 +537,7 @@ The function(s) are passed as the first argument.
 
 For the few methods that use one or more derivatives (`Newton`, `Halley`,
 `Schroder`, `LithBoonkkampIJzerman(S,D)`, and  `Order5Derivative`) a
-tuple of functions is used.
+tuple of functions is used. For the classical algorithms, a function `fs` returning `(f(x), f(x)/f'(x), [f'(x)/f''(x)])` may be used.
 
 # Optional arguments (tolerances, limit evaluations, tracing)
 
@@ -555,22 +555,23 @@ convergence. See the help page for `Roots.default_tolerances(method)`
 for details on the default tolerances.
 
 In general, with floating point numbers, convergence must be
-understood as not an absolute statement. Even if mathematically α is
-an answer and xstar the floating point realization, it may be that
+understood as not an absolute statement. Even if mathematically `α` is
+an answer and `xstar` the floating point realization, it may be that
 `f(xstar) - f(α)  ≈ xstar ⋅  f'(α) ⋅ eps(α)`, so tolerances must be
 appreciated, and at times specified.
 
 For the `Bisection` methods, convergence is guaranteed, so the tolerances are set to be 0 by default.
 
-If a bracketing method is passed in after the method specification, if
-a bracket is identified during the algorithm, the bracketing method
-will then be used to identify the zero. This is what `Order0` does by
-default, with initials secant steps and then `AlefeldPotraShi` steps
-should a bracket be encountered.
+If a bracketing method is passed in after the method specification,
+then whenever a bracket is identified during the algorithm, the method
+will switch to the bracketing method to identify the zero. (Bracketing
+methods are guaranteed to converge, non-bracketing methods may not.)
+This is what `Order0` does by default, with an initial secant method switching
+to the `AlefeldPotraShi` method should a bracket be encountered.
 
 Note: The order of the method is hinted at in the naming scheme. A
 scheme is order `r` if, with `eᵢ = xᵢ - α`, `eᵢ₊₁ = C⋅eᵢʳ`. If the
-error `eᵢ` is small enough, then essentially the error will gain `r`
+error `eᵢ` is small enough, then essentially if the error aswill gain `r`
 times as many leading zeros each step. However, if the error is not
 small, this will not be the case. Without good initial guesses, a high
 order method may still converge slowly, if at all. The `OrderN`
@@ -627,8 +628,7 @@ julia> x0, xstar = 3.0,  2.9947567209477;
 julia> fn(find_zero(fn, x0, Order2())) <= 1e-14  # f(xₙ) ≈ 0, but Δxₙ can be largish
 true
 
-julia> find_zero(fn, x0, Order2(), atol=0.0, rtol=0.0) # error: x_n ≉ x_{n-1}; just f(x_n) ≈ 0
-ERROR: Roots.ConvergenceFailed("Stopped at: xn = 2.991488255523429. Increment `Δx` has issues. Too many steps taken. ")
+julia> find_zero(fn, x0, Order2(), atol=0.0, rtol=0.0) # Error: too many steps taken.
 [...]
 
 julia> fn = x -> (sin(x)*cos(x) - x^3 + 1)^9;
@@ -639,8 +639,10 @@ julia> find_zero(fn, x0, Order2()) ≈ xstar
 true
 
 julia> find_zero(fn, x0, Order2(), maxevals=3)    # Roots.ConvergenceFailed: 26 iterations needed, not 3
-ERROR: Roots.ConvergenceFailed("Stopped at: xn = 1.0482748172022405. Too many steps taken. ")
+[...]
 ```
+
+# Tracing
 
 Passing `verbose=true` will show details on the steps of the algorithm:
 
@@ -661,6 +663,11 @@ x_2 =  3.1415926535897936,	 fx_2 = -0.0000000000000003
 
 3.1415926535897936
 ```
+
+For more detail on the algorithm, the underlying `state` contains the
+number of steps and function evaluations; the `tracks` argument allows
+the passing of storage to record the values of `x` and `f(x)` used in
+the algorithm.
 
 !!! note
     See [`solve`](@ref) and [`ZeroProblem`](@ref) for an alternate interface.
@@ -703,22 +710,10 @@ of the processing pipeline is to be adjusted.
 * `state`: An initial state, as created by `init_state` (or `_init_state`).
 * `options::UnivariateZeroOptions`: specification of tolerances
 * `l::AbstractTracks`: used to record steps in algorithm, when requested.
-
-# Examples
-
-```
-f(x) = sin(x)
-xs = (3.0, 4.0)
-fxs = f.(xs)
-if prod((sign∘f).(xs)) < 0 # check bracket
-    M = Bisection()
-    state = Roots._init_state(M, f, xs, fxs) # reuse fxs from test
-    find_zero(M, f, state)
-end
 ```
 
 !!! note
-    To be deprecated
+    To be deprecated in favor of `solve!(init(...))`.
 """
 function find_zero(M::AbstractUnivariateZeroMethod,
                    F,
