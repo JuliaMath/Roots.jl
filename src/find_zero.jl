@@ -628,8 +628,12 @@ julia> x0, xstar = 3.0,  2.9947567209477;
 julia> fn(find_zero(fn, x0, Order2())) <= 1e-14  # f(xₙ) ≈ 0, but Δxₙ can be largish
 true
 
-julia> find_zero(fn, x0, Order2(), atol=0.0, rtol=0.0) # Error: too many steps taken.
-[...]
+julia> try
+       find_zero(fn, x0, Order2(), atol=0.0, rtol=0.0)  # Too many steps taken.
+       catch err
+       typeof(err)
+       end
+Roots.ConvergenceFailed
 
 julia> fn = x -> (sin(x)*cos(x) - x^3 + 1)^9;
 
@@ -638,8 +642,10 @@ julia> x0, xstar = 1.0,  1.112243913023029;
 julia> find_zero(fn, x0, Order2()) ≈ xstar
 true
 
-julia> find_zero(fn, x0, Order2(), maxevals=3)    # Roots.ConvergenceFailed: 26 iterations needed, not 3
-[...]
+julia> try
+       find_zero(fn, x0, Order2(), maxevals=3) # Roots.ConvergenceFailed: 26 iterations needed, not 3
+       catch err; typeof(err); end
+Roots.ConvergenceFailed
 ```
 
 # Tracing
