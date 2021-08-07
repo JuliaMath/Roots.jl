@@ -331,7 +331,7 @@ function newton(f, x0; xatol=nothing, xrtol=nothing, maxevals = 100)
         xo = x
     end
 
-    error("No convergence")
+    throw(ConvergenceFailed("No convergence"))
 end
 
 
