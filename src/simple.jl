@@ -297,6 +297,8 @@ will be faster for subsequent calls, but may be slower for an initial call.
 Convergence here is decided by x_n ≈ x_{n-1} using the tolerances specified, which both default to
 `eps(T)^4/5` in the appropriate units.
 
+If the convergence fails, will return a `ConvergenceFailed` error.
+
 """
 struct TupleWrapper{F, Fp}
 f::F
@@ -331,7 +333,7 @@ function newton(f, x0; xatol=nothing, xrtol=nothing, maxevals = 100)
         xo = x
     end
 
-    error("No convergence")
+    throw(ConvergenceFailed("No convergence"))
 end
 
 
