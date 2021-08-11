@@ -165,7 +165,7 @@ function init_state(M::AbstractHalleyLikeMethod, F, x,
     x1 = float(first(x))
     fx1, Δ, ΔΔ = F(x1)
 
-    state = _init_state(nan(x1)*x1, x1, promote(nan(fx1)*fx1, fx1)..., m=[Δ,ΔΔ], fnevals=fnevals, kwargs...)
+    state = _init_state(M, nan(x1)*x1, x1, promote(nan(fx1)*fx1, fx1)..., m=[Δ,ΔΔ], fnevals=fnevals, kwargs...)
     init_state!(state, M, F; compute_fx=true, clear=false)
     state
 end

@@ -59,7 +59,7 @@ mutable struct UnivariateZeroState{T,S} <: AbstractUnivariateZeroState where {T,
 end
 
 # Main constructor with no defaults
-function _init_state(
+function _init_state(M::AbstractUnivariateZeroMethod,
     x₀::T, x₁::T, fx₀::S, fx₁::S;
     m=T[],
     fm=S[],
@@ -107,7 +107,7 @@ end
 init_state(M::AbstractUnivariateZeroMethod, F, x;
            fnevals=initial_fnevals(M), kwargs...) = nothing
 init_state(M::AbstractUnivariateZeroMethod, x₀::T, x₁::T, fx₀::S, fx₁::S; kwargs...) where {T,S} =
-    _init_state(x₀::T, x₁::T, fx₀::S, fx₁::S; kwargs...)
+    _init_state(M, x₀::T, x₁::T, fx₀::S, fx₁::S; kwargs...)
 
 function init_state!(state, M::AbstractUnivariateZeroMethod, F; clear=true, kwargs...)
     clear && clear_convergence_flags!(state)
