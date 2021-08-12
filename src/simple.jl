@@ -6,8 +6,10 @@
 # though they will take similar number of function calls.
 #
 # `Roots.bisection(f, a, b)`  (Bisection).
+# `Roots.chandrapatlu(f, a, b)` (Chandrapatlu's method)
 # `Roots.secant_method(f, xs)` (Order1) secant method
 # `Roots.muller(f, [xᵢ₋₂], [xᵢ₋₁], xᵢ) uses inverse quadratic
+# `Roots.newton(f, fp, x0)`
 # `Roots.dfree(f, xs)`  (Order0) more robust secant method
 #
 
@@ -40,6 +42,7 @@ or Float16 values, the process will terminate at a value `x` with
 0`. For other number types, the A42 method is used.
 
 """
+bisection(f, uv; kwargs...) = bisection(f, extrema(uv)...; kwargs...)
 function bisection(f, a::Number, b::Number; xatol=nothing, xrtol=nothing)
 
     x1, x2 = adjust_bracket(float.((a,b)))
@@ -103,6 +106,12 @@ end
 
 ## ----
 # faster bisection method using inverse quadratic steps as possible, otherwise a Regula Falsi step
+"""
+    chandrapatlu(f, u, v; maxsteps=100)
+
+For a bracketing interval ``[u,v]``, uses a method of Chandrapatlu to switch between inverse quadratic steps or Regula Falsi steps. Convergence is declared when the bracketing interval is small or the function value is small.
+"""
+chandrapatlu(f, uv; kwargs...) = chandrapatlu(f, extrema(uv)...; kwargs...)
 function chandrapatlu(f, u, v; maxsteps=100)
     a,b = promote(float(u), float(v))
     fa,fb = f(a),f(b)
@@ -115,13 +124,13 @@ function chandrapatlu(f, u, v; maxsteps=100)
     c, fc = a, fa
 
     for _ in 1:maxsteps
-
         Δ = abs(b-a)
+
         ϵ = max(eps(a),eps(b))
         if Δ ≤ 2ϵ
           return abs(fa) < abs(fb) ? a : b
         end
-        abs(fa) < ϵ && return a
+        abs(fa) ≤ ϵ && return a
 
         ξ = (a-b) / (c-b)
         Φ = (fa-fb) / (fc-fb)
@@ -136,7 +145,7 @@ function chandrapatlu(f, u, v; maxsteps=100)
 
         ft = f(xt)
 
-        isnan(ft) && break
+        (isnan(ft) || isinf(ft)) && break
 
         if sign(fa) == sign(ft)
             c,fc = a,fa
@@ -160,10 +169,11 @@ The secant method is an iterative method with update step
 given by b - fb/m where m is the slope of the secant line between
 (a,fa) and (b,fb).
 
-The inital values can be specified as a pair of 2, as in `(a,b)` or
-`[a,b]`, or as a single value, in which case a value of `b` is chosen.
+The inital values can be specified as a pair of 2, as in `(x₀,x₁)` or
+`[x₀,x₁]`, or as a single value, `x₁` in which case a value of `x₀` is chosen.
 
-The algorithm returns m when `abs(fm) <= max(atol, abs(m) * rtol)`.
+The algorithm returns m when `abs(fm) <= max(atol, abs(m) * rtol)` or
+`Δ ≤ max(atol, abs(m) * rtol)`.
 If this doesn't occur before `maxevals` steps or the algorithm
 encounters an issue, a value of `NaN` is returned. If too many steps
 are taken, the current value is checked to see if there is a sign
@@ -190,28 +200,41 @@ ones.
 """
 function secant_method(f, xs; atol=zero(float(real(first(xs)))), rtol=8eps(one(float(real(first(xs))))), maxevals=100)
 
-    a,b = x₀x₁(xs)
-    secant(f, a, b, atol, rtol, maxevals)
+    if length(xs) == 1 # secant needs x0, x1; only x0 given
+        a = float(first(xs))
+        h = eps(one(real(a)))^(1/3)
+        da = h*oneunit(a) + abs(a)*h^2 # adjust for if eps(a) > h
+        b = a + da
+    else
+        a, b = promote(float(xs[1]), float(xs[2]))
+    end
+    _secant(f, a, b, atol, rtol, maxevals)
 end
 
+function _secant(f, a::T, b::T, atol=zero(T), rtol=8eps(T), maxevals=100) where {T}
 
-function secant(f, a::T, b::T, atol=zero(T), rtol=8eps(T), maxevals=100) where {T}
     nan = (0a)/(0a)
     cnt = 0
 
     fa, fb = f(a), f(b)
     fb == fa && return nan
 
-    uatol = atol / oneunit(atol) * oneunit(real(a))
-    adjustunit = oneunit(real(fb))/oneunit(real(b))
+    uatol = _unitless(atol)
+    urtol = _unitless(rtol)
 
     while cnt < maxevals
-        m = b - (b-a)*fb/(fb - fa)
+        Δ = b - a
+        m = b - fb * Δ / (fb - fa)
         fm = f(m)
 
         iszero(fm) && return m
-        isnan(fm) && return nan
-        abs(fm) <= adjustunit * max(uatol, abs(m) * rtol) && return m
+        (isinf(fm) || isnan(fm)) && return nan
+
+        δ = max(uatol, _unitless(abs(m)) * urtol)
+
+        abs(_unitless(fm)) ≤ δ && return m
+        abs(_unitless(Δ))  ≤ δ && return m
+
         if fm == fb
             sign(fm) * sign(f(nextfloat(m))) <= 0 && return m
             sign(fm) * sign(f(prevfloat(m))) <= 0 && return m
@@ -225,6 +248,7 @@ function secant(f, a::T, b::T, atol=zero(T), rtol=8eps(T), maxevals=100) where {
 
     return nan
 end
+
 
 """
     muller(f, xᵢ; xatol=nothing, xrtol=nothing, maxevals=100)
@@ -360,7 +384,9 @@ Convergence here is decided by x_n ≈ x_{n-1} using the tolerances specified, w
 If the convergence fails, will return a `ConvergenceFailed` error.
 
 """
-newton(f::Tuple, x0; kwargs...) = newton(TupleWrapper(f[1],f[2]), x0; kwargs...)
+newton(fs::Tuple, x0; kwargs...) =
+    newton(Roots.Callable_Function(Roots.Newton(),fs), x0; kwargs...)
+#newton(TupleWrapper(f[1],f[2]), x0; kwargs...)
 function newton(f, x0; xatol=nothing, xrtol=nothing, maxevals = 100)
 
     x = float(x0)
@@ -377,7 +403,7 @@ function newton(f, x0; xatol=nothing, xrtol=nothing, maxevals = 100)
 
         x -= Δx
 
-        if isapprox(x, xo, atol=atol,sw rtol=rtol)
+        if isapprox(x, xo, atol=atol, rtol=rtol)
             return x
         end
 

@@ -41,7 +41,9 @@ end
 # used by secant. Get x₀, x₁ for x
 function x₀x₁(x::Number)
     x₁ = float(x)
-    promote(_default_secant_step(x₁), x₁)
+#    promote(_default_secant_step(x₁), x₁)
+    x₀ = _default_secant_step(x₁)
+    (x₀, x₁)
 end
 
 function x₀x₁(x)

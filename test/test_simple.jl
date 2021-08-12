@@ -12,6 +12,18 @@ using Test
     xrt = Roots.bisection(sin, big(3.0), big(4.0))
     @test isapprox(xrt, pi)
 
+    # chandraptlu
+    @test Roots.chandrapatlu(sin, 3.0, 4.0) ≈ π
+
+    # test bracketing on range of problems
+    max_residual = 0.0
+    for (fn, ab) ∈ galadino_probs
+        α,β = Roots.bisection(fn,ab), Roots.chandrapatlu(fn,ab)
+        max_residual = max(max_residual, abs(fn(α)), abs(fn(β)))
+    end
+    @test max_residual <= 1e-14
+
+
     # secant_method
     fpoly = x -> x^5 - x - 1
     xrt = Roots.secant_method(fpoly, 1.0)
@@ -36,7 +48,7 @@ using Test
     expoly(z) = log(-z)*asin(z)/tanh(z)
 
     @test Roots.muller(expoly, -0.7-0.5im) ≈ -1.0
-    
+
     # dfree
     fpoly = x -> x^5 - x - 1
     xrt = Roots.dfree(fpoly, 1.0)
@@ -46,4 +58,16 @@ using Test
     @test Roots.newton((sin, cos), 3.0)  ≈ pi
     u = Roots.newton(x -> (sin(x), sin(x)/cos(x)), 3.0, xatol=1e-10, xrtol=1e-10)
     @test abs(u -pi) <= 1e-8
+
+    ## Test allocations
+    @test @allocated(Roots.bisection(sin, 3, 4)) == 0
+    # @test (@allocated Roots.bisection(sin, (3, 4))) == 0
+    # @test (@allocated Roots.chandrapatlu(sin, 3, 4)) == 0
+    # @test (@allocated Roots.secant_method(sin, 3)) == 0
+    # @test (@allocated Roots.secant_method(sin, (3,4))) == 0
+#    @test (@allocated Roots.muller(sin, 3)) == 0
+#    @test (@allocated Roots.muller(sin, 3.0, 3.05, 3.10)) == 0
+#    @test (@allocated Roots.newton((sin, cos), 3)) == 0
+#    @test (@allocated Roots.dfree(sin, 3)) == 0
+
 end
