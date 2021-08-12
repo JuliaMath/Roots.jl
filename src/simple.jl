@@ -1,4 +1,4 @@
-# some simpler (and faster) implementations for root finding
+# some simpler, non-allocating, implementations for root finding
 #
 # Not exported
 #
@@ -7,6 +7,7 @@
 #
 # `Roots.bisection(f, a, b)`  (Bisection).
 # `Roots.secant_method(f, xs)` (Order1) secant method
+# `Roots.muller(f, [xᵢ₋₂], [xᵢ₋₁], xᵢ) uses inverse quadratic
 # `Roots.dfree(f, xs)`  (Order0) more robust secant method
 #
 
@@ -100,6 +101,56 @@ end
 end
 
 
+## ----
+# faster bisection method using inverse quadratic steps as possible, otherwise a Regula Falsi step
+function chandrapatlu(f, u, v; maxsteps=100)
+    a,b = promote(float(u), float(v))
+    fa,fb = f(a),f(b)
+    assert_bracket(fa, fb)
+
+    if abs(fa) < abs(fb)
+        a,b,fa,fb = b,a,fb,fa
+    end
+
+    c, fc = a, fa
+
+    for _ in 1:maxsteps
+
+        Δ = abs(b-a)
+        ϵ = max(eps(a),eps(b))
+        if Δ ≤ 2ϵ
+          return abs(fa) < abs(fb) ? a : b
+        end
+        abs(fa) < ϵ && return a
+
+        ξ = (a-b) / (c-b)
+        Φ = (fa-fb) / (fc-fb)
+
+        if Φ^2 < ξ < 1 - (1-Φ)^2
+            xt = fa * fc / (fb-fa) / (fb-fc) * b +
+                fb * fc / (fa-fb) / (fa-fc) * a +
+                fa * fb / (fc-fa) / (fc-fb) * c
+        else
+            xt = a + (b-a)/2
+        end
+
+        ft = f(xt)
+
+        isnan(ft) && break
+
+        if sign(fa) == sign(ft)
+            c,fc = a,fa
+            a,fa = xt,ft
+        else
+            c,b,a = b,a,xt
+            fc,fb,fa = fb,fa,ft
+        end
+
+    end
+    throw(ConvergenceFailed("no convergence: [a,b] = $(sort([a,b]))"))
+end
+
+
 """
     secant_method(f, xs; [atol=0.0, rtol=8eps(), maxevals=1000])
 
@@ -139,16 +190,7 @@ ones.
 """
 function secant_method(f, xs; atol=zero(float(real(first(xs)))), rtol=8eps(one(float(real(first(xs))))), maxevals=100)
 
-    if length(xs) == 1 # secant needs x0, x1; only x0 given
-        a = float(xs[1])
-
-        h = eps(one(real(a)))^(1/3)
-        da = h*oneunit(a) + abs(a)*h^2 # adjust for if eps(a) > h
-        b = a + da
-
-    else
-        a, b = promote(float(xs[1]), float(xs[2]))
-    end
+    a,b = x₀x₁(xs)
     secant(f, a, b, atol, rtol, maxevals)
 end
 
@@ -217,16 +259,22 @@ muller(x->x^3-1, 1.5, 1.0, 2.0) # → 2.0, Not converged
 ```
 
 """
-muller(f, x₀::T; kwargs...) where T = muller(f, (rand(T, 2).*x₀)..., x₀; kwargs...)
+function muller(f, x₀::T; kwargs...) where {T}
+    xᵢ₋₂ = float(x₀)
+    xᵢ₋₁ = _default_secant_step(xᵢ₋₂)
+    fxᵢ₋₁,  fxᵢ₋₂ = f(xᵢ₋₁), f(xᵢ₋₂)
+    xᵢ = xᵢ₋₁ -  fxᵢ₋₁ * (xᵢ₋₁ -  xᵢ₋₂) / (fxᵢ₋₁ -  fxᵢ₋₂)
+    muller(f, xᵢ₋₂, xᵢ₋₁, xᵢ; kwargs...)
+end
 
 muller(f, xᵢ₋₂, xᵢ₋₁, xᵢ; kwargs...) =
     muller(f, promote(xᵢ₋₂, xᵢ₋₁, xᵢ)...; kwargs...)
 
 function muller(f, oldest::T, older::T, old::T;
     xatol=nothing, xrtol=nothing, maxevals=300) where {T}
-    @assert old ≠ older ≠ oldest ≠ old # we want q to be non-degenerate
+    old ≠ older ≠ oldest ≠ old || throw(DomainError("xᵢ₋₂, xᵢ₋₁, xᵢ points must be distinct."))
     xᵢ₋₂, xᵢ₋₁, xᵢ = oldest, older, old
-    fxᵢ₋₂, fxᵢ₋₁ = f(xᵢ₋₂), f(xᵢ₋₁) 
+    fxᵢ₋₂, fxᵢ₋₁ = f(xᵢ₋₂), f(xᵢ₋₁)
 
     RT = typeof(abs(oldest))
     atol = xatol !== nothing ? xatol : oneunit(RT) * (eps(one(RT)))^(4/5)
@@ -242,7 +290,6 @@ function muller(f, oldest::T, older::T, old::T;
             return xᵢ
         end
 
-        # @debug "Iteration $i:" xᵢ₋₂ xᵢ₋₁ xᵢ x abs(x-xᵢ)
         xᵢ₋₂, xᵢ₋₁, xᵢ = xᵢ₋₁, xᵢ, x
         fxᵢ₋₂, fxᵢ₋₁ = fxᵢ₋₁, fxᵢ
         #stopping criterion
@@ -276,6 +323,19 @@ end
 
 @inline qq(a, b, c) = (c - b)/(b - a)
 
+
+## ----
+
+struct TupleWrapper{F, Fp}
+f::F
+fp::Fp
+end
+(F::TupleWrapper)(x) = begin
+    u, v = F.f(x), F.fp(x)
+    return (u, u/v)
+end
+
+
 """
     newton((f, f'), x0; xatol=nothing, xrtol=nothing, maxevals=100)
     newton(fΔf, x0; xatol=nothing, xrtol=nothing, maxevals=100)
@@ -298,15 +358,6 @@ Convergence here is decided by x_n ≈ x_{n-1} using the tolerances specified, w
 `eps(T)^4/5` in the appropriate units.
 
 """
-struct TupleWrapper{F, Fp}
-f::F
-fp::Fp
-end
-(F::TupleWrapper)(x) = begin
-    u, v = F.f(x), F.fp(x)
-    return (u, u/v)
-end
-
 newton(f::Tuple, x0; kwargs...) = newton(TupleWrapper(f[1],f[2]), x0; kwargs...)
 function newton(f, x0; xatol=nothing, xrtol=nothing, maxevals = 100)
 
@@ -324,7 +375,7 @@ function newton(f, x0; xatol=nothing, xrtol=nothing, maxevals = 100)
 
         x -= Δx
 
-        if isapprox(x, xo, atol=atol, rtol=rtol)
+        if isapprox(x, xo, atol=atol,sw rtol=rtol)
             return x
         end
 
@@ -337,7 +388,7 @@ end
 
 
 
-## This is basically Order0(), but with different, default, tolerances employed
+## This is basically Order0(), but with different, default tolerances employed.
 ## It takes more function calls, but works harder to find exact zeros
 ## where exact means either iszero(fx), adjacent floats have sign change, or
 ## abs(fxn) <= 8 eps(xn)
