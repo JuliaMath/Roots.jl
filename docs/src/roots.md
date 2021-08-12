@@ -724,8 +724,8 @@ julia> u=1/3; for i in 1:10 (global  u=prevfloat(u);push!(ns, u)) end
 
 julia> sort!(ns);
 
-julia> maximum(abs.(f.(ns) - f1.(ns)))
-1.887379141862766e-15
+julia> maximum(abs.(f.(ns) - f1.(ns))) < 1e-14
+true
 
 ```
 
