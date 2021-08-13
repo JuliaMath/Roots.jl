@@ -60,15 +60,17 @@ using BenchmarkTools
     @test abs(u -pi) <= 1e-8
 
     ## Test allocations
-    @test @ballocated(Roots.bisection($sin, 3, 4)) == 0
-    @test @ballocated(Roots.bisection(sin, (3, 4))) == 0
-    @test @ballocated(Roots.aps(sin, 3, 4)) == 0
-    @test @ballocated(Roots.aps(sin, (3, 4))) == 0
-    @test @ballocated(Roots.secant_method(sin, 3)) == 0
-    @test @ballocated(Roots.secant_method(sin, (3,4))) == 0
-    @test @ballocated(Roots.muller(sin, 3)) == 0
-    @test @ballocated(Roots.muller(sin, 3.0, 3.05, 3.10)) == 0
-    @test @ballocated(Roots.newton((sin, cos), 3)) == 0
-    @test @ballocated(Roots.dfree(sin, 3)) == 0
+    if VERSION >= v"1.6.0"
+        @test @ballocated(Roots.bisection($sin, 3, 4)) == 0
+        @test @ballocated(Roots.bisection(sin, (3, 4))) == 0
+        @test @ballocated(Roots.aps(sin, 3, 4)) == 0
+        @test @ballocated(Roots.aps(sin, (3, 4))) == 0
+        @test @ballocated(Roots.secant_method(sin, 3)) == 0
+        @test @ballocated(Roots.secant_method(sin, (3,4))) == 0
+        @test @ballocated(Roots.muller(sin, 3)) == 0
+        @test @ballocated(Roots.muller(sin, 3.0, 3.05, 3.10)) == 0
+        @test @ballocated(Roots.newton((sin, cos), 3)) == 0
+        @test @ballocated(Roots.dfree(sin, 3)) == 0
+    end
 
 end
