@@ -95,6 +95,14 @@ function guarded_secant_step(alpha, beta, falpha, fbeta)
     end
 end
 
+@inline function inverse_quadratic_step(a,b,c,fa,fb,fc)
+    fa * fc / (fb-fa) / (fb-fc) * b +
+        fb * fc / (fa-fb) / (fa-fc) * a +
+        fa * fb / (fc-fa) / (fc-fb) * c
+end
+
+@inline midpoint_step(a,b) = a + (b-a)/2
+
 # return vertex of parabola through (a,fa),(b,fb),(c,fc)
 # first time trhough, we have picture of a > b > c; |fa|, |fc| > |fb|, all same sign
 function quad_vertex(c,fc,b,fb,a,fa)
@@ -104,9 +112,6 @@ function quad_vertex(c,fc,b,fb,a,fa)
     1/2 * ((a+b) - fba/(fbc - fba)*(c-a))
 
 end
-
-
-
 
 
 ## Different functions for approximating f'(xn)

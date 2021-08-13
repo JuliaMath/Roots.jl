@@ -168,7 +168,7 @@ end
 
 
 # find middle of (a,b) with convention that
-# * if a, b finite, they are made non-finite
+# * if a, b infinite, they are made non-infinite
 # if a,b of different signs, middle is 0
 # middle falls back to a/2 + b/2, but
 # for Float64 values, middle is over the

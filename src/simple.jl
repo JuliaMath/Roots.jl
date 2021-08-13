@@ -39,26 +39,22 @@ when the bracket (a,b) satisfies `isapprox(a, b, atol=xatol,
 rtol=xrtol)`. For zero tolerances, the default, for Float64, Float32,
 or Float16 values, the process will terminate at a value `x` with
 `f(x)=0` or `f(x)*f(prevfloat(x)) < 0 ` or `f(x) * f(nextfloat(x)) <
-0`. For other number types, the A42 method is used.
+0`.
 
 """
 bisection(f, uv; kwargs...) = bisection(f, extrema(uv)...; kwargs...)
-function bisection(f, a::Number, b::Number; xatol=nothing, xrtol=nothing)
-
-    x1, x2 = adjust_bracket(float.((a,b)))
-    T = eltype(x1)
-
-
-    atol = xatol == nothing ? zero(T) : abs(xatol)
-    rtol = xrtol == nothing ? zero(one(T)) : abs(xrtol)
-    CT = iszero(atol) && iszero(rtol) ?  Val(:exact) : Val(:inexact)
+bisection(f, a::Number, b::Number; kwargs...) =
+     bisection(f, promote(float(a), float(b))...; kwargs...)
+function bisection(f, a::T, b::T; xatol=zero(T), xrtol=zero(one(T))) where {T <: AbstractFloat}
+    x1, x2 = adjust_bracket((a,b))
+    CT = iszero(xatol) && iszero(xrtol) ?  Val(:exact) : Val(:inexact)
 
     x1, x2 = float(x1), float(x2)
     y1, y2 = f(x1), f(x2)
 
-    _unitless(y1 * y2) >= 0  && error("the interval provided does not bracket a root")
+    assert_bracket(_unitless(y1), _unitless(y2))
 
-    if isneg(y2)
+    if isneg(y2) # we assume y1 < 0 < y2
         x1, x2, y1, y2 = x2, x1, y2, y1
     end
 
@@ -67,7 +63,7 @@ function bisection(f, a::Number, b::Number; xatol=nothing, xrtol=nothing)
 
     while true
 
-        if has_converged(CT, x1, x2, xm, ym, atol, rtol)
+        if has_converged(CT, x1, x2, xm, ym, xatol, xrtol)
             return xm
         end
 
@@ -103,60 +99,64 @@ end
     return val
 end
 
-
-## ----
-# faster bisection method using inverse quadratic steps as possible, otherwise a Regula Falsi step
 """
-    chandrapatlu(f, u, v; maxsteps=100)
+    aps(f, ab)
+    aps(f, a, b)
 
-For a bracketing interval ``[u,v]``, uses a method of Chandrapatlu to switch between inverse quadratic steps or Regula Falsi steps. Convergence is declared when the bracketing interval is small or the function value is small.
+AlefeldPotraShi algorithm. A faster bisection method for smooth functions.
 """
-chandrapatlu(f, uv; kwargs...) = chandrapatlu(f, extrema(uv)...; kwargs...)
-function chandrapatlu(f, u, v; maxsteps=100)
-    a,b = promote(float(u), float(v))
-    fa,fb = f(a),f(b)
-    assert_bracket(fa, fb)
+aps(f, ab) = aps(f, extrema(ab)...)
+aps(f, a::Real, b::Real) = aps(f, promote(float(a), float(b))...)
+function aps(f, a::T, b::T) where {T <: AbstractFloat}
+    a, b = adjust_bracket((a,b))
+    fa, fb = f(a), f(b)
+    assert_bracket(fa,fb)
 
-    if abs(fa) < abs(fb)
-        a,b,fa,fb = b,a,fb,fa
-    end
+    δ = 2 * max(abs(a), abs(b)) * eps(T)
+    μ = one(T)/2
 
-    c, fc = a, fa
+    c = _middle(a,b)
+    fc = f(c)
 
-    for _ in 1:maxsteps
-        Δ = abs(b-a)
+    a,b,d,fa,fb,fd = bracket(a,b,c,fa,fb,fc)
 
-        ϵ = max(eps(a),eps(b))
-        if Δ ≤ 2ϵ
-          return abs(fa) < abs(fb) ? a : b
+    c = newton_quadratic(a, b, d, fa, fb, fd, 2, δ) # boot strap up
+    fc = f(c)
+    iszero(fc) && return c
+
+    while true
+        a,b,d,fa,fb,fd = bracket(a,b,c,fa,fb,fc)
+        c = newton_quadratic(a,b,d,fa,fb,fd, 3, δ)
+        fc = f(c)
+        iszero(fc) && return c
+
+        a, b, d, fa, fb, fd = bracket(a, b, c, fa, fb,fc)
+        u, fu = choose_smallest(a, b, fa, fb)
+        c = u - 2 * fu * (b - a) / (fb - fa)
+        if abs(c - u) > 0.5 * (b - a)
+            c = _middle(a, b)
         end
-        abs(fa) ≤ ϵ && return a
+        fc = f(c)
 
-        ξ = (a-b) / (c-b)
-        Φ = (fa-fb) / (fc-fb)
+        iszero(fc) && return c
+        δ = 2 * max(abs(a), abs(b)) * eps(T)
+        abs(b-a) ≤ δ && return c
 
-        if Φ^2 < ξ < 1 - (1-Φ)^2
-            xt = fa * fc / (fb-fa) / (fb-fc) * b +
-                fb * fc / (fa-fb) / (fa-fc) * a +
-                fa * fb / (fc-fa) / (fc-fb) * c
+        â,b̂,d̂,fâ,fb̂,fd̂ =  bracket(a, b, c, fa, fb, fc)
+        if b̂ - â < μ * (b - a)
+            a,b,d,fa,fb,fd = â,b̂,d̂,fâ,fb̂,fd̂
         else
-            xt = a + (b-a)/2
+            m = _middle(â,b̂)
+            fm = f(m)
+            a,b,d,fa,fb,fd = bracket(â,b̂,m,fâ,fb̂,fm)
         end
 
-        ft = f(xt)
-
-        (isnan(ft) || isinf(ft)) && break
-
-        if sign(fa) == sign(ft)
-            c,fc = a,fa
-            a,fa = xt,ft
-        else
-            c,b,a = b,a,xt
-            fc,fb,fa = fb,fa,ft
-        end
+        iszero(fc) && return c
+        δ = 2 * max(abs(a), abs(b)) * eps(T)
+        abs(b-a) ≤ δ && return c
 
     end
-    throw(ConvergenceFailed("no convergence: [a,b] = $(sort([a,b]))"))
+    nothing
 end
 
 
@@ -208,10 +208,10 @@ function secant_method(f, xs; atol=zero(float(real(first(xs)))), rtol=8eps(one(f
     else
         a, b = promote(float(xs[1]), float(xs[2]))
     end
-    _secant(f, a, b, atol, rtol, maxevals)
+    secant(f, a, b, atol, rtol, maxevals)
 end
 
-function _secant(f, a::T, b::T, atol=zero(T), rtol=8eps(T), maxevals=100) where {T}
+function secant(f, a::T, b::T, atol=zero(T), rtol=8eps(T), maxevals=100) where {T}
 
     nan = (0a)/(0a)
     cnt = 0
@@ -254,17 +254,17 @@ end
     muller(f, xᵢ; xatol=nothing, xrtol=nothing, maxevals=100)
     muller(f, xᵢ₋₂, xᵢ₋₁, xᵢ; xatol=nothing, xrtol=nothing, maxevals=100)
 
-> *Muller’s method* generalizes the secant method, but uses quadratic
-> interpolation among three points instead of linear interpolation between two.
-> Solving for the zeros of the quadratic allows the method to find complex
-> pairs of roots.
-> Given three previous guesses for the root `xᵢ₋₂`, `xᵢ₋₁`, `xᵢ`, and the values
-> of the polynomial `f` at those points, the next approximation `xᵢ₊₁` is produced.
+*Muller’s method* generalizes the secant method, but uses quadratic
+interpolation among three points instead of linear interpolation
+between two.  Solving for the zeros of the quadratic allows the method
+to find complex pairs of roots.  Given three previous guesses for the
+root `xᵢ₋₂`, `xᵢ₋₁`, `xᵢ`, and the values of the polynomial `f` at
+those points, the next approximation `xᵢ₊₁` is produced.
 
 Excerpt and the algorithm taken from
 
-> W.H. Press, S.A. Teukolsky, W.T. Vetterling and B.P. Flannery
-> *Numerical Recipes in C*, Cambridge University Press (2002), p. 371
+W.H. Press, S.A. Teukolsky, W.T. Vetterling and B.P. Flannery
+*Numerical Recipes in C*, Cambridge University Press (2002), p. 371
 
 Convergence here is decided by `xᵢ₊₁ ≈ xᵢ` using the tolerances specified,
 which both default to `eps(one(typeof(abs(xᵢ))))^4/5` in the appropriate units.
@@ -350,23 +350,14 @@ end
 
 ## ----
 
-struct TupleWrapper{F, Fp}
-f::F
-fp::Fp
-end
-(F::TupleWrapper)(x) = begin
-    u, v = F.f(x), F.fp(x)
-    return (u, u/v)
-end
-
 
 """
-    newton((f, f'), x0; xatol=nothing, xrtol=nothing, maxevals=100)
+    newton((f, f′), x0; xatol=nothing, xrtol=nothing, maxevals=100)
     newton(fΔf, x0; xatol=nothing, xrtol=nothing, maxevals=100)
 
 Newton's method.
 
-Function may be passed in as a tuple (f, f') *or* as function which returns (f,f/f').
+Function may be passed in as a tuple `(f, f')` *or* as function which returns `(f, f/f')`.
 
 Examples:
 ```
@@ -378,7 +369,7 @@ Note: unlike the call `newton(f, fp, x0)`--which dispatches to a method of `find
 two interfaces will specialize on the function that is passed in. This means, these functions
 will be faster for subsequent calls, but may be slower for an initial call.
 
-Convergence here is decided by x_n ≈ x_{n-1} using the tolerances specified, which both default to
+Convergence here is decided by `x_n ≈ x_{n-1}` using the tolerances specified, which both default to
 `eps(T)^4/5` in the appropriate units.
 
 If the convergence fails, will return a `ConvergenceFailed` error.
@@ -386,28 +377,24 @@ If the convergence fails, will return a `ConvergenceFailed` error.
 """
 newton(fs::Tuple, x0; kwargs...) =
     newton(Roots.Callable_Function(Roots.Newton(),fs), x0; kwargs...)
-#newton(TupleWrapper(f[1],f[2]), x0; kwargs...)
+
 function newton(f, x0; xatol=nothing, xrtol=nothing, maxevals = 100)
 
-    x = float(x0)
-    T = typeof(x)
+    xᵢ = float(x0)
+    T = typeof(xᵢ)
     atol = xatol != nothing ? xatol : oneunit(T) * (eps(one(T)))^(4/5)
     rtol = xrtol != nothing ? xrtol : eps(one(T))^(4/5)
 
-
-    xo = Inf
     for i in 1:maxevals
 
-        fx, Δx = f(x)
-        iszero(fx) && return x
+        xᵢ₋₁ = xᵢ
+        fxᵢ, Δxᵢ = f(xᵢ)
+        xᵢ -= Δxᵢ
 
-        x -= Δx
+        iszero(fxᵢ) && return xᵢ
+        isapprox(xᵢ, xᵢ₋₁, atol=atol, rtol=rtol) && return xᵢ
+        (isinf(Δxᵢ) || isnan(Δxᵢ)) && break
 
-        if isapprox(x, xo, atol=atol, rtol=rtol)
-            return x
-        end
-
-        xo = x
     end
 
     throw(ConvergenceFailed("No convergence"))
