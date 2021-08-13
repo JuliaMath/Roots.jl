@@ -6,9 +6,9 @@
 # though they will take similar number of function calls.
 #
 # `Roots.bisection(f, a, b)`  (Bisection).
-# `Roots.chandrapatlu(f, a, b)` (Chandrapatlu's method)
+# `Roots.aps(f, a, b)` (Alefeld, Potra, and Shi's method)
 # `Roots.secant_method(f, xs)` (Order1) secant method
-# `Roots.muller(f, [xᵢ₋₂], [xᵢ₋₁], xᵢ) uses inverse quadratic
+# `Roots.muller(f, [xᵢ₋₂], [xᵢ₋₁], xᵢ) uses inverse quadratic steps
 # `Roots.newton(f, fp, x0)`
 # `Roots.dfree(f, xs)`  (Order0) more robust secant method
 #
