@@ -24,12 +24,12 @@ using BenchmarkTools
     @test max_residual <= 1e-14
 
 
-    # secant_method
+    # secant
     fpoly = x -> x^5 - x - 1
-    xrt = Roots.secant_method(fpoly, 1.0)
+    xrt = Roots.secant(fpoly, 1.0)
     @test abs(fpoly(xrt)) <= 1e-15
 
-    xrt = Roots.secant_method(fpoly, (1, 2))
+    xrt = Roots.secant(fpoly, (1, 2))
     @test abs(fpoly(xrt)) <= 1e-14
 
 
@@ -65,8 +65,8 @@ using BenchmarkTools
         @test @ballocated(Roots.bisection(sin, (3, 4))) == 0
         @test @ballocated(Roots.aps(sin, 3, 4)) == 0
         @test @ballocated(Roots.aps(sin, (3, 4))) == 0
-        @test @ballocated(Roots.secant_method(sin, 3)) == 0
-        @test @ballocated(Roots.secant_method(sin, (3,4))) == 0
+        @test @ballocated(Roots.secant(sin, 3)) == 0
+        @test @ballocated(Roots.secant(sin, (3,4))) == 0
         @test @ballocated(Roots.muller(sin, 3)) == 0
         @test @ballocated(Roots.muller(sin, 3.0, 3.05, 3.10)) == 0
         @test @ballocated(Roots.newton((sin, cos), 3)) == 0

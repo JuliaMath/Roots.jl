@@ -7,7 +7,7 @@
 #
 # `Roots.bisection(f, a, b)`  (Bisection).
 # `Roots.aps(f, a, b)` (Alefeld, Potra, and Shi's method)
-# `Roots.secant_method(f, xs)` (Order1) secant method
+# `Roots.secant(f, xs)` (Order1) secant method
 # `Roots.muller(f, [xᵢ₋₂], [xᵢ₋₁], xᵢ) uses inverse quadratic steps
 # `Roots.newton(f, fp, x0)`
 # `Roots.dfree(f, xs)`  (Order0) more robust secant method
@@ -161,7 +161,7 @@ end
 
 
 """
-    secant_method(f, xs; [atol=0.0, rtol=8eps(), maxevals=1000])
+    secant(f, xs; [atol=0.0, rtol=8eps(), maxevals=1000])
 
 Perform secant method to solve f(x) = 0.
 
@@ -185,8 +185,8 @@ method. This one will be faster, as there are fewer setup costs.
 Examples:
 
 ```julia
-Roots.secant_method(sin, (3,4))
-Roots.secant_method(x -> x^5 -x - 1, 1.1)
+Roots.secant(sin, (3,4))
+Roots.secant(x -> x^5 -x - 1, 1.1)
 ```
 
 Note:
@@ -198,7 +198,7 @@ ensure that the initial call is also equally as fast as subsequent
 ones.
 
 """
-function secant_method(f, xs; atol=zero(float(real(first(xs)))), rtol=8eps(one(float(real(first(xs))))), maxevals=100)
+function secant(f, xs; atol=zero(float(real(first(xs)))), rtol=8eps(one(float(real(first(xs))))), maxevals=100)
 
     if length(xs) == 1 # secant needs x0, x1; only x0 given
         a = float(first(xs))
@@ -249,6 +249,8 @@ function secant(f, a::T, b::T, atol=zero(T), rtol=8eps(T), maxevals=100) where {
     return nan
 end
 
+# deprecate this later; but this is exported for now.
+const secant_method = secant
 
 """
     muller(f, xᵢ; xatol=nothing, xrtol=nothing, maxevals=100)
