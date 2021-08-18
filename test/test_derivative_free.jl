@@ -298,7 +298,7 @@ if !isinteractive()
 
 
         ## basic methods
-        Ms = [Roots.Order1(), Roots.Order1B(), Roots.Order2(), Roots.Order2B(),
+        Ms = [Roots.Order1(),  Roots.Order1B(), Roots.Order2(), Roots.Order2B(),
               Roots.Order5(), Roots.Order8(), Roots.Order16()]
         results = [run_tests((f,b) -> find_zero(f, b, M), name="$M") for M in Ms]
 
@@ -318,9 +318,9 @@ if !isinteractive()
         residuals = [result.maxresidual for result in results]
         cnts = [result.evalcount/result.problems  for result in results]
 
-        @test maximum(failures) <= 40
+        @test maximum(failures) <= 41
         @test maximum(residuals) <= 1e-5
-        @test avg(cnts) <= 30
+        @test avg(cnts) <= 36
 
 
         ## Newton and Halley

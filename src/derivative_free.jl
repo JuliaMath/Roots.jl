@@ -34,38 +34,38 @@
 ## (f(x+fx) - fx)/fx  ≈ f'(x), we take a Steffensen step if |fx|
 ## is small enough. For this we use |fx| <= x/1000; which
 ## seems to work reasonably well over several different test cases.
-@inline function do_guarded_step(M::AbstractSecant, o::UnivariateZeroState{T,S}) where {T, S}
+@inline function do_guarded_step(M::AbstractSecant, o::AbstractUnivariateZeroState{T,S}) where {T, S}
     x, fx = o.xn1, o.fxn1
     1000 * abs(fx) >  max(oneunit(S), abs(x) * oneunit(S) /oneunit(T)) * one(T)
 end
 
 
 # check if we should guard against step for method M; call N if yes, P if not
-function update_state_guarded(M::AbstractSecant,N::AbstractUnivariateZeroMethod, P::AbstractUnivariateZeroMethod, fs, o, options)
+function update_state_guarded(M::AbstractSecant,N::AbstractUnivariateZeroMethod, P::AbstractUnivariateZeroMethod, fs, o, options, l=NullTracks())
     if do_guarded_step(M, o)
-        return update_state(N, fs, o, options)
+        return update_state(N, fs, o, options, l)
     else
-        update_state(P, fs, o, options)
+        update_state(P, fs, o, options, l)
     end
 end
 
 ##################################################
-initial_fnevals(::AbstractSecant) = 2
+initial_fncalls(::AbstractSecant) = 2
 
-# init_state sets x₀,x₁,fx₀,fx₁ and sets up state
+# Init_state sets x₀,x₁,fx₀,fx₁ and sets up state
 # then calls init_state!(state, M, F) for customizing for method
 # init_state! should be able to swap states (e.g. for hybrid use)
-function init_state(M::AbstractSecant, F::Callable_Function, x;
-                    fnevals = initial_fnevals(M),
-                    kwargs...)
-    x₀,x₁ =  x₀x₁(x)
-    fx₀, fx₁ = promote(float(first(F(x₀))), float(first(F(x₁))))
-    state::UnivariateZeroState = init_state(M, x₀, x₁, fx₀, fx₁;
-                                            fnevals = initial_fnevals(M),
-                                            kwargs...)
-    init_state!(state, M, F, clear=false)
-    state
-end
+# function init_state(M::AbstractSecant, F::Callable_Function, x;
+#                     fnevals = initial_fncalls(M),
+#                     kwargs...)
+#     x₀,x₁ =  x₀x₁(x)
+#     fx₀, fx₁ = promote(float(first(F(x₀))), float(first(F(x₁))))
+#     state::UnivariateZeroState = init_state(M, x₀, x₁, fx₀, fx₁;
+#                                             fnevals = initial_fncalls(M),
+#                                             kwargs...)
+#     init_state!(state, M, F, clear=false)
+#     state
+# end
 
 
 ##################################################
@@ -90,27 +90,47 @@ The error, `eᵢ = xᵢ - α`, satisfies
 struct Secant <: AbstractSecant end
 const Order1 = Secant
 
-function update_state(method::Order1, fs, o::UnivariateZeroState{T,S}, options) where {T, S}
+# init_state(M,F,x) --> call init_state(M,F,x₀,x₁,fx₀, fx₁)
+function init_state(M::AbstractSecant, F::Callable_Function, x)
+    x₀,x₁ = x₀x₁(x)
+    fx₀, fx₁ = first(F(x₀)), first(F(x₁))
+    state = init_state(M, F, x₀, x₁, fx₀, fx₁)
+end
+
+# initialize from xs, fxs
+function init_state(::AbstractSecant, F, x₀, x₁, fx₀, fx₁)
+    UnivariateZeroState(x₁, x₀, fx₁, fx₀)
+end
+
+
+
+function update_state(method::Order1, F, o::AbstractUnivariateZeroState{T,S}, options, l=NullTracks()) where {T, S}
 
     xn0, xn1 = o.xn0, o.xn1
     fxn0, fxn1 = o.fxn0, o.fxn1
+    Δ = fxn1 * (xn1 - xn0) / (fxn1 - fxn0)
 
-    delta = fxn1 * (xn1 - xn0) / (fxn1 - fxn0)
 
-
-    if isinf(delta) || isnan(delta)
-        o.stopped = true
-        o.message = "Increment `Δx` has issues. "
-         return
+    if isissue(Δ)
+        log_message(l, "Increment `Δx` has issues. ")
+        return o, true
+#        o.stopped = true
+#        o.message = "Increment `Δx` has issues. "
+#         return
      end
 
-    o.xn0 = xn1
-    o.xn1 -= delta
-    o.fxn0 = fxn1
-    o.fxn1 = (tmp::S = fs(o.xn1))
-    incfn(o)
+    x0,x1 = xn1, xn1 - Δ
+    fx0, fx1 = fxn1, F(x1)
+    incfn(l)
 
-    nothing
+
+    @set! o.xn0 = x0
+    @set! o.xn1 = x1
+    @set! o.fxn0 = fx0
+    @set! o.fxn1 = fx1
+
+    return o, false
+    #nothing
 
 end
 
@@ -136,60 +156,77 @@ The *asymptotic* error, `eᵢ = xᵢ - α`, is given by
 struct King <: AbstractSecant end
 struct Order1B <: AbstractSecant end
 
-
-function update_state(method::Order1B, fs, o::UnivariateZeroState{T,S}, options)  where {T, S}
-    update_state_guarded(method, Secant(), King(), fs, o, options)
+struct KingState{T,S} <: AbstractUnivariateZeroState{T,S}
+    xn1::T
+    xn0::T
+    fxn1::S
+    fxn0::S
+    G0::S
 end
 
 
-function update_state(method::King, fs,
-                      o::UnivariateZeroState{T,S}, options)  where {T, S}
+function init_state(M::Union{King, Order1B}, F, x₀, x₁::T, fx₀, fx₁::S) where {T,S}
+    fₛ₀ = F(x₀ - fx₀*oneunit(T)/oneunit(S))
+    G₀ = -fx₀^2 / (fₛ₀ - fx₀)
+    KingState(x₁, x₀, fx₁, fx₀, G₀)
+end
+initial_fncalls(::Union{King, Order1B}) = 3
+
+function update_state(method::Order1B, F, o::KingState{T,S}, options, l=NullTracks())  where {T, S}
+    if do_guarded_step(Order1B(), o)
+        state, flag = update_state(Order1(), F, o, options, l)
+
+        x0,fx0 = state.xn0, state.fxn0 # clunky! Need to update G₀ after Order1() step
+        fₛ = F(x0 - fx0*oneunit(T)/oneunit(S))
+        incfn(l)
+        G₀ = -fx0^2 / (fₛ - fx0)
+        @set! state.G0 = G₀
+
+        return (state, flag)
+    else
+        update_state(King(), F, o, options, l)
+    end
+end
+
+
+function update_state(method::King, F,
+                      o::KingState{T,S}, options, l=NullTracks())  where {T, S}
 
 
     x0, x1 = o.xn0, o.xn1
     fx0, fx1 = o.fxn0, o.fxn1
+    G₀ = o.G0
+    fₛ₁ = F(x1 - fx1*oneunit(T)/oneunit(S))
+    incfn(l)
+    G₁ = -fx1^2 / (fₛ₁ - fx1)
 
-    # G(x,f0,f_1) = -fx^2/(f_1 - f0)
-    f0 = fx1
-    f_1::S = fs(x1 - f0*oneunit(T)/oneunit(S))
-    incfn(o, 1)
+    m = (x1-x0) / (G₁-G₀) # approximate value of `m`, the multiplicity
 
-    G1 = -f0^2 / (f_1 - f0)
-
-    if isempty(o.fm)
-        f0 = fx0
-        tmp::S = fs(x0 - f0*oneunit(T)/oneunit(S))
-        f_1 = tmp
-        incfn(o,1)
-        G0 = -f0^2 / (f_1 - f0)
-    else
-        G0 = first(o.fm)
-    end
-
-    m = (x1-x0)/(G1-G0) # approximate value of `m`, the multiplicity
     if abs(m) <= 1e-2 * oneunit(m)
-        #@info "small m estimate, stopping"
-        o.stopped  = true
-        o.message = "Estimate for multiplicity has issues. "
-        return
+        log_message(l, "Estimate for multiplicity has issues. ")
+        return (o, true)
     end
 
-    delta = G1 * (x1 - x0) / (G1 - G0)
-    empty!(o.fm); push!(o.fm, G1)
+    Δ = G₁ * (x1 - x0) / (G₁ - G₀)
 
-    if isissue(delta)
-        o.stopped  = true
-        o.message = "Increment `Δx` has issues. "
-        return
+    if isissue(Δ)
+        log_message(l, "Increment `Δx` has issues. ")
+        return o, true
     end
 
+    x0, x1 = x1, x1 - Δ
+    fx0, fx1 = fx1, F(x1)
+    incfn(l)
 
-    o.xn0, o.fxn0 = o.xn1, o.fxn1
-    o.xn1 -= delta
-    o.fxn1 = fs(o.xn1)
-    incfn(o)
+    @set! o.xn0 = x0
+    @set! o.xn1 = x1
+    @set! o.fxn0 = fx0
+    @set! o.fxn1 = fx1
+    @set! o.G0 = G₁
 
-    nothing
+
+    return o, false
+
 end
 
 
@@ -219,12 +256,12 @@ The error, `eᵢ - α`, satisfies
 struct Order2 <: AbstractSecant end
 struct Steffensen <: AbstractSecant end
 
-function update_state(method::Order2, fs, o::UnivariateZeroState{T,S}, options)  where {T, S}
-     update_state_guarded(method, Secant(), Steffensen(), fs, o, options)
+function update_state(method::Order2, fs, o::UnivariateZeroState{T,S}, options, l=NullTracks())  where {T, S}
+     update_state_guarded(method, Secant(), Steffensen(), fs, o, options, l)
 end
 
 
-function update_state(method::Steffensen, fs, o::UnivariateZeroState{T,S}, options)  where {T, S}
+function update_state(method::Steffensen, F, o::AbstractUnivariateZeroState{T,S}, options, l=NullTracks())  where {T, S}
 
     x0, x1 = o.xn0, o.xn1
     fx0, fx1 = o.fxn0, o.fxn1
@@ -233,23 +270,33 @@ function update_state(method::Steffensen, fs, o::UnivariateZeroState{T,S}, optio
     x2 = x1 - sgn * fx1 / oneunit(S) * oneunit(T)
 
     f0 = fx1
-    f1::S = fs(x2)
-    incfn(o, 1)
+    f1::S = F(x2)
+    incfn(l, 1)
 
     delta = -sgn * f0 * f0 / (f1 - f0) * oneunit(T) / oneunit(S)
 
     if isissue(delta)
-        o.stopped  = true
-        o.message = "Increment `Δx` has issues. "
-        return
+        log_message(l, "Increment `Δx` has issues. ")
+        return o, true
+#        o.stopped  = true
+#        o.message = "Increment `Δx` has issues. "
+#        return
     end
 
-    o.xn0, o.fxn0 = o.xn1, o.fxn1
-    o.xn1 -= delta
-    o.fxn1 = fs(o.xn1)
-    incfn(o)
+    @set! o.xn0 = x1
+    @set! o.xn1 = x1 - delta
+    @set! o.fxn0 = fx1
+    @set! o.fxn1 = F(o.xn1)
+    incfn(l)
 
-    nothing
+    return o, false
+
+#    o.xn0, o.fxn0 = o.xn1, o.fxn1
+#    o.xn1 -= delta
+#    o.fxn1 = fs(o.xn1)
+#    incfn(o)
+
+#    nothing
 end
 
 ##################################################
@@ -286,21 +333,21 @@ find_zero(g, x0, Roots.Order2B(), verbose=true) #  4 / 10
 struct Esser <: AbstractSecant end
 struct Order2B <: AbstractSecant end
 
-function update_state(method::Order2B, fs, o::UnivariateZeroState{T,S}, options)  where {T, S}
-     update_state_guarded(method, Secant(), Esser(), fs, o, options)
+function update_state(method::Order2B, fs, o::AbstractUnivariateZeroState{T,S}, options, l=NullTracks())  where {T, S}
+     update_state_guarded(method, Secant(), Esser(), fs, o, options, l)
 end
 
-function update_state(method::Esser, fs,
-                      o::UnivariateZeroState{T,S}, options)  where {T, S}
+function update_state(method::Esser, F,
+                      o::AbstractUnivariateZeroState{T,S}, options, l=NullTracks())  where {T, S}
 
 
     x1, fx1 = o.xn1, o.fxn1
 
     f0 = fx1
 
-    f1  = fs(x1 + f0 * oneunit(T) / oneunit(S))
-    f_1 = fs(x1 - f0 * oneunit(T) / oneunit(S))
-    incfn(o, 2)
+    f1  = F(x1 + f0 * oneunit(T) / oneunit(S))
+    f_1 = F(x1 - f0 * oneunit(T) / oneunit(S))
+    incfn(l, 2)
 
     # h = f0
     # r1 = f/f' ~ f/f[x+h,x-h]
@@ -311,27 +358,40 @@ function update_state(method::Esser, fs,
     k = r2/(r2-r1)  # ~ m
 
     if abs(k) <= 1e-2 * oneunit(k)
-        #@info "estimate for m is *too* small"
-        o.stopped  = true
-        o.message = "Estimate for multiplicity had issues. "
-        return
+        log_message(l, "Estimate for multiplicity had issues. ")
+        return o, true
+#        #@info "estimate for m is *too* small"
+#        o.stopped  = true
+#        o.message = "Estimate for multiplicity had issues. "
+#        return
     end
 
     delta = k * r1
 
     if isissue(delta)
-        o.stopped  = true
-        o.message = "Increment `Δx` has issues. "
-        return
+        log_message(l, "Increment `Δx` has issues. ")
+        return o, true
+#        o.stopped  = true
+#        o.message = "Increment `Δx` has issues. "
+#        return
     end
 
-    o.xn0, o.fxn0 = o.xn1, o.fxn1
-    o.xn1 -= delta
+    @set! o.xn0 = x1
+    @set! o.xn1 = x1 - delta
+    @set! o.fxn0 = fx1
+    @set! o.fxn1 = F(o.xn1)
+    incfn(l)
 
-    o.fxn1 = fs(o.xn1)
-    incfn(o)
+    return o, false
 
-    nothing
+
+    # o.xn0, o.fxn0 = o.xn1, o.fxn1
+    # o.xn1 -= delta
+
+    # o.fxn1 = fs(o.xn1)
+    # incfn(o)
+
+    # nothing
 end
 
 
@@ -358,94 +418,129 @@ struct KumarSinghAkanksha <: AbstractSecant end
 
 
 
-function update_state(M::Union{Order5, KumarSinghAkanksha}, fs, o::UnivariateZeroState{T,S},
-                      options) where {T, S}
+function update_state(M::Union{Order5, KumarSinghAkanksha}, F, o::AbstractUnivariateZeroState{T,S},
+                      options, l=NullTracks()) where {T, S}
 
     xn = o.xn1
     fxn = o.fxn1
 
     wn::T = steff_step(M, o.xn1, o.fxn1)
 
-    fwn::S = fs(wn)
-    incfn(o)
+    fwn::S = F(wn)
+   incfn(l)
 
     fp, issue = _fbracket(o.xn1, wn, o.fxn1, fwn)
     if issue
-        o.xn0, o.xn1 = o.xn1, wn
-        o.fxn0, o.fxn1 = o.fxn1, fwn
-        o.message = "Issue with divided difference f[xn, wn]. "
-        o.stopped  = true
-        return
+        log_message(l, "Issue with divided difference f[xn, wn]. ")
+        @set! o.xn0 = o.xn1
+        @set! o.xn1 = wn
+        @set! o.fxn0 = o.fxn1
+        @set! o.fxn1 = fwn
+
+        return o, true
+#        o.xn0, o.xn1 = o.xn1, wn
+#        o.fxn0, o.fxn1 = o.fxn1, fwn
+#        o.message = "Issue with divided difference f[xn, wn]. "
+#        o.stopped  = true
+#        return
     end
 
     yn::T = o.xn1 - o.fxn1 / fp
-    fyn::S = fs(yn)
-    incfn(o)
+    fyn::S = F(yn)
+    incfn(l)
 
 
     zn::T = xn - (fxn + fyn) / fp
-    fzn::S = fs(zn)
-    incfn(o)
+    fzn::S = F(zn)
+    incfn(l)
 
     fp, issue = _fbracket_ratio(yn, o.xn1, wn, fyn, o.fxn1, fwn)
     if issue
-        o.xn0, o.xn1 = o.xn1, yn
-        o.fxn0, o.fxn1 = o.fxn1, fyn
-        o.message = "Issue with f[xn,yn]*f[yn,wn] / f[xn, wn]"
-        o.stopped = true
-        return
+        log_message(l, "Issue with f[xn,yn]*f[yn,wn] / f[xn, wn]")
+        @set! o.xn0 = o.xn1
+        @set! o.xn1 = yn
+        @set! o.fxn0 = o.fxn1
+        @set! o.fxn1 = fyn
+
+        return o, true
+
+        # o.xn0, o.xn1 = o.xn1, yn
+        # o.fxn0, o.fxn1 = o.fxn1, fyn
+        # o.message = "Issue with f[xn,yn]*f[yn,wn] / f[xn, wn]"
+        # o.stopped = true
+        # return
     end
 
-    o.xn0 = o.xn1
-    o.fxn0 = o.fxn1
-    o.xn1 = zn  - fzn  / fp
-    o.fxn1 = fs(o.xn1)
-    incfn(o)
+    @set! o.xn0 = o.xn1
+    @set! o.fxn0 = o.fxn1
+    @set! o.xn1 = zn  - fzn  / fp
+    @set! o.fxn1 = F(o.xn1)
+    incfn(l)
 
-    nothing
+    return o, false
+
+
+#    nothing
 end
 
 struct Order5Derivative <: AbstractSecant end
 fn_argout(::Order5Derivative) = 2
 function update_state(method::Order5Derivative, f,
-                      o::UnivariateZeroState{T,S}, options)  where {T, S}
+                      o::AbstractUnivariateZeroState{T,S}, options, l=NullTracks())  where {T, S}
 
 
     xn, fxn = o.xn1, o.fxn1
     a::T, b::S = f(xn)
     fpxn = a/b
-    incfn(o)
+    incfn(l)
 
     if isissue(fpxn)
-        o.stopped  = true
-        return
+        return o, true
+        #o.stopped  = true
+        #return
     end
 
     yn::T = xn - fxn / fpxn
     fyn::S, Δyn::T = f(yn)
     fpyn = fyn / Δyn
-    incfn(o, 2)
+    incfn(l, 2)
 
     if isissue(fpyn)
-        o.xn0, o.xn1 = xn, yn
-        o.fxn0, o.fxn1 = fxn, fyn
-        o.stopped  = true
-        return
+        log_message(l, "Issue computing `fpyn`")
+        @set! o.xn0 = o.xn1
+        @set! o.xn1 = yn
+        @set! o.fxn0 = o.fxn1
+        @set! o.fxn1 = fyn
+
+        return o, true
+
+        # o.xn0, o.xn1 = xn, yn
+        # o.fxn0, o.fxn1 = fxn, fyn
+        # o.stopped  = true
+        # return
     end
 
 
     zn::T = xn  - (fxn + fyn) / fpxn
     fzn::S, _ = f(zn)
-    incfn(o, 2)
+    incfn(l, 2)
 
     xn1 = zn - fzn / fpyn
     fxn1,_ = f(xn1)
-    incfn(o, 2)
+    incfn(l, 2)
 
-    o.xn0, o.xn1 = xn, xn1
-    o.fxn0, o.fxn1 = fxn, fxn1
+    @set! o.xn0 = xn
+    @set! o.xn1 = xn1
+    @set! o.fxn0 = fxn
+    @set! o.fxn1 = fxn1
 
-    nothing
+    return o
+
+
+    # o.xn0, o.xn1 = xn, xn1
+    # o.fxn0, o.fxn1 = fxn, fxn1
+
+    # nothing
 end
 
 ##################################################
@@ -468,21 +563,29 @@ The error, `eᵢ = xᵢ - α`, is expressed as `eᵢ₊₁ = K ⋅ eᵢ⁸` in
 struct Order8 <: AbstractSecant end
 struct Thukral8 <: AbstractSecant end
 
-function update_state(M::Union{Thukral8, Order8}, fs, o::UnivariateZeroState{T,S}, options) where {T, S}
+function update_state(M::Union{Thukral8, Order8}, F, o::AbstractUnivariateZeroState{T,S}, options, l=NullTracks()) where {T, S}
 
     xn = o.xn1
     fxn = o.fxn1
 
     wn::T = steff_step(M, xn, fxn)
-    fwn::S = fs(wn)
-    incfn(o)
+    fwn::S = F(wn)
+    incfn(l)
 
     if isissue(fwn)
-        o.xn0,o.xn1 = xn, wn
-        o.fxn0,o.fxn1 = fxn, fwn
-        o.stopped = true
-        o.message = "issue with Steffensen step fwn"
-        return
+        log_message(l, "issue with Steffensen step fwn")
+        @set! o.xn0 = xn
+        @set! o.xn1 = wn
+        @set! o.fxn0 = fxn
+        @set! o.fxn1 = fwn
+
+        return o, true
+
+#        o.xn0,o.xn1 = xn, wn
+#        o.fxn0,o.fxn1 = fxn, fwn
+#        o.stopped = true
+#        o.message = "issue with Steffensen step fwn"
+#        return
     end
 
 
@@ -490,37 +593,56 @@ function update_state(M::Union{Thukral8, Order8}, fs, o::UnivariateZeroState{T,S
     fp, issue = _fbracket(xn, wn, fxn, fwn)
 
     if issue
-        o.stopped = true
-        o.message = "issue with divided difference f[xn, wn]. "
-        return
+        log_message(l, "issue with divided difference f[xn, wn]. ")
+        return o, true
+#        o.stopped = true
+#        o.message = "issue with divided difference f[xn, wn]. "
+#        return
     end
 
     yn::T = xn - fxn / fp
-    fyn::S = fs(yn)
-    incfn(o)
+    fyn::S = F(yn)
+    incfn(l)
 
     fp, issue = _fbracket(yn, xn, fyn, fxn)
     if issue #fp
-        o.xn0,o.xn1 = xn, yn
-        o.fxn0,o.fxn1 = fxn, fyn
-        o.stopped = true
-        o.message = "issue with divided difference f[xn, yn]. "
-        return
+        log_message(l, "issue with divided difference f[xn, yn]. ")
+        @set! o.xn0 = xn
+        @set! o.xn1 = yn
+        @set! o.fxn0 = fxn
+        @set! o.fxn1 = fyn
+
+        return o, true
+
+
+        # o.xn0,o.xn1 = xn, yn
+        # o.fxn0,o.fxn1 = fxn, fyn
+        # o.stopped = true
+        # o.message = "issue with divided difference f[xn, yn]. "
+        # return
     end
 
 
     phi = (1 + fyn / fwn)           # pick one of options
     zn =  yn - phi * fyn / fp
-    fzn::S = fs(zn)
-    incfn(o)
+    fzn::S = F(zn)
+    incfn(l)
 
     fp, issue =  _fbracket_diff(xn, yn, zn, fxn, fyn, fzn)
     if issue
-        o.xn0,o.xn1 = xn, zn
-        o.fxn0,o.fxn1 = fxn, fzn
-        o.message = "issue with divided difference  f[y,z] - f[x,y] + f[x,z]. "
-        o.stopped = true
-        return
+        log_message(l, "issue with divided difference  f[y,z] - f[x,y] + f[x,z]. ")
+        @set! o.xn0 = xn
+        @set! o.xn1 = zn
+        @set! o.fxn0 = fxn
+        @set! o.fxn1 = fzn
+
+        return o, true
+
+        # o.xn0,o.xn1 = xn, zn
+        # o.fxn0,o.fxn1 = fxn, fzn
+        # o.message = "issue with divided difference  f[y,z] - f[x,y] + f[x,z]. "
+        # o.stopped = true
+        # return
     end
 
     w = 1 / (1 - fzn/fwn)
@@ -528,13 +650,20 @@ function update_state(M::Union{Thukral8, Order8}, fs, o::UnivariateZeroState{T,S
     xi = (1 - 2fyn*fyn*fyn / (fwn * fwn * fxn))
 
     xn1 = zn - w * xi * fzn / fp
-    fxn1::S = fs(xn1)
-    incfn(o)
+    fxn1::S = F(xn1)
+    incfn(l)
 
-    o.xn0,o.xn1 = xn, xn1
-    o.fxn0,o.fxn1 = fxn, fxn1
+    @set! o.xn0 = xn
+    @set! o.xn1 = xn1
+    @set! o.fxn0 = fxn
+    @set! o.fxn1 = fxn1
 
-    nothing
+    return o, false
+
+    # o.xn0,o.xn1 = xn, xn1
+    # o.fxn0,o.fxn1 = fxn, fxn1
+
+    # nothing
 end
 
 ##################################################
@@ -561,43 +690,57 @@ in equation (50) of the paper.
 struct Order16 <: AbstractSecant end
 struct Thukral16 <: AbstractSecant end
 
-function update_state(M::Union{Thukral16, Order16}, fs, o::UnivariateZeroState{T,S}, options) where {T, S}
+function update_state(M::Union{Thukral16, Order16}, F, o::AbstractUnivariateZeroState{T,S}, options, l=NullTracks()) where {T, S}
     xn = o.xn1
     fxn = o.fxn1
 
     wn::T = steff_step(M, xn, fxn)
-    fwn::S = fs(wn)
-    incfn(o)
+    fwn::S = F(wn)
+    incfn(l)
 
     fp, issue = _fbracket(xn, wn, fxn, fwn)
 
 
     if issue
-        o.xn0, o.xn1 = xn, wn
-        o.fxn0, o.fxn1 = fxn, fwn
-        o.message = "issue with f[xn,wn]"
-        o.stopped = true
-        return
+        log_message(l, "issue with f[xn,wn]")
+        @set! o.xn0 = o.xn1
+        @set! o.xn1 = wn
+        @set! o.fxn0 = o.fxn1
+        @set! o.fxn1 = fwn
+        return o, true
+#        o.xn0, o.xn1 = xn, wn
+#        o.fxn0, o.fxn1 = fxn, fwn
+#        o.message = "issue with f[xn,wn]"
+#        o.stopped = true
+#        return
     end
 
     yn::T = xn - fxn / fp
-    fyn::S = fs(yn)
-    incfn(o)
+    fyn::S = F(yn)
+    incfn(l)
 
     fp, issue = _fbracket_ratio(yn, xn, wn, fyn, fxn, fwn)
     if issue
-        o.xn0, o.xn1 = xn, yn
-        o.fxn0, o.fxn1 = fxn, fyn
-        o.message = "issue with f[xn,yn]*f[yn,wn]/f[xn,wn]"
-        o.stopped = true
-        return
+        log_message(l, "issue with f[xn,yn]*f[yn,wn]/f[xn,wn]")
+        @set! o.xn0 = o.xn1
+        @set! o.xn1 = yn
+        @set! o.fxn0 = o.fxn1
+        @set! o.fxn1 = fyn
+
+        return o, true
+
+        # o.xn0, o.xn1 = xn, yn
+        # o.fxn0, o.fxn1 = fxn, fyn
+        # o.message = "issue with f[xn,yn]*f[yn,wn]/f[xn,wn]"
+        # o.stopped = true
+        # return
     end
 
 
 
     zn = yn - fyn / fp
-    fzn::S = fs(zn)
-    incfn(o)
+    fzn::S = F(zn)
+    incfn(l)
 
     fp, issue = _fbracket_diff(xn, yn, zn, fxn, fyn, fzn)
     u2, u3, u4 = fzn/fwn, fyn/fxn, fyn/fwn
@@ -605,25 +748,41 @@ function update_state(M::Union{Thukral16, Order16}, fs, o::UnivariateZeroState{T
 
     eta = 1 / (1 + 2*u3*u4^2) / (1 - u2)
     if issue
-        o.xn0, o.xn1 = xn, zn
-        o.fxn0, o.fxn1 = fxn, fzn
-        o.stopped = true
-        o.message = "Approximate derivative failed"
-        return
+        log_message(l, "Approximate derivative failed")
+        @set! o.xn0 = o.xn1
+        @set! o.xn1 = zn
+        @set! o.fxn0 = o.fxn1
+        @set! o.fxn1 = fzn
+
+        return o, true
+
+        # o.xn0, o.xn1 = xn, zn
+        # o.fxn0, o.fxn1 = fxn, fzn
+        # o.stopped = true
+        # o.message = "Approximate derivative failed"
+        # return
     end
 
     an = zn - eta * fzn / fp
-    fan::S = fs(an)
-    incfn(o)
+    fan::S = F(an)
+    incfn(l)
 
 
     fp, issue = _fbracket_ratio(an, yn, zn, fan, fyn, fzn)
     if issue
-        o.xn0, o.xn1 = xn, an
-        o.fxn0, o.fxn1 = fxn, fan
-        o.stopped = true
-        o.message = "Approximate derivative failed"
-        return
+        log_message(l, "Approximate derivative failed")
+        @set! o.xn0 = o.xn1
+        @set! o.xn1 = an
+        @set! o.fxn0 = o.fxn1
+        @set! o.fxn1 = fan
+
+        return o, true
+
+        # o.xn0, o.xn1 = xn, an
+        # o.fxn0, o.fxn1 = fxn, fan
+        # o.stopped = true
+        # o.message = "Approximate derivative failed"
+        # return
     end
 
     u1, u5, u6 = fzn/fxn, fan/fxn, fan/fwn
@@ -635,13 +794,20 @@ function update_state(M::Union{Thukral16, Order16}, fs, o::UnivariateZeroState{T
 
 
     xn1 = an - sigma * fan / fp
-    fxn1::S = fs(xn1)
-    incfn(o)
+    fxn1::S = F(xn1)
+    incfn(l)
 
-    o.xn0, o.xn1 = xn, xn1
-    o.fxn0, o.fxn1 = fxn, fxn1
+    @set! o.xn0 = xn
+    @set! o.xn1 = xn1
+    @set! o.fxn0 = fxn
+    @set! o.fxn1 = fxn1
 
-    nothing
+    return o, false
+
+    # o.xn0, o.xn1 = xn, xn1
+    # o.fxn0, o.fxn1 = fxn, fxn1
+
+    # nothing
 end
 
 ##################################################

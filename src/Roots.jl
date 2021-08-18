@@ -7,6 +7,7 @@ end
 using Printf
 import CommonSolve
 import CommonSolve: solve, solve!, init
+using Setfield
 
 export fzero,
        fzeros,
@@ -23,7 +24,6 @@ include("utils.jl")
 include("find_zero.jl")
 include("bracketing.jl")
 include("derivative_free.jl")
-include("ssecant.jl")
 include("order0.jl")
 include("simple.jl")
 include("find_zeros.jl")
