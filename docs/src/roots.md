@@ -704,8 +704,8 @@ julia> below = accumulate((x,y) -> prevfloat(x), 1:10, init=1/3);
 
 julia> ns = sort([b...,1/3, a...])
 
-julia> maximum(abs.(f.(ns) - f1.(ns)))
-1.887379141862766e-15
+julia> maximum(abs.(f.(ns) - f1.(ns))) < 1e-14
+true
 
 ```
 
