@@ -123,30 +123,39 @@ algorithm due to Alefeld, Potra, and Shi is used.
 ```jldoctest roots
 julia> find_zero(sin, (big(3), big(4)))    # uses a different algorithm than for (3,4)
 3.141592653589793238462643383279502884197169399375105820974944592307816406286198
-
-
 ```
+
+
+The algorithms of Alefeld, Potra, and Shi and the well known algorithm of Brent, also start with a bracketing algorithm. For many problems these will take far fewer steps than the bisection algorithm to reach convergence. These may be called directly. For example,
+
+```jldoctest roots
+julia> find_zero(sin, (3,4), Roots.A42())
+3.141592653589793
+```
+
+This takes ``9`` function evaluations, the default method takes ``53``. The method is specified above in the third positional argument by `Roots.A42()`. This method is not exported, so must be qualified.
+
 
 By default, bisection will converge to machine tolerance. This may
 provide more accuracy than desired. A tolerance may be specified to
 terminate early, thereby utilizing fewer resources. For example, this
-uses 19 steps to reach accuracy to $10^{-6}$ (without specifying `xatol` it uses
-51 steps):
+uses ``4`` steps to reach accuracy to $1/16$ (without specifying `xatol` it uses
+``51`` steps):
 
 ```jldoctest roots
-julia> rt = find_zero(sin, (3.0, 4.0), xatol=1e-6)
-3.141592502593994
+julia> rt = find_zero(sin, (3.0, 4.0), xatol=1/16)
+3.125
 
 julia> rt - pi
--1.5099579897537296e-7
+-0.016592653589793116
 
 ```
 
 
 ## Non-bracketing problems
 
-Bracketing methods have guaranteed convergence, but in general require
-many more function calls than are needed to produce an answer.  If a
+Bracketing methods have guaranteed convergence, but in general may require
+many more function calls than are otherwise needed to produce an answer.  If a
 good initial guess is known, then the `find_zero` function provides an
 interface to some different iterative algorithms that are more
 efficient. Unlike bracketing methods, these algorithms may not
@@ -156,7 +165,7 @@ The default algorithm is modeled after an algorithm used for
 [HP-34 calculators](http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1979-12.pdf). This
 algorithm is designed to be more forgiving of the quality of the
 initial guess at the cost of possibly performing many more steps than
-other algorithms, as if the algorithm encounters a bracket, bisection
+other algorithms, as if the algorithm encounters a bracket, a bracketing method
 will be used.
 
 For example, the answer to our initial problem is visibly seen from a
@@ -226,7 +235,7 @@ julia> x, f(x)
 
 ```
 
-The above makes $8$ function calls, to the $57$ made with `Order0`.
+The above makes $8$ function calls, to the $54$ made with `Order0`.
 
 ```jldoctest roots
 julia> f(x) = (x + 3) * (x - 1)^2
@@ -254,8 +263,9 @@ The latter shows that zeros need not be simple zeros  to be found.
 A simple zero, $c$,has $f(x) = (x-c) \cdot g(x)$ where $g(c) \neq 0$.
 Generally speaking, non-simple zeros are
 expected to take many more function calls, as the methods are no
-longer super-linear. This is the case here, where `Order2` uses $55$
-function calls, `Order8` uses $41$, and `Order0` takes, a comparable, $42$.)
+longer super-linear. This is the case here, where `Order2` uses $51$
+function calls, `Order8` uses $42$, and `Order0` takes  $80$. The `Roots.Order2B` method is useful
+when a multiplicity is expected.
 
 To investigate an algorithm and its convergence, the argument
 `verbose=true` may be specified.
@@ -264,8 +274,8 @@ To investigate an algorithm and its convergence, the argument
 For some functions, adjusting the default tolerances may be necessary
 to achieve convergence. The tolerances include `atol` and `rtol`, which are
 used to check if $f(x_n) \approx 0$;
-`xatol` and `xrtol`, to check if $x_n \approx x_{n-1}$; and `maxevals` and `maxfnevals` to limit the
-number of steps in the algorithm or function calls.
+`xatol` and `xrtol`, to check if $x_n \approx x_{n-1}$; and `maxevals`  to limit the
+number of steps in the algorithm.
 
 
 
@@ -305,7 +315,7 @@ julia> find_zero((f,fp), 2, Roots.Newton())
 ```
 
 The secant method typically needs two starting points, though a second
-one is computed if only one is give. Here we start with 2 and 3,
+one is computed if only one is given. Here we start with 2 and 3,
 specified through a tuple:
 
 ```jldoctest roots
@@ -367,7 +377,7 @@ dfᵏs (generic function with 1 method)
 
 
 ```jldoctest roots
-julia> Roots.newton(f, D(f), 2)
+julia> find_zero((f,D(f)), 2, Roots.Newton())
 2.0945514815423265
 
 ```
@@ -375,7 +385,7 @@ julia> Roots.newton(f, D(f), 2)
 Or, for Halley's method:
 
 ```jldoctest roots
-julia> Roots.halley(f, D(f), D(f,2), 2)
+julia> find_zero((f, D(f), D(f,2)), 2, Roots.Halley())
 2.0945514815423265
 
 ```
@@ -440,36 +450,6 @@ julia> solve(Z, Roots.Secant(), 2) # p=2
 julia> solve(Z, Bisection(), 3)
 1.1701209500026262
 ```
-
-Behind the scenes an iterator is created, then iterated to convergence. This iterator can be exposed programatically, which might be of use if details of the algorithm are desired:
-
-```jldoctest roots
-julia> Z, M = ZeroProblem(sin, (3, 4)), Roots.Secant();
-
-julia> prob = init(Z, M);  # A ZeroProblemIterator instance
-
-julia> solve!(prob)
-3.141592653589793
-
-julia> prob.state.fnevals
-7
-```
-
-Or more explicitly:
-
-```jldoctest roots
-julia> prob = init(Z, M);
-
-julia> steps = 0
-0
-
-julia> for _ in prob; steps += 1; end
-
-julia> steps, last(prob)
-(5, 3.141592653589793)
-```
-
-
 
 
 ## Finding critical points
@@ -566,9 +546,11 @@ savefig("flight-2.svg"); nothing #hide
 ![](flight-2.svg)
 
 
-## ForwardDiff
+### Using  `ForwardDiff`
 
-We have seen that `ForwardDiff` can be used to specify functions to pass to `find_zero`. This example shows what is necessary to use `ForwardDiff` to differentiate a problem which internally calls `find_zero`. It comes from [stackoverflow](https://stackoverflow.com/questions/68485811/julia-roots-find-zero-with-forwarddiff-dual-type). The main issue is technical. When `find_zero` sets up a problem, it creates a state which specifies types for the ``x`` and ``f(x)`` values. These types are found from the initial `x0` values passed to `find_zero(f, x0, M)`, *after* calling `float`, and the corresponding `f(x)` values. In the following, it is necessary to ensure the type for the `x0` value is the underlying type for forward differentiation by `ForwardDiff`. This is the working solution:
+We have seen that `ForwardDiff` can be used to specify functions to pass to `find_zero`.
+The last example avoided using `ForwardDiff` to find the derivative, opting for a finite difference approximation.
+This example shows what is necessary to use `ForwardDiff` to differentiate a problem which internally calls `find_zero`. It comes from [stackoverflow](https://stackoverflow.com/questions/68485811/julia-roots-find-zero-with-forwarddiff-dual-type). The main issue is technical. When `find_zero` sets up a problem, it creates a state which specifies types for the ``x`` and ``f(x)`` values. These types are found from the initial `x0` values passed to `find_zero(f, x0, M)`, *after* calling `float`, and the corresponding `f(x)` values. In the following, it is necessary to ensure the type for the `x0` value is the underlying type for forward differentiation by `ForwardDiff`. This is the working solution:
 
 ```julia
 julia> using Distributions, Roots, StatsFuns, ForwardDiff
@@ -671,7 +653,7 @@ julia> try find_zero(f, x0, Order2())  catch err  "Convergence failed" end
 
 ```
 
-A graph shows the issue. We have overlayed 15 steps of Newton's
+A graph shows the issue. We have overlayed ``15`` steps of Newton's
 method, the other algorithms being somewhat similar:
 
 ```@example roots
@@ -690,7 +672,7 @@ savefig("newton-15.svg"); nothing #hide
 
 ![](newton-15.svg)
 
-Though 15 steps are shown, only a few are discernible, as the function's relative maximum
+Though ``15`` steps are shown, only a few are discernible, as the function's relative maximum
 causes a trap for this algorithm. Starting to the right of the
 relative minimum--nearer the zero--would avoid this trap. The default
 method employs a trick to bounce out of such traps, though it doesn't
@@ -716,13 +698,11 @@ f (generic function with 1 method)
 julia> f1(x) =  -1 + 15*x - 90*x^2 + 270*x^3 - 405*x^4 + 243*x^5
 f1 (generic function with 1 method)
 
-julia> ns = [1/3];
+julia> above = accumulate((x,y) -> nextfloat(x), 1:10, init=1/3);
 
-julia> u=1/3; for i in 1:10 (global  u=nextfloat(u);push!(ns, u)) end
+julia> below = accumulate((x,y) -> prevfloat(x), 1:10, init=1/3);
 
-julia> u=1/3; for i in 1:10 (global  u=prevfloat(u);push!(ns, u)) end
-
-julia> sort!(ns);
+julia> ns = sort([b...,1/3, a...])
 
 julia> maximum(abs.(f.(ns) - f1.(ns)))
 1.887379141862766e-15

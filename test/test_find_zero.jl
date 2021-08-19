@@ -104,197 +104,179 @@ struct Order3_Test <: Roots.AbstractSecant end
 
 end
 
+import Roots.Setfield
+import Roots.Setfield: @set!
 
-# @testset "find_zero internals" begin
+@testset "find_zero internals" begin
 
-#     ##  init_state! method
-#     g1 = x -> x^5 - x - 1
-#     x0_, xstar_ = (1.0, 2.0), 1.1673039782614187
-#     M = Roots.A42()
-#     G1 = Roots.Callable_Function(M, g1)
-#     state = Roots.init_state(M, G1, x0_)
-#     options = Roots.init_options(M, state)
-#     for M in (Roots.A42(), Roots.Bisection(), Roots.FalsePosition())
-#         Roots.init_state!(state, M, g1, x0_)
-#         @test find_zero(M, g1, state, options) ≈ xstar_
-#     end
+    ##  init_state method
+    g1 = x -> x^5 - x - 1
+    x0_, xstar_ = (1.0, 2.0), 1.1673039782614187
+    M = Roots.A42()
+    G1 = Roots.Callable_Function(M, g1)
+    state = Roots.init_state(M, G1, x0_)
+    options = Roots.init_options(M, state)
+    for M in (Roots.A42(), Roots.Bisection(), Roots.FalsePosition())
+        Gₘ = Roots.Callable_Function(M, G1)
+        stateₘ = Roots.init_state(M, state, Gₘ)
+        @test solve(M, Gₘ, stateₘ) ≈ xstar_
+    end
 
-#     # iterator interface (ZeroProblem, solve; init, solve!)
-#     meths = [Order1(), Roots.Order1B(), Roots.King(),
-#              Order2(), Roots.Steffensen(), Roots.Order2B(), Roots.Esser(),
-#              Order5(), Roots.KumarSinghAkanksha(),
-#              Order8(), Roots.Thukral8(),
-#              Order16(), Roots.Thukral16()]
-#     g1(x) = x^5 - x - 1
-#     x0_, xstar_ = 1.16, 1.1673039782614187
-#     fx = ZeroProblem(g1, x0_)
-#     for M in meths
-#         @test solve(fx, M) ≈ xstar_
-#         P = init(fx, M)
-#         solve!(P)
-#         @test last(P) ≈ xstar_
-#         # these next two methods are to be deprecated:
-#         P = Roots.ZeroProblem(M, g1, x0_)
-#         @test find_zero!(P) ≈ xstar_
-#     end
+    # iterator interface (ZeroProblem, solve; init, solve!)
+    meths = [Order1(), Roots.Order1B(), Roots.King(),
+             Order2(), Roots.Steffensen(), Roots.Order2B(), Roots.Esser(),
+             Order5(), Roots.KumarSinghAkanksha(),
+             Order8(), Roots.Thukral8(),
+             Order16(), Roots.Thukral16()]
+    g1(x) = x^5 - x - 1
+    x0_, xstar_ = 1.16, 1.1673039782614187
+    fx = ZeroProblem(g1, x0_)
+    for M in meths
+        @test solve(fx, M) ≈ xstar_
+        P = init(fx, M)
+        @test solve!(P) ≈ xstar_
+    end
 
-#     # solve and parameters
-#     # should be positional, but named supported for now
-#     g2 = (x,p) -> cos(x) - x/p
-#     fx = ZeroProblem(g2, (0,pi/2))
-#     @test solve(fx, 2) ≈ find_zero(x -> cos(x) - x/2, (0, pi/2))
-#     @test solve(fx, p=2) ≈ find_zero(x -> cos(x) - x/2, (0, pi/2))
-#     @test solve(fx, p=3) ≈ find_zero(x -> cos(x) - x/3, (0, pi/2))
-#     g3 = (x, p) -> cos(x) + p[1]*x - p[2]
-#     fx = ZeroProblem(g3, (0,pi/2))
-#     @test solve(fx, p=[-1/10, 1/10]) ≈ find_zero(x -> cos(x) - x/10 - 1/10, (0, pi/2))
+    # solve and parameters
+    # should be positional, but named supported for now
+    g2 = (x,p) -> cos(x) - x/p
+    fx = ZeroProblem(g2, (0,pi/2))
+    @test solve(fx, 2) ≈ find_zero(x -> cos(x) - x/2, (0, pi/2))
+    @test solve(fx, p=2) ≈ find_zero(x -> cos(x) - x/2, (0, pi/2))
+    @test solve(fx, p=3) ≈ find_zero(x -> cos(x) - x/3, (0, pi/2))
+    g3 = (x, p) -> cos(x) + p[1]*x - p[2]
+    fx = ZeroProblem(g3, (0,pi/2))
+    @test solve(fx, p=[-1/10, 1/10]) ≈ find_zero(x -> cos(x) - x/10 - 1/10, (0, pi/2))
 
-#     ## test with early evaluation of bracket
-#     f = x -> sin(x)
-#     xs = (3.0, 4.0)
-#     fxs = f.(xs)
-#     M = Bisection()
-#     #XXX    state = Roots._init_state(M, f, xs, fxs)
-#     state = Roots.init_state(M, xs..., fxs..., m=[3.5], fm=[f(3.5)])
-#     @test find_zero(M, f, state) ≈ π
+    ## test with early evaluation of bracket
+    f = x -> sin(x)
+    xs = (3.0, 4.0)
+    fxs = f.(xs)
+    M = Bisection()
+    state = Roots.init_state(M, f, xs..., fxs..., m=3.5, fm=f(3.5))
+    @test find_zero(M, f, state) ≈ π
 
 
-#     ## hybrid
-#     g1 = x -> exp(x) - x^4
-#     x0_, xstar_ = (5.0, 20.0), 8.613169456441398
-#     M = Roots.Bisection()
-#     G1 = Roots.Callable_Function(M, g1)
-#     state = Roots.init_state(M, G1, x0_)
-#     options = Roots.init_options(M, state, xatol=1/2)
-#     find_zero(M, g1, state, options)
-#     M = Roots.Order1()
-#     #Roots.init_state!(state, M, g1, state.m[1])
-#     Roots.init_state!(state, M, G1)
-#     #Roots.init_options!(options, M)
-#     options = Roots.init_options(M, state)
-#     @test find_zero(M, g1, state, options) ≈ xstar_
+    #     ## hybrid
+    g1 = x -> exp(x) - x^4
+    x0_, xstar_ = (5.0, 20.0), 8.613169456441398
+    M = Roots.Bisection()
+    G1 = Roots.Callable_Function(M, g1)
+    state = Roots.init_state(M, G1, x0_)
+    options = Roots.init_options(M, state, xatol=1/2)
+    ZPI = init(M,G1,state,options)
+    ϕ = iterate(ZPI)
+    while ϕ != nothing
+        val, st = ϕ
+        state, ctr = st
+        ϕ = iterate(ZPI, st)
+    end
+
+    N = Roots.Order1() # switch to N
+    G2 = Roots.Callable_Function(N, G1)
+    stateₙ = Roots.init_state(N, state, G2)
+    options = Roots.init_options(N, stateₙ)
+    x = solve(N, G2, stateₙ, options)
+    @test x ≈ xstar_
 
 
-#     # test conversion between states/options
-#     Ms = vcat([Roots.FalsePosition(i) for i in 1:12], Roots.A42(), Roots.AlefeldPotraShi(), Roots.Brent(), Roots.Bisection())
-#     Ns = [Order1(),
-#           Roots.Order1B(),
-#           Order2(),
-#           Roots.Order2B(),
-#           Order5(),
-#           Order8(),
-#           Order16()]
 
-#     g1 = x -> exp(x) - x^4
-#     x0_= (5.0, 20.0)
-#     M = Ms[1]
-#     G1 = Roots.Callable_Function(M,g1)
-#     state = Roots.init_state(M, G1, x0_)
-#     options = Roots.init_options(M, state)
+    ## test creation of new methods
+    ## xn - f/f' - f'' * f^2 / 2(f')^3 = xn - r1 - r1^2/r2 is third order,
+    # had to previousely define:
+    struct Order3_Test <: Roots.AbstractSecant end
+    function Roots.update_state(M::Order3_Test, f, o::Roots.AbstractUnivariateZeroState{T,S}, options, l=Roots.NullTracks()) where {T, S}
+        # xn - f/f' - f'' * f^2 / 2(f')^3 = xn - r1 - r1^2/r2 is third order
+        xn_1, xn = o.xn0, o.xn1
+        fxn_1, fxn = o.fxn0, o.fxn1
 
-#     for M in Ms
-#         G1 = Roots.Callable_Function(M,g1)
-#         @test Roots.init_state!(state, M, G1, x0_) == nothing
-#         #@test Roots.init_options!(options, M) == nothing
-#         options = Roots.init_options(M, state)
-#         @test Roots.update_state(M, G1, state, options) == nothing
-#         @test Roots.assess_convergence(M, state, options) == false # none in just 1 step
-#     end
+        f_10 = (fxn - fxn_1) / (xn - xn_1)
+        xn1::T = xn - fxn / f_10
+        fxn1::S = f(xn1)
 
-#     x0_ = 8.0
-#     xstars = find_zeros(g1, -20.0, 20.0)
-#     for M in Ns
-#         G1 = Roots.Callable_Function(M,g1)
-#         @test Roots.init_state!(state, M, G1, x0_) == nothing
-#         #@test Roots.init_options!(options, M) == nothing
-#         options = Roots.init_options(M, state)
-#         @test Roots.update_state(M, G1, state, options)  == nothing
-#         @test Roots.assess_convergence(M, state, options) == false  # none in 1 step
-#     end
+        f01 = (fxn1 - fxn) /  (xn1 - xn)
 
-#     ## test creation of new methods
-#     ## xn - f/f' - f'' * f^2 / 2(f')^3 = xn - r1 - r1^2/r2 is third order,
-#     # had to previousely define:
-#     # struct Order3_Test <: Roots.AbstractSecant end
-#     function Roots.update_state(M::Order3_Test, f, o::Roots.UnivariateZeroState{T,S}, options) where {T, S}
-#         # xn - f/f' - f'' * f^2 / 2(f')^3 = xn - r1 - r1^2/r2 is third order
-#         xn_1, xn = o.xn0, o.xn1
-#         fxn_1, fxn = o.fxn0, o.fxn1
+        if isnan(f_10) || iszero(f_10) || isnan(f01) || iszero(f01)
+            return (o, true)
+        end
 
-#         f_10 = (fxn - fxn_1) / (xn - xn_1)
-#         xn1::T = xn - fxn / f_10
-#         fxn1::S = f(xn1)
+        r1 = fxn1 / f01
+        r2 = f01 / ((f01 - f_10) / (xn1 - xn_1))
 
-#         f01 = (fxn1 - fxn) /  (xn1 - xn)
+        wn = xn1 - r1 - r1^2/r2
+        fwn::S = f(wn)
 
-#         if isnan(f_10) || iszero(f_10) || isnan(f01) || iszero(f01)
-#             o.message = "issue with bracket. "
-#             o.stopped = true
-#             return
-#         end
+        @set! o.xn0 = xn
+        @set! o.xn1 = wn
+        @set! o.fxn0 = fxn
+        @set! o.fxn1 = fwn
 
-#         r1 = fxn1 / f01
-#         r2 = f01 / ((f01 - f_10) / (xn1 - xn_1))
+        return (o, false)
 
-#         wn = xn1 - r1 - r1^2/r2
-#         fwn::S = f(wn)
+    end
 
-#         o.xn0, o.xn1 = xn, wn
-#         o.fxn0, o.fxn1 = fxn, fwn
-#     end
+    g1 = x -> exp(x) - x^4
+    @test find_zero(g1, 8.3, Order3_Test()) ≈ find_zero(g1, 8.3, Order1())
 
-#     g1 = x -> exp(x) - x^4
-#     @test find_zero(g1, 8.3, Order3_Test()) ≈ find_zero(g1, 8.3, Order1())
+    # test many different calling styles
+    f(x) = (sin(x), sin(x)/cos(x)) # x -> (f(x), f(x)/f′(x))
+    fs(x) = (sin, cos) # (f, f′)
+    x0 = (3,4)
+    g(x,p) = begin
+        fx = cos(x) - x/p
+        (fx, fx/(-sin(x) - 1/p))
+    end
+    x0a = (0.0, pi/2)
+    α₂, α₃ = 1.0298665293222589, 1.1701209500026262
+    @test find_zero(f, x0) ≈ π
+    @test find_zero(f, first(x0)) ≈ π
+    @test find_zero(g, x0a, p=2) ≈ α₂
+    @test find_zero(g, first(x0a), p=2) ≈ α₂
+    Z = ZeroProblem(f, x0)
+    Za = ZeroProblem(g, x0a)
+    @test solve(Z) ≈ π
+    @test solve(Za, 3) ≈ α₃
+    @test solve(Za, p=2) ≈ α₂
+    @test solve!(init(Z)) ≈ π
+    @test solve!(init(Za, 3)) ≈ α₃
+    @test solve!(init(Za, p=3)) ≈ α₃
+    Ms = (Roots.Secant(), Roots.Bisection(), Roots.Newton())
+    for M ∈ Ms
+        @test find_zero(f, x0, M) ≈ π
+        @test solve(Z, M) ≈ π
+        @test solve!(init(Z, M)) ≈ π
+        @test find_zero(g, x0a, M, p=2) ≈ α₂
+        @test solve(Za, M, 2) ≈ α₂
+        @test solve(Za, M, p=2) ≈ α₂
+        @test solve!(init(Za, M, 2)) ≈ α₂
+    end
 
-#     # test many different calling styles
-#     f(x) = (sin(x), sin(x)/cos(x)) # x -> (f(x), f(x)/f′(x))
-#     fs(x) = (sin, cos) # (f, f′)
-#     x0 = (3,4)
-#     g(x,p) = begin
-#         fx = cos(x) - x/p
-#         (fx, fx/(-sin(x) - 1/p))
-#     end
-#     x0a = (0.0, pi/2)
-#     α₂, α₃ = 1.0298665293222589, 1.1701209500026262
-#     @test find_zero(f, x0) ≈ π
-#     @test find_zero(f, first(x0)) ≈ π
-#     @test find_zero(g, x0a, p=2) ≈ α₂
-#     @test find_zero(g, first(x0a), p=2) ≈ α₂
-#     Z = ZeroProblem(f, x0)
-#     Za = ZeroProblem(g, x0a)
-#     @test solve(Z) ≈ π
-#     @test solve(Za, 3) ≈ α₃
-#     @test solve(Za, p=2) ≈ α₂
-#     @test solve!(init(Z)) ≈ π
-#     @test solve!(init(Za, 3)) ≈ α₃
-#     @test solve!(init(Za, p=3)) ≈ α₃
-#     Ms = (Roots.Secant(), Roots.Bisection(), Roots.Newton())
-#     for M ∈ Ms
-#         @test find_zero(f, x0, M) ≈ π
-#         @test solve(Z, M) ≈ π
-#         @test solve!(init(Z, M)) ≈ π
-#         @test find_zero(g, x0a, M, p=2) ≈ α₂
-#         @test solve(Za, M, 2) ≈ α₂
-#         @test solve(Za, M, p=2) ≈ α₂
-#         @test solve!(init(Za, M, 2)) ≈ α₂
-#     end
+    ## test counting of `steps`, function evaluations
+    # the function count in state is removed; approximate counts are in a tracks object
+    wrapper(f) = begin
+        cnt = 0; x -> (cnt += 1; f(x))
+    end
+    Ms = (Roots.Secant(), Roots.Order2(), Roots.Bisection(), Roots.A42())
+    for M ∈ Ms
+        F = wrapper(sin); x0 = (3,4)
+        G = Roots.Callable_Function(M,F)
+        state = Roots.init_state(M, G, x0)
+        options = Roots.init_options(M,state)
+        l = Roots.Tracks(Float64, Float64)
+        prob = init(M, G, state, options, l)
+        ctr = steps = 0
+        ϕ = iterate(prob)
+        while ϕ != nothing
+            steps += 1
+            val, st = ϕ
+            state, ctr = st
+            ϕ = iterate(prob, st)
+        end
+        @test steps == ctr
+        @test l.fncalls <= F.cnt.contents <= l.fncalls +  Roots.initial_fncalls(M)
+    end
 
-#     ## test counting of `steps`, `fnevals` in `state`
-#     wrapper(f) = begin
-#         cnt = 0; x -> (cnt += 1; f(x))
-#     end
-#     Ms = (Roots.Secant(), Roots.Order2(), Roots.Bisection(), Roots.A42())
-#     for M ∈ Ms
-#         F = wrapper(sin)
-#         prob = init(ZeroProblem(F, (3,4)))
-#         steps = 0
-#         for _ in prob
-#             steps += 1
-#         end
-#         @test steps == prob.state.steps
-#         @test F.cnt.contents == prob.state.fnevals
-#     end
-# end
+end
 
 @testset "find_zero issue tests" begin
 

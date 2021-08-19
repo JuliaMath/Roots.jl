@@ -232,12 +232,6 @@ Keyword arguments are passed to `find_zero` using the `Roots.Halley()` method.
 
 """
 halley(f, fp, fpp, x0; kwargs...) = find_zero((f, fp, fpp), x0, Halley(); kwargs...)
-#halley(f,  x0; kwargs...) = find_zero(f, x0, Halley(); kwargs...) # deprecated
-#halley(f, fp, x0; kwargs...) = find_zero((f, fp), x0, Halley(); kwargs...) # deprecated
-@deprecate halley(f,  x0; kwargs...)    halley(f, fp, fpp, x0; kwargs...)
-@deprecate halley(f, fp, x0; kwargs...) halley(f, fp, fpp, x0; kwargs...)
-
-
 
 """
     Roots.Schroder()

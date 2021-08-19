@@ -303,3 +303,55 @@ end
     end
 
 end
+
+
+@testset "Bracketing edge cases" begin
+
+    Ms = (Roots.Bisection(), Roots.A42(), Roots.AlefeldPotraShi())
+
+    # Endpoints can be infinite
+    for M ∈ Ms
+        @test find_zero(sign, (-Inf, Inf), M) ≈ 0 atol=1e-16
+    end
+
+    # Function can be infinite for Bisection and Float64
+    @test find_zero(x -> Inf * sign(x-pi), (-Inf, Inf), Bisection()) ≈ pi
+
+    # finds discontinuities, not necessarily zeros
+    f = (x,p = 0.0) -> 1/(x - p) #avoid issue with `0` being identified by `_middle`
+    for M ∈ Ms
+        @test find_zero(f, (-1,1), M, p=eps()) ≈ eps() atol = 2eps()
+    end
+
+    @test find_zero(f, (-1,1), Roots.Bisection()) == 0.0
+    @test_throws Roots.ConvergenceFailed find_zero(f, (-1,1), Roots.A42())
+    @test_throws Roots.ConvergenceFailed find_zero(f, (-1,1), Roots.AlefeldPotraShi())
+
+    # subnormals should still be okay
+    α = nextfloat(nextfloat(0.0))
+    f = x -> x - α
+    for M ∈ Ms
+        @test find_zero(f, (-1,1), Bisection()) == α
+    end
+
+    # with NaN, not Inf
+    f = x -> abs(x)/x
+    for M ∈ Ms
+        @test find_zero(f, (-1,1), M) ≈ 0 atol = eps()
+    end
+
+
+    # points are not evaluated outside boundary; issue #233
+    a,b = -1, 1
+    f = x -> abs(x) > 1 ? error("out of bounds") : 1.0 - x
+    for M ∈ Ms
+        @test find_zero(f, (a,b), M) ≈ 1
+    end
+
+    f =  x ->  abs(x) > 1 ? error("out of bounds") : prevfloat(1.0) - x
+    for M ∈ Ms
+        @test find_zero(f, (a,b), M) ≈ 1
+    end
+
+
+end

@@ -308,28 +308,6 @@ function init_state(L::LithBoonkkampIJzermanBracket, F, x₀,x₁,fx₀,fx₁)
 end
 
 
-# function init_state(::LithBoonkkampIJzermanBracket, F::Callable_Function{S,Tup,𝑭,P}, xs) where {S, Tup <: Val{true}, 𝑭, P}
-#     u, v = promote(float.(xs)...)
-#     fu,fv = F.f[1](u), F.f[1](v)
-#     isbracket(fu, fv) || throw(ArgumentError(bracketing_error))
-
-#     if abs(fu) < abs(fv)
-#         a,b,fa,fb = v,u,fv,fu
-#     else
-#         a,b,fa,fb = u,v,fu,fv
-#     end
-#     f′a,f′b = F.f[2](a), F.f[2](b) # F.fp(a), F.fp(b)
-#     c,fc,f′c = a,fa,f′a
-
-#     # keep bracket, int[a,b] as xn1, xn0, m=[c]
-#     # store fb,fa, [fc, f′a, f′c,f′b]
-#     state = UnivariateZeroState(b,a, one(a)*NaN, [c], # b,c=xₙ,xₙ-1; int[a,b] a bracket
-#                                 fb,fa, one(fb)*NaN, [fc, f′a, f′c, f′b],
-#                                 0, 4,
-#                                 false, false, false, false,
-#                                 "")
-# end
-
 function update_state(M::LithBoonkkampIJzermanBracket, F, state::LithState{T,S}, options::UnivariateZeroOptions, l=NullTracks()) where {T,S}
 
     b::T,c::T,a::T = state.xn1, state.m[1], state.xn0

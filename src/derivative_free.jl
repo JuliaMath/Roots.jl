@@ -52,21 +52,6 @@ end
 ##################################################
 initial_fncalls(::AbstractSecant) = 2
 
-# Init_state sets x₀,x₁,fx₀,fx₁ and sets up state
-# then calls init_state!(state, M, F) for customizing for method
-# init_state! should be able to swap states (e.g. for hybrid use)
-# function init_state(M::AbstractSecant, F::Callable_Function, x;
-#                     fnevals = initial_fncalls(M),
-#                     kwargs...)
-#     x₀,x₁ =  x₀x₁(x)
-#     fx₀, fx₁ = promote(float(first(F(x₀))), float(first(F(x₁))))
-#     state::UnivariateZeroState = init_state(M, x₀, x₁, fx₀, fx₁;
-#                                             fnevals = initial_fncalls(M),
-#                                             kwargs...)
-#     init_state!(state, M, F, clear=false)
-#     state
-# end
-
 
 ##################################################
 
@@ -114,9 +99,6 @@ function update_state(method::Order1, F, o::AbstractUnivariateZeroState{T,S}, op
     if isissue(Δ)
         log_message(l, "Increment `Δx` has issues. ")
         return o, true
-#        o.stopped = true
-#        o.message = "Increment `Δx` has issues. "
-#         return
      end
 
     x0,x1 = xn1, xn1 - Δ
@@ -130,7 +112,6 @@ function update_state(method::Order1, F, o::AbstractUnivariateZeroState{T,S}, op
     @set! o.fxn1 = fx1
 
     return o, false
-    #nothing
 
 end
 
@@ -278,25 +259,18 @@ function update_state(method::Steffensen, F, o::AbstractUnivariateZeroState{T,S}
     if isissue(delta)
         log_message(l, "Increment `Δx` has issues. ")
         return o, true
-#        o.stopped  = true
-#        o.message = "Increment `Δx` has issues. "
-#        return
     end
 
-    @set! o.xn0 = x1
-    @set! o.xn1 = x1 - delta
-    @set! o.fxn0 = fx1
-    @set! o.fxn1 = F(o.xn1)
+    x0, x1 = x1, x1 - delta
+    fx0, fx1 = fx1, F(x1)
     incfn(l)
 
+    @set! o.xn0 = x0
+    @set! o.xn1 = x1
+    @set! o.fxn0 = fx0
+    @set! o.fxn1 = fx1
+
     return o, false
-
-#    o.xn0, o.fxn0 = o.xn1, o.fxn1
-#    o.xn1 -= delta
-#    o.fxn1 = fs(o.xn1)
-#    incfn(o)
-
-#    nothing
 end
 
 ##################################################
@@ -361,9 +335,6 @@ function update_state(method::Esser, F,
         log_message(l, "Estimate for multiplicity had issues. ")
         return o, true
 #        #@info "estimate for m is *too* small"
-#        o.stopped  = true
-#        o.message = "Estimate for multiplicity had issues. "
-#        return
     end
 
     delta = k * r1
@@ -371,27 +342,21 @@ function update_state(method::Esser, F,
     if isissue(delta)
         log_message(l, "Increment `Δx` has issues. ")
         return o, true
-#        o.stopped  = true
-#        o.message = "Increment `Δx` has issues. "
-#        return
     end
 
-    @set! o.xn0 = x1
-    @set! o.xn1 = x1 - delta
-    @set! o.fxn0 = fx1
-    @set! o.fxn1 = F(o.xn1)
+    x0, x1 = x1, x1 - delta
+    fx0, fx1 = fx1, F(x1)
     incfn(l)
+
+
+
+    @set! o.xn0 = x0
+    @set! o.xn1 = x1
+    @set! o.fxn0 = fx0
+    @set! o.fxn1 = fx1
 
     return o, false
 
-
-    # o.xn0, o.fxn0 = o.xn1, o.fxn1
-    # o.xn1 -= delta
-
-    # o.fxn1 = fs(o.xn1)
-    # incfn(o)
-
-    # nothing
 end
 
 
@@ -438,11 +403,6 @@ function update_state(M::Union{Order5, KumarSinghAkanksha}, F, o::AbstractUnivar
         @set! o.fxn1 = fwn
 
         return o, true
-#        o.xn0, o.xn1 = o.xn1, wn
-#        o.fxn0, o.fxn1 = o.fxn1, fwn
-#        o.message = "Issue with divided difference f[xn, wn]. "
-#        o.stopped  = true
-#        return
     end
 
     yn::T = o.xn1 - o.fxn1 / fp
@@ -464,11 +424,6 @@ function update_state(M::Union{Order5, KumarSinghAkanksha}, F, o::AbstractUnivar
 
         return o, true
 
-        # o.xn0, o.xn1 = o.xn1, yn
-        # o.fxn0, o.fxn1 = o.fxn1, fyn
-        # o.message = "Issue with f[xn,yn]*f[yn,wn] / f[xn, wn]"
-        # o.stopped = true
-        # return
     end
 
     @set! o.xn0 = o.xn1
@@ -496,8 +451,6 @@ function update_state(method::Order5Derivative, f,
 
     if isissue(fpxn)
         return o, true
-        #o.stopped  = true
-        #return
     end
 
     yn::T = xn - fxn / fpxn
@@ -513,11 +466,6 @@ function update_state(method::Order5Derivative, f,
         @set! o.fxn1 = fyn
 
         return o, true
-
-        # o.xn0, o.xn1 = xn, yn
-        # o.fxn0, o.fxn1 = fxn, fyn
-        # o.stopped  = true
-        # return
     end
 
 
@@ -536,11 +484,6 @@ function update_state(method::Order5Derivative, f,
 
     return o
 
-
-    # o.xn0, o.xn1 = xn, xn1
-    # o.fxn0, o.fxn1 = fxn, fxn1
-
-    # nothing
 end
 
 ##################################################
@@ -580,12 +523,6 @@ function update_state(M::Union{Thukral8, Order8}, F, o::AbstractUnivariateZeroSt
         @set! o.fxn1 = fwn
 
         return o, true
-
-#        o.xn0,o.xn1 = xn, wn
-#        o.fxn0,o.fxn1 = fxn, fwn
-#        o.stopped = true
-#        o.message = "issue with Steffensen step fwn"
-#        return
     end
 
 
@@ -595,9 +532,6 @@ function update_state(M::Union{Thukral8, Order8}, F, o::AbstractUnivariateZeroSt
     if issue
         log_message(l, "issue with divided difference f[xn, wn]. ")
         return o, true
-#        o.stopped = true
-#        o.message = "issue with divided difference f[xn, wn]. "
-#        return
     end
 
     yn::T = xn - fxn / fp
@@ -613,13 +547,6 @@ function update_state(M::Union{Thukral8, Order8}, F, o::AbstractUnivariateZeroSt
         @set! o.fxn1 = fyn
 
         return o, true
-
-
-        # o.xn0,o.xn1 = xn, yn
-        # o.fxn0,o.fxn1 = fxn, fyn
-        # o.stopped = true
-        # o.message = "issue with divided difference f[xn, yn]. "
-        # return
     end
 
 
@@ -637,12 +564,6 @@ function update_state(M::Union{Thukral8, Order8}, F, o::AbstractUnivariateZeroSt
         @set! o.fxn1 = fzn
 
         return o, true
-
-        # o.xn0,o.xn1 = xn, zn
-        # o.fxn0,o.fxn1 = fxn, fzn
-        # o.message = "issue with divided difference  f[y,z] - f[x,y] + f[x,z]. "
-        # o.stopped = true
-        # return
     end
 
     w = 1 / (1 - fzn/fwn)
@@ -660,10 +581,6 @@ function update_state(M::Union{Thukral8, Order8}, F, o::AbstractUnivariateZeroSt
 
     return o, false
 
-    # o.xn0,o.xn1 = xn, xn1
-    # o.fxn0,o.fxn1 = fxn, fxn1
-
-    # nothing
 end
 
 ##################################################
@@ -708,11 +625,6 @@ function update_state(M::Union{Thukral16, Order16}, F, o::AbstractUnivariateZero
         @set! o.fxn0 = o.fxn1
         @set! o.fxn1 = fwn
         return o, true
-#        o.xn0, o.xn1 = xn, wn
-#        o.fxn0, o.fxn1 = fxn, fwn
-#        o.message = "issue with f[xn,wn]"
-#        o.stopped = true
-#        return
     end
 
     yn::T = xn - fxn / fp
@@ -728,12 +640,6 @@ function update_state(M::Union{Thukral16, Order16}, F, o::AbstractUnivariateZero
         @set! o.fxn1 = fyn
 
         return o, true
-
-        # o.xn0, o.xn1 = xn, yn
-        # o.fxn0, o.fxn1 = fxn, fyn
-        # o.message = "issue with f[xn,yn]*f[yn,wn]/f[xn,wn]"
-        # o.stopped = true
-        # return
     end
 
 
@@ -755,12 +661,6 @@ function update_state(M::Union{Thukral16, Order16}, F, o::AbstractUnivariateZero
         @set! o.fxn1 = fzn
 
         return o, true
-
-        # o.xn0, o.xn1 = xn, zn
-        # o.fxn0, o.fxn1 = fxn, fzn
-        # o.stopped = true
-        # o.message = "Approximate derivative failed"
-        # return
     end
 
     an = zn - eta * fzn / fp
@@ -777,12 +677,6 @@ function update_state(M::Union{Thukral16, Order16}, F, o::AbstractUnivariateZero
         @set! o.fxn1 = fan
 
         return o, true
-
-        # o.xn0, o.xn1 = xn, an
-        # o.fxn0, o.fxn1 = fxn, fan
-        # o.stopped = true
-        # o.message = "Approximate derivative failed"
-        # return
     end
 
     u1, u5, u6 = fzn/fxn, fan/fxn, fan/fwn
@@ -803,11 +697,6 @@ function update_state(M::Union{Thukral16, Order16}, F, o::AbstractUnivariateZero
     @set! o.fxn1 = fxn1
 
     return o, false
-
-    # o.xn0, o.xn1 = xn, xn1
-    # o.fxn0, o.fxn1 = fxn, fxn1
-
-    # nothing
 end
 
 ##################################################

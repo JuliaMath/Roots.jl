@@ -5,7 +5,7 @@
 using Roots
 using Test
 using Unitful
-using SymEngine
+using Polynomials
 
 @testset "Test composability with other packages" begin
 
@@ -39,7 +39,7 @@ using SymEngine
 
 
     # SymEngine
-    @testset "find zero(s) with SymEngine" begin
+    @testset "find zero(s) with Polynomials" begin
 
         m = s = 1.0
         g = 9.8*m/s^2
@@ -47,7 +47,7 @@ using SymEngine
         y0 = 16m
         y(t) = -g*t^2 + v0*t + y0
 
-        @vars x
+        x = variable()
         for order in orders
             @test find_zero(y(x), 1.8, order) ≈  1.8860533706680143
         end

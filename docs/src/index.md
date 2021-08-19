@@ -6,13 +6,13 @@ Documentation for [Roots.jl](https://github.com/JuliaMath/Roots.jl)
 ## About
 
 `Roots` is  a `Julia` package  for finding zeros of continuous
-scalar functions of a single real variable. That  is solving $f(x)=0$ for $x$.
+scalar functions of a single real variable. That  is solving ``f(x)=0`` for ``x``.
 The `find_zero`function provides the
 primary interface. It supports various algorithms through the
 specification of a method. These include:
 
 * Bisection-like algorithms. For functions where a bracketing interval
-  is known (one where $f(a)$ and $f(b)$ have alternate signs), the
+  is known (one where ``f(a)`` and ``f(b)`` have alternate signs), the
   `Bisection` method can be specified. For most floating point number
   types, bisection occurs in a manner exploiting floating point
   storage conventions. For others, an algorithm of Alefeld, Potra, and
@@ -40,11 +40,11 @@ specification of a method. These include:
 
 ## Basic usage
 
-Consider  the polynomial   function  $f(x) = x^5 - x + 1/2$. As a polynomial,  its roots, or  zeros, could  be identified with the  `roots` function of  the `Polynomials` package. However, even  that function uses a numeric method to identify   the values, as no  solution with radicals is available. That is, even for polynomials, non-linear root finders are needed to solve $f(x)=0$.
+Consider  the polynomial   function  ``f(x) = x^5 - x + 1/2``. As a polynomial,  its roots, or  zeros, could  be identified with the  `roots` function of  the `Polynomials` package. However, even  that function uses a numeric method to identify   the values, as no  solution with radicals is available. That is, even for polynomials, non-linear root finders are needed to solve ``f(x)=0``.
 
-The `Roots` package provides a variety algorithms for this  task. In this overview, only the  default ones  are illustrated.
+The `Roots` package provides a variety of algorithms for this  task. In this overview, only the  default ones  are illustrated.
 
-For  the function $f(x) = x^5 - x + 1/2$ a simple plot will show a zero  somewhere between $-1.2$ and $-1.0$ and two zeros near $0.6$.
+For  the function ``f(x) = x^5 - x + 1/2`` a simple plot will show a zero  somewhere between ``-1.2`` and ``-1.0`` and two zeros near ``0.6``.
 
 For the zero between two values at which the function changes sign, a
 bracketing method is useful, as bracketing methods are guaranteed to
@@ -59,7 +59,7 @@ julia> f(x) =  x^5 - x + 1/2
 f (generic function with 1 method)
 
 julia> find_zero(f, (-1.2,  -1))
--1.0983313019186334
+-1.0983313019186336
 ```
 
 The default algorithm is guaranteed to have an  answer nearly as accurate as is  possible  given the limitations of floating point  computations.
@@ -72,7 +72,7 @@ julia> find_zero(f,  0.6)
 ```
 
 
-This finds  the answer  to the left of the starting point. To get the other nearby zero, a starting point closer to the answer cana be used.  However,  an initial graph might convince one  that any of the upto 5 reaal  roots  will   occur between `-5`  and `5`.  The `find_zeros` function uses  heuristics and a few of the  algorithms to  identify  all zeros between the specified range. Here  we see  there  are 3:
+This finds  the answer  to the left of the starting point. To get the other nearby zero, a starting point closer to the answer can be used.  However,  an initial graph might convince one  that any of the up-to-``5`` real  roots  will   occur between ``-5``  and ``5``.  The `find_zeros` function uses  heuristics and a few of the  algorithms to  identify  all zeros between the specified range. Here  we see  there  are ``3``:
 
 ```jldoctest find_zero
 julia> find_zeros(f, -5,  5)

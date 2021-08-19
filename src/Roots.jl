@@ -31,6 +31,14 @@ include("newton.jl")
 include("lith.jl")
 include("fzero.jl")
 
-
+# cf. https://github.com/JuliaDocs/Documenter.jl/pull/1664/files
+function _update_module_doc()
+    path = joinpath(@__DIR__, "..", "README.md")
+    text = read(path, String)
+    # The code blocks in the README.md should be julia blocks for the syntax highlighter.
+    text = replace(text, "```julia" => "```jldoctest")
+    @doc text Roots
+end
+_update_module_doc()
 
 end

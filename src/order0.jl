@@ -34,31 +34,6 @@ function find_zero(fs, x0, method::Order0;
     find_zero(F, x0, M, N; tracks=tracks,verbose=verbose, kwargs...)
 end
 
-# function Base.copy(state::UnivariateZeroState{T,S}) where {T, S}
-#     UnivariateZeroState(state.xn1, state.xn0, state.xstar, copy(state.m),
-#                         state.fxn1, state.fxn0, state.fxstar, copy(state.fm),
-#                         state.steps, state.fnevals,
-#                         state.stopped, state.x_converged,
-#                         state.f_converged, state.convergence_failed,
-#                         state.message)
-# end
-
-# function Base.copy!(dst::UnivariateZeroState{T,S}, src::UnivariateZeroState{T,S}) where {T,S}
-#     dst.xn1 = src.xn1
-#     dst.xn0 = src.xn0
-#     empty!(dst.m); append!(dst.m, src.m)
-#     dst.fxn1 = src.fxn1
-#     dst.fxn0 = src.fxn0
-#     empty!(dst.fm); append!(dst.fm, src.fm)
-#     dst.steps = src.steps
-#     dst.fnevals = src.fnevals
-#     dst.stopped = src.stopped
-#     dst.x_converged = src.x_converged
-#     dst.f_converged = src.f_converged
-#     dst.convergence_failed = src.convergence_failed
-#     dst.message = src.message
-#     nothing
-# end
 
 # todo: consolidate this with find_zero(M,N,f, x0)...
 function find_zero(fs, x0,
@@ -122,19 +97,16 @@ function find_zero(M::AbstractUnivariateZeroMethod,
         if iszero(state0.fxn1)
             state = state0
             break
-#            copy!(state, state0)
-#            state.xstar, state.fxstar = state.xn1, state.fxn1
-#            state.f_converged = true
-#            break
         elseif sign(state0.fxn0) * sign(state0.fxn1) < 0
-            a, b =  state0.xn0, state0.xn1
-            !isa(l, NullTracks) && log_message(l, "Used bracketing method $N on  [$a,$b], those steps not recorded")
-            α = find_zero(F, (a,b), N)
+            !isa(l, NullTracks) && log_message(l, "Used bracketing method $N on  [$(state0.xn0),$(state0.xn1)], those steps not recorded")
+            # a, b =  state0.xn0, state0.xn1
+             #α = find_zero(F, (a,b), N)
+            # save function calls by using state = init_state
+            Fₙ = Callable_Function(N, F)
+            stateₙ = init_state(N, state0, Fₙ)
+            optionsₙ = init_options(N, stateₙ)
+            α = solve!(init(N,Fₙ,stateₙ,optionsₙ))
             break
-#            copy!(state, state0)
-#            a, b = state0.xn0, state0.xn1 # could save some fn calls here
-#            run_bisection(N, F, (a, b), state)
-#            break
         end
 
 
@@ -163,11 +135,6 @@ function find_zero(M::AbstractUnivariateZeroMethod,
             !isa(l, NullTracks) && log_message(l, "Used bracketing method $N on  [$a,$b], those steps not recorded")
             α = find_zero(F, (a,b), N)
             break
-#            state.xn0, state.fxn0 = state.xn1, state.fxn1
-#            state.xn1, state.fxn1 = state0.xn1, state0.fxn1
-#            a, b = state.xn0, state.xn1
-#            run_bisection(N, F, (a, b), state)
-#            break
         end
 
 
@@ -177,9 +144,7 @@ function find_zero(M::AbstractUnivariateZeroMethod,
                 break
             end
             state = state0
-#            copy!(state, state0)
             log_step(l, M, state)
-#            incsteps(state)
             quad_ctr = 0
             continue
         end
@@ -187,8 +152,6 @@ function find_zero(M::AbstractUnivariateZeroMethod,
         ## try quad_vertex, unless that has gotten old
         if quad_ctr > 4
             state = state0
-            #copy!(state, state0)
-            #state.stopped = true
             break
         else
             quad_ctr += 1
@@ -196,7 +159,6 @@ function find_zero(M::AbstractUnivariateZeroMethod,
 
             if isnan(r) || isinf(r)
                 state = state0
-                #copy!(state, state0)
             else
                 fr = F(r)
                 incfn(l)
@@ -204,11 +166,9 @@ function find_zero(M::AbstractUnivariateZeroMethod,
                 @set! state0.xn1 = r
                 @set! state0.fxn1 = fr
                 state = state0
-                #copy!(state, state0)
             end
         end
         log_step(l, M, state)
-#        incsteps(state)
     end
 
     log_state(l, state)
