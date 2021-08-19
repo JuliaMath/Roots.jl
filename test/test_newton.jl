@@ -47,6 +47,8 @@ import Roots.newton, Roots.halley
 
     @test find_zero(x -> (x^2 -2, (x^2-2)/2x), 1.0, Roots.Newton(), Roots.Bisection()) ≈ sqrt(2)
 
+    @test_throws Roots.ConvergenceFailed Roots.newton((x->x^2 + 1, x->2x), 0)
+
 end
 
 @testset "Lith Boonkkamp IJzerman methods" begin
