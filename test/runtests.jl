@@ -19,7 +19,7 @@ include("./test_newton.jl")
 include("./test_simple.jl")
 
 include("./test_composable.jl")
-include("./test_allocations.jl")
+VERSION >= v"1.6.0" && include("./test_allocations.jl")
 
 #include("./runbenchmarks.jl")
 #include("./test_derivative_free_interactive.jl")

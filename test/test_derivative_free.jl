@@ -320,7 +320,7 @@ if !isinteractive()
 
         @test maximum(failures) <= 41
         @test maximum(residuals) <= 1e-5
-        @test avg(cnts) <= 39
+        @test avg(cnts) <= 40
 
 
         ## Newton and Halley
