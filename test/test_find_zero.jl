@@ -4,6 +4,8 @@ using Test
 
 
 # for a user-defined method
+import Roots.Setfield
+import Roots.Setfield: @set!
 struct Order3_Test <: Roots.AbstractSecant end
 
 ## Test the interface
@@ -104,8 +106,6 @@ struct Order3_Test <: Roots.AbstractSecant end
 
 end
 
-import Roots.Setfield
-import Roots.Setfield: @set!
 
 @testset "find_zero internals" begin
 
@@ -184,7 +184,6 @@ import Roots.Setfield: @set!
     ## test creation of new methods
     ## xn - f/f' - f'' * f^2 / 2(f')^3 = xn - r1 - r1^2/r2 is third order,
     # had to previousely define:
-    struct Order3_Test <: Roots.AbstractSecant end
     function Roots.update_state(M::Order3_Test, f, o::Roots.AbstractUnivariateZeroState{T,S}, options, l=Roots.NullTracks()) where {T, S}
         # xn - f/f' - f'' * f^2 / 2(f')^3 = xn - r1 - r1^2/r2 is third order
         xn_1, xn = o.xn0, o.xn1
