@@ -576,7 +576,7 @@ julia> find_zero(sin, 3)  # use Order0()
 3.141592653589793
 
 julia> find_zero(sin, (3,4)) # use Bisection()
-3.1415926535897936
+3.141592653589793
 ```
 
 Specifying a method,
@@ -636,19 +636,7 @@ Passing `verbose=true` will show details on the steps of the algorithm:
 
 ```jldoctest find_zero
 julia> find_zero(x->sin(x), 3.0, Order2(), verbose=true)   # 2 iterations
-Results of univariate zero finding:
-
-* Converged to: 3.1415926535897936
-* Algorithm: Order2()
-* iterations: 2
-* function evaluations: 5
-* stopped as |f(x_n)| ≤ max(δ, max(1,|x|)⋅ϵ) using δ = atol, ϵ = rtol
-
-Trace:
-x_0 =  3.0000000000000000,	 fx_0 =  0.1411200080598672
-x_1 =  3.1425464815525403,	 fx_1 = -0.0009538278181169
-x_2 =  3.1415926535897936,	 fx_2 = -0.0000000000000003
-
+* function evaluations ≈ 5
 3.1415926535897936
 ```
 
@@ -835,6 +823,8 @@ Returns `NaN`, not an error, when the problem can not be solved.
 ## Examples:
 
 ```jldoctest find_zero
+julia> using Roots
+
 julia> fx = ZeroProblem(sin, 3)
 ZeroProblem{typeof(sin), Int64}(sin, 3)
 
@@ -846,6 +836,7 @@ Or, if the iterable is required
 
 ```jldoctest find_zero
 julia> problem = init(fx);
+
 
 julia> solve!(problem)
 3.141592653589793
@@ -867,6 +858,7 @@ The above is equivalent to:
 ```jldoctest find_zero
 julia> problem = init(fx, Order5(), atol=1/100);
 
+
 julia> solve!(problem)
 3.1415926207129554
 ```
@@ -875,7 +867,7 @@ The  argument `p` may be used if the function(s) to be solved depend on a parame
 
 ```jldoctest find_zero
 julia> f(x,p) = exp(-x) - p # to solve p = exp(-x)
-f (generic function with 2 methods)
+f (generic function with 1 method)
 
 julia> fx = ZeroProblem(f, 1)
 ZeroProblem{typeof(f), Int64}(f, 1)

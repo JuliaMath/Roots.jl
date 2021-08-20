@@ -78,10 +78,10 @@ julia> f(x) = sin(x)
 f (generic function with 1 method)
 
 julia> x = find_zero(f, (pi/2, 3pi/2))
-3.1415926535897936
+3.141592653589793
 
 julia> x, f(x)
-(3.1415926535897936, -3.216245299353273e-16)
+(3.141592653589793, 1.2246467991473532e-16)
 
 ```
 
@@ -531,7 +531,7 @@ julia> howfarp(theta) = (howfar(theta+h) - howfar(theta-h)) / (2h)
 howfarp (generic function with 1 method)
 
 julia> tstar = find_zero(howfarp, 45)
-26.262308916287818
+26.26230891235514
 
 ```
 
@@ -702,7 +702,8 @@ julia> above = accumulate((x,y) -> nextfloat(x), 1:10, init=1/3);
 
 julia> below = accumulate((x,y) -> prevfloat(x), 1:10, init=1/3);
 
-julia> ns = sort([b...,1/3, a...])
+julia> ns = sort([below...,1/3, above...]);
+
 
 julia> maximum(abs.(f.(ns) - f1.(ns))) < 1e-14
 true
@@ -1088,6 +1089,7 @@ The [IntervalRootFinding](https://github.com/JuliaIntervals/IntervalRootFinding.
 
 ```jldoctest interval_root_finding
 julia> using IntervalArithmetic, IntervalRootFinding, Roots
+
 
 julia> f(x) = sin(x) - 0.1*x^2 + 1
 f (generic function with 1 method)
