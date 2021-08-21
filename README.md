@@ -41,7 +41,7 @@ Each method's documentation has additional detail.
 
 Some examples:
 
-```julia
+```jldoctest readme
 julia> using Roots
 
 julia> f(x) = exp(x) - x^4;
@@ -61,7 +61,7 @@ julia> find_zero(f, (-10, 0), Roots.A42())  # fewer function evaluations
 For non-bracketing methods, the initial position is passed in as a
 scalar:
 
-```julia
+```jldoctest readme
 
 julia> find_zero(f, 3)   # find_zero(f, x0::Number) will use Order0()
 1.4296118247255556
@@ -75,7 +75,7 @@ julia> find_zero(sin, BigFloat(3.0), Order16())
 
 The `find_zero` function can be used with callable objects:
 
-```julia
+```jldoctest readme
 julia> using Polynomials
 
 julia> x = variable()
@@ -87,7 +87,7 @@ julia> find_zero(x^5 - x - 1, 1.0)
 
 The function should respect the units of the `Unitful` package:
 
-```julia
+```jldoctest readme
 julia> using Unitful
 
 julia> s = u"s"; m = u"m"
@@ -112,7 +112,7 @@ julia> find_zero(y, 1s)      # 1.886053370668014 s
 Newton's method can be used without taking derivatives by hand. For example, if the
 `ForwardDiff` package is available:
 
-```julia
+```jldoctest readme
 julia> using ForwardDiff
 
 julia> D(f) = x -> ForwardDiff.derivative(f,float(x))
@@ -121,7 +121,7 @@ D (generic function with 1 method)
 
 Now we have:
 
-```julia
+```jldoctest readme
 julia> f(x) = x^3 - 2x - 5
 f (generic function with 1 method)
 
@@ -135,7 +135,7 @@ julia> find_zero((f,D(f)), x0, Roots.Newton())
 Automatic derivatives allow for easy solutions to finding critical
 points of a function.
 
-```julia
+```jldoctest readme
 julia> using Statistics: mean, median
 
 julia> as = rand(5);
@@ -163,7 +163,7 @@ solving the problem is also implemented using the methods
 
 For example, we can solve a problem with many different methods, as follows:
 
-```julia
+```jldoctest readme
 julia> f(x) = exp(-x) - x^3
 f (generic function with 1 method)
 
@@ -183,7 +183,7 @@ methods to be passed, along with other options. For example, to use
 the `Order2` method using a convergence criteria (see below) that
 `|xₙ - xₙ₋₁| ≤ δ`, we could make this call:
 
-```julia
+```jldoctest readme
 julia> solve(fx, Order2(), atol=0.0, rtol=0.0)
 0.7728829591492101
 ```
@@ -194,7 +194,7 @@ for most initial values will escape towards `±∞`, sometimes causing a
 relative tolerance to return a misleading value. Here we can see the
 differences:
 
-```julia
+```jldoctest readme
 julia> f(x) = cbrt(x)*exp(-x^2)
 f (generic function with 1 method)
 
@@ -221,7 +221,7 @@ julia> solve(fx, Roots.LithBoonkkampIJzerman(2,1), atol=0.0, rtol=0.0)
 
 Functions may be parameterized, as illustrated:
 
-```julia
+```jldoctest readme
 julia> f(x, p=2) = cos(x) - x/p
 f (generic function with 2 methods)
 
@@ -244,7 +244,7 @@ is used to identify a zero, otherwise a derivative free method is used
 to search for zeros. This algorithm can miss zeros for various reasons, so the
 results should be confirmed by other means.
 
-```julia
+```jldoctest readme
 julia> f(x) = exp(x) - x^4
 f (generic function with 2 methods)
 
@@ -296,7 +296,7 @@ even if the tolerances are set to zero, so these are the
 defaults. Non-zero values for `xatol` and `xrtol` can be specified to
 reduce the number of function calls when lower precision is required.
 
-```julia
+```jldoctest readme
 julia> fx = ZeroProblem(sin, (3,4));
 
 julia> solve(fx, Bisection(); xatol=1/16)
@@ -319,7 +319,7 @@ MATLAB users. `Roots` also provides this alternative interface:
 
 ### Usage examples
 
-```julia
+```jldoctest readme
 julia> f(x) = exp(x) - x^4
 f (generic function with 2 methods)
 
