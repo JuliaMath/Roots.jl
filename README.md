@@ -47,7 +47,6 @@ julia> using Roots
 julia> f(x) = exp(x) - x^4;
 
 julia> find_zero(f, (8,9), Bisection()) # a bisection method has the bracket specified
-
 8.6131694564414
 
 julia> find_zero(f, (-10, 0))  # Bisection is default if x in `find_zero(f,x)` is not a number
@@ -81,8 +80,7 @@ julia> import Pkg; Pkg.add("Polynomials"); # if not installed
 julia> using Polynomials;
 [...]
 
-julia> x = variable()
-Polynomial(x)
+julia> x = variable();
 
 julia> find_zero(x^5 - x - 1, 1.0)
 1.1673039782614187
