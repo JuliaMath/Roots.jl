@@ -14,7 +14,6 @@ import BenchmarkTools
         @test BenchmarkTools.@ballocated(solve(ZeroProblem($fs, $x0), $M)) == 0
     end
 
-
 end
 
 @testset "simple: zero allocations" begin

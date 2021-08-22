@@ -30,8 +30,7 @@ function find_zero(fs, x0, method::Order0;
                    kwargs...)
     M = Order1()
     N = AlefeldPotraShi()
-    F = Callable_Function(M, fs, p)
-    find_zero(F, x0, M, N; tracks=tracks,verbose=verbose, kwargs...)
+    find_zero(fs, x0, M, N; p=p, tracks=tracks,verbose=verbose, kwargs...)
 end
 
 
@@ -73,7 +72,6 @@ function find_zero(M::AbstractUnivariateZeroMethod,
                    verbose=false
                    )
 
-
     incfn(l,2)
     log_step(l, M, state, :init)
     log_method(l,M)
@@ -98,15 +96,15 @@ function find_zero(M::AbstractUnivariateZeroMethod,
             state = state0
             break
         elseif sign(state0.fxn0) * sign(state0.fxn1) < 0
+
             !isa(l, NullTracks) && log_message(l, "Used bracketing method $N on  [$(state0.xn0),$(state0.xn1)], those steps not recorded")
-            # a, b =  state0.xn0, state0.xn1
-             #α = find_zero(F, (a,b), N)
-            # save function calls by using state = init_state
+
             Fₙ = Callable_Function(N, F)
-            stateₙ = init_state(N, state0, Fₙ)
+            stateₙ = init_state(N, state0, Fₙ) # save function calls by using state0 values
             optionsₙ = init_options(N, stateₙ)
-            α = solve!(init(N,Fₙ,stateₙ,optionsₙ))
+            α = solve!(init(N, Fₙ, stateₙ, optionsₙ))
             break
+
         end
 
 
@@ -128,12 +126,17 @@ function find_zero(M::AbstractUnivariateZeroMethod,
         @set! state0.fxn1 = first(F(r))
         incfn(l)
 
-
         # a sign change after shortening?
         if sign(state.fxn1) * sign(state0.fxn1) < 0
             a, b = state.xn1, state0.xn1
+            fa, fb = state.fxn1, state0.fxn1
+
             !isa(l, NullTracks) && log_message(l, "Used bracketing method $N on  [$a,$b], those steps not recorded")
-            α = find_zero(F, (a,b), N)
+
+            Fₙ = Callable_Function(N, F)
+            stateₙ = init_state(N, Fₙ, a, b, fa, fb)
+            optionsₙ = init_options(N, stateₙ)
+            α = solve!(init(N,Fₙ,stateₙ,optionsₙ))
             break
         end
 

@@ -78,9 +78,15 @@ function init_state(M::AbstractBracketing, F::Callable_Function, x)
 end
 
 function init_state(::AbstractBracketing, F, x₀, x₁, fx₀, fx₁; m=_middle(x₀,x₁),fm=F(m))
+
     (iszero(fx₀) || iszero(fx₁)) && return UnivariateZeroState(x₁, x₀, fx₁, fx₀)
+
     assert_bracket(fx₀, fx₁)
-#    xₘ = Roots._middle(x₀, x₁) # for possibly mixed sign x1, x2
+    if x₀ > x₁
+        x₀, x₁, fx₀, fx₁ = x₁, x₀, fx₁, fx₀
+    end
+
+    #    xₘ = Roots._middle(x₀, x₁) # for possibly mixed sign x1, x2
     if sign(fm) * fx₀ < 0
         UnivariateZeroState(m, x₀, fm, fx₀)
     else
@@ -599,23 +605,21 @@ struct AlefeldPotraShiState{T,S} <: AbstractUnivariateZeroState{T,S}
 end
 
 function init_state(::AlefeldPotraShi, F, x₀, x₁, fx₀, fx₁; c=_middle(x₀,x₁), fc=F(c))
-
     a,b,fa,fb = x₀,x₁,fx₀,fx₁
     if a > b
         a,b,fa,fb = b,a,fb,fa
     end
 
     a,b,d,fa,fb,fd = bracket(a,b,c,fa,fb,fc)
-
-    AlefeldPotraShiState(x₁, x₀, d, fx₁, fx₀, fd)
+    return AlefeldPotraShiState(b,a,d,fb,fa,fd)
 end
 initial_fncalls(::AlefeldPotraShiState) = 3 # worst case assuming fx₀, fx₁,fc must be computed
 
 
 # ## 3, maybe 4, functions calls per step
 function update_state(M::AlefeldPotraShi, f, state::AbstractUnivariateZeroState{T,S}, options::UnivariateZeroOptions, l=NullTracks()) where {T,S}
-
     a::T,b::T,d::T = state.xn0, state.xn1, state.d
+
     fa::S,fb::S,fd::S = state.fxn0, state.fxn1, state.fd
     μ, λ = 0.5, 0.7
     tole = max(options.xabstol, max(abs(a),abs(b)) * options.xreltol) # paper uses 2|u|*rtol + atol
@@ -633,7 +637,6 @@ function update_state(M::AlefeldPotraShi, f, state::AbstractUnivariateZeroState{
     end
 
     a,b,d,fa,fb,fd = bracket(a,b,c,fa,fb,fc)
-
 
     c = newton_quadratic(a,b,d,fa,fb,fd, 3, delta)
     fc = f(c)

@@ -488,8 +488,8 @@ end
 
     # test that for update state, fnevals are correctly counted for simpler
     # methods
-    f(x) = sin(x); x0 = (3,4); M = Order1()
-    state = Roots.init_state(M, Roots.Callable_Function(M,f), x0)
+    fn = (x) -> sin(x); x0 = (3,4); M = Order1()
+    state = Roots.init_state(M, Roots.Callable_Function(M,fn), x0)
     options = Roots.init_options(M, state)
 
     for M ∈ (Order1(), Order2(), Order5(),Order8(), Order16(),
@@ -498,18 +498,17 @@ end
              Roots.A42(), Roots.AlefeldPotraShi())
 
         # test initial count
-        g = wrapper(f)
+        g = wrapper(fn)
         G = Roots.Callable_Function(M,g)
         Roots.init_state(M, G, x0)
         @test  g.cnt.contents ≤ Roots.initial_fncalls(M)
 
         # test update state
-        g = wrapper(f)
+        g = wrapper(fn)
         stateₘ = Roots.init_state(M, state, Roots.Callable_Function(M,f))
         G = Roots.Callable_Function(M,g)
         l = Roots.Tracks(Float64, Float64)
         Roots.update_state(M, G, stateₘ, options,l)
-        @show M,g.cnt.contents
         @test g.cnt.contents == l.fncalls
 
     end

@@ -21,11 +21,12 @@
 
 # A zero is found by specifying:
 # the method to use <: AbstractUnivariateZeroMethod
-# the function(s) <: CallableFunction
+# the function(s)
 # the initial state through a value for x either x, [a,b], or (a,b) <: AbstractUnivariateZeroState
 # the options (e.g., tolerances) <: UnivariateZeroOptions
 
 # The minimal amount needed to add a method, is to define a Method and an update_state method.
+
 
 ### Methods
 abstract type AbstractUnivariateZeroMethod end
@@ -283,8 +284,8 @@ struct Callable_Function{Single, Tup, F, P}
     end
 end
 
-function CallableFunction(M,F::Callable_Function, p=F.p)
-    CallableFunction(M, F.f, p)
+function Callable_Function(M,F::Callable_Function, p=F.p)
+    Callable_Function(M, F.f, p)
 end
 
 
@@ -930,18 +931,24 @@ julia> order0(sin, 3)
 
 """
 function solve!(P::ZeroProblemIterator; verbose=false)
+
     M, F, state, options, l = P.M, P.F, P.state, P.options, P.logger
+
     val, stopped = :not_converged, false
     ctr = 1
     log_step(l, M, state, :init)
+
     while !stopped
         val, stopped = assess_convergence(M, state, options)
         stopped && break
         ctr > options.maxevals && break
-        #ctr * fn_argout(M) > options.maxfnevals && break
+
         state, stopped = update_state(M, F, state, options, l)
+
         log_step(l, M, state)
         ctr += 1
+
+
     end
 
     if !(l isa NullTracks)
