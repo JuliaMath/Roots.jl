@@ -644,20 +644,7 @@ Passing `verbose=true` will show details on the steps of the algorithm:
 
 ```jldoctest find_zero
 julia> find_zero(sin, 3.0, Order2(), verbose=true)   # 2 iterations
-Results of univariate zero finding:
-
-* Converged to: 3.1415926535897936
-* Algorithm: Order2()
-* iterations: 2
 * function evaluations ≈ 5
-
-Trace:
-x_0 =  3.0000060555644579,	 fx_0 =  0.1411140130939039
-x_1 =  3.0000000000000000,	 fx_1 =  0.1411200080598672
-x_2 =  3.1425464815525403,	 fx_2 = -0.0009538278181169
-x_3 =  3.1415926535897936,	 fx_3 = -0.0000000000000003
-
-
 3.1415926535897936
 ```
 

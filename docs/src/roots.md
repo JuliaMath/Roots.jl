@@ -531,7 +531,7 @@ julia> howfarp(theta) = (howfar(theta+h) - howfar(theta-h)) / (2h)
 howfarp (generic function with 1 method)
 
 julia> tstar = find_zero(howfarp, 45)
-26.26230891235514
+26.262308916287818
 
 ```
 
