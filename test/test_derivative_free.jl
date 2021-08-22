@@ -318,7 +318,7 @@ if !isinteractive()
         residuals = [result.maxresidual for result in results]
         cnts = [result.evalcount/result.problems  for result in results]
 
-        @test maximum(failures) <= 41
+        @test maximum(failures) <= 30
         @test maximum(residuals) <= 1e-5
         @test avg(cnts) <= 40
 
@@ -336,7 +336,7 @@ if !isinteractive()
 
         @test maximum(failures) <= 70
         @test maximum(residuals) <= 5e-4
-        @test avg(cnts) <= 125
+        @test avg(cnts) <= 50
 
 
     end
