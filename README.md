@@ -5,7 +5,7 @@ Windows: [![Build status](https://ci.appveyor.com/api/projects/status/goteuptn5k
 # Root finding functions for Julia
 
 This package contains simple routines for finding roots of continuous
-scalar functions of a single real variable. The `find_zero`function provides the
+scalar functions of a single real variable. The `find_zero` function provides the
 primary interface. It supports various algorithms through the
 specification of a method. These include:
 
@@ -41,7 +41,7 @@ Each method's documentation has additional detail.
 
 Some examples:
 
-```jldoctest readme
+```julia
 julia> using Roots
 
 julia> f(x) = exp(x) - x^4;
@@ -60,7 +60,7 @@ julia> find_zero(f, (-10, 0), Roots.A42())  # fewer function evaluations
 For non-bracketing methods, the initial position is passed in as a
 scalar:
 
-```jldoctest readme
+```julia
 julia> find_zero(f, 3)   # find_zero(f, x0::Number) will use Order0()
 1.4296118247255556
 
@@ -73,7 +73,7 @@ julia> find_zero(sin, BigFloat(3.0), Order16())
 
 The `find_zero` function can be used with callable objects:
 
-```jldoctest readme
+```julia
 julia> import Pkg; Pkg.add("Polynomials"); # if not installed
 [...]
 
@@ -88,7 +88,7 @@ julia> find_zero(x^5 - x - 1, 1.0)
 
 The function should respect the units of the `Unitful` package:
 
-```jldoctest readme
+```julia
 julia> import Pkg; Pkg.add("Unitful"); # if not installed
 [...]
 
@@ -116,7 +116,7 @@ julia> find_zero(y, 1s)      # 1.886053370668014 s
 Newton's method can be used without taking derivatives by hand. The
 following use the `ForwardDiff` package:
 
-```jldoctest readme
+```julia
 julia> import Pkg; Pkg.add("ForwardDiff"); # if not installed
 [...]
 
@@ -128,7 +128,7 @@ D (generic function with 1 method)
 
 Now we have:
 
-```jldoctest readme
+```julia
 julia> f(x) = x^3 - 2x - 5
 f (generic function with 1 method)
 
@@ -142,7 +142,7 @@ julia> find_zero((f,D(f)), x0, Roots.Newton())
 Automatic derivatives allow for easy solutions to finding critical
 points of a function.
 
-```jldoctest readme
+```julia
 julia> using Statistics: mean, median
 
 julia> as = rand(5);
@@ -170,7 +170,7 @@ solving the problem is also implemented using the methods
 
 For example, we can solve a problem with many different methods, as follows:
 
-```jldoctest readme
+```julia
 julia> f(x) = exp(-x) - x^3
 f (generic function with 1 method)
 
@@ -190,18 +190,20 @@ methods to be passed, along with other options. For example, to use
 the `Order2` method using a convergence criteria (see below) that
 `|xₙ - xₙ₋₁| ≤ δ`, we could make this call:
 
-```jldoctest readme
+```julia
 julia> solve(fx, Order2(), atol=0.0, rtol=0.0)
 0.7728829591492101
 ```
 
 Unlike `find_zero`, which errors on non-convergence, `solve` returns
-`NaN` on non-convergence. This next example has a zero at `0.0`, but
+`NaN` on non-convergence.
+
+This next example has a zero at `0.0`, but
 for most initial values will escape towards `±∞`, sometimes causing a
 relative tolerance to return a misleading value. Here we can see the
 differences:
 
-```jldoctest readme
+```julia
 julia> f(x) = cbrt(x)*exp(-x^2)
 f (generic function with 1 method)
 
@@ -228,7 +230,7 @@ julia> solve(fx, Roots.LithBoonkkampIJzerman(2,1), atol=0.0, rtol=0.0)
 
 Functions may be parameterized, as illustrated:
 
-```jldoctest readme
+```julia
 julia> f(x, p=2) = cos(x) - x/p
 f (generic function with 2 methods)
 
@@ -251,7 +253,7 @@ is used to identify a zero, otherwise a derivative free method is used
 to search for zeros. This algorithm can miss zeros for various reasons, so the
 results should be confirmed by other means.
 
-```jldoctest readme
+```julia
 julia> f(x) = exp(x) - x^4
 f (generic function with 2 methods)
 
@@ -264,7 +266,7 @@ julia> find_zeros(f, -10, 10)  # -0.815553…,  1.42961…,  8.61317…
 
 The interval can also be specified using a structure with `extrema` defined, where `extrema` return two different values:
 
-```
+```julia
 julia> import Pkg; Pkg.add("IntervalSets");
 [...]
 
@@ -284,10 +286,10 @@ julia> find_zeros(f, -10..10)
 
 For most algorithms, convergence is decided when
 
-* The value |f(x_n)| < tol with `tol = max(atol, abs(x_n)*rtol)`, or
+* The value `|f(x_n)| <= tol` with `tol = max(atol, abs(x_n)*rtol)`, or
 
-* the values x_n ≈ x_{n-1} with tolerances `xatol` and `xrtol` *and*
-  f(x_n) ≈ 0 with a *relaxed* tolerance based on `atol` and `rtol`.
+* the values `x_n ≈ x_{n-1}` with tolerances `xatol` and `xrtol` *and*
+  `f(x_n) ≈ 0` with a *relaxed* tolerance based on `atol` and `rtol`.
 
 The algorithm stops if
 
@@ -307,7 +309,7 @@ even if the tolerances are set to zero, so these are the
 defaults. Non-zero values for `xatol` and `xrtol` can be specified to
 reduce the number of function calls when lower precision is required.
 
-```jldoctest readme
+```julia
 julia> fx = ZeroProblem(sin, (3,4));
 
 julia> solve(fx, Bisection(); xatol=1/16)
@@ -330,7 +332,7 @@ MATLAB users. `Roots` also provides this alternative interface:
 
 ### Usage examples
 
-```jldoctest readme
+```julia
 julia> f(x) = exp(x) - x^4
 f (generic function with 2 methods)
 
@@ -346,7 +348,7 @@ julia> fzeros(f, -10, 10)
   1.4296118247255556
   8.613169456441398
 
-julia> fzero(f, 3)       # default is Order1()
+julia> fzero(f, 3)       # default is Order0()
 1.4296118247255556
 
 julia> fzero(sin, big(3), order=16)  # uses higher order method

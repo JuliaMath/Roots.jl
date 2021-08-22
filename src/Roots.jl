@@ -36,7 +36,7 @@ function _update_module_doc()
     path = joinpath(@__DIR__, "..", "README.md")
     text = read(path, String)
     # The code blocks in the README.md should be julia blocks for the syntax highlighter.
-    text = replace(text, "```julia" => "```jldoctest")
+    text = replace(text, "```julia" => "```jldoctest readme")
     @doc text Roots
 end
 _update_module_doc()
