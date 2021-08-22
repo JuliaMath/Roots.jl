@@ -48,10 +48,10 @@ julia> f(x) = exp(x) - x^4;
 
 julia> find_zero(f, (8,9), Bisection()) # a bisection method has the bracket specified
 
-8.613169456441398
+8.6131694564414
 
 julia> find_zero(f, (-10, 0))  # Bisection is default if x in `find_zero(f,x)` is not a number
--0.8155534188089606
+-0.8155534188089607
 
 
 julia> find_zero(f, (-10, 0), Roots.A42())  # fewer function evaluations
@@ -62,7 +62,6 @@ For non-bracketing methods, the initial position is passed in as a
 scalar:
 
 ```jldoctest readme
-
 julia> find_zero(f, 3)   # find_zero(f, x0::Number) will use Order0()
 1.4296118247255556
 
@@ -76,7 +75,11 @@ julia> find_zero(sin, BigFloat(3.0), Order16())
 The `find_zero` function can be used with callable objects:
 
 ```jldoctest readme
-julia> using Polynomials
+julia> import Pkg; Pkg.add("Polynomials"); # if not installed
+[...]
+
+julia> using Polynomials;
+[...]
 
 julia> x = variable()
 Polynomial(x)
@@ -88,6 +91,9 @@ julia> find_zero(x^5 - x - 1, 1.0)
 The function should respect the units of the `Unitful` package:
 
 ```jldoctest readme
+julia> import Pkg; Pkg.add("Unitful"); # if not installed
+[...]
+
 julia> using Unitful
 
 julia> s = u"s"; m = u"m"
@@ -109,10 +115,13 @@ julia> find_zero(y, 1s)      # 1.886053370668014 s
 1.8860533706680143 s
 ```
 
-Newton's method can be used without taking derivatives by hand. For example, if the
-`ForwardDiff` package is available:
+Newton's method can be used without taking derivatives by hand. The
+following use the `ForwardDiff` package:
 
 ```jldoctest readme
+julia> import Pkg; Pkg.add("ForwardDiff"); # if not installed
+[...]
+
 julia> using ForwardDiff
 
 julia> D(f) = x -> ForwardDiff.derivative(f,float(x))
@@ -258,7 +267,11 @@ julia> find_zeros(f, -10, 10)  # -0.815553…,  1.42961…,  8.61317…
 The interval can also be specified using a structure with `extrema` defined, where `extrema` return two different values:
 
 ```
+julia> import Pkg; Pkg.add("IntervalSets");
+[...]
+
 julia> using IntervalSets
+[...]
 
 julia> find_zeros(f, -10..10)
 3-element Vector{Float64}:

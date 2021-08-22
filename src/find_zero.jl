@@ -138,6 +138,9 @@ function init_options(M, T=Float64, S=Float64; kwargs...)
                                     get(d, :maxevals,   get(d, :maxsteps, defs[5])),
                                     get(d, :maxfnevals, defs[6]),
                                     get(d, :strict,     defs[7]))
+    if haskey(d, :maxfnevals)
+        @warn("maxfnevals is ignored. See the test for an example to implement this featrue")
+    end
     options
 end
 

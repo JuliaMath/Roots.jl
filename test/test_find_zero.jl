@@ -250,30 +250,6 @@ end
         @test solve!(init(Za, M, 2)) ≈ α₂
     end
 
-    ## test counting of `steps`, function evaluations
-    # the function count in state is removed; approximate counts are in a tracks object
-    wrapper(f) = begin
-        cnt = 0; x -> (cnt += 1; f(x))
-    end
-    Ms = (Roots.Secant(), Roots.Order2(), Roots.Bisection(), Roots.A42())
-    for M ∈ Ms
-        F = wrapper(sin); x0 = (3,4)
-        G = Roots.Callable_Function(M,F)
-        state = Roots.init_state(M, G, x0)
-        options = Roots.init_options(M,state)
-        l = Roots.Tracks(Float64, Float64)
-        prob = init(M, G, state, options, l)
-        ctr = steps = 0
-        ϕ = iterate(prob)
-        while ϕ != nothing
-            steps += 1
-            val, st = ϕ
-            state, ctr = st
-            ϕ = iterate(prob, st)
-        end
-        @test steps == ctr
-        @test l.fncalls <= F.cnt.contents <= l.fncalls +  Roots.initial_fncalls(M)
-    end
 
 end
 
@@ -478,5 +454,65 @@ end
     M = Roots.BisectionExact()
     l = Roots.find_bracket(fn,  b,  M)
     @test !l.exact &&   abs(-(l.bracket...))  <= maximum(eps.(l.bracket))
+
+end
+
+@testset "function evalutions" begin
+
+    function wrapper(f)
+        cnt = 0
+        x -> begin
+            cnt += 1
+            f(x)
+       end
+    end
+
+    # as of v"1.3.0", no more maxfnevals for stopping, just maxevals
+    # this is an alternative
+    function fz(f, x0::Number, M; maxfnevals=10, kwargs...)
+        F = wrapper(f)
+        ZPI = init(ZeroProblem(F, x0), M; kwargs...)
+        x = NaN * float(x0)
+        ϕ = iterate(ZPI)
+        while ϕ != nothing
+            x, st = ϕ
+            F.cnt.contents >= maxfnevals && return NaN*float(x0)
+            ϕ = iterate(ZPI, st)
+        end
+        x
+    end
+    f(x) = x^20 - 1
+    x0 = 0.9
+    M = Order1()
+    @test isnan(fz(f, x0, M))  # takes 19 fn evals, not 10
+
+    # test that for update state, fnevals are correctly counted for simpler
+    # methods
+    f(x) = sin(x); x0 = (3,4); M = Order1()
+    state = Roots.init_state(M, Roots.Callable_Function(M,f), x0)
+    options = Roots.init_options(M, state)
+
+    for M ∈ (Order1(), Order2(), Order5(),Order8(), Order16(),
+             Roots.Order1B(), Roots.Order2B(),
+             Roots.BisectionExact(), Roots.Brent(),
+             Roots.A42(), Roots.AlefeldPotraShi())
+
+        # test initial count
+        g = wrapper(f)
+        G = Roots.Callable_Function(M,g)
+        Roots.init_state(M, G, x0)
+        @test  g.cnt.contents ≤ Roots.initial_fncalls(M)
+
+        # test update state
+        g = wrapper(f)
+        stateₘ = Roots.init_state(M, state, Roots.Callable_Function(M,f))
+        G = Roots.Callable_Function(M,g)
+        l = Roots.Tracks(Float64, Float64)
+        Roots.update_state(M, G, stateₘ, options,l)
+        @show M,g.cnt.contents
+        @test g.cnt.contents == l.fncalls
+
+    end
+
 
 end
