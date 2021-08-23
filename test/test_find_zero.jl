@@ -4,6 +4,8 @@ using Test
 
 
 # for a user-defined method
+import Roots.Setfield
+import Roots.Setfield: @set!
 struct Order3_Test <: Roots.AbstractSecant end
 
 ## Test the interface
@@ -42,9 +44,10 @@ struct Order3_Test <: Roots.AbstractSecant end
     @test find_zero(fn, x0, M)  ≈ xstar   # needs 16 iterations, 33 fn evaluations, difference is exact
 
 
-    # test of maxevals, maxfneval
+    # test of maxevals
     @test_throws Roots.ConvergenceFailed find_zero(fn, x0, M, maxevals=2)
-    @test_throws Roots.ConvergenceFailed find_zero(fn, x0, M, maxfnevals=2)
+    # test of maxfneval REMOVED
+    # @test_throws Roots.ConvergenceFailed find_zero(fn, x0, M, maxfnevals=2)
 
 
     # tolerance on f, atol, rtol: f(x) ~ 0
@@ -60,7 +63,7 @@ struct Order3_Test <: Roots.AbstractSecant end
     a,b = 1.5, 2.0
     h = 1e-6
     M = Roots.Bisection()
-    tracks = Roots.Tracks(Float64[], Float64[])
+    tracks = Roots.Tracks(Float64, Float64);
     find_zero(fn, (a,b), M, tracks=tracks, xatol=h, xrtol=0.0)
     u,v = tracks.xs[end-1:end]
     @test h >= abs(u-v) >= h/2
@@ -106,7 +109,7 @@ end
 
 @testset "find_zero internals" begin
 
-    ##  init_state! method
+    ##  init_state method
     g1 = x -> x^5 - x - 1
     x0_, xstar_ = (1.0, 2.0), 1.1673039782614187
     M = Roots.A42()
@@ -114,8 +117,9 @@ end
     state = Roots.init_state(M, G1, x0_)
     options = Roots.init_options(M, state)
     for M in (Roots.A42(), Roots.Bisection(), Roots.FalsePosition())
-        Roots.init_state!(state, M, g1, x0_)
-        @test find_zero(M, g1, state, options) ≈ xstar_
+        Gₘ = Roots.Callable_Function(M, G1)
+        stateₘ = Roots.init_state(M, state, Gₘ)
+        @test solve(M, Gₘ, stateₘ) ≈ xstar_
     end
 
     # iterator interface (ZeroProblem, solve; init, solve!)
@@ -130,11 +134,7 @@ end
     for M in meths
         @test solve(fx, M) ≈ xstar_
         P = init(fx, M)
-        solve!(P)
-        @test last(P) ≈ xstar_
-        # these next two methods are to be deprecated:
-        P = Roots.ZeroProblem(M, g1, x0_)
-        @test find_zero!(P) ≈ xstar_
+        @test solve!(P) ≈ xstar_
     end
 
     # solve and parameters
@@ -153,69 +153,38 @@ end
     xs = (3.0, 4.0)
     fxs = f.(xs)
     M = Bisection()
-    #XXX    state = Roots._init_state(M, f, xs, fxs)
-    state = Roots.init_state(M, xs..., fxs..., m=[3.5], fm=[f(3.5)])
+    state = Roots.init_state(M, f, xs..., fxs..., m=3.5, fm=f(3.5))
     @test find_zero(M, f, state) ≈ π
 
 
-    ## hybrid
+    #     ## hybrid
     g1 = x -> exp(x) - x^4
     x0_, xstar_ = (5.0, 20.0), 8.613169456441398
     M = Roots.Bisection()
     G1 = Roots.Callable_Function(M, g1)
     state = Roots.init_state(M, G1, x0_)
     options = Roots.init_options(M, state, xatol=1/2)
-    find_zero(M, g1, state, options)
-    M = Roots.Order1()
-    #Roots.init_state!(state, M, g1, state.m[1])
-    Roots.init_state!(state, M, G1)
-    #Roots.init_options!(options, M)
-    options = Roots.init_options(M, state)
-    @test find_zero(M, g1, state, options) ≈ xstar_
-
-
-    # test conversion between states/options
-    Ms = vcat([Roots.FalsePosition(i) for i in 1:12], Roots.A42(), Roots.AlefeldPotraShi(), Roots.Brent(), Roots.Bisection())
-    Ns = [Order1(),
-          Roots.Order1B(),
-          Order2(),
-          Roots.Order2B(),
-          Order5(),
-          Order8(),
-          Order16()]
-
-    g1 = x -> exp(x) - x^4
-    x0_= (5.0, 20.0)
-    M = Ms[1]
-    G1 = Roots.Callable_Function(M,g1)
-    state = Roots.init_state(M, G1, x0_)
-    options = Roots.init_options(M, state)
-
-    for M in Ms
-        G1 = Roots.Callable_Function(M,g1)
-        @test Roots.init_state!(state, M, G1, x0_) == nothing
-        #@test Roots.init_options!(options, M) == nothing
-        options = Roots.init_options(M, state)
-        @test Roots.update_state(M, G1, state, options) == nothing
-        @test Roots.assess_convergence(M, state, options) == false # none in just 1 step
+    ZPI = init(M,G1,state,options)
+    ϕ = iterate(ZPI)
+    while ϕ != nothing
+        val, st = ϕ
+        state, ctr = st
+        ϕ = iterate(ZPI, st)
     end
 
-    x0_ = 8.0
-    xstars = find_zeros(g1, -20.0, 20.0)
-    for M in Ns
-        G1 = Roots.Callable_Function(M,g1)
-        @test Roots.init_state!(state, M, G1, x0_) == nothing
-        #@test Roots.init_options!(options, M) == nothing
-        options = Roots.init_options(M, state)
-        @test Roots.update_state(M, G1, state, options)  == nothing
-        @test Roots.assess_convergence(M, state, options) == false  # none in 1 step
-    end
+    N = Roots.Order1() # switch to N
+    G2 = Roots.Callable_Function(N, G1)
+    stateₙ = Roots.init_state(N, state, G2)
+    options = Roots.init_options(N, stateₙ)
+    x = solve(N, G2, stateₙ, options)
+    @test x ≈ xstar_
+
+
 
     ## test creation of new methods
     ## xn - f/f' - f'' * f^2 / 2(f')^3 = xn - r1 - r1^2/r2 is third order,
     # had to previousely define:
-    # struct Order3_Test <: Roots.AbstractSecant end
-    function Roots.update_state(M::Order3_Test, f, o::Roots.UnivariateZeroState{T,S}, options) where {T, S}
+    function Roots.update_state(M::Order3_Test, f, o::Roots.AbstractUnivariateZeroState{T,S}, options, l=Roots.NullTracks()) where {T, S}
         # xn - f/f' - f'' * f^2 / 2(f')^3 = xn - r1 - r1^2/r2 is third order
         xn_1, xn = o.xn0, o.xn1
         fxn_1, fxn = o.fxn0, o.fxn1
@@ -227,9 +196,7 @@ end
         f01 = (fxn1 - fxn) /  (xn1 - xn)
 
         if isnan(f_10) || iszero(f_10) || isnan(f01) || iszero(f01)
-            o.message = "issue with bracket. "
-            o.stopped = true
-            return
+            return (o, true)
         end
 
         r1 = fxn1 / f01
@@ -238,8 +205,13 @@ end
         wn = xn1 - r1 - r1^2/r2
         fwn::S = f(wn)
 
-        o.xn0, o.xn1 = xn, wn
-        o.fxn0, o.fxn1 = fxn, fwn
+        @set! o.xn0 = xn
+        @set! o.xn1 = wn
+        @set! o.fxn0 = fxn
+        @set! o.fxn1 = fwn
+
+        return (o, false)
+
     end
 
     g1 = x -> exp(x) - x^4
@@ -278,21 +250,7 @@ end
         @test solve!(init(Za, M, 2)) ≈ α₂
     end
 
-    ## test counting of `steps`, `fnevals` in `state`
-    wrapper(f) = begin
-        cnt = 0; x -> (cnt += 1; f(x))
-    end
-    Ms = (Roots.Secant(), Roots.Order2(), Roots.Bisection(), Roots.A42())
-    for M ∈ Ms
-        F = wrapper(sin)
-        prob = init(ZeroProblem(F, (3,4)))
-        steps = 0
-        for _ in prob
-            steps += 1
-        end
-        @test steps == prob.state.steps
-        @test F.cnt.contents == prob.state.fnevals
-    end
+
 end
 
 @testset "find_zero issue tests" begin
@@ -382,9 +340,10 @@ end
         F = Roots.Callable_Function(M, lhs, nothing) #Roots.DerivativeFree(lhs)
         state = Roots.init_state(M, F, x0)
         options = Roots.init_options(M, state)
-        find_zero(M, F, state, options)
+        l = Roots.Tracks(state);
+        find_zero(M, F, state, options, l)
 
-        @test state.steps <= 45 # 15
+        @test l.steps <= 45 # 15
     end
     test_94()
 
@@ -413,7 +372,7 @@ end
 
 
 struct _SampleCallableObject end
-_SampleCallableObject(x) = x^5 - x - 1
+(::_SampleCallableObject)(x) = x^5 - x - 1
 
 mutable struct Cnt
     cnt::Int
@@ -432,12 +391,12 @@ end
           Order16()]
 
     for M in Ms
-        @test find_zero(_SampleCallableObject, 1.0, M) ≈ 1.1673039782614187
+        @test find_zero(_SampleCallableObject(), 1.1, M) ≈ 1.1673039782614187
     end
 
     for M in Ms
         g = Cnt(x -> x^5 - x - 1)
-        @test find_zero(g, 1.0, M) ≈ 1.1673039782614187
+        @test find_zero(g, 1.1, M) ≈ 1.1673039782614187
         @test g.cnt <= 30
     end
 
@@ -473,18 +432,21 @@ end
     M = Roots.BisectionExact()
     l = Roots.find_bracket(fn,  b,  M)
     ## Here l.exact=true, but  this checks the bracket size
-    @test  !(abs(-(l.bracket...)) <=  eps(l.xstar))
+    ab = abs(l.bracket[2] - l.bracket[1])
+    #@test  !(ab) <=  eps(l.xstar))
     @test  abs(-(l.bracket...)) <=  m
 
     M =  Roots.A42()
     l = Roots.find_bracket(fn,  b,  M)
-    @test  !(abs(-(l.bracket...)) <=  eps(l.xstar))
-    @test  abs(-(l.bracket...)) <= m
+    ab = abs(l.bracket[2] - l.bracket[1])
+    #@test  !(ab <=  eps(l.xstar))
+    @test  ab <= m
 
     M =  Roots.AlefeldPotraShi()
     l = Roots.find_bracket(fn,  b,  M)
-    @test  !(abs(-(l.bracket...)) <=  eps(l.xstar))
-    @test  abs(-(l.bracket...)) <= m
+    ab = abs(l.bracket[1] - l.bracket[1])
+    #@test  !(ab <=  eps(l.xstar))
+    @test  ab ≤ m
 
     x0 = nextfloat(0.0)
     fn  = x ->  x <=  0.0 ?  x-x0  : x  +  x0
@@ -492,5 +454,64 @@ end
     M = Roots.BisectionExact()
     l = Roots.find_bracket(fn,  b,  M)
     @test !l.exact &&   abs(-(l.bracket...))  <= maximum(eps.(l.bracket))
+
+end
+
+@testset "function evalutions" begin
+
+    function wrapper(f)
+        cnt = 0
+        x -> begin
+            cnt += 1
+            f(x)
+       end
+    end
+
+    # as of v"1.3.0", no more maxfnevals for stopping, just maxevals
+    # this is an alternative
+    function fz(f, x0::Number, M; maxfnevals=10, kwargs...)
+        F = wrapper(f)
+        ZPI = init(ZeroProblem(F, x0), M; kwargs...)
+        x = NaN * float(x0)
+        ϕ = iterate(ZPI)
+        while ϕ != nothing
+            x, st = ϕ
+            F.cnt.contents >= maxfnevals && return NaN*float(x0)
+            ϕ = iterate(ZPI, st)
+        end
+        x
+    end
+    f(x) = x^20 - 1
+    x0 = 0.9
+    M = Order1()
+    @test isnan(fz(f, x0, M))  # takes 19 fn evals, not 10
+
+    # test that for update state, fnevals are correctly counted for simpler
+    # methods
+    fn = (x) -> sin(x); x0 = (3,4); M = Order1()
+    state = Roots.init_state(M, Roots.Callable_Function(M,fn), x0)
+    options = Roots.init_options(M, state)
+
+    for M ∈ (Order1(), Order2(), Order5(),Order8(), Order16(),
+             Roots.Order1B(), Roots.Order2B(),
+             Roots.BisectionExact(), Roots.Brent(),
+             Roots.A42(), Roots.AlefeldPotraShi())
+
+        # test initial count
+        g = wrapper(fn)
+        G = Roots.Callable_Function(M,g)
+        Roots.init_state(M, G, x0)
+        @test  g.cnt.contents ≤ Roots.initial_fncalls(M)
+
+        # test update state
+        g = wrapper(fn)
+        stateₘ = Roots.init_state(M, state, Roots.Callable_Function(M,f))
+        G = Roots.Callable_Function(M,g)
+        l = Roots.Tracks(Float64, Float64)
+        Roots.update_state(M, G, stateₘ, options,l)
+        @test g.cnt.contents == l.fncalls
+
+    end
+
 
 end

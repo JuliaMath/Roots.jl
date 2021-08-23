@@ -1,4 +1,5 @@
 using Test
+using BenchmarkTools
 
 @testset "simpler implementations" begin
 
@@ -36,7 +37,7 @@ using Test
     expoly(z) = log(-z)*asin(z)/tanh(z)
 
     @test Roots.muller(expoly, -0.7-0.5im) ≈ -1.0
-    
+
     # dfree
     fpoly = x -> x^5 - x - 1
     xrt = Roots.dfree(fpoly, 1.0)

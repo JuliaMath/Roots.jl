@@ -102,32 +102,66 @@ struct LithBoonkkampIJzerman{S,D} <: AbstractNewtonLikeMethod end
 LithBoonkkampIJzerman(s,d) = LithBoonkkampIJzerman{s,d}()
 fn_argout(::LithBoonkkampIJzerman{S,D}) where {S, D} = 1+D
 
-function init_state(L::LithBoonkkampIJzerman{S,D}, fs, x) where {S,D}
+struct LithState{T,S} <: AbstractUnivariateZeroState{T,S}
+    xn1::T
+    xn0::T
+    m::Vector{T}
+    fxn1::S
+    fxn0::S
+    fm::Vector{S}
+end
 
-    xs, ys = init_lith(L, fs, x) # [x₀,x₁,…,xₛ₋₁], ...
+function init_state(L::LithBoonkkampIJzerman{S,D}, F, x) where {S,D}
+
+    xs, ys = init_lith(L, F, x) # [x₀,x₁,…,xₛ₋₁], ...
     R = eltype(xs)
     T = eltype(ys[1])
 
     ys′ = vcat(ys...)
     # skip unit consideration here, as won't fit within storage of ys
-    state = UnivariateZeroState(xs[end],    # xₙ
-                                S >= 2 ? xs[end-1] : one(R)*NaN, # xₙ₋₁
-                                one(R)*NaN, # α, or xtar
-                                xs,         # all xs (not all but first 2)
-                                ys[1][end], # fₙ
-                                one(T)*NaN, # fₙ₋₁
-                                one(T)*NaN, # f(α)
-                                ys′,        # flattened ys, as a vector
-                                0,          # no steps
-                                iszero(D) + S*(1+D), # no function calls in initialization
-                                false,false,false,false,
-                                "")
+    state = LithState(xs[end],    # xₙ
+                      S >= 2 ? xs[end-1] : one(R)*NaN, # xₙ₋₁
+                      xs,         # all xs (not all but first 2)
+                      ys[1][end], # fₙ
+                      one(T)*NaN, # fₙ₋₁
+                      ys′        # flattened ys, as a vector
+                      )
 
     state
 end
+function init_state(L::LithBoonkkampIJzerman, F, x₀,x₁,fx₀,fx₁)
+    ## different; as init_lith does the work
+    init_state(L, F, x₁)
+end
+initial_fncalls(::LithBoonkkampIJzerman{S,D}) where {S,D} = D
+
+# function init_state(L::LithBoonkkampIJzerman{S,D}, fs, x) where {S,D}
+
+#     xs, ys = init_lith(L, fs, x) # [x₀,x₁,…,xₛ₋₁], ...
+#     R = eltype(xs)
+#     T = eltype(ys[1])
+
+#     ys′ = vcat(ys...)
+#     # skip unit consideration here, as won't fit within storage of ys
+#     state = UnivariateZeroState(xs[end],    # xₙ
+#                                 S >= 2 ? xs[end-1] : one(R)*NaN, # xₙ₋₁
+#                                 one(R)*NaN, # α, or xtar
+#                                 xs,         # all xs (not all but first 2)
+#                                 ys[1][end], # fₙ
+#                                 one(T)*NaN, # fₙ₋₁
+#                                 one(T)*NaN, # f(α)
+#                                 ys′,        # flattened ys, as a vector
+#                                 0,          # no steps
+#                                 iszero(D) + S*(1+D), # no function calls in initialization
+#                                 false,false,false,false,
+#                                 "")
+
+#     state
+# end
 
 
-function update_state(L::LithBoonkkampIJzerman{S,D}, F::Callable_Function, o::UnivariateZeroState, options) where {S,D}
+function update_state(L::LithBoonkkampIJzerman{S,D}, F::Callable_Function, o::LithState,
+                      options, l=NullTracks()) where {S,D}
 
     xs, ys′ = o.m, o.fm
     ys = ntuple(i -> view(ys′, 1 + (i-1)*S:(i*S)), Val(1+D)) # unflatten ys′
@@ -154,9 +188,19 @@ function update_state(L::LithBoonkkampIJzerman{S,D}, F::Callable_Function, o::Un
     #     ys[i][end] = fⁱ(xᵢ)
     # end
 
-    o.xn0, o.xn1 = o.xn1, xᵢ
-    o.fxn0, o.fxn1 = o.fxn1, ys[1][end]
-    incfn(o, 1+D)
+    incfn(l, 1+D)
+
+    @set! o.xn0 = o.xn1
+    @set! o.xn1 = xᵢ
+    @set! o.fxn0 = o.fxn1
+    @set! o.fxn1 = ys[1][end]
+    @set! o.m = xs
+    @set! o.fm = vcat(ys...)
+
+    return (o, false)
+#    o.xn0, o.xn1 = o.xn1, xᵢ
+#    o.fxn0, o.fxn1 = o.fxn1, ys[1][end]
+
 
     nothing
 
@@ -232,8 +276,9 @@ the next step.
 """
 struct LithBoonkkampIJzermanBracket <: AbstractBracketing end
 
-function init_state(::LithBoonkkampIJzermanBracket, F::Callable_Function{S,Tup,𝑭,P}, xs) where {S, Tup <: Val{true}, 𝑭, P}
-    u, v = promote(float.(xs)...)
+function init_state(L::LithBoonkkampIJzermanBracket, F::Callable_Function, x)
+
+    u, v = promote(float.(x)...)
     fu,fv = F.f[1](u), F.f[1](v)
     isbracket(fu, fv) || throw(ArgumentError(bracketing_error))
 
@@ -245,16 +290,25 @@ function init_state(::LithBoonkkampIJzermanBracket, F::Callable_Function{S,Tup,�
     f′a,f′b = F.f[2](a), F.f[2](b) # F.fp(a), F.fp(b)
     c,fc,f′c = a,fa,f′a
 
-    # keep bracket, int[a,b] as xn1, xn0, m=[c]
-    # store fb,fa, [fc, f′a, f′c,f′b]
-    state = UnivariateZeroState(b,a, one(a)*NaN, [c], # b,c=xₙ,xₙ-1; int[a,b] a bracket
-                                fb,fa, one(fb)*NaN, [fc, f′a, f′c, f′b],
-                                0, 4,
-                                false, false, false, false,
-                                "")
+
+    # skip unit consideration here, as won't fit within storage of ys
+    state = LithState(b,    # xₙ
+                      a, # xₙ₋₁
+                      [c],         # all xs (not all but first 2)
+                      fb, # fₙ
+                      fa, # fₙ₋₁
+                      [fc, f′a, f′c, f′b]       # flattened ys, as a vector
+                      )
+
+    state
+end
+function init_state(L::LithBoonkkampIJzermanBracket, F, x₀,x₁,fx₀,fx₁)
+    ## different; as init_state does the work
+    init_state(L, F, x₁)
 end
 
-function update_state(M::LithBoonkkampIJzermanBracket, F, state::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
+
+function update_state(M::LithBoonkkampIJzermanBracket, F, state::LithState{T,S}, options::UnivariateZeroOptions, l=NullTracks()) where {T,S}
 
     b::T,c::T,a::T = state.xn1, state.m[1], state.xn0
     fb::S,fc::S,fa::S = state.fxn1, state.fm[1], state.fxn0
@@ -335,12 +389,16 @@ function update_state(M::LithBoonkkampIJzermanBracket, F, state::UnivariateZeroS
         a,b,fa,fb,f′a,f′b = b,a,fb,fa,f′b,f′a
     end
 
-    state.xn1,state.xn0, state.m[1] = b,a,c
-    state.fxn1,state.fxn0 = fb, fa
-    state.fm .= (fc, f′a, f′c, f′b)
+    incfn(l, 3)
+    @set! state.xn1 = b
+    @set! state.xn0 = a
+    @set! state.m = [c]
+    @set! state.fxn1 = fb
+    @set! state.fxn0 = fa
+    @set! state.fm = [fc, f′a, f′c, f′b]
 
-    incfn(state, 3)
-    nothing
+
+    return (state, false)
 
 end
 

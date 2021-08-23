@@ -152,8 +152,6 @@ function create_diagonostics(Ms, Fs, nms)
         D["failed"][jj] = [fc[i,j] || fd[i,j] || fr[i,j] for i in 1:size(fc)[1], j in 1:size(fc)[2]]
     end
 
-
-
     D
 end
 
@@ -535,7 +533,7 @@ function compare_convergence(Ms; F=identity)
         fn_,x0,xstar = u
         fn = F(fn_)
         for M in Ms
-            tracks = Roots.Tracks(BigFloat[], BigFloat[])
+            tracks = Roots.Tracks(BigFloat, BigFloat)
             a = try
                 find_zero(fn, x0, M, tracks=tracks)
             catch err

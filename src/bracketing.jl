@@ -45,15 +45,16 @@ struct BisectionExact <: AbstractBisection end
 function log_step(l::Tracks, M::AbstractBracketing, state)
     push!(l.xs, state.xn0)
     push!(l.xs, state.xn1) # we store [ai,bi, ai+1, bi+1, ...]
+    log_steps(l)
 end
-function show_tracks(l::Tracks, M::AbstractBracketing)
+function show_tracks(io::IO, l::Tracks, M::AbstractBracketing)
 
     xs = l.xs
     n = length(xs)
     for (i,j) in enumerate(1:2:(n-1))
-        println(@sprintf("(%s, %s) = (% 18.16f, % 18.16f)", "a_$(i-1)", "b_$(i-1)", xs[j], xs[j+1]))
+        println(io, @sprintf("(%s, %s) = (% 18.16f, % 18.16f)", "a_$(i-1)", "b_$(i-1)", xs[j], xs[j+1]))
     end
-    println("")
+    println(io, "")
 end
 
 
@@ -69,79 +70,37 @@ function adjust_bracket(x0)
     u, v
 end
 
-
-function init_state(M::AbstractBracketing, F::Callable_Function, x; kwargs...)
-    x₀, x₁ = adjust_bracket(x)
-    fx₀, fx₁ = promote(float(first(F(x₀))), float(first(F(x₁))))
-    state::UnivariateZeroState = init_state(M, x₀, x₁, fx₀, fx₁;
-                                            fnevals = initial_fnevals(M),
-                                            kwargs...)
-    init_state!(state, M, F, clear=false)
-    state
+function init_state(M::AbstractBracketing, F::Callable_Function, x)
+    x₀′, x₁′ = float.(_extrema(x))
+    x₀, x₁ = adjust_bracket((x₀′, x₁′))
+    fx₀, fx₁ = F(x₀), F(x₁)
+    state = init_state(M, F, x₀, x₁, fx₀, fx₁)
 end
-initial_fnevals(::Roots.AbstractBracketing) = 2
 
-function init_state!(state, M::AbstractBisection, F::Callable_Function; clear=true)
-    x0, x1 = state.xn0, state.xn1
-    fx0, fx1 = state.fxn0, state.fxn1
+function init_state(::AbstractBracketing, F, x₀, x₁, fx₀, fx₁; m=_middle(x₀,x₁),fm=F(m))
 
-    if x0 > x1
-        x0, x1, fx0, fx1 = x1, x0, fx1, fx0
+    (iszero(fx₀) || iszero(fx₁)) && return UnivariateZeroState(x₁, x₀, fx₁, fx₀)
+
+    assert_bracket(fx₀, fx₁)
+    if x₀ > x₁
+        x₀, x₁, fx₀, fx₁ = x₁, x₀, fx₁, fx₀
     end
 
-    fx0fx1 = sign(fx0) * sign(fx1)
-    if iszero(fx0fx1)
-        # should be an error -- not bracketing, but we have a zero, so return it.
-        m,fm = iszero(fx0) ? (x0,fx0) : (x1, fx1)
-        state.x_converged = true
-        state.f_converged = true
-        state.xstar  = m
-        state.fxstar =  fm
-        return state
+    #    xₘ = Roots._middle(x₀, x₁) # for possibly mixed sign x1, x2
+    if sign(fm) * fx₀ < 0
+        UnivariateZeroState(m, x₀, fm, fx₀)
+    else
+        UnivariateZeroState(x₁, m, fx₁, fm)
     end
-
-    if isnan(fx0fx1)
-        m,fm = isnan(fx0) ? (x0,fx0) : (x1, fx1)
-        state.x_converged = true
-        state.f_converged = true
-        state.message = "NaN encountered. "
-        state.xstar  = m
-        state.fxstar =  fm
-        return state
-    end
-
-    assert_bracket(fx0, fx1)
-
-    # we want a,b to be same sign, finite
-    if sign(x0) * sign(x1) < 0
-        m = zero(x1)
-        fm = F(m) # iszero(fm) caught in assess_convergence
-        incfn(state)
-        if sign(fx0) * sign(fm) < 0
-            x1, fx1 = m, fm
-        else  sign(fx0) * sign(fm) > 0
-            x0, fx0 = m, fm
-        end
-    end
-
-    m = __middle(x0, x1)
-    fm = F(m)
-    incfn(state)
-
-    state.xn0, state.xn1 = x0, x1
-    state.fxn0, state.fxn1 = fx0, fx1
-    empty!(state.m); empty!(state.fm)
-    push!(state.m, m), push!(state.fm, fm)
-
-    clear && clear_convergence_flags!(state)
-    nothing
 end
+
+initial_fncalls(::Roots.AbstractBracketing) = 3
 
 
 
 # for Bisection, the defaults are zero tolerances and strict=true
 """
-    default_tolerances(M::Bisection, [T], [S])
+    default_tolerances(M::AbstractBisection, [T], [S])
 
 
 For `Bisection` (or `BisectionExact`), when the `x` values are of type `Float64`, `Float32`,
@@ -154,8 +113,7 @@ point values.
 For other types,  the [`A42`](@ref) method (with its tolerances) is used.
 
 """
-default_tolerances(M::Union{Bisection, BisectionExact}) = default_tolerances(M,Float64, Float64)
-function default_tolerances(::M, ::Type{T}, ::Type{S}) where {M<:Union{Bisection, BisectionExact},T,S}
+function default_tolerances(::AbstractBisection, ::Type{T}, ::Type{S}) where {T,S}
     xatol = zero(T)
     xrtol = zero(one(T))
     atol = zero(float(one(S))) * oneunit(S)
@@ -212,86 +170,84 @@ end
 
 ## the method converges,
 ## as we bound between x0, nextfloat(x0) is not measured by eps(), but eps(x0)
-function assess_convergence(M::Bisection, state::UnivariateZeroState{T,S}, options) where {T, S}
+function assess_convergence(M::Bisection, state::AbstractUnivariateZeroState{T,S}, options) where {T, S}
 
-    assess_convergence(BisectionExact(), state, options) && return true
-    x0, x1, xm = state.xn0, state.xn1, first(state.m)
+    flag, converged = assess_convergence(BisectionExact(), state, options)
+    converged && return (flag, converged)
 
-    xtol = max(options.xabstol, max(abs(x0), abs(x1)) * options.xreltol)
-    x_converged = x1 - x0 < xtol
+    a,b = state.xn0, state.xn1
+    fa,fb = state.fxn0, state.fxn1
 
-    if x_converged
-        state.message=""
-        state.xstar = xm
-        state.x_converged = true
-        return true
+    xtol = max(options.xabstol, max(abs(a), abs(b)) * options.xreltol)
+    if b-a ≤ xtol
+        return (:x_converged, true)
+    end
+    ftol = max(options.abstol, max(abs(a), abs(b)) * options.reltol)
+    if min(abs(fa), abs(fb)) ≤ ftol
+        return (:f_converged, true)
     end
 
 
-    fm = first(state.fm)
-    ftol = max(options.abstol, max(abs(x0), abs(x1)) * options.reltol)
-    f_converged = abs(fm) < ftol
-
-    if f_converged
-        state.message = ""
-        state.xstar = xm
-        state.fxstar = fm
-        state.f_converged = f_converged
-        return true
-    end
-
-    return false
+    return :not_converged, false
 end
 
 # for exact convergence, we can skip some steps
 function assess_convergence(M::BisectionExact, state::UnivariateZeroState{T,S}, options) where {T, S}
 
-    state.x_converged && return true
+    a,b = state.xn0, state.xn1
+    fa, fb = state.fxn0,  state.fxn1
 
-    x0, xm::T, x1 = state.xn0, state.m[1], state.xn1
-    y0, ym, y1 = state.fxn0, state.fm[1], state.fxn1
+    (iszero(fa) || isnan(fa) || iszero(fb) || isnan(fb)) && return (:f_converged, true)
 
-    for (c,fc) in ((x0,y0), (xm,ym), (x1, y1))
-        if iszero(fc) || isnan(fc) #|| isinf(fc)
-            state.f_converged = true
-            state.x_converged = true
-            state.xstar = c
-            state.fxstar = fc
-            return true
-        end
+    nextfloat(a) == b && return (:x_converged, true)
+
+    return (:not_converged, false)
+
+end
+
+# assumes stopped = :x_converged
+function decide_convergence(M::AbstractBracketing,  F, state::AbstractUnivariateZeroState{T,S}, options, val) where {T,S}
+
+    a,b = state.xn0, state.xn1
+    fa, fb = state.fxn0, state.fxn1
+
+    isnan(fa) && return a
+    isnan(fb) && return b
+
+
+
+    if abs(fa) < abs(fb)
+        return a
+    else
+        return b
     end
-
-    x0 < xm < x1 && return false
-
-    state.xstar = x1
-    state.fxstar = ym
-    state.x_converged = true
-    return true
 end
 
 
 
+
 ##################################################
+function update_state(M::AbstractBisection, F, o, options, l=NullTracks())
 
+    a, b = o.xn0, o.xn1
+    fa, fb = o.fxn0, o.fxn1
 
-function update_state(method::Union{Bisection, BisectionExact}, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T<:Number,S<:Number}
+    c = _middle(a,b)
+    fc = F(c)
+    incfn(l)
 
-    y0 = o.fxn0
-    m::T = o.m[1]
-    ym::S = o.fm[1] #fs(m)
-
-    if sign(y0) * sign(ym) < 0
-        o.xn1, o.fxn1 = m, ym
+    if sign(fa)*sign(fc) < 0
+        b,fb = c, fc
     else
-        o.xn0, o.fxn0 = m, ym
+        a,fa = c, fc
     end
 
-    m  = __middle(o.xn0, o.xn1) # assume a,b have same sign
-    fm::S = fs(m)
-    o.m[1], o.fm[1] = m, fm
-    incfn(o)
+    @set! o.xn0 = a
+    @set! o.xn1 = b
+    @set! o.fxn0 = fa
+    @set! o.fxn1 = fb
 
-    return nothing
+    return o, false
 
 end
 
@@ -313,82 +269,46 @@ function find_zero(fs, x0, method::Bisection;
     end
 
     ZPI = init(ZeroProblem(fs, x0), method, p; verbose=verbose, tracks=tracks, kwargs...)
-    solve!(ZPI)
-
-    verbose && show_trace(ZPI)
-    last(ZPI) # no error thrown?
+    solve!(ZPI, verbose=verbose)
 
 end
 
-## --------------------------------------------------
-##
-# assume int[xn0,xn1] is a bracket in state
-function assess_convergence(method::AbstractBracketing, state::UnivariateZeroState{T,S}, options) where {T,S}
 
-    if state.stopped || state.x_converged || state.f_converged
-        return true
-    end
-
-    check_steps_fnevals(state, options) && return true
+function assess_convergence(method::AbstractBracketing, state::AbstractUnivariateZeroState, options)
 
     a,b,fa,fb = state.xn0, state.xn1, state.fxn0, state.fxn1
 
     if isnan(a) || isnan(b)
-        state.convergence_failed = true
-        state.message *= "NaN produced by algorithm. "
-        return true
+        return (:nan, true)
+    end
+
+    if isnan(fa) || isnan(fb)
+        return (:nan, true)
     end
 
     M = maximum(abs, (a,b))
     δₓ = maximum(promote(options.xabstol, M * options.xreltol, sign(options.xreltol) *   eps(M)))
 
     if abs(b-a) <= 2δₓ
-        state.x_converged = true
+        return (:x_converged, true)
     end
 
     # check f
     u,fu = choose_smallest(a,b,fa,fb)
     δ = maximum(promote(options.abstol, M * options.reltol * (oneunit(fu) / oneunit(u))))
     if abs(fu) <= δ
-        state.f_converged = true
-        if iszero(fu)
-            state.x_converged
-            state.message *= "Exact zero found. "
-        end
+        iszero(fu) && return (:exact_zero, true)
+        return (:f_converged, true)
     end
 
-    if state.f_converged || state.x_converged
-        state.xstar = u
-        state.fxstar = fu
-        return true
-    end
-
-    return false
+    return (:not_converged, false)
 end
 
 ## convergence is much different here
 function check_zero(::AbstractBracketing, state, c, fc)
-    if isnan(c)
-        state.stopped = true
-        #state.xn1 = c
-        state.xstar = c
-        state.fxstar =fc
-        state.message *= "NaN encountered. "
-        return true
-    elseif isinf(c)
-        state.stopped = true
-        #state.xn1 = c
-        state.xstar = c
-        state.fxstar =fc
-        state.message *= "Inf encountered. "
-        return true
-    elseif iszero(fc)
-        state.f_converged=true
-        state.message *= "Exact zero found. "
-        state.xstar = c
-        state.fxstar =  fc
-        return true
-    end
+    isnan(c) && return true
+    isinf(c) && return true
+    iszero(fc) && return true
     return false
 end
 
@@ -498,35 +418,6 @@ function newton_quadratic(a::T, b, d, fa, fb, fd, k::Int, delta=zero(T)) where {
 
 end
 
-function init_state!(state::UnivariateZeroState{T,S}, M::AbstractAlefeldPotraShi, F::Callable_Function;
-                     middle=nothing, clear=true) where {T,S}
-
-
-    a,b,fa,fb = state.xn0, state.xn1, state.fxn0, state.fxn1
-
-    if a > b
-        a,b,fa,fb = b,a,fb,fa
-    end
-
-
-
-    c::T = (middle != nothing && a < middle < b) ? middle : _middle(a,b)
-    fc::S = F(c)
-    incfn(state)
-
-    a,b,d,fa,fb,fd = bracket(a,b,c,fa,fb,fc)
-    ee, fe = d, fd
-
-    state.xn0, state.xn1, state.fxn0, state.fxn1 = a,b,fa,fb
-    empty!(state.m), empty!(state.fm)
-    append!(state.m, (d,ee)), append!(state.fm, (fd, fe))
-
-    clear && clear_convergence_flags!(state)
-
-    nothing
-end
-
-
 
 # for A42, the defaults are reltol=eps(), atol=0; 45 evals and strict=true
 # this *basically* follows the tol in the paper (2|u|*rtol + atol)
@@ -556,46 +447,85 @@ end
 
 ## initial step, needs to log a,b,d
 function log_step(l::Tracks, M::AbstractAlefeldPotraShi, state, ::Any)
-    a, b, c = state.xn0, state.xn1, state.m[1]
+    a, b, c = state.xn0, state.xn1, state.d
     append!(l.xs, extrema((a,b,c)))
     push!(l.xs, a)
     push!(l.xs, b) # we store [ai,bi, ai+1, bi+1, ...] for brackecting methods
+    log_steps(l,1)
+end
+
+struct A42State{T,S} <: AbstractUnivariateZeroState{T,S}
+    xn1::T
+    xn0::T
+    d::T
+    ee::T
+    fxn1::S
+    fxn0::S
+    fd::S
+    fee::S
+end
+
+function init_state(::A42, F, x₀, x₁, fx₀, fx₁; c=_middle(x₀,x₁), fc = F(c))
+
+    a,b,fa,fb = x₀,x₁,fx₀,fx₁
+    if a > b
+        a,b,fa,fb = b,a,fb,fa
+    end
+
+    a,b,d,fa,fb,fd = bracket(a,b,c,fa,fb,fc)
+    ee, fe = NaN*d, fd # use NaN for initial
+
+    A42State(b,a,d,ee,fb,fa,fd,fe)
+end
+initial_fncalls(::A42) = 3
+
+# helper: set state xn1, fxn1
+function _set_state(state, x₁, fx₁)
+    @set! state.xn1 = x₁
+    @set! state.fxn1 = fx₁
+    return (state, true)
 end
 
 # Main algorithm for A42 method
-function update_state(M::A42, f, state::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
+function update_state(M::A42, F, state::A42State{T,S}, options, l=NullTracks()) where {T,S}
 
-    a::T,b::T,d::T, ee::T = state.xn0, state.xn1, state.m[1], state.m[2]
-    fa::S,fb::S,fd::S,fe::S = state.fxn0, state.fxn1, state.fm[1], state.fm[2]
+    a::T,b::T,d::T, ee::T = state.xn0, state.xn1, state.d, state.ee
+    fa::S,fb::S,fd::S,fe::S = state.fxn0, state.fxn1, state.fd, state.fee
 
     an, bn = a, b
     μ, λ = 0.5, 0.7
     tole = max(options.xabstol, max(abs(a),abs(b)) * options.xreltol) # paper uses 2|u|*rtol + atol
     delta = λ * tole
 
-    if state.steps < 1
+    if isnan(ee)
         c = newton_quadratic(a, b, d, fa, fb, fd, 2)
     else
         c = ipzero(a, b, d, ee, fa, fb, fd, fe)
     end
-    fc::S = f(c)
-    incfn(state)
-    if check_zero(M, state, c, fc)
-        return nothing
-    end
+    fc::S = F(c)
+    incfn(l)
+
+    (iszero(fc) || isnan(fc)) && return _set_state(state, c, fc)
+    (isnan(c) || isinf(c)) && return (state, true)
+
 
     ab::T, bb::T, db::T, fab::S, fbb::S, fdb::S = bracket(a,b,c,fa,fb,fc)
     eb::T, feb::S = d, fd
 
     cb::T = take_a42_step(ab, bb, db, eb, fab, fbb, fdb, feb, delta)
-    fcb::S = f(cb)
-    incfn(state)
-    if check_zero(M, state, cb, fcb)
-        # tighten up bracket
-        state.xn0, state.xn1, state.m[1]  = ab, bb, db
-        state.fxn0, state.fxn1, state.fm[1]= fab, fbb, fdb
+    fcb::S = F(cb)
+    incfn(l)
 
-        return nothing
+    (iszero(fc) || isnan(fc)) && return _set_state(state, c, fc)
+    if isnan(c) || isinf(c)
+        # tighten up bracket
+        @set! state.xn0 = ab
+        @set! state.xn1 = bb
+        @set! state.d = db
+        @set! state.fxn0 = fab
+        @set! state.fxn1 = fbb
+        @set! state.fd = fdb
+        return state, false
     end
 
     ab,bb,db,fab,fbb,fdb = bracket(ab,bb,cb,fab,fbb,fcb)
@@ -607,14 +537,20 @@ function update_state(M::A42, f, state::UnivariateZeroState{T,S}, options::Univa
     if abs(cb - u) > 0.5 * (b-a)
         ch = _middle(an, bn)
     end
-    fch::S = f(ch)
-    incfn(state)
-    if check_zero(M, state, ch, fch)
-        # tighten up bracket
-        state.xn0, state.xn1, state.m[1]  = ab, bb, db
-        state.fxn0, state.fxn1, state.fm[1]= fab, fbb, fdb
+    fch::S = F(ch)
+    incfn(l)
 
-        return nothing
+    (iszero(fch) || isnan(fch)) && return _set_state(state, ch, fch)
+    if isnan(ch) || isinf(ch)
+        # tighten up bracket
+        @set! state.xn0 = ab
+        @set! state.xn1 = bb
+        @set! state.d = db
+        @set! state.fxn0 = fab
+        @set! state.fxn1 = fbb
+        @set! state.fd = fdb
+        return state, false
+
     end
 
     ah::T, bh::T, dh::T, fah::S, fbh::S, fdh::S = bracket(ab, bb, ch, fab, fbb, fch)
@@ -625,19 +561,29 @@ function update_state(M::A42, f, state::UnivariateZeroState{T,S}, options::Univa
         fa, fb, fd, fe = fah, fbh, fdh, fdb
     else
         m::T = _middle(ah, bh)
-        fm::S = f(m)
-        incfn(state)
+        fm::S = F(m)
+        incfn(l)
         ee, fe = dh, fdh
         a, b, d, fa, fb, fd = bracket(ah, bh, m, fah, fbh, fm)
     end
-    state.xn0, state.xn1, state.m[1], state.m[2],  = a, b, d, ee
-    state.fxn0, state.fxn1, state.fm[1], state.fm[2] = fa, fb, fd, fe
 
-    return nothing
+    @set! state.xn0 = a
+    @set! state.xn1 = b
+    @set! state.d = d
+    @set! state.ee = ee
+    @set! state.fxn0 = fa
+    @set! state.fxn1 = fb
+    @set! state.fd = fd
+    @set! state.fee = fe
+
+    return state, false
+
 end
 
 
-####
+
+## ----
+
 """
     Roots.AlefeldPotraShi()
 
@@ -649,32 +595,64 @@ Originally by John Travers.
 """
 struct AlefeldPotraShi <: AbstractAlefeldPotraShi end
 
+struct AlefeldPotraShiState{T,S} <: AbstractUnivariateZeroState{T,S}
+    xn1::T
+    xn0::T
+    d::T
+    fxn1::S
+    fxn0::S
+    fd::S
+end
+
+function init_state(::AlefeldPotraShi, F, x₀, x₁, fx₀, fx₁; c=_middle(x₀,x₁), fc=F(c))
+    a,b,fa,fb = x₀,x₁,fx₀,fx₁
+    if a > b
+        a,b,fa,fb = b,a,fb,fa
+    end
+
+    a,b,d,fa,fb,fd = bracket(a,b,c,fa,fb,fc)
+    return AlefeldPotraShiState(b,a,d,fb,fa,fd)
+end
+initial_fncalls(::AlefeldPotraShiState) = 3 # worst case assuming fx₀, fx₁,fc must be computed
+
+
 # ## 3, maybe 4, functions calls per step
-function update_state(M::AlefeldPotraShi, f, state::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
+function update_state(M::AlefeldPotraShi, f, state::AbstractUnivariateZeroState{T,S}, options::UnivariateZeroOptions, l=NullTracks()) where {T,S}
+    a::T,b::T,d::T = state.xn0, state.xn1, state.d
 
-    a::T,b::T,d::T = state.xn0, state.xn1, state.m[1]
-    fa::S,fb::S,fd::S = state.fxn0, state.fxn1, state.fm[1]
-
+    fa::S,fb::S,fd::S = state.fxn0, state.fxn1, state.fd
     μ, λ = 0.5, 0.7
     tole = max(options.xabstol, max(abs(a),abs(b)) * options.xreltol) # paper uses 2|u|*rtol + atol
     delta = λ * tole
 
     c::T = newton_quadratic(a, b, d, fa, fb, fd, 2, delta)
     fc::S = f(c)
-    incfn(state)
-    check_zero(M, state, c, fc) && return nothing
+    incfn(l)
+    if iszero(fc) || isnan(fc)
+        @set! state.xn1 = c
+        @set! state.fxn1 = fc
+        return (state, true)
+    elseif isnan(c) || isinf(c)
+        return (state, true)
+    end
 
     a,b,d,fa,fb,fd = bracket(a,b,c,fa,fb,fc)
 
     c = newton_quadratic(a,b,d,fa,fb,fd, 3, delta)
     fc = f(c)
-    incfn(state)
-    if check_zero(M, state, c, fc)
-        # tighten up bracket
-        state.xn0, state.xn1, state.m[1]  = a, b, d
-        state.fxn0, state.fxn1, state.fm[1]= fa, fb, fd
+    incfn(l)
 
-        return nothing
+    (iszero(fc) || isnan(fc)) && return _set_state(state, c, fc)
+    if isnan(c) || isinf(c)
+        # tighten up bracket
+        @set! state.xn0 = a
+        @set! state.xn1 = b
+        @set! state.d = d
+        @set! state.fxn0 = fa
+        @set! state.fxn1 = fb
+        @set! state.fd = fd
+
+        return (state, false)
     end
 
     a, b, d, fa, fb, fd = bracket(a, b, c, fa, fb,fc)
@@ -685,13 +663,19 @@ function update_state(M::AlefeldPotraShi, f, state::UnivariateZeroState{T,S}, op
         c = _middle(a, b)
     end
     fc = f(c)
-    incfn(state)
-    if  check_zero(M, state, c, fc)
-        # tighten up bracket
-        state.xn0, state.xn1, state.m[1]  = a, b, d
-        state.fxn0, state.fxn1, state.fm[1]= fa, fb, fd
+    incfn(l)
 
-        return nothing
+    (iszero(fc) || isnan(fc)) && return _set_state(state, c, fc)
+    if isnan(c) || isinf(c)
+        # tighten up bracket
+        @set! state.xn0 = a
+        @set! state.xn1 = b
+        @set! state.d = d
+        @set! state.fxn0 = fa
+        @set! state.fxn1 = fb
+        @set! state.fd = fd
+
+        return (state, false)
     end
 
     ahat::T, bhat::T, dhat::T, fahat::S, fbhat::S, fdhat::S = bracket(a, b, c, fa, fb, fc)
@@ -701,14 +685,20 @@ function update_state(M::AlefeldPotraShi, f, state::UnivariateZeroState{T,S}, op
     else
         m::T = _middle(ahat, bhat)
         fm::S = f(m)
-        incfn(state)
+        incfn(l)
         a, b, d, fa, fb, fd = bracket(ahat, bhat, m, fahat, fbhat, fm)
     end
-    state.xn0, state.xn1, state.m[1] = a, b, d
-    state.fxn0, state.fxn1, state.fm[1] = fa, fb, fd
 
-    return nothing
+    @set! state.xn0 = a
+    @set! state.xn1 = b
+    @set! state.d = d
+    @set! state.fxn0 = fa
+    @set! state.fxn1 = fb
+    @set! state.fd = fd
+
+    return (state, false)
 end
+
 
 
 ### Brent
@@ -723,37 +713,47 @@ step, falling back on bisection if necessary.
 """
 struct Brent <: AbstractBracketing end
 
+struct BrentState{T,S} <: AbstractUnivariateZeroState{T,S}
+    xn1::T
+    xn0::T
+    c::T
+    d::T
+    fxn1::S
+    fxn0::S
+    fc::S
+    mflag::Bool
+end
+
+
 function log_step(l::Tracks, M::Brent, state)
     a,b = state.xn0, state.xn1
     u,v = a < b ? (a,b) : (b,a)
     push!(l.xs, a)
     push!(l.xs, b) # we store [ai,bi, ai+1, bi+1, ...]
+    log_steps(l)
 end
 
+# # we store mflag as -1, or +1 in state.mflag
+function init_state(::Brent, F, x₀, x₁, fx₀, fx₁)
 
-# we store mflag as -1, or +1 in state.m[2]
-function init_state!(state::UnivariateZeroState{T,S}, ::Brent, F; clear=true) where {T,S}
-
-    u, v, fu, fv = state.xn0, state.xn1, state.fxn0, state.fxn1
-
-    empty!(state.m); empty!(state.fm)
-    # brent store b as smaller of |fa|, |fb|
+    u,v,fu,fv = x₀,x₁,fx₀,fx₁
     if abs(fu) > abs(fv)
-        state.xn0, state.xn1, state.fxn0, state.fxn1 = u, v, fu, fv
-        append!(state.m, (u,u)); append!(state.fm, (fu, one(fu)))
-    else
-        state.xn0, state.xn1, state.fxn0, state.fxn1 = v, u, fv, fu
-        append!(state.m, (v,v)); append!(state.fm, (fv, one(fv)))
+        u,v,fu,fv = v,u, fv, fu
     end
-    clear && clear_convergence_flags!(state)
-    return nothing
+
+    BrentState(u,v,v,v,fu,fv, fv, true) # a,b,c,d, fa,fb,fc, mflag
+
 end
 
 
-function update_state(M::Brent, f, state::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
-    mflag = state.fm[2] > 0
-    a, b, c, d = state.xn0, state.xn1, state.m[1], state.m[2]
-    fa, fb, fc = state.fxn0, state.fxn1, state.fm[1]
+
+function update_state(M::Brent, f, state::BrentState{T,S},
+                      options::UnivariateZeroOptions, l = NullTracks()) where {T,S}
+
+
+    mflag = state.mflag
+    a, b, c, d = state.xn0, state.xn1, state.c, state.d
+    fa, fb, fc = state.fxn0, state.fxn1, state.fc
 
     # next setp
     s::T = zero(a)
@@ -766,8 +766,17 @@ function update_state(M::Brent, f, state::UnivariateZeroState{T,S}, options::Uni
         s = secant_step(a,b,fa,fb)
     end
     fs::S = f(s)
-    incfn(state)
-    check_zero(M, state, s, fs) && return nothing
+    incfn(l)
+    if iszero(fs)
+        @set! state.xn1 = s
+        @set! state.fxn1 = fs
+        return (state, true)
+    elseif isnan(fs) || isinf(fs)
+        return (state, true)
+    end
+
+#    val = check_zero(M, state, s, fs)
+#    val && return (state, true)
 
     # guard step
     u,v = (3a+b)/4, b
@@ -783,8 +792,16 @@ function update_state(M::Brent, f, state::UnivariateZeroState{T,S}, options::Uni
         (!mflag && abs(c-d) <= tol)
         s = _middle(a, b)
         fs = f(s)
-        incfn(state)
-        check_zero(M, state, s, fs) && return nothing
+        incfn(l)
+
+        if iszero(fs)
+            @set! state.xn1 = s
+            @set! state.fxn1 = fs
+            return (state, true)
+        elseif isnan(fs) || isinf(fs)
+            return (state, true)
+        end
+
         mflag = true
     else
         mflag = false
@@ -803,13 +820,18 @@ function update_state(M::Brent, f, state::UnivariateZeroState{T,S}, options::Uni
         a, b, fa, fb = b, a, fb, fa
     end
 
-    state.xn0, state.xn1, state.m[1], state.m[2] = a, b, c, d
-    state.fxn0, state.fxn1, state.fm[1] = fa, fb, fc
-    state.fm[2] = mflag ? one(fa) : -one(fa)
+    @set! state.xn0 = a
+    @set! state.xn1 = b
+    @set! state.c = c
+    @set! state.d = d
+    @set! state.fxn0 = fa
+    @set! state.fxn1 = fb
+    @set! state.fc = fc
+    @set! state.mflag = mflag
 
-    return nothing
+    return state, false
+
 end
-
 
 ## ----------------------------
 
@@ -848,15 +870,46 @@ find_zero(x -> x^5 - x - 1, (-2, 2), FalsePosition())
 FalsePosition
 FalsePosition(x=:anderson_bjork) = FalsePosition{x}()
 
+function default_tolerances(::FalsePosition{R}, ::Type{T}, ::Type{S}) where {R, T,S}
+    default_tolerances(Secant(), T, S)
+end
+
 # use fallback for derivative free
 function assess_convergence(method::FalsePosition, state::UnivariateZeroState{T,S}, options) where {T,S}
     assess_convergence(Any, state, options)
 end
 
-function update_state(method::FalsePosition, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
+function decide_convergence(M::FalsePosition,  F, state::AbstractUnivariateZeroState{T,S}, options, val) where {T,S}
 
-    a::T, b::T =  o.xn0, o.xn1
-    fa::S, fb::S = o.fxn0, o.fxn1
+    a,b = state.xn0, state.xn1
+    fa, fb = state.fxn0, state.fxn1
+
+    isnan(fa) && return b
+    isnan(fb) && return a
+
+    if abs(fa) < abs(fb)
+        _is_f_approx_0(fa,a,options.abstol, options.reltol, true) && return a
+    else
+        _is_f_approx_0(fb,b,options.abstol, options.reltol, true) && return b
+    end
+    val == :not_converged && return NaN*a
+
+
+
+
+    if abs(fa) < abs(fb)
+        return a
+    else
+        return b
+    end
+end
+
+
+function update_state(method::FalsePosition, fs, o::AbstractUnivariateZeroState{T,S},
+                      options::UnivariateZeroOptions, l=NullTracks()) where {T,S}
+
+    a, b =  o.xn0, o.xn1
+    fa, fb = o.fxn0, o.fxn1
 
     lambda = fb / (fb - fa)
     tau = 1e-10                   # some engineering to avoid short moves; still fails on some
@@ -864,14 +917,14 @@ function update_state(method::FalsePosition, fs, o::UnivariateZeroState{T,S}, op
         lambda = 1/2
     end
 
-    x::T = b - lambda * (b-a)
-    fx::S = fs(x)
-    incfn(o)
+    x = b - lambda * (b-a)
+    fx = fs(x)
+    incfn(l)
+
     if iszero(fx)
-        o.xn1 = x
-        o.fxn1 = fx
-        o.f_converged = true
-        return
+        @set! o.xn1 = x
+        @set! o.fxn1 = fx
+        return (o, true)
     end
 
     if sign(fx)*sign(fb) < 0
@@ -881,13 +934,16 @@ function update_state(method::FalsePosition, fs, o::UnivariateZeroState{T,S}, op
     end
     b, fb = x, fx
 
-    o.xn0, o.xn1 = a, b
-    o.fxn0, o.fxn1 = fa, fb
+    @set! o.xn0 = a
+    @set! o.xn1 = b
+    @set! o.fxn0 = fa
+    @set! o.fxn1 = fb
 
-    nothing
+    return (o, false)
 end
 
-# the 12 reduction factors offered by Galadino
+
+# the 12 reduction factors offered by Galdino
 # In RootsTesting.jl, we can see :12 has many more failures.
 galdino = Dict{Union{Int,Symbol},Function}(:1 => (fa, fb, fx) -> fa*fb/(fb+fx),
                                            :2 => (fa, fb, fx) -> (fa - fb)/2,
@@ -920,7 +976,7 @@ end
 
 
 
-
+# deprecate this
 """
     find_bracket(f, x0, method=A42(); kwargs...)
 
@@ -934,13 +990,21 @@ function find_bracket(fs, x0, method::M=A42(); kwargs...) where {M <: Union{Abst
     F = Callable_Function(method, fs) #callable_function(fs)
     state = init_state(method, F, x)
     options = init_options(method, state; kwargs...)
+    l = NullTracks()
 
     # check if tolerances are exactly 0
     iszero_tol = iszero(options.xabstol) && iszero(options.xreltol) && iszero(options.abstol) && iszero(options.reltol)
 
-    ZPI = ZeroProblemIterator(method, F, state, options, NullTracks())
-    solve!(ZPI)
+    val, stopped = :not_converged, false
+    while !stopped
+        val, stopped = assess_convergence(method, state, options)
+        stopped && break
+        state, stopped = update_state(method, F, state, options,l)
+    end
 
-    (xstar=state.xstar, bracket=(state.xn0, state.xn1), exact=iszero(state.fxstar))
+    a, b = state.xn0, state.xn1
+    fa, fb = state.fxn0, state.fxn1
+    xstar, fxstar = abs(fa) < abs(fb) ? (a, fa) : (b,fb)
+    (xstar=xstar, bracket=(a,b), exact=iszero(fxstar))
 
 end

@@ -39,8 +39,7 @@ import Roots.fzero
     @test !(fzero(fn, x0, order=1, xatol=1e-4, atol=1) ≈ xstar)
     @test_throws Roots.ConvergenceFailed fzero(fn, x0, order=1, maxevals=3)
     @test !(fzero(fn, x0, order=1, maxevals=3, atol=1e-3) ≈ xstar)
-    @test_throws Roots.ConvergenceFailed fzero(fn, x0, order=1, maxfnevals=3)
-    @test !(fzero(fn, x0, order=1, maxfnevals=3, atol=1e-3) ≈ xstar)
+    ## @test !(fzero(fn, x0, order=1, maxfnevals=3, atol=1e-3) ≈ xstar) removed maxfnevals
 
     ## Infinities
     ## f(b) = Inf

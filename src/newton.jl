@@ -44,61 +44,60 @@ The error, `eᵢ = xᵢ - α`, can be expressed as `eᵢ₊₁ = f[xᵢ,xᵢ,α]
 """
 Newton
 
-
-function init_state(M::AbstractNewtonLikeMethod, F, x;
-                    fnevals = initial_fnevals(M),
-                    kwargs...)
-    x0 = float(first(x))
-    fx0, Δ = F(x0)  # f, f/f'
-    x0, x1 = promote(x0, x0 - Δ)
-    fx1, Δ = F(x1)
-    state = init_state(M, x0, x1, promote(fx0, fx1)..., m=[Δ], fnevals=fnevals, kwargs...)
-    init_state!(state, M, F, compute_fx=false, clear=false)
-    state
-end
-initial_fnevals(M::Newton) = 2
-
-function init_state!(state, ::Newton, F::Callable_Function;
-                     compute_fx=false, clear=true)
-    if compute_fx
-        x1 = state.xn1
-        f, Δ = F(x1)
-        empty!(state.m)
-        append!(state.m, (Δ,))
-    end
-    clear && clear_convergence_flags!(state)
-    state
+# we store x0,x1,fx0,fx1 **and** Δ = fx1/f'(x1)
+struct NewtonState{T,S} <: AbstractUnivariateZeroState{T,S}
+    xn1::T
+    xn0::T
+    Δ::T
+    fxn1::S
+    fxn0::S
 end
 
 
+function init_state(M::Newton, F::Callable_Function, x)
+    x₀ = float(first(x))
+    fx₀, Δ = F(x₀)
+    x₁ = x₀ - Δ
+    state = init_state(M, F, x₀, x₁, fx₀, fx₀)
+end
+
+# compute fx₁, Δ
+function init_state(::Newton, F, x₀, x₁, fx₀, fx₁)
+    fx₁, Δ = F(x₁)
+    NewtonState(x₁, x₀, Δ, fx₁, fx₀)
+end
+
+initial_fncalls(M::Newton) = 2
 
 
+function update_state(method::Newton, F, o::NewtonState{T,S}, options, l=NullTracks()) where {T, S}
 
+    xn0, xn1 = o.xn0, o.xn1
+    fxn0, fxn1 = o.fxn0, o.fxn1
+    Δ = o.Δ
 
-function update_state(method::Newton, fs, o::UnivariateZeroState{T,S}, options) where {T, S}
-    xn = o.xn1
-    fxn = o.fxn1
-    r1 = o.m[1]
-
-    if isissue(r1)
-        o.stopped=true
-        return
+    if isissue(Δ)
+        log_message(l, "Issue with `f/f′'")
+        return o, true
     end
 
-    xn1 = xn - r1
+    xn0, xn1 = xn1, xn1-Δ
+    fxn0 = fxn1
+    fxn1, Δ = F(xn1)
+    incfn(l,2)
 
-    fxn1::S, r1::T = fs(xn1)
-    incfn(o,2)
+    @set! o.xn0 = xn0
+    @set! o.xn1 = xn1
+    @set! o.Δ = Δ
+    @set! o.fxn0 = fxn0
+    @set! o.fxn1 = fxn1
 
-    o.xn0, o.xn1 = xn, xn1
-    o.fxn0, o.fxn1 = fxn, fxn1
-    o.m[1] = r1
-
-    nothing
+    return o, false
 
 
 
 end
+
 
 """
     Roots.newton(f, fp, x0; kwargs...)
@@ -158,44 +157,55 @@ The error, `eᵢ = xᵢ - α`, satisfies
 struct Halley <: AbstractHalleyLikeMethod
 end
 
-function init_state(M::AbstractHalleyLikeMethod, F, x,
-    fnevals = initial_fnevals(M),
-    kwargs...
-    )
-    x1 = float(first(x))
-    fx1, Δ, ΔΔ = F(x1)
-
-    state = _init_state(nan(x1)*x1, x1, promote(nan(fx1)*fx1, fx1)..., m=[Δ,ΔΔ], fnevals=fnevals, kwargs...)
-    init_state!(state, M, F; compute_fx=true, clear=false)
-    state
-end
-initial_fnevals(M::AbstractHalleyLikeMethod) = 3
-# halley
-function init_state!(state, ::AbstractHalleyLikeMethod, F::Callable_Function;
-                     compute_fx=false, clear=true)
-    if compute_fx
-        x1 = state.xn1
-        f, Δ, ΔΔ = F(x1)
-        empty!(state.m)
-        append!(state.m, (Δ, ΔΔ))
-    end
-    clear && clear_convergence_flags!(state)
-    state
+struct HalleyState{T,S} <: AbstractUnivariateZeroState{T,S}
+    xn1::T
+    xn0::T
+    Δ::T
+    ΔΔ::T
+    fxn1::S
+    fxn0::S
 end
 
-function update_state(method::Halley, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
+# we compute one step here to get x₁
+function init_state(M::AbstractHalleyLikeMethod, F::Callable_Function, x)
+    x₀ = float(first(x))
+    fx₀, Δ, ΔΔ = F(x₀)
+    x₁ = x₀ - 2ΔΔ/(2ΔΔ - Δ) * Δ
+    state = init_state(M, F, x₀, x₁, fx₀, fx₀)
+end
+
+function init_state(::AbstractHalleyLikeMethod, F, x₀, x₁, fx₀, fx₁)
+    fx₁, Δ, ΔΔ = F(x₁)
+    HalleyState(x₁, x₀, Δ, ΔΔ, fx₁, fx₀)
+end
+
+initial_fncalls(M::AbstractHalleyLikeMethod) = 2*3
+
+function update_state(method::Halley, F, o::HalleyState{T,S}, options::UnivariateZeroOptions, l=NullTracks()) where {T,S}
     xn = o.xn1
     fxn = o.fxn1
-    r1, r2 = o.m
+    r1, r2 = o.Δ, o.ΔΔ
 
-    xn1::T = xn - 2*r2/(2r2 - r1) * r1
+    Δ =  2*r2/(2r2 - r1) * r1
+    if isissue(Δ)
+        log_message(l, "Issue with computing `Δ`")
+        return (o, true)
+    end
 
-    fxn1::S, r1::T, r2::T = fs(xn1)
-    incfn(o,3)
+    xn1::T = xn - Δ
+    fxn1::S, r1::T, r2::T = F(xn1)
+    incfn(l,3)
 
-    o.xn0, o.xn1 = xn, xn1
-    o.fxn0, o.fxn1 = fxn, fxn1
-    o.m[1], o.m[2] = r1, r2
+
+    @set! o.xn0 = xn
+    @set! o.xn1 = xn1
+    @set! o.fxn0 = fxn
+    @set! o.fxn1 = fxn1
+    @set! o.Δ = r1
+    @set! o.ΔΔ = r2
+
+    return o, false
+
 end
 
 """
@@ -222,13 +232,6 @@ Keyword arguments are passed to `find_zero` using the `Roots.Halley()` method.
 
 """
 halley(f, fp, fpp, x0; kwargs...) = find_zero((f, fp, fpp), x0, Halley(); kwargs...)
-#halley(f,  x0; kwargs...) = find_zero(f, x0, Halley(); kwargs...) # deprecated
-#halley(f, fp, x0; kwargs...) = find_zero((f, fp), x0, Halley(); kwargs...) # deprecated
-@deprecate halley(f,  x0; kwargs...)    halley(f, fp, fpp, x0; kwargs...)
-@deprecate halley(f, fp, x0; kwargs...) halley(f, fp, fpp, x0; kwargs...)
-
-
-## Shroder-like methods
 
 """
     Roots.Schroder()
@@ -274,24 +277,40 @@ end
 const Schroeder = Schroder # either spelling
 const Schröder = Schroder
 
-function update_state(method::Schroder, fs, o::UnivariateZeroState{T,S}, options::UnivariateZeroOptions) where {T,S}
+## Shroder-like methods
+function init_state(M::Schroder, F::Callable_Function, x)
+    x₀ = float(first(x))
+    fx₀, Δ, ΔΔ = F(x₀)
+    x₁ = x₀ - ΔΔ/(ΔΔ - Δ) * Δ # m*r1
+    state = init_state(M, F, x₀, x₁, fx₀, fx₀)
+end
+
+
+
+function update_state(method::Schroder, F, o::AbstractUnivariateZeroState{T,S},
+                      options::UnivariateZeroOptions, l=NullTracks()) where {T,S}
     xn = o.xn1
     fxn = o.fxn1
-    r1, r2 = o.m[1], o.m[2]
+    r1, r2 = o.Δ, o.ΔΔ
 
-    delta =  r2 / (r2 - r1) * r1  # m * r1
+    Δ =  r2 / (r2 - r1) * r1  # m * r1
 
-    if isissue(delta)
-        o.stopped=true
-        return
+    if isissue(Δ)
+        log_message(l, "Issue with increment")
+        return o, true
     end
 
-    xn1::T = xn - delta
+    xn1::T = xn - Δ
 
-    fxn1::S, r1::T, r2::T = fs(xn1)
-    incfn(o,3)
+    fxn1::S, r1::T, r2::T = F(xn1)
+    incfn(l,3)
 
-    o.xn0, o.xn1 = xn, xn1
-    o.fxn0, o.fxn1 = fxn, fxn1
-    o.m[1], o.m[2] = r1, r2
+    @set! o.xn0 = xn
+    @set! o.xn1 = xn1
+    @set! o.fxn0 = fxn
+    @set! o.fxn1 = fxn1
+    @set! o.Δ = r1
+    @set! o.ΔΔ = r2
+
+    return o, false
 end

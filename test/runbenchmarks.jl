@@ -32,7 +32,8 @@ function run_bracket(problems, Ms)
     for (nm, prob) in problems
         fn, x0, ab = prob
         for (mnm, M) in zip(fieldnames(typeof(Ms)), Ms)
-            find_zero(fn, ab, M)
+            solve(ZeroProblem(fn,ab),M)
+            #find_zero(fn, ab, M)
         end
     end
 
@@ -43,7 +44,8 @@ function run_bracketing(problems, Ms)
     for (nm, prob) in problems
         fn, x0, ab = prob
         for M in Ms
-            rt = find_zero(fn, ab)
+            rt  = solve(ZeroProblem(fn,ab),M)
+            #rt = find_zero(fn, ab, M)
             push!(rts, rt)
         end
     end
@@ -56,7 +58,12 @@ function run_derivative_free(problems, Ms)
     for (nm, prob) in problems
         fn, x0, ab = prob
         for M in Ms
-            rt = find_zero(fn, x0, M)
+            if M == Order0()
+                rt = find_zero(fn, x0, M)
+            else
+                rt  = solve(ZeroProblem(fn,ab),M)
+            end
+
             push!(rts, rt)
         end
     end

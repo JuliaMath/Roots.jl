@@ -30,35 +30,9 @@ function find_zero(fs, x0, method::Order0;
                    kwargs...)
     M = Order1()
     N = AlefeldPotraShi()
-    F = Callable_Function(M, fs, p)
-    find_zero(F, x0, M, N; tracks=tracks,verbose=verbose, kwargs...)
+    find_zero(fs, x0, M, N; p=p, tracks=tracks,verbose=verbose, kwargs...)
 end
 
-function Base.copy(state::UnivariateZeroState{T,S}) where {T, S}
-    UnivariateZeroState(state.xn1, state.xn0, state.xstar, copy(state.m),
-                        state.fxn1, state.fxn0, state.fxstar, copy(state.fm),
-                        state.steps, state.fnevals,
-                        state.stopped, state.x_converged,
-                        state.f_converged, state.convergence_failed,
-                        state.message)
-end
-
-function Base.copy!(dst::UnivariateZeroState{T,S}, src::UnivariateZeroState{T,S}) where {T,S}
-    dst.xn1 = src.xn1
-    dst.xn0 = src.xn0
-    empty!(dst.m); append!(dst.m, src.m)
-    dst.fxn1 = src.fxn1
-    dst.fxn0 = src.fxn0
-    empty!(dst.fm); append!(dst.fm, src.fm)
-    dst.steps = src.steps
-    dst.fnevals = src.fnevals
-    dst.stopped = src.stopped
-    dst.x_converged = src.x_converged
-    dst.f_converged = src.f_converged
-    dst.convergence_failed = src.convergence_failed
-    dst.message = src.message
-    nothing
-end
 
 # todo: consolidate this with find_zero(M,N,f, x0)...
 function find_zero(fs, x0,
@@ -70,15 +44,12 @@ function find_zero(fs, x0,
                    kwargs...)
 
     F = Callable_Function(M, fs, p)
-    #    state = init_state(M, F, x0)
     state = init_state(M, F, x0)
     options = init_options(M, state; kwargs...)
     l = Tracks(verbose, tracks, state)
 
-    xstar = find_zero(M, N, F, state, options, l)
-    verbose &&  show_trace(M, N, state, l)
-
-    isnan(xstar) && throw(ConvergenceFailed("Stopped at: xn = $(state.xn1). $(state.message)"))
+    xstar = find_zero(M, N, F, state, options, l, verbose)
+    isnan(xstar) && throw(ConvergenceFailed("Stopped"))
 
     return xstar
 
@@ -97,39 +68,48 @@ function find_zero(M::AbstractUnivariateZeroMethod,
                    F,
                    state::AbstractUnivariateZeroState,
                    options::UnivariateZeroOptions,
-                   l::AbstractTracks=NullTracks()
+                   l::AbstractTracks=NullTracks(),
+                   verbose=false
                    )
 
-
+    incfn(l,2)
     log_step(l, M, state, :init)
-    state0 = copy(state)
+    log_method(l,M)
+    log_nmethod(l,N)
+
     quad_ctr = 0
-
+    flag = :not_converged
+    ctr = 0
+    α = NaN*state.xn1
     while true
+        ctr += 1
+        flag, converged = assess_convergence(M, state, options)
 
-        if assess_convergence(M, state, options)
-            break
-        end
+        converged && break
+        ctr >= options.maxevals && break
 
-        copy!(state0, state)
-        update_state(M, F, state0, options) # state0 is proposed step
+        state0 = state
+        state0, stopped = update_state(M, F, state0, options) # state0 is proposed step
 
-        adj = false
         ## did we find a zero or a bracketing interval?
         if iszero(state0.fxn1)
-            copy!(state, state0)
-            state.xstar, state.fxstar = state.xn1, state.fxn1
-            state.f_converged = true
+            state = state0
             break
         elseif sign(state0.fxn0) * sign(state0.fxn1) < 0
-            copy!(state, state0)
-            a, b = state0.xn0, state0.xn1 # could save some fn calls here
-            run_bisection(N, F, (a, b), state)
+
+            !isa(l, NullTracks) && log_message(l, "Used bracketing method $N on  [$(state0.xn0),$(state0.xn1)], those steps not recorded")
+
+            Fₙ = Callable_Function(N, F)
+            stateₙ = init_state(N, state0, Fₙ) # save function calls by using state0 values
+            optionsₙ = init_options(N, stateₙ)
+            α = solve!(init(N, Fₙ, stateₙ, optionsₙ))
             break
+
         end
 
 
         ## did we move too far?
+        adj = false
         r, a, b = state0.xn1, state.xn0, state.xn1
         Δr = abs(r - b)
         Δx = abs(b - a)
@@ -137,24 +117,26 @@ function find_zero(M::AbstractUnivariateZeroMethod,
         if  Δr >= TB * Δx
             adj = true
             r = b + sign(r-b) * TB * Δx  ## too big
-            state0.xn1 = r
-            state0.fxn1 = F(r)
-            incfn(state)
         elseif Δr  <= ts *  Δx
             adj = true
             r = b + sign(r - b) * ts * Δx
-            fr = first(F(r))
-            incfn(state)
-            state0.xn1 = r
-            state0.fxn1 = fr
         end
+
+        @set! state0.xn1 = r
+        @set! state0.fxn1 = first(F(r))
+        incfn(l)
 
         # a sign change after shortening?
         if sign(state.fxn1) * sign(state0.fxn1) < 0
-            state.xn0, state.fxn0 = state.xn1, state.fxn1
-            state.xn1, state.fxn1 = state0.xn1, state0.fxn1
-            a, b = state.xn0, state.xn1
-            run_bisection(N, F, (a, b), state)
+            a, b = state.xn1, state0.xn1
+            fa, fb = state.fxn1, state0.fxn1
+
+            !isa(l, NullTracks) && log_message(l, "Used bracketing method $N on  [$a,$b], those steps not recorded")
+
+            Fₙ = Callable_Function(N, F)
+            stateₙ = init_state(N, Fₙ, a, b, fa, fb)
+            optionsₙ = init_options(N, stateₙ)
+            α = solve!(init(N,Fₙ,stateₙ,optionsₙ))
             break
         end
 
@@ -164,41 +146,40 @@ function find_zero(M::AbstractUnivariateZeroMethod,
             if isnan(state0.xn1) || isnan(state0.fxn1) || isinf(state0.xn1) || isinf(state0.fxn1)
                 break
             end
-            copy!(state, state0)
+            state = state0
             log_step(l, M, state)
-            incsteps(state)
             quad_ctr = 0
             continue
         end
 
         ## try quad_vertex, unless that has gotten old
         if quad_ctr > 4
-            copy!(state, state0)
-            state.stopped = true
+            state = state0
             break
         else
             quad_ctr += 1
             r = quad_vertex(state0.xn1, state0.fxn1, state.xn1, state.fxn1, state.xn0, state.fxn0)
 
             if isnan(r) || isinf(r)
-                copy!(state, state0)
+                state = state0
             else
-
                 fr = F(r)
-                incfn(state)
+                incfn(l)
 
-                state0.xn1 = r
-                state0.fxn1 = fr
-                incfn(state)
-                copy!(state, state0)
+                @set! state0.xn1 = r
+                @set! state0.fxn1 = fr
+                state = state0
             end
         end
-
         log_step(l, M, state)
-        incsteps(state)
     end
 
-    decide_convergence(M, F, state, options)
+    log_state(l, state)
+    verbose && display(l)
+
+    flag, converged = assess_convergence(M, state, options)
+    isnan(α) ? decide_convergence(M, F, state, options, flag) : α
+
 end
 
 # Switch to bracketing method

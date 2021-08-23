@@ -5,7 +5,8 @@
 using Roots
 using Test
 using Unitful
-using SymEngine
+using Polynomials
+using ForwardDiff
 
 @testset "Test composability with other packages" begin
 
@@ -38,8 +39,8 @@ using SymEngine
     end
 
 
-    # SymEngine
-    @testset "find zero(s) with SymEngine" begin
+    # Polynomials
+    @testset "find zero(s) with Polynomials" begin
 
         m = s = 1.0
         g = 9.8*m/s^2
@@ -47,7 +48,7 @@ using SymEngine
         y0 = 16m
         y(t) = -g*t^2 + v0*t + y0
 
-        @vars x
+        x = variable()
         for order in orders
             @test find_zero(y(x), 1.8, order) ≈  1.8860533706680143
         end
@@ -61,6 +62,13 @@ using SymEngine
         @test xrts[1] ≈  1.8860533706680143
     end
 
-
+    # ForwardDiff
+    # taking a derivative of a function that using find_zero.
+    D(f) = x -> ForwardDiff.derivative(f,x)
+    F(x,y) = (x+1)*(x^2+y^2) - 2x^2 # has  loop for x ∈ (0,1)
+    h(x) = find_zero(y -> F(x,y), -1/4 * one(x))  # one(x) to get proper type for D
+    α = find_zero(D(h), (0,1)) # find lowest point on loop
+    @test h(α) ≤ h(α + 0.1)
+    @test h(α) ≤ h(α - 0.1)
 
 end
