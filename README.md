@@ -74,11 +74,7 @@ julia> find_zero(sin, BigFloat(3.0), Order16())
 The `find_zero` function can be used with callable objects:
 
 ```julia
-julia> import Pkg; Pkg.add("Polynomials"); # if not installed
-[...]
-
 julia> using Polynomials;
-[...]
 
 julia> x = variable();
 
@@ -89,9 +85,6 @@ julia> find_zero(x^5 - x - 1, 1.0)
 The function should respect the units of the `Unitful` package:
 
 ```julia
-julia> import Pkg; Pkg.add("Unitful"); # if not installed
-[...]
-
 julia> using Unitful
 
 julia> s = u"s"; m = u"m"
@@ -267,11 +260,7 @@ julia> find_zeros(f, -10, 10)  # -0.815553…,  1.42961…,  8.61317…
 The interval can also be specified using a structure with `extrema` defined, where `extrema` return two different values:
 
 ```julia
-julia> import Pkg; Pkg.add("IntervalSets");
-[...]
-
 julia> using IntervalSets
-[...]
 
 julia> find_zeros(f, -10..10)
 3-element Vector{Float64}:
