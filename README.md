@@ -98,10 +98,10 @@ julia> s = u"s"; m = u"m"
 m
 
 julia> g = 9.8*m/s^2
-9.8 m s⁻²
+9.8 m s^-2
 
 julia> v0 = 10m/s
-10 m s⁻¹
+10 m s^-1
 
 julia> y0 = 16m
 16 m
