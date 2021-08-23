@@ -1087,7 +1087,7 @@ zeros, can lead to misidentification.
 
 The [IntervalRootFinding](https://github.com/JuliaIntervals/IntervalRootFinding.jl) package rigorously identifies isolating intervals for the zeros of a function. This example, from that package's README, is used to illustrate the differences:
 
-```jldoctest interval_root_finding
+```julia
 julia> using IntervalArithmetic, IntervalRootFinding, Roots
 [ Info: Precompiling IntervalRootFinding [d2bf35a9-74e0-55ec-b149-d360ff49b807]
 
@@ -1112,7 +1112,7 @@ julia> find_zeros(f, -10, 10)
 
 Using that in this case, the intervals are bracketing intervals for `f`, we can find the zeros from the `roots` ouput with the following:
 
-```jldoctest interval_root_finding
+```julia
 julia> [find_zero(f, (interval(u).lo, interval(u).hi)) for u ∈ rts if u.status == :unique]
 4-element Vector{Float64}:
   3.1495967624505226
