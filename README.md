@@ -110,9 +110,6 @@ Newton's method can be used without taking derivatives by hand. The
 following use the `ForwardDiff` package:
 
 ```julia
-julia> import Pkg; Pkg.add("ForwardDiff"); # if not installed
-[...]
-
 julia> using ForwardDiff
 
 julia> D(f) = x -> ForwardDiff.derivative(f,float(x))
