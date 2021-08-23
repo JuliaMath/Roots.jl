@@ -1089,6 +1089,7 @@ The [IntervalRootFinding](https://github.com/JuliaIntervals/IntervalRootFinding.
 
 ```jldoctest interval_root_finding
 julia> using IntervalArithmetic, IntervalRootFinding, Roots
+[ Info: Precompiling IntervalRootFinding [d2bf35a9-74e0-55ec-b149-d360ff49b807]
 
 
 julia> f(x) = sin(x) - 0.1*x^2 + 1

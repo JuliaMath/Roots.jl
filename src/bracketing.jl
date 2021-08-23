@@ -180,7 +180,7 @@ function assess_convergence(M::Bisection, state::AbstractUnivariateZeroState{T,S
 
     xtol = max(options.xabstol, max(abs(a), abs(b)) * options.xreltol)
     if b-a ≤ xtol
-        return (:f_converged, true) # not :x_converged
+        return (:x_converged, true)
     end
     ftol = max(options.abstol, max(abs(a), abs(b)) * options.reltol)
     if min(abs(fa), abs(fb)) ≤ ftol
@@ -199,7 +199,7 @@ function assess_convergence(M::BisectionExact, state::UnivariateZeroState{T,S}, 
 
     (iszero(fa) || isnan(fa) || iszero(fb) || isnan(fb)) && return (:f_converged, true)
 
-    nextfloat(a) == b && return (:f_converged, true)
+    nextfloat(a) == b && return (:x_converged, true)
 
     return (:not_converged, false)
 
@@ -290,7 +290,7 @@ function assess_convergence(method::AbstractBracketing, state::AbstractUnivariat
     δₓ = maximum(promote(options.xabstol, M * options.xreltol, sign(options.xreltol) *   eps(M)))
 
     if abs(b-a) <= 2δₓ
-        return (:converged, true)
+        return (:x_converged, true)
     end
 
     # check f

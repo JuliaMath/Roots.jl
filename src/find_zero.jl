@@ -168,13 +168,13 @@ mutable struct Tracks{T,S} <: AbstractTracks
     fs::Vector{S}
     steps::Int
     fncalls::Int
-    convergence_flag::String
+    convergence_flag::Symbol
     message::String
     state
     method
     nmethod
 end
-Tracks(T,S) = Tracks(T[],S[], 0, 0, "", "", nothing, nothing,nothing)
+Tracks(T,S) = Tracks(T[],S[], 0, 0, :not_converged, "", nothing, nothing,nothing)
 Tracks(s::AbstractUnivariateZeroState{T,S}) where {T, S} = Tracks(T,S)
 Tracks(verbose, tracks, state) = (verbose && isa(tracks, NullTracks)) ? Tracks(state) : tracks
 
@@ -192,39 +192,14 @@ function log_step(l::Tracks, M::Any, state, init=nothing)
     nothing
 end
 
-function log_steps(l::Tracks, n=1)
-    l.steps += n
-    nothing
-end
+incfn(l::Tracks, i=1) = (l.fncalls += i; nothing)
+log_steps(l::Tracks, n=1) = (l.steps += n; nothing)
+log_message(l::Tracks, msg) = (l.message *= msg; nothing)
+log_convergence(l::Tracks, msg) = (l.convergence_flag = msg; nothing)
+log_state(l::Tracks, state) = (l.state = state; nothing)
+log_method(l::Tracks, method) = (l.method = method; nothing)
+log_nmethod(l::Tracks, method) = (l.nmethod = method; nothing)
 
-function incfn(l::Tracks, i=1)
-    l.fncalls += i
-    nothing
-end
-
-function log_message(l::Tracks, msg)
-    l.message *= msg
-    nothing
-end
-
-function log_convergence(l::Tracks, msg)
-    l.convergence_flag = string(msg)
-    nothing
-end
-
-function log_state(l::Tracks, state)
-    l.state = state
-    nothing
-end
-
-function log_method(l::Tracks, method)
-    l.method = method
-    nothing
-end
-function log_nmethod(l::Tracks, method)
-    l.nmethod = method
-    nothing
-end
 
 Base.show(io::IO, l::Tracks) = show_trace(io, l.method, l.nmethod, l.state, l)
 
@@ -254,9 +229,8 @@ function show_trace(io::IO, method, N, state, tracks)
         end
         println(io, "* iterations: $(tracks.steps)")
         println("* function evaluations ≈ $(tracks.fncalls)")
-
         tracks.convergence_flag == :x_converged && println(io, "* stopped as x_n ≈ x_{n-1} using atol=xatol, rtol=xrtol")
-        tracks.convergence_flag == :f_converged && state.message == "" && println(io, "* stopped as |f(x_n)| ≤ max(δ, max(1,|x|)⋅ϵ) using δ = atol, ϵ = rtol")
+        tracks.convergence_flag == :f_converged && tracks.message == "" && println(io, "* stopped as |f(x_n)| ≤ max(δ, |x|⋅ϵ) using δ = atol, ϵ = rtol")
         tracks.message != "" && println(io, "* Note: $(tracks.message)")
     else
         println(io, "* Convergence failed: $(tracks.message)")
@@ -662,12 +636,9 @@ function find_zero(fs, x0, M::AbstractUnivariateZeroMethod;
                    tracks::AbstractTracks=NullTracks(),
                    kwargs...)
 
-    Z = ZeroProblem(fs, x0)
-    ZPI = init(Z, M, p;
-               verbose=verbose, tracks=tracks,
-               kwargs...)
-
-    xstar = solve!(ZPI; verbose=verbose)
+    xstar = solve(ZeroProblem(fs, x0), M;
+                  p=p, verbose=verbose, tracks=tracks,
+                  kwargs...)
 
     isnan(xstar) && throw(ConvergenceFailed("Algorithm failed to converge"))
 
