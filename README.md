@@ -226,6 +226,7 @@ julia> solve(Z, Order1()) ≈ 1.0298665293222586     # use p=2 default
 true
 
 julia> solve(Z, Order1(), p=3) ≈ 1.170120950002626 # use p=3
+true
 ```
 
 ### Multiple zeros
