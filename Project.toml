@@ -9,17 +9,18 @@ Setfield = "efcf1570-3423-57d1-acb7-fd33fddbac46"
 
 [compat]
 CommonSolve = "0.1, 0.2"
+Setfield = "0.7"
 SpecialFunctions = "0.8, 0.9, 0.10, 1.0"
 julia = "1.0"
 
 [extras]
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+Polynomials = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
-ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
-Polynomials = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
 Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
 [targets]
