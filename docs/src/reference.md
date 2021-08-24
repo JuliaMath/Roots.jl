@@ -208,7 +208,7 @@ The problem-algorithm-solve interface is a pattern popularized in `Julia` by the
 
 ```@docs
 Roots.solve!
-````
+```
 
 
 ## Matlab interface
