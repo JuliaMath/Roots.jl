@@ -450,10 +450,9 @@ julia> find_zero(D(f), 1)
 
 ```
 
-For more complicated expressions, `D` will not work, and other means
-of finding a derivative can be employed. In
-this example, we have a function that models the flight
-of an arrow on a windy day:
+For more complicated expressions, `D` may need some technical
+adjustments to be employed. In this example, we have a function that
+models the flight of an arrow on a windy day:
 
 ```jldoctest roots
 julia> function flight(x, theta)
@@ -586,15 +585,6 @@ julia> try find_zero(f, x0)  catch err  "Convergence failed" end
 
 ```
 
-Whereas,
-
-```jldoctest roots
-julia> try find_zero(f, x0, Order2())  catch err  "Convergence failed" end
-"Convergence failed"
-
-
-```
-
 A graph shows the issue. Running the following shows ``15`` steps of Newton's
 method, the other algorithms being somewhat similar:
 
@@ -649,7 +639,7 @@ true
 
 
 We see the function values are close for each point, as the maximum difference
-is like $10^{15}$. This is roughly as expected, where even one
+is like $10^{-15}$. This is roughly as expected, where even one
 addition may introduce a relative error as big as $2\cdot 10^{-16}$ and here
 there are several such.
 
@@ -834,6 +824,14 @@ tolerance must be relatively generous.  A conservative choice of
 absolute tolerance might be `sqrt(eps())`, or about `1e-8`,
 essentially the one made in SciPy.
 
+Though this tolerance won't be able to work really large values:
+
+```
+julia> find_zero(x -> sqrt(eps()) - eps(x), (0,Inf))
+9.981132799999999e7
+```
+
+
 This is not the choice made in `Roots`. The fact that bisection can
 produce zeros as exact as possible, and the fact that the error in
 function evaluation, $f'(x)|x|\epsilon$, is not typically on the scale
@@ -885,7 +883,7 @@ increasing order.  It is assumed that neither endpoint is a zero.
 ----
 
 
-The search for all zeros in an interval is confounded by a few things:
+The algorithm used to search for all zeros in an interval is confounded by a few things:
 
 * too many zeros in the interval $(a,b)$
 * nearby zeros ("nearby" depends on the size of $(a,b)$ as well should this be very wide)
