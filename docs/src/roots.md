@@ -485,7 +485,7 @@ howfar (generic function with 1 method)
 To visualize the trajectory if shot at ``45`` degrees, we would have:
 
 
-```julia
+```
 flight(x, theta) = (k = 1/2;a = 200*cosd(theta);b = 32/k;tand(theta)*x + (b/a)*x - b*log(a/(a-x))); nothing
 howfar(theta) = (a = 200*cosd(theta);find_zero(x -> flight(x, theta), a-5)); nothing
 
@@ -513,7 +513,7 @@ julia> tstar = find_zero(D(howfar), 45)
 
 This graph would show the differences in the trajectories:
 
-```julia
+```
 plot(x -> flight(x, 45), 0, howfar(45))
 plot!(x -> flight(x, tstar), 0, howfar(tstar))
 ```
