@@ -473,13 +473,12 @@ This can be solved for different `theta` with `find_zero`. In the
 following, we note that `log(a/(a-x))` will have an asymptote at `a`,
 so we start our search at `a-5`:
 
-```jldoctest roots
+```
 julia> function howfar(theta)
          a = 200*cosd(theta)
          find_zero(x -> flight(x, theta), a-5)  # starting point has type determined by `theta`.
         end
 howfar (generic function with 1 method)
-
 ```
 
 To visualize the trajectory if shot at ``45`` degrees, we would have:
@@ -505,7 +504,7 @@ The automatic differentiation provided by `ForwardDiff` will
 work through a call to `find_zero` **if** the initial point has the proper type (depending on an expression of `theta` in this case).
 As we use `200*cosd(theta)-5` for a starting point, this is satisfied.
 
-```jldoctest roots
+```
 julia> tstar = find_zero(D(howfar), 45)
 26.262308916287818
 
