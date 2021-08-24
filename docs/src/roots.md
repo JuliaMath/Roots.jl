@@ -15,7 +15,6 @@ julia> using Roots
 
 julia> using Plots, ForwardDiff
 
-
 ```
 
 ## Bracketing
