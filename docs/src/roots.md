@@ -7,10 +7,13 @@ function `find_zero`, which through multiple dispatch can handle many different 
 
 The [NonlinearSolve](https://github.com/JuliaComputing/NonlinearSolve.jl) package provides an alternative.
 
-In the following, we will use  `ForwardDiff` to take derivatives.
+In the following, we will use `Plots` for plotting and `ForwardDiff`
+to take derivatives.
 
 ```jldoctest roots
-julia> using Roots, ForwardDiff
+julia> using Roots
+
+julia> using Plots, ForwardDiff
 
 ```
 
@@ -30,8 +33,19 @@ roundoff. That is, given `f(a) * f(b) < 0`, a value `c` with `a < c < b` can be
 found where either `f(c) == 0.0` or  `f(prevfloat(c)) * f(c) < 0` or
 `f(c) * f(nextfloat(c)) < 0`.
 
-To illustrate, consider the function $f(x) = \cos(x) - x$. From a
-graph we can see readily that $[0,1]$ is a bracket
+To illustrate, consider the function $f(x) = \cos(x) - x$. From the
+graph we see readily that $[0,1]$ is a bracket (which we emphasize
+with an overlay):
+
+```@example roots
+using Plots, Roots
+f(x) = cos(x) - x
+plot(f, -2, 2)
+plot!([0,1], [0,0], linewidth=2)
+savefig("plot-f-1.svg"); nothing #hide
+```
+
+![](plot-f-1.svg)
 
 The `Roots` package includes the bisection algorithm through
 `find_zero`. We use a structure for which `extrema` returns `(a,b)`
@@ -118,7 +132,7 @@ julia> find_zero(sin, (3,4), Roots.A42())
 3.141592653589793
 ```
 
-This takes ``9`` function evaluations, the default method takes ``53``. The method is specified above in the third positional argument by `Roots.A42()`. This method is not exported, so must be qualified.
+This takes ``9`` function evaluations, the default bisection method takes ``53``. The method is specified above in the third positional argument by `Roots.A42()`. This method is not exported, so must be qualified.
 
 
 By default, bisection will converge to machine tolerance. This may
@@ -347,6 +361,8 @@ For many functions, their derivatives can be computed automatically. The
 to compute a derivative:
 
 ```jldoctest roots
+julia> using ForwardDiff
+
 julia> function D(f, n::Int=1)
            n <= 0 && return f
            n == 1 && return x -> ForwardDiff.derivative(f,float(x))
@@ -434,6 +450,7 @@ julia> solve(Z, Bisection(), 3)
 1.1701209500026262
 ```
 
+
 ## Finding critical points
 
 The `D` function, defined above, makes it straightforward to find critical points
@@ -450,9 +467,10 @@ julia> find_zero(D(f), 1)
 
 ```
 
-For more complicated expressions, `D` may need some technical
-adjustments to be employed. In this example, we have a function that
-models the flight of an arrow on a windy day:
+For more complicated expressions, `D` will not work, and other means
+of finding a derivative can be employed. In
+this example, we have a function that models the flight
+of an arrow on a windy day:
 
 ```jldoctest roots
 julia> function flight(x, theta)
@@ -472,49 +490,65 @@ This can be solved for different `theta` with `find_zero`. In the
 following, we note that `log(a/(a-x))` will have an asymptote at `a`,
 so we start our search at `a-5`:
 
-```
+```jldoctest roots
 julia> function howfar(theta)
          a = 200*cosd(theta)
-         find_zero(x -> flight(x, theta), a-5)  # starting point has type determined by `theta`.
+         find_zero(x -> flight(x, theta), a-5)
         end
 howfar (generic function with 1 method)
-```
-
-To visualize the trajectory if shot at ``45`` degrees, we would have:
-
 
 ```
+
+To visualize the trajectory if shot at 45 degrees, we have:
+
+
+```@example roots
 flight(x, theta) = (k = 1/2;a = 200*cosd(theta);b = 32/k;tand(theta)*x + (b/a)*x - b*log(a/(a-x))); nothing
 howfar(theta) = (a = 200*cosd(theta);find_zero(x -> flight(x, theta), a-5)); nothing
+howfarp(theta,h=1e-5) = (howfar(theta+h) - howfar(theta-h)) / (2h); nothing
+tstar = find_zero(howfarp, 45); nothing  # hide
 
 theta = 45
-tstar = find_zero(howfarp, 45)
-
-using Plots
 plot(x -> flight(x,  theta), 0, howfar(theta))
+savefig("flight.svg"); nothing # hide
 ```
 
+![](flight.svg)
 
 
 To maximize the range we solve for the lone critical point of `howfar`
 within reasonable starting points.
 
-The automatic differentiation provided by `ForwardDiff` will
-work through a call to `find_zero` **if** the initial point has the proper type (depending on an expression of `theta` in this case).
-As we use `200*cosd(theta)-5` for a starting point, this is satisfied.
 
-```
-julia> tstar = find_zero(D(howfar), 45)
+In this example, the automatic derivative of a function defined using `find_zero` *can* be taken as long
+as the starting type depends on the input. In our case, `a-5` depends on the input `theta`, so it would work. (That is `ForwardDiff.derivative(howfar, 45)` would be defined.)
+
+However, in the following we using instead a central-difference approximation and start the
+search at 45 degrees--the angle which maximizes the trajectory on a
+non-windy day:
+
+```jldoctest roots
+julia> h = 1e-5
+1.0e-5
+
+julia> howfarp(theta) = (howfar(theta+h) - howfar(theta-h)) / (2h)
+howfarp (generic function with 1 method)
+
+julia> tstar = find_zero(howfarp, 45)
 26.262308916287818
 
 ```
 
-This graph would show the differences in the trajectories:
+This graph shows the differences in the trajectories:
 
-```
+```@example roots
 plot(x -> flight(x, 45), 0, howfar(45))
 plot!(x -> flight(x, tstar), 0, howfar(tstar))
+savefig("flight-2.svg"); nothing #hide
 ```
+
+![](flight-2.svg)
+
 
 
 ## Potential issues
@@ -585,10 +619,13 @@ julia> try find_zero(f, x0)  catch err  "Convergence failed" end
 
 ```
 
-A graph shows the issue. Running the following shows ``15`` steps of Newton's
+
+A graph shows the issue. We have overlayed ``15`` steps of Newton's
 method, the other algorithms being somewhat similar:
 
-```julia
+```@example roots
+using ForwardDiff
+D(f) = x -> ForwardDiff.derivative(f,float(x))
 xs = [0.1] # x0
 n = 15
 for i in 1:(n-1) push!(xs, xs[end] - f(xs[end])/D(f)(xs[end])) end
@@ -597,9 +634,12 @@ xs = xs[repeat(collect(1:n), inner=[2], outer=[1])]
 plot(f, -1.25, 1.5, linewidth=3, legend=false)
 plot!(zero, -1.25, 1.5, linewidth=3)
 plot!(xs, ys)
+savefig("newton-15.svg"); nothing #hide
 ```
 
-Only a few of the steps are discernible, as the function's relative maximum
+![](newton-15.svg)
+
+Though ``15`` steps are shown, only a few are discernible, as the function's relative maximum
 causes a trap for this algorithm. Starting to the right of the
 relative minimum--nearer the zero--would avoid this trap. The default
 method employs a trick to bounce out of such traps, though it doesn't
@@ -639,7 +679,7 @@ true
 
 
 We see the function values are close for each point, as the maximum difference
-is like $10^{-15}$. This is roughly as expected, where even one
+is like $10^{15}$. This is roughly as expected, where even one
 addition may introduce a relative error as big as $2\cdot 10^{-16}$ and here
 there are several such.
 
@@ -652,7 +692,7 @@ small differences might matter. Here we look at the signs of the
 function values for a run of the above:
 
 
-```julia
+```
 julia> fs = sign.(f.(ns));
 
 julia> f1s = sign.(f1.(ns));
@@ -824,14 +864,6 @@ tolerance must be relatively generous.  A conservative choice of
 absolute tolerance might be `sqrt(eps())`, or about `1e-8`,
 essentially the one made in SciPy.
 
-Though this tolerance won't be able to work really large values:
-
-```
-julia> find_zero(x -> sqrt(eps()) - eps(x), (0,Inf))
-9.981132799999999e7
-```
-
-
 This is not the choice made in `Roots`. The fact that bisection can
 produce zeros as exact as possible, and the fact that the error in
 function evaluation, $f'(x)|x|\epsilon$, is not typically on the scale
@@ -877,13 +909,63 @@ julia> zs = find_zeros(f, a, b)
 The search interval, $(a,b)$, is specified either through two
 arguments or through a single argument using a structure, such as a
 tuple or vector, where `extrema` returns two distinct values in
-increasing order.  It is assumed that neither endpoint is a zero.
+increasing order.  It is assumed that neither endpoint is a zero. Here
+we see the result of the search graphically:
 
+```@example roots
+f(x) = exp(x) - x^4; nothing
+a,b=-10, 10; nothing
+zs = find_zeros(f, a, b); nothing
+plot(f, a, b)
+scatter!(zs, f.(zs))
+savefig("plot-f-2.svg"); nothing #hide
+```
+
+![](plot-f-2.svg)
+
+
+We can identify points where the first and second derivative is
+zero. We use `D` from above:
+
+
+```@example roots
+f(x) = cos(x) + cos(2x)
+a, b = -10, 10
+cps = find_zeros(D(f), a, b)
+ips = find_zeros((D∘D)(f), a, b)
+plot(f, a, b)
+scatter!(cps, f.(cps))
+scatter!(ips, f.(ips), markercolor = :yellow)
+savefig("plot-f-3.svg"); nothing
+```
+
+![](plot-f-3.svg)
+
+
+The `find_zeros` algorithm will use bisection when a bracket is
+identified. This method will identify jumps, so areas where the
+derivative changes sign (and not necessarily a zero of the derivative)
+will typically be identified:
+
+```@example roots
+f(x) = abs(cbrt(x^2-1))
+a, b = -5, 5
+cps = find_zeros(D(f), a, b)
+plot(f, a, b)
+scatter!(cps, f.(cps))
+savefig("plot-f-4.svg"); nothing
+```
+
+![](plot-f-4.svg)
+
+In this example, the derivative has vertical asymptotes at $x=1$ and
+$x=-1$ so is not continuous there. The bisection method identifies the
+zero crossing, not a zero.
 
 ----
 
 
-The algorithm used to search for all zeros in an interval is confounded by a few things:
+The search for all zeros in an interval is confounded by a few things:
 
 * too many zeros in the interval $(a,b)$
 * nearby zeros ("nearby" depends on the size of $(a,b)$ as well should this be very wide)
@@ -898,8 +980,12 @@ Here the algorithm identifies all the zeros, despite there being several:
 f(x) = cos(x)^2 + cos(x^2)
 a, b = 0, 10
 rts = find_zeros(f, a, b)
-length(rts)
+plot(f, a, b)
+scatter!(rts, f.(rts))
+savefig("plot-f-4a.svg"); nothing
 ```
+
+![](plot-f-4a.svg)
 
 
 For nearby zeros, the algorithm does pretty well, though it isn't
@@ -910,9 +996,13 @@ $0$--it finds many:
 
 ```@example roots
 f(x) = iszero(x) ? NaN : sin(1/x)  # avoid sin(Inf) error
-rts = find_zeros(f, -1, 1)
-length(rts) # 88 zeros identified
+rts = find_zeros(f, -1, 1)  # 88 zeros identified
+plot(f, -1, 1)
+scatter!(rts, f.(rts))
+savefig("plot-f-5.svg"); nothing
 ```
+
+![](plot-f-5.svg)
 
 The function, $f(x) = (x-0.5)^3 \cdot (x-0.499)^3$, looks *too* much like
 $g(x) = x^6$ to `find_zeros` for success, as the two zeros are very nearby:
@@ -966,6 +1056,8 @@ The [IntervalRootFinding](https://github.com/JuliaIntervals/IntervalRootFinding.
 
 ```julia
 julia> using IntervalArithmetic, IntervalRootFinding, Roots
+[ Info: Precompiling IntervalRootFinding [d2bf35a9-74e0-55ec-b149-d360ff49b807]
+
 
 julia> f(x) = sin(x) - 0.1*x^2 + 1
 f (generic function with 1 method)
