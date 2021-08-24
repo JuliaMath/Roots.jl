@@ -433,3 +433,87 @@ julia> solve(Z, Roots.Secant(), 2) # p=2
 julia> solve(Z, Bisection(), 3)
 1.1701209500026262
 ```
+
+## Finding critical points
+
+The `D` function, defined above, makes it straightforward to find critical points
+(typically where the derivative is $0$ but also where it is undefined). For example, the critical
+point of the function $f(x) = 1/x^2 + x^3, x > 0$ near $1.0$ is where
+the derivative is $0$ and can be found through:
+
+```jldoctest roots
+julia> f(x) = 1/x^2 + x^3
+f (generic function with 1 method)
+
+julia> find_zero(D(f), 1)
+0.9221079114817278
+
+```
+
+For more complicated expressions, `D` will not work, and other means
+of finding a derivative can be employed. In
+this example, we have a function that models the flight
+of an arrow on a windy day:
+
+```jldoctest roots
+julia> function flight(x, theta)
+         k = 1/2
+         a = 200*cosd(theta)
+         b = 32/k
+         tand(theta)*x + (b/a)*x - b*log(a/(a-x))
+       end
+flight (generic function with 1 method)
+
+```
+
+
+
+The total distance flown is when `flight(x) == 0.0` for some `x > 0`:
+This can be solved for different `theta` with `find_zero`. In the
+following, we note that `log(a/(a-x))` will have an asymptote at `a`,
+so we start our search at `a-5`:
+
+```jldoctest roots
+julia> function howfar(theta)
+         a = 200*cosd(theta)
+         find_zero(x -> flight(x, theta), a-5)  # starting point has type determined by `theta`.
+        end
+howfar (generic function with 1 method)
+
+```
+
+To visualize the trajectory if shot at ``45`` degrees, we would have:
+
+
+```julia
+flight(x, theta) = (k = 1/2;a = 200*cosd(theta);b = 32/k;tand(theta)*x + (b/a)*x - b*log(a/(a-x))); nothing
+howfar(theta) = (a = 200*cosd(theta);find_zero(x -> flight(x, theta), a-5)); nothing
+
+theta = 45
+tstar = find_zero(howfarp, 45)
+
+using Plots
+plot(x -> flight(x,  theta), 0, howfar(theta))
+```
+
+
+
+To maximize the range we solve for the lone critical point of `howfar`
+within reasonable starting points.
+
+The automatic differentiation provided by `ForwardDiff` will
+work through a call to `find_zero` **if** the initial point has the proper type (depending on an expression of `theta` in this case).
+As we use `200*cosd(theta)-5` for a starting point, this is satisfied.
+
+```jldoctest roots
+julia> tstar = find_zero(D(howfar), 45)
+26.262308916287818
+
+```
+
+This graph would show the differences in the trajectories:
+
+```julia
+plot(x -> flight(x, 45), 0, howfar(45))
+plot!(x -> flight(x, tstar), 0, howfar(tstar))
+```
