@@ -58,17 +58,17 @@ julia> using Roots
 julia> f(x) =  x^5 - x + 1/2
 f (generic function with 1 method)
 
-julia> find_zero(f, (-1.2,  -1))
--1.0983313019186336
+julia> find_zero(f, (-1.2,  -1)) ≈ -1.0983313019186336
+true
 ```
 
 The default algorithm is guaranteed to have an  answer nearly as accurate as is  possible  given the limitations of floating point  computations.
 
 For the zeros "near" a point,  a non-bracketing method is often used, as generally  the algorithms are more efficient and can be  used in cases where a zero does  not. Passing just  the initial point will dispatch to  such a method:
 
-```jjdoctest find_zero
-julia> find_zero(f,  0.6)
-0.550606579334135
+```jldoctest find_zero
+julia> find_zero(f,  0.6) ≈ 0.550606579334135
+true
 ```
 
 

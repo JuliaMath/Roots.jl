@@ -46,29 +46,31 @@ julia> using Roots
 
 julia> f(x) = exp(x) - x^4;
 
-julia> find_zero(f, (8,9), Bisection()) # a bisection method has the bracket specified
-8.6131694564414
+julia> α₀,α₁,α₂ = -0.8155534188089607, 1.4296118247255556, 8.6131694564414;
 
-julia> find_zero(f, (-10, 0))  # Bisection is default if x in `find_zero(f,x)` is not a number
--0.8155534188089607
+julia> find_zero(f, (8,9), Bisection()) ≈ α₂ # a bisection method has the bracket specified
+true
+
+julia> find_zero(f, (-10, 0)) ≈ α₀ # Bisection is default if x in `find_zero(f,x)` is not a number
+true
 
 
-julia> find_zero(f, (-10, 0), Roots.A42())  # fewer function evaluations
--0.8155534188089607
+julia> find_zero(f, (-10, 0), Roots.A42()) ≈ α₀ # fewer function evaluations
+true
 ```
 
 For non-bracketing methods, the initial position is passed in as a
 scalar:
 
 ```julia
-julia> find_zero(f, 3)   # find_zero(f, x0::Number) will use Order0()
-1.4296118247255556
+julia> find_zero(f, 3) ≈ α₁  # find_zero(f, x0::Number) will use Order0()
+true
 
-julia> find_zero(f, 3, Order1()) # same answer, different method (secant)
-1.4296118247255556
+julia> find_zero(f, 3, Order1()) ≈ α₁ # same answer, different method (secant)
+true
 
-julia> find_zero(sin, BigFloat(3.0), Order16())
-3.141592653589793238462643383279502884197169399375105820974944592307816406286198
+julia> find_zero(sin, BigFloat(3.0), Order16()) ≈ π
+true
 ```
 
 The `find_zero` function can be used with callable objects:
@@ -78,8 +80,8 @@ julia> using Polynomials;
 
 julia> x = variable();
 
-julia> find_zero(x^5 - x - 1, 1.0)
-1.1673039782614187
+julia> find_zero(x^5 - x - 1, 1.0) ≈ 1.1673039782614187
+true
 ```
 
 The function should respect the units of the `Unitful` package:
@@ -87,23 +89,16 @@ The function should respect the units of the `Unitful` package:
 ```julia
 julia> using Unitful
 
-julia> s = u"s"; m = u"m"
-m
+julia> s, m  = u"s", u"m";
 
-julia> g = 9.8*m/s^2
-9.8 m s^-2
+julia> g, v₀, y₀ = 9.8*m/s^2, 10m/s, 16m;
 
-julia> v0 = 10m/s
-10 m s^-1
 
-julia> y0 = 16m
-16 m
-
-julia> y(t) = -g*t^2 + v0*t + y0
+julia> y(t) = -g*t^2 + v₀*t + y₀
 y (generic function with 1 method)
 
-julia> find_zero(y, 1s)      # 1.886053370668014 s
-1.8860533706680143 s
+julia> find_zero(y, 1s)  ≈ 1.886053370668014s
+true
 ```
 
 Newton's method can be used without taking derivatives by hand. The
@@ -125,8 +120,8 @@ f (generic function with 1 method)
 julia> x0 = 2
 2
 
-julia> find_zero((f,D(f)), x0, Roots.Newton())
-2.0945514815423265
+julia> find_zero((f,D(f)), x0, Roots.Newton()) ≈ 2.0945514815423265
+true
 ```
 
 Automatic derivatives allow for easy solutions to finding critical
@@ -140,14 +135,14 @@ julia> as = rand(5);
 julia> M(x) = sum([(x-a)^2 for a in as])
 M (generic function with 1 method)
 
-julia> find_zero(D(M), .5) - mean(as)
-0.0
+julia> find_zero(D(M), .5) ≈ mean(as)
+true
 
 julia> med(x) = sum([abs(x-a) for a in as])
 med (generic function with 1 method)
 
-julia> find_zero(D(med), (0, 1)) - median(as)
-0.0
+julia> find_zero(D(med), (0, 1)) ≈ median(as)
+true
 ```
 
 ### The CommonSolve interface
@@ -170,8 +165,8 @@ julia> x0 = 2.0
 julia> fx = ZeroProblem(f,x0)
 ZeroProblem{typeof(f), Float64}(f, 2.0)
 
-julia> solve(fx)
-0.7728829591492101
+julia> solve(fx) ≈ 0.7728829591492101
+true
 ```
 
 With no default, and a single initial point specified, the default
@@ -181,8 +176,8 @@ the `Order2` method using a convergence criteria (see below) that
 `|xₙ - xₙ₋₁| ≤ δ`, we could make this call:
 
 ```julia
-julia> solve(fx, Order2(), atol=0.0, rtol=0.0)
-0.7728829591492101
+julia> solve(fx, Order2(), atol=0.0, rtol=0.0) ≈ 0.7728829591492101
+true
 ```
 
 Unlike `find_zero`, which errors on non-convergence, `solve` returns
@@ -227,11 +222,11 @@ f (generic function with 2 methods)
 julia> Z = ZeroProblem(f, pi/4)
 ZeroProblem{typeof(f), Float64}(f, 0.7853981633974483)
 
-julia> solve(Z, Order1()) # use p=2 default
-1.0298665293222586
+julia> solve(Z, Order1()) ≈ 1.0298665293222586     # use p=2 default
+true
 
-julia> solve(Z, Order1(), p=3)
-1.170120950002626
+julia> solve(Z, Order1(), p=3) ≈ 1.170120950002626 # use p=3
+true
 ```
 
 ### Multiple zeros
@@ -247,11 +242,8 @@ results should be confirmed by other means.
 julia> f(x) = exp(x) - x^4
 f (generic function with 2 methods)
 
-julia> find_zeros(f, -10, 10)  # -0.815553…,  1.42961…,  8.61317…
-3-element Vector{Float64}:
- -0.8155534188089606
-  1.4296118247255556
-  8.613169456441398
+julia> find_zeros(f, -10,10) ≈ [α₀,α₁,α₂] # from above
+true
 ```
 
 The interval can also be specified using a structure with `extrema` defined, where `extrema` return two different values:
@@ -259,11 +251,8 @@ The interval can also be specified using a structure with `extrema` defined, whe
 ```julia
 julia> using IntervalSets
 
-julia> find_zeros(f, -10..10)
-3-element Vector{Float64}:
- -0.8155534188089606
-  1.4296118247255556
-  8.613169456441398
+julia> find_zeros(f, -10..10) ≈ [α₀,α₁,α₂]
+true
 ```
 
 (For tougher problems, the [IntervalRootFinding](https://github.com/JuliaIntervals/IntervalRootFinding.jl) package gives guaranteed results, rather than the heuristically identified values returned by `find_zeros`.)
@@ -322,21 +311,18 @@ MATLAB users. `Roots` also provides this alternative interface:
 julia> f(x) = exp(x) - x^4
 f (generic function with 2 methods)
 
-julia> fzero(f, 8, 9)    # bracketing
-8.6131694564414
+julia> fzero(f, 8, 9) ≈ α₂   # bracketing
+true
 
-julia> fzero(f, -10, 0)
--0.8155534188089607
+julia> fzero(f, -10, 0) ≈ α₀
+true
 
-julia> fzeros(f, -10, 10)
-3-element Vector{Float64}:
- -0.8155534188089606
-  1.4296118247255556
-  8.613169456441398
+julia> fzeros(f, -10, 10) ≈ [α₀, α₁, α₂]
+true
 
-julia> fzero(f, 3)       # default is Order0()
-1.4296118247255556
+julia> fzero(f, 3) ≈ α₁      # default is Order0()
+true
 
-julia> fzero(sin, big(3), order=16)  # uses higher order method
-3.141592653589793238462643383279502884197169399375105820974944592307816406286198
+julia> fzero(sin, big(3), order=16)  ≈ π # uses higher order method
+true
 ```
