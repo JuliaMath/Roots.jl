@@ -102,7 +102,7 @@ end
 """
     Roots.newton(f, fp, x0; kwargs...)
 
-Implementation of Newton's method: `x_n1 = x_n - f(x_n)/ f'(x_n)`
+Implementation of Newton's method: `xᵢ₊₁ =  xᵢ - f(xᵢ)/f'(xᵢ)`.
 
 Arguments:
 
@@ -117,7 +117,7 @@ With the `FowardDiff` package derivatives may be computed automatically. For exa
 
 Keyword arguments are passed to `find_zero` using the `Roots.Newton()` method.
 
-See also `Roots.newton((f,fp), x0) and `Roots.newton(fΔf, x0)` for simpler implementations.
+See also `Roots.newton((f,fp), x0)` and `Roots.newton(fΔf, x0)` for simpler implementations.
 
 """
 newton(f, fp, x0; kwargs...) = find_zero((f, fp), x0, Newton(); kwargs...)

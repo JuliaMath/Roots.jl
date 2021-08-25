@@ -107,8 +107,7 @@ The default tolerances for most methods are `xatol=eps(T)`,
 units (absolute tolerances have the units of `x` and `f(x)`; relative
 tolerances are unitless). For `Complex{T}` values, `T` is used.
 
-The number of iterations is limited by `maxevals=40`, the number of
-function evaluations is not capped.
+The number of iterations is limited by `maxevals=40`.
 
 """
 default_tolerances(M::AbstractUnivariateZeroMethod) = default_tolerances(M, Float64, Float64)
@@ -327,15 +326,15 @@ end
 end
 
 """
-   Roots.assess_convergence(method, state, options)
+    Roots.assess_convergence(method, state, options)
 
 Assess if algorithm has converged.
 
 Return a convergence flag and a boolean indicating if algorithm has terminated (converged or not converged)
 
-If alogrithm hasn't converged returns `false`.
+If algrithm hasn't converged returns `(:not_converged, false)`.
 
-If algorithm has stopped or converged, return `true` and a flag:
+If algorithm has stopped or converged, return flag and `true`. Flags are:
 
 * `:x_converged` if `abs(xn1 - xn0) < max(xatol, max(abs(xn1), abs(xn0)) * xrtol)`
 
@@ -347,7 +346,7 @@ If algorithm has stopped or converged, return `true` and a flag:
 
 Does not check number of steps taken nor number of function evaluations.
 
-In `find_zero`, stopped values (and `:x_converged`) are checked for convergence with a relaxed tolerance.
+In `decide_convergence`, stopped values (and `:x_converged` when `strict=false`) are checked for convergence with a relaxed tolerance.
 
 
 """
@@ -373,9 +372,7 @@ function assess_convergence(method::Any, state::AbstractUnivariateZeroState{T,S}
 
     # stop when xn1 ~ xn.
     # in find_zeros there is a check that f could be a zero with a relaxed tolerance
-    Δ = abs(xn1 - xn0)
-    δ = max(options.xabstol, max(abs(xn1), abs(xn0)) * options.xreltol)
-    if Δ ≤ δ
+    if isapprox(xn1, xn0, atol=options.xabstol, rtol=options.xreltol)
         return (:x_converged, true)
     end
 

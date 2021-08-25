@@ -14,9 +14,9 @@ step fails to decrease the function value, a quadratic step is used up
 to 4 times.
 
 This is not really 0-order: the secant method has order
-1.6...[Wikipedia](https://en.wikipedia.org/wiki/Secant_method#Comparison_with_other_root-finding_methods_
+1.6... [Wikipedia](https://en.wikipedia.org/wiki/Secant_method#Comparison_with_other_root-finding_methods)
 and the the bracketing method has order
-1.6180...[Wikipedia](http://www.ams.org/journals/mcom/1993-61-204/S0025-5718-1993-1192965-2/S0025-5718-1993-1192965-2.pdf)
+1.6180... [Wikipedia](http://www.ams.org/journals/mcom/1993-61-204/S0025-5718-1993-1192965-2/S0025-5718-1993-1192965-2.pdf)
 so for reasonable starting points and functions, this algorithm should be
 superlinear, and relatively robust to non-reasonable starting points.
 

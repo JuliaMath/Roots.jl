@@ -29,9 +29,10 @@ tolerances are set to zero (the default) guarantees a "best" solution
 (one where a zero is found or the bracketing interval is of the type
 `[a, nextfloat(a)]`).
 
-When tolerances are given, this algorithm terminates when the midpoint
-is approximately equal to an endpoint using absolute tolerance `xatol`
-and relative tolerance `xrtol`.
+When tolerances are given, this algorithm terminates when the interval
+length is less than or equal to the tolerance
+`max(xtol, max(abs(a), abs(b)) * .xrtol)`.
+
 
 When a zero tolerance is given and the values are not `Float64`
 values, this will call the [`A42`](@ref) method.
@@ -110,7 +111,7 @@ algorithm is guaranteed to converge to an exact zero, or a point where
 the function changes sign at one of the answer's adjacent floating
 point values.
 
-For other types,  the [`A42`](@ref) method (with its tolerances) is used.
+For other types,  the [`Roots.A42`](@ref) method (with its tolerances) is used.
 
 """
 function default_tolerances(::AbstractBisection, ::Type{T}, ::Type{S}) where {T,S}
@@ -178,10 +179,11 @@ function assess_convergence(M::Bisection, state::AbstractUnivariateZeroState{T,S
     a,b = state.xn0, state.xn1
     fa,fb = state.fxn0, state.fxn1
 
-    xtol = max(options.xabstol, max(abs(a), abs(b)) * options.xreltol)
-    if b-a ≤ xtol
+
+    if isapprox(a, b, atol=options.xabstol, rtol = options.xreltol)
         return (:x_converged, true)
     end
+
     ftol = max(options.abstol, max(abs(a), abs(b)) * options.reltol)
     if min(abs(fa), abs(fb)) ≤ ftol
         return (:f_converged, true)

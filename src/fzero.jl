@@ -59,9 +59,9 @@ fzero(sin, (3, 3.1), order=2)  # use Steffensen's method with x_0=3.0, x_1 = 3.1
 fzero(sin, cos, 3)             # use Newton's method
 ```
 
-Note: unlike `find_zero`, `fzero` does not specialize on the type of
-the function argument. This has the advantage of making the first use
-of the function `f` faster, but subsequent uses slower.
+!!!Note:
+    Unlike `find_zero`, `fzero` does not specialize on the type of the function argument.
+    This has the advantage of making the first use of the function `f` faster, but subsequent uses slower.
 
 """
 function fzero(f, x0::Number; kwargs...)

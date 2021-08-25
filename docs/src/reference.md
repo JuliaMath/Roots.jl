@@ -23,7 +23,7 @@ CurrentModule = Roots
 
 ##  The `find_zero`  and `find_zeros` functions
 
-There are  two main  functions:  `find_zero`   to  identify  a  zero  of  ``f``  given  some initial starting  value or  bracketing i nterval and  `find_zeros` to heuristically identify  all  zeros in  a specified interval.
+There are  two main  functions:  `find_zero`   to  identify  a  zero  of  ``f``  given  some initial starting  value or  bracketing interval and  `find_zeros` to heuristically identify  all  zeros in  a specified interval.
 
 
 ```@docs
@@ -31,16 +31,25 @@ find_zero
 find_zeros
 ```
 
+### CommonSolve interface
+
+The problem-algorithm-solve interface is a pattern popularized in `Julia` by the `DifferentialEquations.jl` suite of packages. This can be used as an alternative to `find_zero`. Unlike `find_zero`, `solve` will return `NaN` on non-convergence.
+
+```@docs
+Roots.solve!
+```
+
+
 
 ##  Classical  methods  based on derivatives
 
 We begin  by  describing  the classical methods even though they are not necessarily  recommended  because they require more work of the  user,  as they give insight into  why there  are a variety  of methods available.
 
-The classical  methods of [Newton](https://en.wikipedia.org/wiki/Newton%27s_method) and  [Halley](https://en.wikipedia.org/wiki/Halley%27s_method) utilize information about  the function  and  its derivative(s) in  an  interative manner  to converge to  a zero of  `f` given an initial starting value.
+The classical  methods of [Newton](https://en.wikipedia.org/wiki/Newton%27s_method) and  [Halley](https://en.wikipedia.org/wiki/Halley%27s_method) utilize information about  the function  and  its derivative(s) in  an  iterative manner  to converge to  a zero of  `f` given an initial starting value.
 
 Newton's method is   easily described:
 
-From  an initial point,  the  next  point  in  the iterative algorithm is found by identifying the  intersection of  the ``x``    axis  with  the tangent line of `f` at the initial  point. This is repeated until convergence  or the realization that   convergence won't happen for the  initial point. Mathematically,
+From  an initial point,  the  next  point  in  the iterative algorithm is found by identifying the  intersection of  the ``x``    axis  with  the tangent line of ``f`` at the initial  point. This is repeated until convergence  or the realization that   convergence won't happen for the  initial point. Mathematically,
 
 ``x_{n+1}  =  x_{n}  - f(x_n)/f'(x_n).``
 
@@ -83,7 +92,7 @@ The [secant](https://en.wikipedia.org/wiki/Secant_method) method replaces the  d
 Though the secant  method   has  convergence  rate of  order ``\approx 1.618`` and is not quadratic,  it
 only requires one new  function call per  step  so  can be very effective. Often  function evaluations are the  slowest part of  the computation and, as  well, no derivative is  needed. Because  it  can be  very efficient, the secant  method  is used in  the default method  of `find_zero` when  called with a single initial starting point.
 
-[Steffensen's](https://en.wikipedia.org/wiki/Steffensen%27s_method) method is a quadratially  converging derivative free method  which uses a secant  line  based on ``x_n`` and ``x_n + f(x_n)``.  Though of  higher  order, it requires  additional function calls per step and depends on a  good initial starting value. Other  derivative free methods are available, trading off  increased function calls for higher-order convergence. They may be  of interest when arbitrary  precision is needed. A  measure of efficiency is ``q^{1/r}`` where ``q`` is the order of convergence and ``r`` the number of function calls per step.   With this measure, the secant method  would be ``\approx (1.618)^{1/1}`` and Steffensen's  would be less (``2^{1/2}``).
+[Steffensen's](https://en.wikipedia.org/wiki/Steffensen%27s_method) method is a quadratically  converging derivative free method  which uses a secant  line  based on ``x_n`` and ``x_n + f(x_n)``.  Though of  higher  order, it requires  additional function calls per step and depends on a  good initial starting value. Other  derivative free methods are available, trading off  increased function calls for higher-order convergence. They may be  of interest when arbitrary  precision is needed. A  measure of efficiency is ``q^{1/r}`` where ``q`` is the order of convergence and ``r`` the number of function calls per step.   With this measure, the secant method  would be ``\approx (1.618)^{1/1}`` and Steffensen's  would be less (``2^{1/2}``).
 
 ----
 
@@ -106,11 +115,11 @@ Roots.Esser
 
 ## Bracketing methods
 
-The [bisection](https://en.wikipedia.org/wiki/Bisection_method) identifies a zero of a *continuous* function bewteen ``a`` and ``b``  when  ``f(a)`` and  ``f(b)`` have different  signs. (The interval ``[a,b]`` is called a bracketing interval when ``f(a)\cdot  f(b)  <0``.)  The basaic  alorithm is particularly simple, an interval  ``[a_i,b_i]`` is  split  at  ``c =  (a_i+b_i)/2``. Either  ``f(c)=0``,  or one  of  ``[a_i,c]``  or  ``[c,b_i]`` is a bracketing  interval,  which is  called  ``[a_{i+1},b_{i+1}]``. From this  description,  we  see  thaat  ``[a_i,b_i]`` has length  ``2^{-i}`` times the length of ``[a_0,b_0]``, so  the intervals will eventually terminate by finding  a zero, ``c``,  or converge  to a zero. This convergence is slow (the efficiency  is only ``1``, but guaranteed. For  64-bit  floating point  values, a  reinterpretation  of  how the midpoint  (``c``) is found  leads  to convergence  is  no more  than   ``64`` iterations.
+The [bisection](https://en.wikipedia.org/wiki/Bisection_method) identifies a zero of a *continuous* function between ``a`` and ``b``  when  ``f(a)`` and  ``f(b)`` have different  signs. (The interval ``[a,b]`` is called a bracketing interval when ``f(a)\cdot  f(b)  <0``.)  The basic  algorithm is particularly simple, an interval  ``[a_i,b_i]`` is  split  at  ``c =  (a_i+b_i)/2``. Either  ``f(c)=0``,  or one  of  ``[a_i,c]``  or  ``[c,b_i]`` is a bracketing  interval,  which is  called  ``[a_{i+1},b_{i+1}]``. From this  description,  we  see  that  ``[a_i,b_i]`` has length  ``2^{-i}`` times the length of ``[a_0,b_0]``, so  the intervals will eventually terminate by finding  a zero, ``c``,  or converge  to a zero. This convergence is slow (the efficiency  is only ``1``, but guaranteed. For  64-bit  floating point  values, a  reinterpretation  of  how the midpoint  (``c``) is found  leads  to convergence  in  no more  than   ``64`` iterations, unlike the midpoint found above, where some cases can take many more steps to converge.
 
 In floating point,  by  guaranteed  convergence we have either an exact zero or a bracketing interval  consisting   of  two  adjacent floating point values. When applied to *non*-continuous  functions,  this algorithm  will identify   an exact  zero or  a zero crossing   of the function. (E.g., applied  to  ``f(x)=1/x`` it  will  find  ``0``.)
 
-The default selection of  midpoint described above includes no information  about the function ``f`` beyonds its  sign. Algorithms exploiting  the shape of the function  can be significantly more efficient. The default bracketing method is due to [Alefeld, Potra, and Shi](https://dl.acm.org/doi/10.1145/210089.210111), and has  efficiency ``\approx 1.6686``. It  is  also   used in the  default method for `find_zero` when a  single initial starting point is given if a bracketing interval is identified.
+The default selection of  midpoint described above includes no information  about the function ``f`` bounds its  sign. Algorithms exploiting  the shape of the function  can be significantly more efficient. For example, the bracketing method `Roots.AlefeldPotraShi` due to [Alefeld, Potra, and Shi](https://dl.acm.org/doi/10.1145/210089.210111) has  efficiency ``\approx 1.6686``. This method  is  also   used in the  default method for `find_zero` when a  single initial starting point is given if a bracketing interval is identified.
 
 ----
 
@@ -124,7 +133,7 @@ FalsePosition
 
 ## Hybrid  methods
 
-A useful  strategy  is   to  begin with a non-bracketing  method and switch to a bracketing method should a bracket be encoutered. This  allows   for the identification of zeros which are not surrounded by a bracket, and have guaranteed convergence  should a bracket be  encountered.  Is  is  used  by default by `find_zero(f,a)`.
+A useful  strategy  is   to  begin with a non-bracketing  method and switch to a bracketing method should a bracket be encountered. This  allows   for the identification of zeros which are not surrounded by a bracket, and have guaranteed convergence  should a bracket be  encountered.  It  is  used  by default by `find_zero(f,a)`.
 
 ```@docs
 Roots.Order0
@@ -143,10 +152,10 @@ be considered a stopping criteria in ``\Delta x``. For early termination
 (less precision but fewer function calls) a tolerance can be given so
 that if ``\Delta_n=b_n-a_n`` is small enough the algorithm stops
 successfully.  In floating point, assessing if ``b_n \approx a_n``
-requires two tolerances: a *relative* tolerance, as the minimial
+requires two tolerances: a *relative* tolerance, as the minimal
 differences in floating point values depend on the size of ``b_n`` and
-``a_n``, and an absolute tolerancef or values near ``0``. The values
-`xrtol` anad `xatol` are passed to the `Base.isapprox` function to
+``a_n``, and an absolute tolerance or values near ``0``. The values
+`xrtol` and `xatol` are passed to the `Base.isapprox` function to
 determine this.
 
 Relying on the closeness of two ``x`` values will not be adequate for
@@ -155,7 +164,7 @@ all problems, as there are examples where the difference
 not near a ``0``. As such, for non-bracketing methods, a check on the
 size of ``f(x_n)`` is also used. As we find floating point
 approximations to ``\alpha``, the zero, we must consider values small
-when ``f(\alpha(1+\epsilon))`` is small. By Taylor's aapproximation, we
+when ``f(\alpha(1+\epsilon))`` is small. By Taylor's approximation, we
 can expect this to be around
 ``\alpha\cdot \epsilon \cdot f'(\alpha)``.
 That is, small depends on the size of ``\alpha`` and the
@@ -164,9 +173,9 @@ tolerances (`rtol` and `atol`).  The size of ``f'(\alpha)`` is problem
 dependent, and can be accommodated by larger relative or absolute
 tolerances.
 
-When an algorithm returns  a  `NaN` value,  it terminates. This  can  happen near convergence or  may indicate some issues.  Early termination is checked for convergence  in the  size  of ``f(x_{n-1})`` with a relaxed tolerance when `strict=false` is specified (the default).
+When an algorithm returns  a  `NaN` value,  it terminates. This  can  happen near convergence or  may indicate some issues.  Early termination is checked for convergence  in the  size  of ``f(x_n)`` with a relaxed tolerance when `strict=false` is specified (the default).
 
-!!! note "Relative tolerances  and assessing  ``f(x) \approx  0``"
+!!! note "Relative tolerances  and assessing  `f(x) ≈ 0`"
     The use of  relative tolerances  to  check  if   ``f(x)  \approx  0`` can lead  to spurious  answers  where  ``x`` is very large   (and  hence the relative  tolerance  is large). The return of  very  large solutions  should  be checked against expectations  of the  answer.
 
 
@@ -202,16 +211,8 @@ Roots.newton
 Roots.dfree
 ```
 
-## CommonSolve interface
 
-The problem-algorithm-solve interface is a pattern popularized in `Julia` by the `DifferentialEquations.jl` suite of packages. This can be used as an alternative to `find_zero`. Unlike `find_zero`, `solve` will return `NaN` on non-convergence.
-
-```@docs
-Roots.solve!
-```
-
-
-## Matlab interface
+## MATLAB interface
 
 The initial naming scheme used `fzero` instead  of `fzeros`, following the name of the  MATLAB function [fzero](https://www.mathworks.com/help/matlab/ref/fzero.html). This interface  is not recommended, but, for now, still maintained.
 

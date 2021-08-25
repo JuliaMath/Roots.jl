@@ -31,7 +31,7 @@ found where either `f(c) == 0.0` or  `f(prevfloat(c)) * f(c) < 0` or
 `f(c) * f(nextfloat(c)) < 0`.
 
 To illustrate, consider the function $f(x) = \cos(x) - x$. From a
-graph we can see readily that $[0,1]$ is a bracket
+graph we can see readily that $[0,1]$ is a bracket.
 
 The `Roots` package includes the bisection algorithm through
 `find_zero`. We use a structure for which `extrema` returns `(a,b)`
@@ -92,7 +92,7 @@ julia> find_zero(x -> 1/x, (-1, 1))
 ```
 
 
-The endpoints and function values can even be infinite:
+The endpoints and function values can even be infinite for the default `Bisection` algorithm over `Float64` values:
 
 ```jldoctest roots
 julia> find_zero(x -> Inf*sign(x), (-Inf, Inf))  # Float64 only
@@ -220,7 +220,7 @@ julia> x, f(x)
 
 ```
 
-The above makes $8$ function calls, to the $54$ made with `Order0`.
+Similarly,
 
 ```jldoctest roots
 julia> f(x) = (x + 3) * (x - 1)^2
@@ -244,13 +244,13 @@ julia> x, f(x)
 
 ```
 
-The latter shows that zeros need not be simple zeros  to be found.
-A simple zero, $c$,has $f(x) = (x-c) \cdot g(x)$ where $g(c) \neq 0$.
+Starting at ``2`` converges to ``1``, showing that zeros need not be simple zeros to be found.
+A simple zero, $c$, has $f(x) = (x-c) \cdot g(x)$ where $g(c) \neq 0$.
 Generally speaking, non-simple zeros are
 expected to take many more function calls, as the methods are no
 longer super-linear. This is the case here, where `Order2` uses $51$
 function calls, `Order8` uses $42$, and `Order0` takes  $80$. The `Roots.Order2B` method is useful
-when a multiplicity is expected.
+when a multiplicity is expected; on this problem it takes ``17`` function calls.
 
 To investigate an algorithm and its convergence, the argument
 `verbose=true` may be specified.
@@ -631,10 +631,8 @@ julia> below = accumulate((x,y) -> prevfloat(x), 1:10, init=1/3);
 
 julia> ns = sort([below...,1/3, above...]);
 
-
 julia> maximum(abs.(f.(ns) - f1.(ns))) < 1e-14
 true
-
 ```
 
 
@@ -894,11 +892,13 @@ of 12, at the cost of possibly taking longer for the search.
 
 Here the algorithm identifies all the zeros, despite there being several:
 
-```@example roots
-f(x) = cos(x)^2 + cos(x^2)
-a, b = 0, 10
-rts = find_zeros(f, a, b)
-length(rts)
+```jldoctest roots
+julia> f(x) = cos(x)^2 + cos(x^2); a,b = 0, 10;
+
+julia> rts = find_zeros(f, a, b);
+
+julia> length(rts)
+32
 ```
 
 
@@ -908,10 +908,14 @@ perfect.
 Here we see for $f(x) = \sin(1/x)$--with infinitely many zeros around
 $0$--it finds many:
 
-```@example roots
-f(x) = iszero(x) ? NaN : sin(1/x)  # avoid sin(Inf) error
-rts = find_zeros(f, -1, 1)
-length(rts) # 88 zeros identified
+```jldoctest roots
+julia> f(x) = iszero(x) ? NaN : sin(1/x)  # avoid sin(Inf) error
+f (generic function with 1 method)
+
+julia> rts = find_zeros(f, -1, 1);
+
+julia> length(rts) # 88 zeros identified
+88
 ```
 
 The function, $f(x) = (x-0.5)^3 \cdot (x-0.499)^3$, looks *too* much like
@@ -924,7 +928,6 @@ f (generic function with 1 method)
 julia> find_zeros(f, 0, 1)
 1-element Vector{Float64}:
  0.5
-
 ```
 
 The issue here isn't *just* that the algorithm can't identify zeros
