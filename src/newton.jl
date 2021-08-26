@@ -141,14 +141,14 @@ find_zero((sin, cos, x->-sin(x)), 3.0, Roots.Halley())
 ```
 
 If function evaluations are expensive one can pass in a function which
-returns (f, f/f',f'/f'') as follows
+returns `(f, f/f',f'/f'')` as follows
 
 ```
 find_zero(x -> (sin(x), sin(x)/cos(x), -cos(x)/sin(x)), 3.0, Roots.Halley())
 ```
 
 This can be advantageous if the derivatives are easily computed from
-the value of f, but otherwise would be expensive to compute.
+the computation for f, but otherwise would be expensive to compute separately.
 
 The error, `eᵢ = xᵢ - α`, satisfies
 `eᵢ₊₁ ≈ -(2f'⋅f''' -3⋅(f'')²)/(12⋅(f'')²) ⋅ eᵢ³` (all evaluated at `α`).

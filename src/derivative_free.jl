@@ -283,7 +283,7 @@ end
 Esser's method. This is a quadratically convergent method that, like
 Schroder's method, does not depend on the multiplicity of the
 zero. Schroder's method has update step `x - r2/(r2-r1) * r1`, where `ri =
-f^(i-1)/f^(i)`. Esser approximates `f' ~ f[x-h, x+h], f'' ~
+fⁱ⁻¹/fⁱ`. Esser approximates `f' ~ f[x-h, x+h], f'' ~
 f[x-h,x,x+h]`, where `h = fx`, as with Steffensen's method, Requiring 3
 function calls per step. The implementation `Order2B` uses a secant
 step when `|fx|` is considered too large.

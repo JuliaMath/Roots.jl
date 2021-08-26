@@ -106,7 +106,7 @@ initial_fncalls(::Roots.AbstractBracketing) = 3
 
 For `Bisection` (or `BisectionExact`), when the `x` values are of type `Float64`, `Float32`,
 or `Float16`, the default tolerances are zero and there is no limit on
-the number of iterations or function evalutions. In this case, the
+the number of iterations. In this case, the
 algorithm is guaranteed to converge to an exact zero, or a point where
 the function changes sign at one of the answer's adjacent floating
 point values.
@@ -324,10 +324,11 @@ abstract type AbstractAlefeldPotraShi <: AbstractBracketing end
     Roots.A42()
 
 Bracketing method which finds the root of a continuous function within
-a provided interval [a, b], without requiring derivatives. It is based
+a provided interval `[a, b]`, without requiring derivatives. It is based
 on algorithm 4.2 described in: G. E. Alefeld, F. A. Potra, and
 Y. Shi, "Algorithm 748: enclosing zeros of continuous functions," ACM
 Trans. Math. Softw. 21, 327–344 (1995), DOI: [10.1145/210089.210111](https://doi.org/10.1145/210089.210111).
+The asymptotic efficiency index, ``q^{1/k}``, is ``(2 + 7^{1/2})^{1/3} = 1.6686...``.
 Originally by John Travers.
 
 """
@@ -589,7 +590,7 @@ end
 Follows algorithm in "ON ENCLOSING SIMPLE ROOTS OF NONLINEAR
 EQUATIONS", by Alefeld, Potra, Shi; DOI:
 [10.1090/S0025-5718-1993-1192965-2](https://doi.org/10.1090/S0025-5718-1993-1192965-2).
- Efficiency is 1.618. Less efficient, but can be faster than the [`A42`](@ref) method.
+Asymptotic efficiency index is ``1.618``. Less efficient, but can run faster than the [`A42`](@ref) method.
 Originally by John Travers.
 """
 struct AlefeldPotraShi <: AbstractAlefeldPotraShi end
@@ -837,12 +838,12 @@ to find a zero for the function `f` within the bracketing interval
 `[a,b]`.
 
 The false position method is a modified bisection method, where the
-midpoint between `[a_k, b_k]` is chosen to be the intersection point
-of the secant line with the x axis, and not the average between the
+midpoint between `[aₖ, bₖ]` is chosen to be the intersection point
+of the secant line with the ``x`` axis, and not the average between the
 two values.
 
 To speed up convergence for concave functions, this algorithm
-implements the 12 reduction factors of Galdino (*A family of regula
+implements the ``12`` reduction factors of Galdino (*A family of regula
 falsi root-finding methods*). These are specified by number, as in
 `FalsePosition(2)` or by one of three names `FalsePosition(:pegasus)`,
 `FalsePosition(:illinois)`, or `FalsePosition(:anderson_bjork)` (the
@@ -850,7 +851,7 @@ default). The default choice has generally better performance than the
 others, though there are exceptions.
 
 For some problems, the number of function calls can be greater than
-for the `bisection64` method, but generally this algorithm will make
+for the `BisectionExact` method, but generally this algorithm will make
 fewer function calls.
 
 Examples

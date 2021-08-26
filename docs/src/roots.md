@@ -55,13 +55,12 @@ For this function we see that `f(x)` is `0.0`.
 Functions may be parameterized. The following is a similar function as above, still having ``(0, \pi/2)`` as  bracket for ``p>0``. By passing in values of `p` to `find_zero`, different, related problems may be solved.
 
 ```jldoctest roots
-julia> f(x, p=1) = cos(x) - x/p
-f (generic function with 2 methods)
+julia> g(x, p=1) = cos(x) - x/p;
 
 julia> x0, M = (0, pi/2), Bisection()
 ((0, 1.5707963267948966), Bisection())
 
-julia> find_zero(f, x0, M) # as before, solve cos(x) - x = 0 using default p=1
+julia> find_zero(g, x0, M) # as before, solve cos(x) - x = 0 using default p=1
 0.7390851332151607
 
 julia> find_zero(f, x0, M, p=2) # solves cos(x) - x/2 = 0
@@ -409,7 +408,7 @@ julia> solve(Z, Roots.Order2())
 The `solve` interface works with parameterized functions, as well:
 
 ```jldoctest roots
-julia> g(x,p) = cos(x) - x/p
+julia> g(x, p=1) = cos(x) - x/p
 g (generic function with 1 method)
 
 julia> Z = ZeroProblem(g, (0.0, pi/2))
@@ -418,7 +417,7 @@ ZeroProblem{typeof(g), Tuple{Float64, Float64}}(g, (0.0, 1.5707963267948966))
 julia> solve(Z, Roots.Secant(), 2) # uses p=2
 1.0298665293222589
 
-julia> solve(Z, Bisection(), 3, xatol=1/16) # use keywords for tolerances
+julia> solve(Z, Bisection(), 3, xatol=1/16) # p=3; uses keywords for tolerances
 1.1959535058744393
 ```
 

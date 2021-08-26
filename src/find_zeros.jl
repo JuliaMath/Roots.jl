@@ -213,7 +213,7 @@ julia> find_zeros(f, 0, 10, no_pts=21)                # too hard for default
 
 !!! note
     There are two cases where the number of zeros may be underreported:
-    * if the initial interval, [a,b], is too wide
+    * if the initial interval, `(a,b)`, is too wide
     * if there are zeros  that are very nearby
 
 ----
@@ -257,14 +257,14 @@ The algorithm is derived from one in a
 [PR](https://github.com/JuliaMath/Roots.jl/pull/113) by @djsegal.
 
 
-!!! Note
-The `IntervalRootFinding` package provides a rigorous alternative to this heuristic one.
-That package use interval arithmetic, so can compute bounds on the size of the image of
-an interval under a function `f`. If this image includes `0`, then it can look for the zero.
-Bisection, on the other hand, only will look for a zero if the two endpoints have different signs,
-a much more rigid condition for a potential zero.
+!!! note
+    The `IntervalRootFinding` package provides a rigorous alternative to this heuristic one.
+    That package use interval arithmetic, so can compute bounds on the size of the image of
+    an interval under `f`. If this image includes `0`, then it can look for the zero.
+    Bisection, on the other hand, only will look for a zero if the two endpoints have different signs,
+    a much more rigid condition for a potential zero.
 
-For example, this function (due to `@truculentmath`) is particularly tricky, as it is positive at every floating point number, but has two zeros (the vertical asymptote at `15//11` is negative between adjacent floating point values):
+For example, this function (due to `@truculentmath`) is particularly tricky, as it is positive at every floating point number, but has two zeros (the vertical asymptote at `15//11` is only negative within adjacent floating point values):
 
 ```jldoctest interval_root_finding
 julia> using IntervalArithmetic, IntervalRootFinding, Roots

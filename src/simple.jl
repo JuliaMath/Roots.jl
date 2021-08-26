@@ -109,8 +109,8 @@ The secant method is an iterative method with update step
 given by `b - fb/m` where `m` is the slope of the secant line between
 `(a,fa)` and `(b,fb)`.
 
-The inital values can be specified as a pair of 2, as in `(a,b)` or
-`[a,b]`, or as a single value, in which case a value of `b` is chosen.
+The inital values can be specified as a pair of 2, as in `(x₀, x₁)` or
+`[x₀, x₁]`, or as a single value, `x₁` in which case a value of `x₀` is chosen.
 
 The algorithm returns m when `abs(fm) <= max(atol, abs(m) * rtol)`.
 If this doesn't occur before `maxevals` steps or the algorithm
