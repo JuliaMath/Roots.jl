@@ -103,7 +103,17 @@ function quad_vertex(c,fc,b,fb,a,fa)
 
 end
 
+# a bit better than a - fa/f_ab
+@inline secant_step(a, b, fa, fb) =  a - fa * (b - a) / (fb - fa)
 
+## inverse quadratic
+function inverse_quadratic_step(a::T,b,c,fa,fb,fc) where {T}
+    s = zero(T)
+    s += a * fb * fc / (fa - fb) / (fa - fc) # quad step
+    s += b * fa * fc / (fb - fa) / (fb - fc)
+    s += c * fa * fb / (fc - fa) / (fc - fb)
+    s
+end
 
 
 

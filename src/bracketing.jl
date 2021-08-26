@@ -346,9 +346,6 @@ assert_bracket(fx0, fx1) = isbracket(fx0, fx1) || throw(ArgumentError(bracketing
     (fbd - fab)/(d-a)
 end
 
-# a bit better than a - fa/f_ab
-@inline secant_step(a, b, fa, fb) =  a - fa * (b - a) / (fb - fa)
-
 # assume fc != 0
 ## return a1,b1,d with a < a1 <  < b1 < b, d not there
 @inline function bracket(a,b,c, fa, fb, fc)
@@ -757,18 +754,13 @@ function update_state(M::Brent, f, state::BrentState{T,S},
     a, b, c, d = state.xn0, state.xn1, state.c, state.d
     fa, fb, fc = state.fxn0, state.fxn1, state.fc
 
-    # next setp
+    # next step depends on points; inverse quadratic
     s::T = zero(a)
-    if  !iszero(fa-fc) && !iszero(fb-fc)
-        s =  a * fb * fc / (fa - fb) / (fa - fc) # quad step
-        s += b * fa * fc / (fb - fa) / (fb - fc)
-        s += c * fa * fb / (fc - fa) / (fc - fb)
-        s
-    else
-        s = secant_step(a,b,fa,fb)
-    end
+    s = inverse_quadratic_step(a,b,c,fa,fb,fc)
+    (isnan(s) || isinf(s)) && (s = secant_step(a,b,fa,fb))
     fs::S = f(s)
     incfn(l)
+
     if iszero(fs)
         @set! state.xn1 = s
         @set! state.fxn1 = fs
@@ -776,9 +768,6 @@ function update_state(M::Brent, f, state::BrentState{T,S},
     elseif isnan(fs) || isinf(fs)
         return (state, true)
     end
-
-#    val = check_zero(M, state, s, fs)
-#    val && return (state, true)
 
     # guard step
     u,v = (3a+b)/4, b
