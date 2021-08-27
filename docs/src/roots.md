@@ -62,7 +62,7 @@ julia> x0, M = (0, pi/2), Bisection()
 julia> find_zero(g, x0, M) # as before, solve cos(x) - x = 0 using default p=1
 0.7390851332151607
 
-julia> find_zero(f, x0, M, p=2) # solves cos(x) - x/2 = 0
+julia> find_zero(g, x0, M, p=2) # solves cos(x) - x/2 = 0
 1.0298665293222589
 ```
 
@@ -970,7 +970,7 @@ The [Wikipedia](https://en.wikipedia.org/wiki/Brent%27s_method) page for Brent's
 
 To implement Chandrapatla's algorithm we first define a type to indicate the method and a state object:
 
-```jldoctest roots
+```julia
 julia> struct Chandrapatla <: Roots.AbstractBracketing end
 
 julia> struct ChandrapatlaState{T,S} <: Roots.AbstractUnivariateZeroState{T,S}
@@ -986,7 +986,7 @@ end
 
 An `init_state` method is used by some methods to add more detail to the basic state object, as is used here, where an intermediate value is stored:
 
-```jldoctest roots
+```julia
 julia> function Roots.init_state(::Chandrapatla, F, x₀, x₁, fx₀, fx₁)
     b, a, fb, fa = x₁, x₀, fx₁, fx₀
     c = Roots._middle(a,b)
@@ -998,7 +998,7 @@ end
 
 The main algorithm is implemented in the `update_state` method. The `@set!` macro from `Setfield.jl` is used to modify a state object, which otherwise is immutable.
 
-```jldoctest roots
+```julia
 julia> import Roots.Setfield: @set!;
 
 julia> function Roots.update_state(::Chandrapatla, F, o, options, l=NullTracks())
@@ -1050,7 +1050,7 @@ This algorithm chooses between an inverse quadratic step or a bisection step dep
 
 To see that the algorithm works, we have:
 
-```jldoctest roots
+```julia
 julia> find_zero(sin, (3,4), Chandrapatla())
 3.141592653589793
 
