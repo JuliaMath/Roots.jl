@@ -16,19 +16,22 @@ specification of a method. These include:
   `Bisection` method can be specified. For most floating point number
   types, bisection occurs in a manner exploiting floating point
   storage conventions. For others, an algorithm of Alefeld, Potra, and
-  Shi is used. These methods are guaranteed to converge.
+  Shi is used. These methods are guaranteed to converge. Methods
+  include `Bisection`, `Roots.A42`, `Roots.AlefeldPotraShi`,
+  `Roots.Brent`, and ``12``-flavors of `FalsePosition`.
 
 
 * Several derivative-free methods are implemented. These are specified
   through the methods `Order0`, `Order1` (the secant method), `Order2`
   (the Steffensen method), `Order5`, `Order8`, and `Order16`. The
   number indicates, roughly, the order of convergence. The `Order0`
-  method is the default, and the most robust, but may take many more
-  function calls to converge. The higher order methods promise higher
-  order (faster) convergence, though don't always yield results with
-  fewer function calls than `Order1` or `Order2`. The methods
-  `Roots.Order1B` and `Roots.Order2B` are superlinear and quadratically converging
-  methods independent of the multiplicity of the zero.
+  method is the default, and the most robust, as it finishes off with
+  a bracketing method when a bracket is encountered, The higher order
+  methods promise higher order (faster) convergence, though don't
+  always yield results with fewer function calls than `Order1` or
+  `Order2`. The methods `Roots.Order1B` and `Roots.Order2B` are
+  superlinear and quadratically converging methods independent of the
+  multiplicity of the zero.
 
 
 * There are historic methods that require a derivative or two:

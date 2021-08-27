@@ -26,12 +26,12 @@ continuous, then there must be a point $c$ in $[a,b]$ where the function
 "jumps" over $0$.
 
 Such values can be found, up to floating point
-roundoff. That is, given `f(a) * f(b) < 0`, a value `c` with `a < c < b` can be
+round off. That is, given `f(a) * f(b) < 0`, a value `c` with `a < c < b` can be
 found where either `f(c) == 0.0` or  `f(prevfloat(c)) * f(c) < 0` or
 `f(c) * f(nextfloat(c)) < 0`.
 
-To illustrate, consider the function $f(x) = \cos(x) - x$. From a
-graph we can see readily that $[0,1]$ is a bracket
+To illustrate, consider the function $f(x) = \cos(x) - x$. From trigonometry
+graph we can see readily infer that $[0,\pi/2]$ is a bracket.
 
 The `Roots` package includes the bisection algorithm through
 `find_zero`. We use a structure for which `extrema` returns `(a,b)`
@@ -39,10 +39,9 @@ with `a < b`, such as a vector or tuple, to specify the initial
 condition and `Bisection()` to specify the algorithm:
 
 ```jldoctest roots
-julia> f(x) = cos(x) - x
-f (generic function with 1 method)
+julia> f(x) = cos(x) - x;
 
-julia> x = find_zero(f, (0, 1), Bisection())    # alternatively fzero(f, [0, 1])
+julia> x = find_zero(f, (0, pi/2), Bisection())
 0.7390851332151607
 
 julia> x, f(x)
@@ -51,16 +50,35 @@ julia> x, f(x)
 
 For this function we see that `f(x)` is `0.0`.
 
+
+Functions may be parameterized. The following is a similar function as above, still having ``(0, \pi/2)`` as  bracket for ``p>0``. By passing in values of `p` to `find_zero`, different, related problems may be solved.
+
+```jldoctest roots
+julia> g(x, p=1) = cos(x) - x/p;
+
+julia> x0, M = (0, pi/2), Bisection()
+((0, 1.5707963267948966), Bisection())
+
+julia> find_zero(g, x0, M) # as before, solve cos(x) - x = 0 using default p=1
+0.7390851332151607
+
+julia> find_zero(g, x0, M, p=2) # solves cos(x) - x/2 = 0
+1.0298665293222589
+```
+
+
 ----
 
 Next consider $f(x) = \sin(x)$. A known zero is $\pi$. Trigonometry
-tells us that $[\pi/2, 3\pi/2]$ will be a bracket. In this call `Bisection()`
-is not specified, as it will be the default when the initial value is
+tells us that $[\pi/2, 3\pi/2]$ will be a bracket.  The calling
+pattern for `find_zero` is `find_zero(f, x0, M; kwargs...)`, where
+`kwargs` can specify details about parameters for the problem or
+tolerances for the solver.  In this call `Bisection()` is not
+specified, as it will be the default when the initial value is
 specified as a pair of numbers:
 
 ```jldoctest roots
-julia> f(x) = sin(x)
-f (generic function with 1 method)
+julia> f(x) = sin(x);
 
 julia> x = find_zero(f, (pi/2, 3pi/2))
 3.141592653589793
@@ -92,7 +110,7 @@ julia> find_zero(x -> 1/x, (-1, 1))
 ```
 
 
-The endpoints and function values can even be infinite:
+The endpoints and function values can even be infinite for the default `Bisection` algorithm over the standard floating point types:
 
 ```jldoctest roots
 julia> find_zero(x -> Inf*sign(x), (-Inf, Inf))  # Float64 only
@@ -102,14 +120,16 @@ julia> find_zero(x -> Inf*sign(x), (-Inf, Inf))  # Float64 only
 
 
 The basic algorithm used for bracketing when the values are simple
-floating point values is a modification of the bisection method. For big float values, an
-algorithm due to Alefeld, Potra, and Shi is used.
+floating point values is a modification of the bisection method, where
+the midpoint is taken over the bit representation of `a` and `b`. For
+big float values, an algorithm due to Alefeld, Potra, and Shi is used.
 
 ```jldoctest roots
 julia> find_zero(sin, (big(3), big(4)))    # uses a different algorithm than for (3,4)
 3.141592653589793238462643383279502884197169399375105820974944592307816406286198
 ```
 
+(Simple bisection over `BigFloat` values can take *many* steps.)
 
 The algorithms of Alefeld, Potra, and Shi and the well known algorithm of Brent, also start with a bracketing algorithm. For many problems these will take far fewer steps than the bisection algorithm to reach convergence. These may be called directly. For example,
 
@@ -118,7 +138,7 @@ julia> find_zero(sin, (3,4), Roots.A42())
 3.141592653589793
 ```
 
-This takes ``9`` function evaluations, the default method takes ``53``. The method is specified above in the third positional argument by `Roots.A42()`. This method is not exported, so must be qualified.
+The above call takes ``9`` function evaluations, the default method takes ``53``. The method is specified above in the third positional argument by `Roots.A42()`, as this method is not exported, it must be qualified.
 
 
 By default, bisection will converge to machine tolerance. This may
@@ -149,7 +169,7 @@ converge to the desired root if the initial guess is not well chosen.
 The default algorithm is modeled after an algorithm used for
 [HP-34 calculators](http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1979-12.pdf). This
 algorithm is designed to be more forgiving of the quality of the
-initial guess at the cost of possibly performing many more steps than
+initial guess at the cost of possibly performing  more steps than
 other algorithms, as if the algorithm encounters a bracket, a bracketing method
 will be used.
 
@@ -158,9 +178,7 @@ graph to be near 1. Given this,
 the zero is found through:
 
 ```jldoctest roots
-julia> f(x) = cos(x) - x
-f (generic function with 1 method)
-
+julia> f(x) = cos(x) - x;
 
 julia> x = find_zero(f , 1)
 0.7390851332151607
@@ -173,8 +191,7 @@ julia> x, f(x)
 For the polynomial $f(x) = x^3 - 2x - 5$, an initial guess of 2 seems reasonable:
 
 ```jldoctest roots
-julia> f(x) = x^3 - 2x - 5
-f (generic function with 1 method)
+julia> f(x) = x^3 - 2x - 5;
 
 julia> x = find_zero(f, 2)
 2.0945514815423265
@@ -197,22 +214,22 @@ julia> x, sin(x), x - pi
 
 ### Higher order methods
 
-The default call to `fzero` uses a first order method and then
-possibly bracketing, which involves potentially many more function
-calls. There may be times where a more efficient algorithm is
-sought.  For such, a higher-order method might be better suited. There
-are algorithms `Order1` (secant method), `Order2`
+The default call to `find_zero` uses a first order method and then
+possibly bracketing, which potentially involves more function
+calls than necessary. There may be times where a more efficient algorithm is sought.
+For such, a higher-order method might be better suited. There are
+algorithms `Order1` (secant method), `Order2`
 ([Steffensen](http://en.wikipedia.org/wiki/Steffensen's_method)),
 `Order5`, `Order8`, and `Order16`. The order 1 or 2 methods are
-generally quite efficient. The even higher order ones are potentially
-useful when more precision is used. These algorithms are accessed by
-specifying the method after the initial starting point:
+generally quite efficient in terms of steps needed over floating point
+values. The even higher order ones are potentially useful when more
+precision is used. These algorithms are accessed by specifying the
+method after the initial starting point:
 
 ```jldoctest roots
-julia> f(x) = 2x - exp(-x)
-f (generic function with 1 method)
+julia> f(x) = 2x - exp(-x);
 
-julia> x = find_zero(f, 1, Order1())      # also fzero(f, 1, order=1)
+julia> x = find_zero(f, 1, Order1())
 0.3517337112491958
 
 julia> x, f(x)
@@ -220,11 +237,10 @@ julia> x, f(x)
 
 ```
 
-The above makes $8$ function calls, to the $54$ made with `Order0`.
+Similarly,
 
 ```jldoctest roots
-julia> f(x) = (x + 3) * (x - 1)^2
-f (generic function with 1 method)
+julia> f(x) = (x + 3) * (x - 1)^2;
 
 julia> x = find_zero(f, -2, Order2())
 -3.0
@@ -244,16 +260,16 @@ julia> x, f(x)
 
 ```
 
-The latter shows that zeros need not be simple zeros  to be found.
-A simple zero, $c$,has $f(x) = (x-c) \cdot g(x)$ where $g(c) \neq 0$.
+Starting at ``2`` converges to ``1``, showing that zeros need not be simple zeros to be found.
+A simple zero, $c$, has $f(x) = (x-c) \cdot g(x)$ where $g(c) \neq 0$.
 Generally speaking, non-simple zeros are
 expected to take many more function calls, as the methods are no
 longer super-linear. This is the case here, where `Order2` uses $51$
 function calls, `Order8` uses $42$, and `Order0` takes  $80$. The `Roots.Order2B` method is useful
-when a multiplicity is expected.
+when a multiplicity is expected; on this problem it takes ``17`` function calls.
 
 To investigate an algorithm and its convergence, the argument
-`verbose=true` may be specified.
+`verbose=true` may be specified. A `Roots.Tracks` object can be used to store the intermediate values.
 
 
 For some functions, adjusting the default tolerances may be necessary
@@ -267,19 +283,17 @@ number of steps in the algorithm.
 ## Classical methods
 
 The package provides some classical methods for root finding:
-`Roots.newton`, `Roots.halley`, and `Roots.secant_method`. (Currently
+`Roots.Newton`, `Roots.Halley`, and `Roots.Schroder`. (Currently
 these are not exported, so must be prefixed with the package name to
-be used.) We can see how each works on a problem studied by Newton
-himself. Newton's method uses the function and its derivative:
+be used.) We can see how each works on a problem studied by Newton.
+Newton's method uses the function and its derivative:
 
 ```jldoctest roots
-julia> f(x) = x^3 - 2x - 5
-f (generic function with 1 method)
+julia> f(x) = x^3 - 2x - 5;
 
-julia> fp(x) = 3x^2 - 2
-fp (generic function with 1 method)
+julia> fp(x) = 3x^2 - 2;
 
-julia> x = Roots.newton(f, fp, 2)
+julia> x = Roots.find_zero((f, fp), 2, Roots.Newton())
 2.0945514815423265
 
 julia> x, f(x)
@@ -287,56 +301,19 @@ julia> x, f(x)
 
 ```
 
-To see the algorithm in progress, the argument `verbose=true` may be
-specified.
-
-Alternatively, `Roots.Newton()` can be specified as the method for `find_zero`. The
-functions are specified using a tuple:
-
-```jldoctest roots
-julia> find_zero((f,fp), 2, Roots.Newton())
-2.0945514815423265
-
-```
-
-The secant method typically needs two starting points, though a second
-one is computed if only one is given. Here we start with 2 and 3,
-specified through a tuple:
-
-```jldoctest roots
-julia> x = Roots.secant_method(f, (2,3))
-2.094551481542327
-
-julia> x, f(x)
-(2.094551481542327, 3.552713678800501e-15)
-
-```
-
-Starting with a single point is also supported:
-
-```jldoctest roots
-julia> Roots.secant_method(f, 2)
-2.0945514815423265
-
-```
-
-(This is like `Order1()`, or `Roots.Secant()`, but the implementation is
-faster, as the framework is bypassed, and fewer checks on convergence
-are used. This method can be used when speed is very important.)
+The functions are specified using a tuple, or through a function returning `(f(x), f(x)/f'(x))`. The latter is convenient when `f'` is easily computed when `f` is, but otherwise may be expensive to compute.
 
 Halley's method has cubic convergence, as compared to Newton's
 quadratic convergence. It uses the second derivative as well:
 
 ```jldoctest roots
-julia> fpp(x) = 6x
-fpp (generic function with 1 method)
+julia> fpp(x) = 6x;
 
-julia> x = Roots.halley(f, fp, fpp, 2)
+julia> x = Roots.find_zero((f, fp, fpp), 2, Roots.Halley())
 2.0945514815423265
 
 julia> x, f(x), sign(f(prevfloat(x)) * f(nextfloat(x)))
 (2.0945514815423265, -8.881784197001252e-16, -1.0)
-
 ```
 
 (Halley's method takes 3 steps, Newton's 4, but Newton's uses 5
@@ -373,7 +350,7 @@ julia> find_zero((f, D(f), D(f,2)), 2, Roots.Halley())
 
 ```
 
-The familiy of solvers implemented in `Roots.LithBoonkkampIJzerman(S,D)` where `S` is the number of prior points used to generate the next, and `D` is the number of derivatives used, has both the secant method (`S=2, D=0`) and Newton's method (`S=1, D=1`) as members, but also provides others. By adding more memory or adding more derivatives the convergence rate increases, at the expense of more complicated expressions or more function calls per step.
+The family of solvers implemented in `Roots.LithBoonkkampIJzerman(S,D)` where `S` is the number of prior points used to generate the next, and `D` is the number of derivatives used, has both the secant method (`S=2, D=0`) and Newton's method (`S=1, D=1`) as members, but also provides others. By adding more memory or adding more derivatives the convergence rate increases, at the expense of more complicated expressions or more function calls per step.
 
 ```
 julia> find_zero(dfᵏs(f, 0), 2, Roots.LithBoonkkampIJzerman(3,0)) # like secant
@@ -395,8 +372,7 @@ To break this up into steps, `Roots` has methods `ZeroProblem` and `init`, `solv
 Consider solving ``\sin(x) = 0`` using the `Secant` method starting with the interval ``[3,4]``.
 
 ```jldoctest roots
-julia> f(x) = sin(x)
-f (generic function with 1 method)
+julia> f(x) = sin(x);
 
 julia> x0 = (3, 4)
 (3, 4)
@@ -421,17 +397,16 @@ julia> solve(Z, Roots.Order2())
 The `solve` interface works with parameterized functions, as well:
 
 ```jldoctest roots
-julia> g(x,p) = cos(x) - x/p
-g (generic function with 1 method)
+julia> g(x, p=1) = cos(x) - x/p;
 
 julia> Z = ZeroProblem(g, (0.0, pi/2))
 ZeroProblem{typeof(g), Tuple{Float64, Float64}}(g, (0.0, 1.5707963267948966))
 
-julia> solve(Z, Roots.Secant(), 2) # p=2
+julia> solve(Z, Roots.Secant(), 2) # uses p=2
 1.0298665293222589
 
-julia> solve(Z, Bisection(), 3)
-1.1701209500026262
+julia> solve(Z, Bisection(), 3, xatol=1/16) # p=3; uses keywords for tolerances
+1.1959535058744393
 ```
 
 ## Finding critical points
@@ -442,8 +417,7 @@ point of the function $f(x) = 1/x^2 + x^3, x > 0$ near $1.0$ is where
 the derivative is $0$ and can be found through:
 
 ```jldoctest roots
-julia> f(x) = 1/x^2 + x^3
-f (generic function with 1 method)
+julia> f(x) = 1/x^2 + x^3;
 
 julia> find_zero(D(f), 1)
 0.9221079114817278
@@ -549,8 +523,7 @@ For a classic example where a large second derivative is
 the issue, we have $f(x) = x^{1/3}$:
 
 ```jldoctest roots
-julia> f(x) = cbrt(x)
-f (generic function with 1 method)
+julia> f(x) = cbrt(x);
 
 julia> x = try  find_zero(f, 1, Order2())  catch err  "Convergence failed" end	# all of 2, 5, 8, and 16 fail or diverge towards infinity
 "Convergence failed"
@@ -574,8 +547,7 @@ its one zero near $1.16$. If we start far from it, convergence may
 happen, but it isn't guaranteed:
 
 ```jldoctest roots
-julia> f(x) = x^5 - x - 1
-f (generic function with 1 method)
+julia> f(x) = x^5 - x - 1;
 
 julia> x0 = 0.1
 0.1
@@ -619,11 +591,9 @@ these are the same, however not so when evaluated in floating
 point. Here we look at the 21 floating point numbers near $1/3$:
 
 ```jldoctest roots
-julia> f(x) = (3x-1)^5
-f (generic function with 1 method)
+julia> f(x) = (3x-1)^5;
 
-julia> f1(x) =  -1 + 15*x - 90*x^2 + 270*x^3 - 405*x^4 + 243*x^5
-f1 (generic function with 1 method)
+julia> f1(x) =  -1 + 15*x - 90*x^2 + 270*x^3 - 405*x^4 + 243*x^5;
 
 julia> above = accumulate((x,y) -> nextfloat(x), 1:10, init=1/3);
 
@@ -631,10 +601,8 @@ julia> below = accumulate((x,y) -> prevfloat(x), 1:10, init=1/3);
 
 julia> ns = sort([below...,1/3, above...]);
 
-
 julia> maximum(abs.(f.(ns) - f1.(ns))) < 1e-14
 true
-
 ```
 
 
@@ -744,11 +712,9 @@ these conditions.
 Now consider the function `f(x) = exp(x)-x^4`. The value`x=8.613169456441398` is a zero in this sense, as there is a change of sign:
 
 ```jldoctest roots
-julia> f(x) = exp(x) - x^4
-f (generic function with 1 method)
+julia> f(x) = exp(x) - x^4;
 
-julia> F(x) = sign(f(x))
-F (generic function with 1 method)
+julia> F(x) = sign(f(x));
 
 julia> x=8.613169456441398
 8.613169456441398
@@ -771,8 +737,7 @@ The value `x` is an approximation to the actual mathematical zero,
 call it $x$. There is a difference between $f(x)$ (the mathematical answer) and `f(x)` (the floating point answer). Roughly speaking we expect `f(x)` to be about $f(x) + f'(x)\cdot \delta$, where $\delta$ is the difference between `x` and $x$. This will be on the scale of `abs(x) * eps()`, so all told we expect an answer to be in the range of $0$ plus or minus this value:
 
 ```jldoctest roots
-julia> fp(x) = exp(x) - 4x^3 # the derivative
-fp (generic function with 1 method)
+julia> fp(x) = exp(x) - 4x^3; # the derivative
 
 julia> fp(x) * abs(x) * eps()
 5.637565490466956e-12
@@ -781,7 +746,7 @@ julia> fp(x) * abs(x) * eps()
 
 which is about what we see.
 
-Bisection can be a slower method than others. For floating point values, `Bisection()` takes no more than 64 steps, but other methods may be able to converge to a zero in 4-5 steps (assuming good starting values are specified).
+Bisection can be a slower method than others. For `Float64` values, `Bisection()` takes no more than 64 steps, but other methods may be able to converge to a zero in 4-5 steps (assuming good starting values are specified).
 
 When fewer function calls are desirable, then checking for an
 *approximate* zero may be preferred over assessing if a sign change
@@ -806,7 +771,7 @@ This is different from `Julia`'s `isapprox(f(x), 0.0)`, as that would use `abs(f
 
 One issue with relative tolerances is that for functions with
 sublinear growth, extremely large values will be considered zeros.
-Returning to an earlier example, we have a misidentified zero:
+Returning to an earlier example, with `Order8` we have a misidentified zero:
 
 ```jldoctest roots
 julia> find_zero(cbrt, 1, Order8())
@@ -814,7 +779,7 @@ julia> find_zero(cbrt, 1, Order8())
 
 ```
 
-For `Order8`, the algorithm rapidly marches off towards infinity so the relative
+The algorithm rapidly marches off towards infinity so the relative
 tolerance $\approx |x| \cdot \epsilon$ used to check if $f(x) \approx
 0$ is large compared to the far-from zero $f(x)$.
 
@@ -860,8 +825,7 @@ several zeros.  The `find_zeros` function searches the interval $(a,b)$
 for all zeros of a function $f$. It is straightforward to use:
 
 ```jldoctest roots
-julia> f(x) = exp(x) - x^4
-f (generic function with 1 method)
+julia> f(x) = exp(x) - x^4;
 
 julia> a, b = -10, 10
 (-10, 10)
@@ -894,11 +858,13 @@ of 12, at the cost of possibly taking longer for the search.
 
 Here the algorithm identifies all the zeros, despite there being several:
 
-```@example roots
-f(x) = cos(x)^2 + cos(x^2)
-a, b = 0, 10
-rts = find_zeros(f, a, b)
-length(rts)
+```jldoctest roots
+julia> f(x) = cos(x)^2 + cos(x^2); a,b = 0, 10;
+
+julia> rts = find_zeros(f, a, b);
+
+julia> length(rts)
+32
 ```
 
 
@@ -908,23 +874,24 @@ perfect.
 Here we see for $f(x) = \sin(1/x)$--with infinitely many zeros around
 $0$--it finds many:
 
-```@example roots
-f(x) = iszero(x) ? NaN : sin(1/x)  # avoid sin(Inf) error
-rts = find_zeros(f, -1, 1)
-length(rts) # 88 zeros identified
+```jldoctest roots
+julia> f(x) = iszero(x) ? NaN : sin(1/x);  # avoid sin(Inf) error
+
+julia> rts = find_zeros(f, -1, 1);
+
+julia> length(rts) # 88 zeros identified
+88
 ```
 
 The function, $f(x) = (x-0.5)^3 \cdot (x-0.499)^3$, looks *too* much like
 $g(x) = x^6$ to `find_zeros` for success, as the two zeros are very nearby:
 
 ```jldoctest roots
-julia> f(x) =  (x-0.5)^3 * (x-0.499)^3
-f (generic function with 1 method)
+julia> f(x) =  (x-0.5)^3 * (x-0.499)^3;
 
 julia> find_zeros(f, 0, 1)
 1-element Vector{Float64}:
  0.5
-
 ```
 
 The issue here isn't *just* that the algorithm can't identify zeros
@@ -934,8 +901,7 @@ nearby values approximately zero.
 The algorithm will have success when the powers are smaller
 
 ```jldoctest roots
-julia> f(x) =  (x-0.5)^2 * (x-0.499)^2
-f (generic function with 1 method)
+julia> f(x) =  (x-0.5)^2 * (x-0.499)^2;
 
 julia> find_zeros(f, 0, 1)
 2-element Vector{Float64}:
@@ -947,8 +913,7 @@ julia> find_zeros(f, 0, 1)
 It can have success for closer pairs of zeros:
 
 ```jldoctest roots
-julia> f(x) = (x-0.5) * (x - 0.49999)
-f (generic function with 1 method)
+julia> f(x) = (x-0.5) * (x - 0.49999);
 
 julia> find_zeros(f, 0, 1)
 2-element Vector{Float64}:
@@ -985,7 +950,7 @@ julia> find_zeros(f, -10, 10)
   3.1495967624505226
 ```
 
-Using that in this case, the intervals are bracketing intervals for `f`, we can find the zeros from the `roots` ouput with the following:
+Using that in this case, the intervals are bracketing intervals for `f`, we can find the zeros from the `roots` output with the following:
 
 ```julia
 julia> [find_zero(f, (interval(u).lo, interval(u).hi)) for u ∈ rts if u.status == :unique]
@@ -994,4 +959,104 @@ julia> [find_zero(f, (interval(u).lo, interval(u).hi)) for u ∈ rts if u.status
  -4.426534982071949
  -3.1068165552293254
  -1.082042132760718
+```
+
+
+## Adding a solver
+
+To add a solver the minimum needed is a type to declare the solver and an `update_state` method. In this example, we also define a state object, as the algorithm, as employed, uses more values stored than the default.
+
+The [Wikipedia](https://en.wikipedia.org/wiki/Brent%27s_method) page for Brent's method suggest a modern improvement, Chandrapatla's method, described [here](https://www.google.com/books/edition/Computational_Physics/cC-8BAAAQBAJ?hl=en&gbpv=1&pg=PA95&printsec=frontcover). The algorithm there is mostly followed below, though rather than store `t`, the related values `c`, `fc` are kept.
+
+To implement Chandrapatla's algorithm we first define a type to indicate the method and a state object:
+
+```julia
+julia> struct Chandrapatla <: Roots.AbstractBracketing end
+
+julia> struct ChandrapatlaState{T,S} <: Roots.AbstractUnivariateZeroState{T,S}
+    xn1::T
+    xn0::T
+    c::T
+    fxn1::S
+    fxn0::S
+    fc::S
+end
+
+```
+
+An `init_state` method is used by some methods to add more detail to the basic state object, as is used here, where an intermediate value is stored:
+
+```julia
+julia> function Roots.init_state(::Chandrapatla, F, x₀, x₁, fx₀, fx₁)
+    b, a, fb, fa = x₁, x₀, fx₁, fx₀
+    c = Roots._middle(a,b)
+    fc = F(c)
+    ChandrapatlaState(b, a, c, fb, fa, fc)
+end
+
+```
+
+The main algorithm is implemented in the `update_state` method. The `@set!` macro from `Setfield.jl` is used to modify a state object, which otherwise is immutable.
+
+```julia
+julia> import Roots.Setfield: @set!;
+
+julia> function Roots.update_state(::Chandrapatla, F, o, options, l=NullTracks())
+
+    b,a,c = o.xn1, o.xn0, o.c
+    fb,fa,fc = o.fxn1, o.fxn0, o.fc
+
+    if sign(fc) * sign(fa) >= 0
+        a, fa, c, fc = c, fc, a, fa
+    else
+        c, b, a = b, a, c
+        fc, fb, fa = fb, fa, fc
+    end
+
+    m, fm = abs(fb) < abs(fa) ? (b, fb) : (a, fa)
+    tol = 2*abs(m)*options.xreltol + options.xabstol
+
+    @set! o.xn0 = a
+    @set! o.xn1 = b
+    @set! o.fxn0 = fa
+    @set! o.fxn1 = fb
+
+    if (tol / abs(b-c) > 0.5) || iszero(fm)
+        return (o, true)
+    end
+
+    ξ = (a - b) / (c - b)
+    Φ = (fa - fb) / (fc - fb)
+
+    if 1 - sqrt(1 - ξ)  < Φ < sqrt(ξ)
+        c = Roots.inverse_quadratic_step(a, b, c, fa, fb, fc)
+    else
+        c = Roots._middle(a, b)
+    end
+
+    fc = F(c)
+    Roots.incfn(l)
+
+    @set! o.c = c
+    @set! o.fc = fc
+
+    return (o, false)
+end
+
+```
+
+This algorithm chooses between an inverse quadratic step or a bisection step depending on the relationship between the computed `ξ` and `Φ`. The tolerances are from the default for `AbstractBracketing`, which are `eps(T)` for the absolute and relative ``x``-tolerances, these are similar for `Roots.Brent()`, whereas some other bracketing algorithms have tighter tolerances.
+
+
+To see that the algorithm works, we have:
+
+```julia
+julia> find_zero(sin, (3,4), Chandrapatla())
+3.141592653589793
+
+julia> find_zero(x -> exp(x) - x^4, (8,9), Chandrapatla())
+8.613169456441398
+
+julia> find_zero(x -> x^5 - x - 1, (1,2), Chandrapatla())
+1.1673039782614187
 ```

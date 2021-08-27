@@ -63,10 +63,10 @@ initial_fncalls(::AbstractSecant) = 2
 
 The `Order1()` method is an alias for `Secant`. It specifies the
 [secant method](https://en.wikipedia.org/wiki/Secant_method).
-This method keeps two values in its state, `x_n` and `x_n1`. The
-updated point is the intersection point of x axis with the secant line
-formed from the two points. The secant method uses 1 function
-evaluation per step and has order `(1+sqrt(5))/2`.
+This method keeps two values in its state, `xₙ` and `xₙ₋₁`. The
+updated point is the intersection point of ``x`` axis with the secant line
+formed from the two points. The secant method uses ``1`` function
+evaluation per step and has order `≈ (1+sqrt(5))/2`.
 
 The error, `eᵢ = xᵢ - α`, satisfies
 `eᵢ₊₂ = f[xᵢ₊₁,xᵢ,α] / f[xᵢ₊₁,xᵢ] * (xᵢ₊₁-α) * (xᵢ - α)`.
@@ -283,13 +283,13 @@ end
 Esser's method. This is a quadratically convergent method that, like
 Schroder's method, does not depend on the multiplicity of the
 zero. Schroder's method has update step `x - r2/(r2-r1) * r1`, where `ri =
-f^(i-1)/f^(i)`. Esser approximates `f' ~ f[x-h, x+h], f'' ~
+fⁱ⁻¹/fⁱ`. Esser approximates `f' ~ f[x-h, x+h], f'' ~
 f[x-h,x,x+h]`, where `h = fx`, as with Steffensen's method, Requiring 3
 function calls per step. The implementation `Order2B` uses a secant
 step when `|fx|` is considered too large.
 
 
-Esser, H. Computing (1975) 14: 367. https://doi.org/10.1007/BF02253547
+Esser, H. Computing (1975) 14: 367. DOI: [10.1007/BF02253547](https://doi.org/10.1007/BF02253547)
 Eine stets quadratisch konvergente Modifikation des Steffensen-Verfahrens
 
 
@@ -593,7 +593,7 @@ Implements the order 16 algorithm from
 by R. Thukral,
 American Journal of Computational and Applied Mathematics
 p-ISSN: 2165-8935;    e-ISSN: 2165-8943; 2012;  2(3): 112-118
-doi: 10.5923/j.ajcam.20120203.08.
+DOI: [10.5923/j.ajcam.20120203.08](https://doi.org/10.5923/j.ajcam.20120203.08).
 
 Five function calls per step are required. Though rapidly converging,
 this method generally isn't faster (fewer function calls/steps) over

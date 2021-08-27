@@ -24,19 +24,19 @@
 Performs bisection method to find a zero of a continuous
 function.
 
-It is assumed that (a,b) is a bracket, that is, the function has
-different signs at a and b. The interval (a,b) is converted to floating point
-and shrunk when a or b is infinite. The function f may be infinite for
-the typical case. If f is not continuous, the algorithm may find
+It is assumed that `(a,b)` is a bracket, that is, the function has
+different signs at `a` and `b`. The interval `(a,b)` is converted to floating point
+and shrunk when `a` or `b` is infinite. The function `f` may be infinite for
+the typical case. If `f` is not continuous, the algorithm may find
 jumping points over the x axis, not just zeros.
 
 
 If non-trivial tolerances are specified, the process will terminate
-when the bracket (a,b) satisfies `isapprox(a, b, atol=xatol,
-rtol=xrtol)`. For zero tolerances, the default, for Float64, Float32,
-or Float16 values, the process will terminate at a value `x` with
+when the bracket `(a,b)` satisfies `isapprox(a, b, atol=xatol,
+rtol=xrtol)`. For zero tolerances, the default, for `Float64`, `Float32`,
+or `Float16` values, the process will terminate at a value `x` with
 `f(x)=0` or `f(x)*f(prevfloat(x)) < 0 ` or `f(x) * f(nextfloat(x)) <
-0`. For other number types, the A42 method is used.
+0`. For other number types, the `Roots.A42` method is used.
 
 """
 function bisection(f, a::Number, b::Number; xatol=nothing, xrtol=nothing)
@@ -103,14 +103,14 @@ end
 """
     secant_method(f, xs; [atol=0.0, rtol=8eps(), maxevals=1000])
 
-Perform secant method to solve f(x) = 0.
+Perform secant method to solve `f(x) = 0.`
 
 The secant method is an iterative method with update step
-given by b - fb/m where m is the slope of the secant line between
-(a,fa) and (b,fb).
+given by `b - fb/m` where `m` is the slope of the secant line between
+`(a,fa)` and `(b,fb)`.
 
-The inital values can be specified as a pair of 2, as in `(a,b)` or
-`[a,b]`, or as a single value, in which case a value of `b` is chosen.
+The inital values can be specified as a pair of 2, as in `(x₀, x₁)` or
+`[x₀, x₁]`, or as a single value, `x₁` in which case a value of `x₀` is chosen.
 
 The algorithm returns m when `abs(fm) <= max(atol, abs(m) * rtol)`.
 If this doesn't occur before `maxevals` steps or the algorithm
@@ -119,7 +119,7 @@ are taken, the current value is checked to see if there is a sign
 change for neighboring floating point values.
 
 The `Order1` method for `find_zero` also implements the secant
-method. This one will be faster, as there are fewer setup costs.
+method. This one should be slightly faster, as there are fewer setup costs.
 
 Examples:
 
@@ -128,13 +128,12 @@ Roots.secant_method(sin, (3,4))
 Roots.secant_method(x -> x^5 -x - 1, 1.1)
 ```
 
-Note:
-
-This function will specialize on the function `f`, so that the inital
-call can take more time than a call to the `Order1()` method, though
-subsequent calls will be much faster.  Using `FunctionWrappers.jl` can
-ensure that the initial call is also equally as fast as subsequent
-ones.
+!!! note "Specialization"
+    This function will specialize on the function `f`, so that the inital
+    call can take more time than a call to the `Order1()` method, though
+    subsequent calls will be much faster.  Using `FunctionWrappers.jl` can
+    ensure that the initial call is also equally as fast as subsequent
+    ones.
 
 """
 function secant_method(f, xs; atol=zero(float(real(first(xs)))), rtol=8eps(one(float(real(first(xs))))), maxevals=100)
@@ -226,7 +225,7 @@ function muller(f, oldest::T, older::T, old::T;
     xatol=nothing, xrtol=nothing, maxevals=300) where {T}
     @assert old ≠ older ≠ oldest ≠ old # we want q to be non-degenerate
     xᵢ₋₂, xᵢ₋₁, xᵢ = oldest, older, old
-    fxᵢ₋₂, fxᵢ₋₁ = f(xᵢ₋₂), f(xᵢ₋₁) 
+    fxᵢ₋₂, fxᵢ₋₁ = f(xᵢ₋₂), f(xᵢ₋₁)
 
     RT = typeof(abs(oldest))
     atol = xatol !== nothing ? xatol : oneunit(RT) * (eps(one(RT)))^(4/5)

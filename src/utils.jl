@@ -61,17 +61,8 @@ function _default_secant_step(x1)
 end
 
 
-"""
-    steff_step(M, x, fx)
-
-Return first steffensen step x + fx (with proper units).
-May be overriden to provide a guard when fx is too large.
-
-"""
-function steff_step(M::Any, x::T, fx::S) where {T, S}
-    x + fx * oneunit(T) / oneunit(S)
-end
-
+# a bit better than a - fa/f_ab
+@inline secant_step(a, b, fa, fb) =  a - fa * (b - a) / (fb - fa)
 
 function guarded_secant_step(alpha, beta, falpha, fbeta)
 
@@ -93,6 +84,18 @@ function guarded_secant_step(alpha, beta, falpha, fbeta)
     end
 end
 
+
+"""
+    steff_step(M, x, fx)
+
+Return first Steffensen step x + fx (with proper units).
+May be overriden to provide a guard when fx is too large.
+
+"""
+function steff_step(M::Any, x::T, fx::S) where {T, S}
+    x + fx * oneunit(T) / oneunit(S)
+end
+
 # return vertex of parabola through (a,fa),(b,fb),(c,fc)
 # first time trhough, we have picture of a > b > c; |fa|, |fc| > |fb|, all same sign
 function quad_vertex(c,fc,b,fb,a,fa)
@@ -104,6 +107,14 @@ function quad_vertex(c,fc,b,fb,a,fa)
 end
 
 
+## inverse quadratic
+function inverse_quadratic_step(a::T,b,c,fa,fb,fc) where {T}
+    s = zero(T)
+    s += a * fb * fc / (fa - fb) / (fa - fc) # quad step
+    s += b * fa * fc / (fb - fa) / (fb - fc)
+    s += c * fa * fb / (fc - fa) / (fc - fb)
+    s
+end
 
 
 

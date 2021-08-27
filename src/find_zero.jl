@@ -107,8 +107,7 @@ The default tolerances for most methods are `xatol=eps(T)`,
 units (absolute tolerances have the units of `x` and `f(x)`; relative
 tolerances are unitless). For `Complex{T}` values, `T` is used.
 
-The number of iterations is limited by `maxevals=40`, the number of
-function evaluations is not capped.
+The number of iterations is limited by `maxevals=40`.
 
 """
 default_tolerances(M::AbstractUnivariateZeroMethod) = default_tolerances(M, Float64, Float64)
@@ -163,6 +162,13 @@ log_method(::NullTracks, method) = nothing
 log_nmethod(::NullTracks, method) = nothing
 
 # a tracks object to record tracks
+"""
+    Tracks(T, S)
+
+Construct a `Tracks` object used to record the progress of the algorithm.
+
+By default, a null tracks object used, but if `verbose=true` is specified of a `Tracks` object passed to the keyword `tracks` then the steps of the algorithm are recorded in the `Tracks` object. If `verbose=true`, the `Tracks` object will be shown.
+"""
 mutable struct Tracks{T,S} <: AbstractTracks
     xs::Vector{T}
     fs::Vector{S}
@@ -327,15 +333,15 @@ end
 end
 
 """
-   Roots.assess_convergence(method, state, options)
+    Roots.assess_convergence(method, state, options)
 
 Assess if algorithm has converged.
 
-Return a convergence flag and a boolean indicating if algorithm has terminated (converged or not converged)
+Return a convergence flag and a Boolean indicating if algorithm has terminated (converged or not converged)
 
-If alogrithm hasn't converged returns `false`.
+If algrithm hasn't converged returns `(:not_converged, false)`.
 
-If algorithm has stopped or converged, return `true` and a flag:
+If algorithm has stopped or converged, return flag and `true`. Flags are:
 
 * `:x_converged` if `abs(xn1 - xn0) < max(xatol, max(abs(xn1), abs(xn0)) * xrtol)`
 
@@ -347,7 +353,7 @@ If algorithm has stopped or converged, return `true` and a flag:
 
 Does not check number of steps taken nor number of function evaluations.
 
-In `find_zero`, stopped values (and `:x_converged`) are checked for convergence with a relaxed tolerance.
+In `decide_convergence`, stopped values (and `:x_converged` when `strict=false`) are checked for convergence with a relaxed tolerance.
 
 
 """
@@ -373,9 +379,7 @@ function assess_convergence(method::Any, state::AbstractUnivariateZeroState{T,S}
 
     # stop when xn1 ~ xn.
     # in find_zeros there is a check that f could be a zero with a relaxed tolerance
-    Δ = abs(xn1 - xn0)
-    δ = max(options.xabstol, max(abs(xn1), abs(xn0)) * options.xreltol)
-    if Δ ≤ δ
+    if isapprox(xn1, xn0, atol=options.xabstol, rtol=options.xreltol)
         return (:x_converged, true)
     end
 
@@ -463,7 +467,7 @@ end
 
 """
 
-    find_zero(fs, x0, M, [N::AbstractBracketing]; kwargs...)
+    find_zero(f, x0, M, [N::AbstractBracketing]; kwargs...)
 
 Interface to one of several methods for finding zeros of a univariate function, e.g. solving ``f(x)=0``.
 
@@ -486,13 +490,13 @@ A method is specified to indicate which algorithm to employ:
 
 * There are methods for bisection where a bracket is specified: [`Bisection`](@ref), [`Roots.A42`](@ref), [`Roots.AlefeldPotraShi`](@ref), [`Roots.Brent`](@ref), and [`FalsePosition`](@ref)
 
-* There are several derivative-free methods: cf. [`Order0`](@ref), [`Order1`](@ref) (also [`Roots.Secant`](@ref)), [`Order2`](@ref) (also [`Roots.Steffensen`](@ref)), [`Order5`](@ref), [`Order8`](@ref), and [`Order16`](@ref), where the number indicates the order of the convergence. Methods [`Roots.Order1B`](@ref) and [`Roots.Order2B`](@ref) implement methods useful when the desired zero has a multiplicity.
+* There are several derivative-free methods: cf. [`Order0`](@ref), [`Order1`](@ref) (also [`Roots.Secant`](@ref)), [`Order2`](@ref) (also [`Roots.Steffensen`](@ref)), [`Order5`](@ref), [`Order8`](@ref), and [`Order16`](@ref), where the number indicates the order of the convergence. Methods [`Roots.Order1B`](@ref) and [`Roots.Order2B`](@ref) are useful when the desired zero has a multiplicity.
 
 * There are some classical methods where derivatives are required: [`Roots.Newton`](@ref), [`Roots.Halley`](@ref), [`Roots.Schroder`](@ref).
 
-* The family [`Roots.LithBoonkkampIJzerman{S,D}`](@ref) for different `S` and `D` uses a linear multistep method root finder. The `(2,0)` method is the secant method, `(1,1)` is Newton's methods.
+* The family [`Roots.LithBoonkkampIJzerman{S,D}`](@ref) for different `S` and `D` uses a linear multistep method root finder. The `(2,0)` method is the secant method, `(1,1)` is Newton's method.
 
-For more detail, see the help page for each method (e.g., `?Order1`). Many methods are not exported, so much be qualified with module name, as in `?Roots.Schroder`.
+For more detail, see the help page for each method (e.g., `?Order1`). Non-exported methods must be qualified with module name, as in `?Roots.Schroder`.
 
 If no method is specified, the default method depends on `x0`:
 
@@ -506,16 +510,16 @@ The function(s) are passed as the first argument.
 
 For the few methods that use one or more derivatives (`Newton`, `Halley`,
 `Schroder`, `LithBoonkkampIJzerman(S,D)`, and  `Order5Derivative`) a
-tuple of functions is used. For the classical algorithms, a function `fs` returning `(f(x), f(x)/f'(x), [f'(x)/f''(x)])` may be used.
+tuple of functions is used. For the classical algorithms, a function returning `(f(x), f(x)/f'(x), [f'(x)/f''(x)])` may be used.
 
 # Optional arguments (tolerances, limit evaluations, tracing)
 
-* `xatol` - absolute tolerance for `x` values. Passed to `isapprox(x_n, x_{n-1})`
-* `xrtol` - relative tolerance for `x` values. Passed to `isapprox(x_n, x_{n-1})`
+* `xatol` - absolute tolerance for `x` values. Passed to `isapprox(x_n, x_{n-1})`.
+* `xrtol` - relative tolerance for `x` values. Passed to `isapprox(x_n, x_{n-1})`.
 * `atol`  - absolute tolerance for `f(x)` values.
 * `rtol`  - relative tolerance for `f(x)` values.
-* `maxevals`   - limit on maximum number of iterations
-* `strict` - if `false` (the default), when the algorithm stops, possible zeros are checked with a relaxed tolerance
+* `maxevals`   - limit on maximum number of iterations.
+* `strict` - if `false` (the default), when the algorithm stops, possible zeros are checked with a relaxed tolerance.
 * `verbose` - if `true` a trace of the algorithm will be shown on successful completion. See the internal `Tracks` object to save this trace.
 
 See the help string for `Roots.assess_convergence` for details on
@@ -533,13 +537,13 @@ For the `Bisection` methods, convergence is guaranteed, so the tolerances are se
 If a bracketing method is passed in after the method specification,
 then whenever a bracket is identified during the algorithm, the method
 will switch to the bracketing method to identify the zero. (Bracketing
-methods are guaranteed to converge, non-bracketing methods may not.)
+methods are mathematicall guaranteed to converge, non-bracketing methods may or may not converge.)
 This is what `Order0` does by default, with an initial secant method switching
 to the `AlefeldPotraShi` method should a bracket be encountered.
 
 Note: The order of the method is hinted at in the naming scheme. A
 scheme is order `r` if, with `eᵢ = xᵢ - α`, `eᵢ₊₁ = C⋅eᵢʳ`. If the
-error `eᵢ` is small enough, then essentially if the error aswill gain `r`
+error `eᵢ` is small enough, then essentially the error will gain `r`
 times as many leading zeros each step. However, if the error is not
 small, this will not be the case. Without good initial guesses, a high
 order method may still converge slowly, if at all. The `OrderN`
@@ -614,29 +618,21 @@ ERROR: Roots.ConvergenceFailed("Algorithm failed to converge")
 
 # Tracing
 
-Passing `verbose=true` will show details on the steps of the algorithm:
-
-```jldoctest find_zero
-julia> find_zero(sin, 3.0, Order2(), verbose=true)   # 2 iterations
-* function evaluations ≈ 5
-3.1415926535897936
-```
-
-For more detail on the algorithm, the underlying `state` contains the
-number of steps and function evaluations; the `tracks` argument allows
+Passing `verbose=true` will show details on the steps of the algorithm.
+The `tracks` argument allows
 the passing of storage to record the values of `x` and `f(x)` used in
 the algorithm.
 
 !!! note
     See [`solve!`](@ref) and [`ZeroProblem`](@ref) for an alternate interface.
 """
-function find_zero(fs, x0, M::AbstractUnivariateZeroMethod;
+function find_zero(f, x0, M::AbstractUnivariateZeroMethod;
                    p = nothing,
                    verbose=false,
                    tracks::AbstractTracks=NullTracks(),
                    kwargs...)
 
-    xstar = solve(ZeroProblem(fs, x0), M;
+    xstar = solve(ZeroProblem(f, x0), M;
                   p=p, verbose=verbose, tracks=tracks,
                   kwargs...)
 
@@ -797,7 +793,7 @@ The latter calls the following, which can be useful independently:
 * `init`: to initialize an iterator with a method for solution, any adjustments to the default tolerances, and a specification to log the steps or not.
 * `solve!` to iterate to convergence.
 
-Returns `NaN`, not an error, when the problem can not be solved.
+Returns `NaN`, not an error, when the problem can not be solved. Tested for zero allocations.
 
 ## Examples:
 

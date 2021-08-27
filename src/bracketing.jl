@@ -29,9 +29,10 @@ tolerances are set to zero (the default) guarantees a "best" solution
 (one where a zero is found or the bracketing interval is of the type
 `[a, nextfloat(a)]`).
 
-When tolerances are given, this algorithm terminates when the midpoint
-is approximately equal to an endpoint using absolute tolerance `xatol`
-and relative tolerance `xrtol`.
+When tolerances are given, this algorithm terminates when the interval
+length is less than or equal to the tolerance
+`max(xtol, max(abs(a), abs(b)) * .xrtol)`.
+
 
 When a zero tolerance is given and the values are not `Float64`
 values, this will call the [`A42`](@ref) method.
@@ -105,12 +106,12 @@ initial_fncalls(::Roots.AbstractBracketing) = 3
 
 For `Bisection` (or `BisectionExact`), when the `x` values are of type `Float64`, `Float32`,
 or `Float16`, the default tolerances are zero and there is no limit on
-the number of iterations or function evalutions. In this case, the
+the number of iterations. In this case, the
 algorithm is guaranteed to converge to an exact zero, or a point where
 the function changes sign at one of the answer's adjacent floating
 point values.
 
-For other types,  the [`A42`](@ref) method (with its tolerances) is used.
+For other types,  the [`Roots.A42`](@ref) method (with its tolerances) is used.
 
 """
 function default_tolerances(::AbstractBisection, ::Type{T}, ::Type{S}) where {T,S}
@@ -178,10 +179,11 @@ function assess_convergence(M::Bisection, state::AbstractUnivariateZeroState{T,S
     a,b = state.xn0, state.xn1
     fa,fb = state.fxn0, state.fxn1
 
-    xtol = max(options.xabstol, max(abs(a), abs(b)) * options.xreltol)
-    if b-a ≤ xtol
+
+    if isapprox(a, b, atol=options.xabstol, rtol = options.xreltol)
         return (:x_converged, true)
     end
+
     ftol = max(options.abstol, max(abs(a), abs(b)) * options.reltol)
     if min(abs(fa), abs(fb)) ≤ ftol
         return (:f_converged, true)
@@ -322,10 +324,11 @@ abstract type AbstractAlefeldPotraShi <: AbstractBracketing end
     Roots.A42()
 
 Bracketing method which finds the root of a continuous function within
-a provided interval [a, b], without requiring derivatives. It is based
+a provided interval `[a, b]`, without requiring derivatives. It is based
 on algorithm 4.2 described in: G. E. Alefeld, F. A. Potra, and
 Y. Shi, "Algorithm 748: enclosing zeros of continuous functions," ACM
 Trans. Math. Softw. 21, 327–344 (1995), DOI: [10.1145/210089.210111](https://doi.org/10.1145/210089.210111).
+The asymptotic efficiency index, ``q^{1/k}``, is ``(2 + 7^{1/2})^{1/3} = 1.6686...``.
 Originally by John Travers.
 
 """
@@ -343,9 +346,6 @@ assert_bracket(fx0, fx1) = isbracket(fx0, fx1) || throw(ArgumentError(bracketing
     fab, fbd = f_ab(a,b,fa,fb), f_ab(b,d,fb,fd)
     (fbd - fab)/(d-a)
 end
-
-# a bit better than a - fa/f_ab
-@inline secant_step(a, b, fa, fb) =  a - fa * (b - a) / (fb - fa)
 
 # assume fc != 0
 ## return a1,b1,d with a < a1 <  < b1 < b, d not there
@@ -590,7 +590,7 @@ end
 Follows algorithm in "ON ENCLOSING SIMPLE ROOTS OF NONLINEAR
 EQUATIONS", by Alefeld, Potra, Shi; DOI:
 [10.1090/S0025-5718-1993-1192965-2](https://doi.org/10.1090/S0025-5718-1993-1192965-2).
- Efficiency is 1.618. Less efficient, but can be faster than the [`A42`](@ref) method.
+Asymptotic efficiency index is ``1.618``. Less efficient, but can run faster than the [`A42`](@ref) method.
 Originally by John Travers.
 """
 struct AlefeldPotraShi <: AbstractAlefeldPotraShi end
@@ -755,18 +755,13 @@ function update_state(M::Brent, f, state::BrentState{T,S},
     a, b, c, d = state.xn0, state.xn1, state.c, state.d
     fa, fb, fc = state.fxn0, state.fxn1, state.fc
 
-    # next setp
+    # next step depends on points; inverse quadratic
     s::T = zero(a)
-    if  !iszero(fa-fc) && !iszero(fb-fc)
-        s =  a * fb * fc / (fa - fb) / (fa - fc) # quad step
-        s += b * fa * fc / (fb - fa) / (fb - fc)
-        s += c * fa * fb / (fc - fa) / (fc - fb)
-        s
-    else
-        s = secant_step(a,b,fa,fb)
-    end
+    s = inverse_quadratic_step(a,b,c,fa,fb,fc)
+    (isnan(s) || isinf(s)) && (s = secant_step(a,b,fa,fb))
     fs::S = f(s)
     incfn(l)
+
     if iszero(fs)
         @set! state.xn1 = s
         @set! state.fxn1 = fs
@@ -774,9 +769,6 @@ function update_state(M::Brent, f, state::BrentState{T,S},
     elseif isnan(fs) || isinf(fs)
         return (state, true)
     end
-
-#    val = check_zero(M, state, s, fs)
-#    val && return (state, true)
 
     # guard step
     u,v = (3a+b)/4, b
@@ -846,12 +838,12 @@ to find a zero for the function `f` within the bracketing interval
 `[a,b]`.
 
 The false position method is a modified bisection method, where the
-midpoint between `[a_k, b_k]` is chosen to be the intersection point
-of the secant line with the x axis, and not the average between the
+midpoint between `[aₖ, bₖ]` is chosen to be the intersection point
+of the secant line with the ``x`` axis, and not the average between the
 two values.
 
 To speed up convergence for concave functions, this algorithm
-implements the 12 reduction factors of Galdino (*A family of regula
+implements the ``12`` reduction factors of Galdino (*A family of regula
 falsi root-finding methods*). These are specified by number, as in
 `FalsePosition(2)` or by one of three names `FalsePosition(:pegasus)`,
 `FalsePosition(:illinois)`, or `FalsePosition(:anderson_bjork)` (the
@@ -859,7 +851,7 @@ default). The default choice has generally better performance than the
 others, though there are exceptions.
 
 For some problems, the number of function calls can be greater than
-for the `bisection64` method, but generally this algorithm will make
+for the `BisectionExact` method, but generally this algorithm will make
 fewer function calls.
 
 Examples
