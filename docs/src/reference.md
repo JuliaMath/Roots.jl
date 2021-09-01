@@ -136,6 +136,26 @@ Roots.Brent
 FalsePosition
 ```
 
+## Non-simple zeros
+
+The order of convergence for most methods is for *simple* zeros, values ``\alpha`` where ``f(x) = (x-\alpha) \cdot g(x)``, with ``g(\alpha)`` being non-zero. For methods which are of order ``k`` for non-simple zeros, usually an additional function call is needed per step. For example, this is the case for `Roots.Newton` as compared to `Roots.Schroder`.
+
+Derivative-free methods for non-simple zeros have the following implemented
+
+```@docs
+Roots.Order1B
+Roots.Order2B
+```
+
+A family of methods for non-simple zeros which require ``k`` derivatives to be order ``k`` are implemented in:
+
+```@docs
+Roots.AbstractThukralBMethod
+
+```
+
+
+
 ## Hybrid  methods
 
 A useful  strategy  is   to  begin with a non-bracketing  method and switch to a bracketing method should a bracket be encountered. This  allows   for the identification of zeros which are not surrounded by a bracket, and have guaranteed convergence  should a bracket be  encountered.  It  is  used  by default by `find_zero(f,a)`.

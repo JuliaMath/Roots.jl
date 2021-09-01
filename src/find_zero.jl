@@ -268,55 +268,95 @@ function Callable_Function(M,F::Callable_Function, p=F.p)
     Callable_Function(M, F.f, p)
 end
 
-
+# return f(x); (f(x), f(x)/f'(x)); *or* f(x), (f(x)/f'(x), f'(x)/f''(x), ...) # so N=1, 2 are special cased
 # Callable_Function(output_arity, input_arity, F, p)
+# First handle: x -> (f,f/f', f'/f'', ...)
 (F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{1}, T <: Val{false}, 𝑭, P<:Nothing} =
     first(F.f(x))
 (F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{1}, T <: Val{false}, 𝑭, P} =
     first(F.f(x, F.p))
 
+(F::Callable_Function{S,T,𝑭,P})(x) where {N, S <: Val{2}, T <: Val{false}, 𝑭, P<:Nothing} =
+    F.f(x)[1:2]
+(F::Callable_Function{S,T,𝑭,P})(x) where {N, S <: Val{2}, T <: Val{false}, 𝑭, P} =
+    F.f(x, F.p)[1:2]
+
+# N ≥ 3 returns (f, (...))
+(F::Callable_Function{S,T,𝑭,P})(x) where {N, S <: Val{N}, T <: Val{false}, 𝑭, P<:Nothing} = begin
+    fs = F.f(x)
+    fs[1], ntuple(i->fs[i+1], Val(N-1))
+end
+(F::Callable_Function{S,T,𝑭,P})(x) where {N, S <: Val{N}, T <: Val{false}, 𝑭, P} = begin
+    fs = F.f(x, F.p)
+    fs[1], ntuple(i->fs[i+1], Val(N-1))
+end
+
+## f is specified as a tuple (f,f',f'', ...)
+## N =1  return f(x)
 (F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{1}, T <: Val{true}, 𝑭, P<:Nothing} =
     first(F.f)(x)
 (F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{1}, T <: Val{true}, 𝑭, P} =
     first(F.f)(x, F.p)
-
-(F::Callable_Function{S,T,𝑭,P})(x) where {N, S <: Val{N}, T <: Val{false}, 𝑭, P<:Nothing} =
-    F.f(x)[1:N]
-(F::Callable_Function{S,T,𝑭,P})(x) where {N, S <: Val{N}, T <: Val{false}, 𝑭, P} =
-    F.f(x, F.p)[1:N]
-
+## N=2 return (f(x), f(x)/f'(x))
 (F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{2}, T <: Val{true}, 𝑭, P<:Nothing} = begin
     f, f′ = (F.f[1])(x), (F.f[2])(x)
-    (f, f/f′)
+    f, f/f′
 end
 (F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{2}, T <: Val{true}, 𝑭, P} = begin
     f, f′ = (F.f[1])(x, F.p), (F.f[2])(x, F.p)
-    (f, f/f′)
+    f, f/f′
 end
 
+## For N ≥ 3 we return (f, (f/f', f'/f'', ...);
+## Pay no attention to this code; we hand write a bunch, as the
+## general formula later runs more slowly.
 (F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{3}, T <: Val{true}, 𝑭, P<:Nothing} = begin
     f, f′, f′′ = (F.f[1])(x), (F.f[2])(x), (F.f[3])(x)
-    (f, f/f′, f′/f′′)
+    f, (f/f′, f′/f′′)
 end
 (F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{3}, T <: Val{true}, 𝑭, P} = begin
-    f, f′ = (F.f[1])(x, F.p), (F.f[2])(x, F.p), (F.f[3])(x, F.p)
-    (f, f/f′, f′/f′′)
+    f, f′, f′′ = (F.f[1])(x, F.p), (F.f[2])(x, F.p), (F.f[3])(x, F.p)
+    f, (f/f′, f′/f′′)
 end
 
-_apply(f,x) = f(x)
-_apply(f,x, p) = f(x, p)
+(F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{4}, T <: Val{true}, 𝑭, P<:Nothing} = begin
+    f, f′, f′′, f′′′ = (F.f[1])(x), (F.f[2])(x), (F.f[3])(x), (F.f[4])(x)
+    f, (f/f′, f′/f′′, f′′/f′′′)
+end
+(F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{4}, T <: Val{true}, 𝑭, P} = begin
+    f, f′,f′′,f′′′ = (F.f[1])(x, F.p), (F.f[2])(x, F.p), (F.f[3])(x, F.p), (F.f[4])(x, F.p)
+    𝐓 = eltype(f/f′)
+    f, NTuple{3,𝐓}((f/f′, f′/f′′, f′′/f′′′))
+end
 
+(F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{5}, T <: Val{true}, 𝑭, P<:Nothing} = begin
+    f, f′, f′′, f′′′, f′′′′ = (F.f[1])(x), (F.f[2])(x), (F.f[3])(x), (F.f[4])(x), (F.f[5])(x)
+    f, (f/f′, f′/f′′, f′′/f′′′, f′′′/f′′′′)
+end
+(F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{5}, T <: Val{true}, 𝑭, P} = begin
+    f, f′,f′′,f′′′,f′′′′ = (F.f[1])(x, F.p), (F.f[2])(x, F.p), (F.f[3])(x, F.p), (F.f[4])(x, F.p), (F.f[5])(x, F.p)
+    f, (f/f′, f′/f′′, f′′/f′′′, f′′′/f′′′′)
+end
 
+(F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{6}, T <: Val{true}, 𝑭, P<:Nothing} = begin
+    f, f′, f′′, f′′′, f′′′′, f′′′′′ = (F.f[1])(x), (F.f[2])(x), (F.f[3])(x), (F.f[4])(x), (F.f[5])(x),(F.f[6])(x)
+    f, (f/f′, f′/f′′, f′′/f′′′, f′′′/f′′′′, f′′′′/f′′′′′)
+end
+(F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{6}, T <: Val{true}, 𝑭, P} = begin
+    f, f′,f′′,f′′′,f′′′′, f′′′′′ = (F.f[1])(x, F.p), (F.f[2])(x, F.p), (F.f[3])(x, F.p), (F.f[4])(x, F.p), (F.f[5])(x, F.p), (F.f[6])(x, F.p)
+    f, (f/f′, f′/f′′, f′′/f′′′, f′′′/f′′′′, f′′′′/f′′′′′)
+end
+
+# faster with the above written out, should generate them...
 (F::Callable_Function{S,T,𝑭,P})(x) where {𝐍, S <: Val{𝐍}, T <: Val{true}, 𝑭, P<:Nothing} = begin
-    fs = _apply.(F.f, Ref(x))
-    Tuple(iszero(i) ? fs[1] : fs[i]/fs[i+1] for i ∈ 0:length(fs)-1)
+    fs = ntuple(i -> F.f[i](x), Val(𝐍))
+    first(fs), ntuple(i -> fs[i]/fs[i+1], Val(𝐍-1))
 end
 
 (F::Callable_Function{S,T,𝑭,P})(x) where {𝐍, S <: Val{𝐍}, T <: Val{true}, 𝑭, P} = begin
-    fs = _apply.(F.f, Ref(x), Ref(p))
-    Tuple(iszero(i) ? fs[1] : fs[i]/fs[i+1] for i ∈ 0:length(fs)-1)
+    fs = ntuple(i -> F.f[i](x, p), Val(𝐍))
+    first(fs), ntuple(i -> fs[i]/fs[i+1], Val(𝐍-1))
 end
-
 
 
 ## Assess convergence

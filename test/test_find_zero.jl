@@ -1,7 +1,7 @@
 ## tests of find_zero interface
 using Roots
 using Test
-
+using ForwardDiff; Base.adjoint(f) = x -> ForwardDiff.derivative(f, float(x))
 
 # for a user-defined method
 import Roots.Setfield
@@ -104,6 +104,22 @@ struct Order3_Test <: Roots.AbstractSecant end
     end
 
 
+end
+
+@testset "non simple zeros" begin
+
+    Ms = (Roots.Order1B(), Roots.Order2B(),Roots.Schroder(),
+          Roots.Thukral2B(),Roots.Thukral3B(),Roots.Thukral4B(),Roots.Thukral5B())
+
+    g(x) = exp(x) + x - 2
+    f(x) = g(x)^2
+    x₀ = 1/4
+
+    α = find_zero(g, x₀)
+    fs = (f,f',f'',f''',f'''',f''''',f'''''')
+    for M ∈ Ms
+        @test find_zero(fs, x₀, M) ≈ α atol=1e-6
+    end
 end
 
 
