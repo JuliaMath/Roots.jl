@@ -19,7 +19,7 @@ _unitless(x) = x / oneunit(x)
 nan(::Type{Float16}) = NaN16
 nan(::Type{Float32}) = NaN32
 nan(::Type{Float64}) = NaN
-nan(x::T) where {T <: Real} = nan(T)
+nan(x::T) where {T <: Real} = NaN*one(T)
 nan(::Any) = NaN
 
 ## issue with approx derivative

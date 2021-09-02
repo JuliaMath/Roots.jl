@@ -29,6 +29,7 @@ include("simple.jl")
 include("find_zeros.jl")
 include("newton.jl")
 include("lith.jl")
+include("non_simple.jl")
 include("fzero.jl")
 
 # cf. https://github.com/JuliaDocs/Documenter.jl/pull/1664/files
