@@ -58,8 +58,9 @@ initial_fncalls(::AbstractSecant) = 2
 ## Secant
 ## https://en.wikipedia.org/wiki/Secant_method
 """
+    Secant()
     Order1()
-    Roots.Secant()
+
 
 The `Order1()` method is an alias for `Secant`. It specifies the
 [secant method](https://en.wikipedia.org/wiki/Secant_method).
@@ -124,8 +125,9 @@ end
 ## https://en.wikipedia.org/wiki/Steffensen's_method#Simple_description
 
 """
+    Steffensen()
     Order2()
-    Roots.Steffensen()
+
 
 The quadratically converging
 [Steffensen](https://en.wikipedia.org/wiki/Steffensen's_method#Simple_description)
@@ -140,8 +142,8 @@ step when `f(x)` is large.
 The error, `eᵢ - α`, satisfies
 `eᵢ₊₁ = f[xᵢ, xᵢ+fᵢ, α] / f[xᵢ,xᵢ+fᵢ] ⋅ (1 - f[xᵢ,α] ⋅ eᵢ²`
 """
-struct Order2 <: AbstractSecant end
 struct Steffensen <: AbstractSecant end
+struct Order2 <: AbstractSecant end
 
 function update_state(method::Order2, fs, o::UnivariateZeroState{T,S}, options, l=NullTracks())  where {T, S}
      update_state_guarded(method, Secant(), Steffensen(), fs, o, options, l)

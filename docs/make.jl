@@ -5,7 +5,7 @@ DocMeta.setdocmeta!(Roots, :DocTestSetup, :(using Roots); recursive=true)
 
 makedocs(
     sitename = "Roots",
-    format = Documenter.HTML(),#ansicolor=true),
+    format = Documenter.HTML(ansicolor=true),
     modules = [Roots]
 )
 
