@@ -456,7 +456,6 @@ To visualize the trajectory if shot at ``45`` degrees, we would have:
 
 
 ```@example roots
-#; continued = true
 using Roots, ForwardDiff  # hide
 using Plots; unicodeplots()  # hide
 
@@ -562,9 +561,8 @@ A graph shows the issue. Running the following shows ``15`` steps of Newton's
 method, the other algorithms being somewhat similar:
 
 ```@example roots
-using Roots, ForwardDiff, Plots; unicodeplots()  # hide
-f(x) = x^5 - x - 1; # hide
-D(f) = x -> ForwardDiff.derivative(f,float(x)) # hide
+#f(x) = x^5 - x - 1; # hide
+#D(f) = x -> ForwardDiff.derivative(f,float(x)) # hide
 xs = [0.1] # x0
 n = 15
 for i in 1:(n-1) push!(xs, xs[end] - f(xs[end])/D(f)(xs[end])) end
