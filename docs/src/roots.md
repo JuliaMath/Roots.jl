@@ -156,7 +156,6 @@ julia> rt - pi
 
 ```
 
-
 ## Non-bracketing problems
 
 Bracketing methods have guaranteed convergence, but in general may require
@@ -378,7 +377,7 @@ julia> x0 = (3, 4)
 (3, 4)
 
 julia> M = Roots.Secant()
-Roots.Secant()
+Secant()
 
 julia> Z = ZeroProblem(f, x0)
 ZeroProblem{typeof(f), Tuple{Int64, Int64}}(f, (3, 4))
@@ -409,6 +408,7 @@ julia> solve(Z, Bisection(), 3, xatol=1/16) # p=3; uses keywords for tolerances
 1.1959535058744393
 ```
 
+
 ## Finding critical points
 
 The `D` function, defined above, makes it straightforward to find critical points
@@ -421,7 +421,6 @@ julia> f(x) = 1/x^2 + x^3;
 
 julia> find_zero(D(f), 1)
 0.9221079114817278
-
 ```
 
 For more complicated expressions, `D` may need some technical
@@ -436,7 +435,6 @@ julia> function flight(x, theta)
          tand(theta)*x + (b/a)*x - b*log(a/(a-x))
        end
 flight (generic function with 1 method)
-
 ```
 
 
@@ -446,7 +444,7 @@ This can be solved for different `theta` with `find_zero`. In the
 following, we note that `log(a/(a-x))` will have an asymptote at `a`,
 so we start our search at `a-5`:
 
-```
+```jldoctest roots
 julia> function howfar(theta)
          a = 200*cosd(theta)
          find_zero(x -> flight(x, theta), a-5)  # starting point has type determined by `theta`.
@@ -457,10 +455,13 @@ howfar (generic function with 1 method)
 To visualize the trajectory if shot at ``45`` degrees, we would have:
 
 
-```@example trajectory; continued = true
+```@example roots
+using Roots, ForwardDiff  # hide
 using Plots; unicodeplots()  # hide
-flight(x, theta) = (k = 1/2; a = 200*cosd(theta); b = 32/k ;tand(theta)*x + (b/a)*x - b*log(a/(a-x)))
+
+flight(x, theta) = (k = 1/2; a = 200*cosd(theta); b = 32/k; tand(theta)*x + (b/a)*x - b*log(a/(a-x)))
 howfar(theta) = (a = 200*cosd(theta); find_zero(x -> flight(x, theta), a-5))
+howfarp(t) = ForwardDiff.derivative(howfar,t)
 
 theta = 45
 tstar = find_zero(howfarp, 45)
@@ -476,18 +477,19 @@ The automatic differentiation provided by `ForwardDiff` will
 work through a call to `find_zero` **if** the initial point has the proper type (depending on an expression of `theta` in this case).
 As we use `200*cosd(theta)-5` for a starting point, this is satisfied.
 
-```
-julia> tstar = find_zero(D(howfar), 45)
-26.262308916287818
+```jldoctest roots
+julia> (tstar = find_zero(D(howfar), 45)) ≈ 26.2623089
+true
 ```
 
 This graph would show the differences in the trajectories:
 
-```@example trajectory
+```@example roots
 plot(x -> flight(x, 45), 0, howfar(45))
 plot!(x -> flight(x, tstar), 0, howfar(tstar))
 show(current())  # hide
 ```
+
 
 
 ## Potential issues
@@ -512,7 +514,6 @@ to be problematic:
 ```jldoctest roots
 julia> try  find_zero(sin, pi/2, Order1()) catch err  "Convergence failed" end
 "Convergence failed"
-
 ```
 
 (Whereas, starting at `pi/2 + 0.3`--where the slope of the tangent
@@ -559,8 +560,9 @@ julia> try find_zero(f, x0)  catch err  "Convergence failed" end
 A graph shows the issue. Running the following shows ``15`` steps of Newton's
 method, the other algorithms being somewhat similar:
 
-```@example
-using Plots(); unicodeplots()  # hide
+```@example roots
+#f(x) = x^5 - x - 1; # hide
+#D(f) = x -> ForwardDiff.derivative(f,float(x)) # hide
 xs = [0.1] # x0
 n = 15
 for i in 1:(n-1) push!(xs, xs[end] - f(xs[end])/D(f)(xs[end])) end

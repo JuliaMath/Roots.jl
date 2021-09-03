@@ -294,7 +294,7 @@ find_zero((f, f', f'', f'''), big(x0), Roots.Thukral3B()) #  3 iterations; 16 fu
 ## Refrence
 
 *Introduction to a family of Thukral ``k``-order method for finding multiple zeros of nonlinear equations*,
-R. Thukral, JOURNAL OF ADVANCES IN MATHEMATICS 13(3):7230-7237, DOI: [10.24297/jam.v13i3.6146](https:doi.org/10.24297/jam.v13i3.6146).
+R. Thukral, JOURNAL OF ADVANCES IN MATHEMATICS 13(3):7230-7237, DOI: [10.24297/jam.v13i3.6146](https://doi.org/10.24297/jam.v13i3.6146).
 """
 abstract type AbstractThukralBMethod <: AbstractHalleyLikeMethod end
 initial_fncalls(M::AbstractThukralBMethod) = fn_argout(M)

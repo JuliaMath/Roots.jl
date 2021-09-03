@@ -37,6 +37,7 @@ The problem-algorithm-solve interface is a pattern popularized in `Julia` by the
 
 ```@docs
 Roots.solve!
+Roots.ZeroProblem
 ```
 
 
@@ -82,11 +83,12 @@ Roots.Newton
 Roots.Halley
 ```
 
-For non-simple zeros, Schroder showed an additional  derivative can  be used to yield quadratic convergence.
+Newton and Halley's method are members of this family of methods:
 
 ```@docs
-Roots.Schroder
+Roots.LithBoonkkampIJzerman{S,D}
 ```
+
 
 ## Derivative free methods
 
@@ -102,20 +104,12 @@ only requires one new  function call per  step  so  can be very effective. Often
 ----
 
 ```@docs
-Order1
-Order2
+Secant
+Steffensen
 Order5
 Order8
 Order16
 ```
-
-As with  Newton's method, convergence rates are for simple  zeros. For  non simple zeros there are related methods with varying convergence rates:
-
-```@docs
-Roots.King
-Roots.Esser
-```
-
 
 
 ## Bracketing methods
@@ -134,6 +128,7 @@ Roots.A42
 Roots.AlefeldPotraShi
 Roots.Brent
 FalsePosition
+Roots.LithBoonkkampIJzermanBracket
 ```
 
 ## Non-simple zeros
@@ -143,15 +138,22 @@ The order of convergence for most methods is for *simple* zeros, values ``\alpha
 Derivative-free methods for non-simple zeros have the following implemented
 
 ```@docs
-Roots.Order1B
-Roots.Order2B
+Roots.King
+Roots.Esser
 ```
 
-A family of methods for non-simple zeros which require ``k`` derivatives to be order ``k`` are implemented in:
+
+For non-simple zeros, Schroder showed an additional derivative can  be used to yield quadratic convergence based on Newton's method:
+
+```@docs
+Roots.Schroder
+```
+
+
+A family of methods for non-simple zeros which require ``k`` derivatives to be order ``k``, with ``k=2`` yielding Schroder's method, are implemented in:
 
 ```@docs
 Roots.AbstractThukralBMethod
-
 ```
 
 
