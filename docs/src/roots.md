@@ -457,18 +457,17 @@ howfar (generic function with 1 method)
 To visualize the trajectory if shot at ``45`` degrees, we would have:
 
 
-```
-flight(x, theta) = (k = 1/2;a = 200*cosd(theta);b = 32/k;tand(theta)*x + (b/a)*x - b*log(a/(a-x))); nothing
-howfar(theta) = (a = 200*cosd(theta);find_zero(x -> flight(x, theta), a-5)); nothing
+```@example trajectory; continued = true
+using Plots; unicodeplots()  # hide
+flight(x, theta) = (k = 1/2; a = 200*cosd(theta); b = 32/k ;tand(theta)*x + (b/a)*x - b*log(a/(a-x)))
+howfar(theta) = (a = 200*cosd(theta); find_zero(x -> flight(x, theta), a-5))
 
 theta = 45
 tstar = find_zero(howfarp, 45)
 
-using Plots
 plot(x -> flight(x,  theta), 0, howfar(theta))
+show(current())  # hide
 ```
-
-
 
 To maximize the range we solve for the lone critical point of `howfar`
 within reasonable starting points.
@@ -480,14 +479,14 @@ As we use `200*cosd(theta)-5` for a starting point, this is satisfied.
 ```
 julia> tstar = find_zero(D(howfar), 45)
 26.262308916287818
-
 ```
 
 This graph would show the differences in the trajectories:
 
-```
+```@example trajectory
 plot(x -> flight(x, 45), 0, howfar(45))
 plot!(x -> flight(x, tstar), 0, howfar(tstar))
+show(current())  # hide
 ```
 
 
@@ -560,7 +559,8 @@ julia> try find_zero(f, x0)  catch err  "Convergence failed" end
 A graph shows the issue. Running the following shows ``15`` steps of Newton's
 method, the other algorithms being somewhat similar:
 
-```julia
+```@example
+using Plots(); unicodeplots()  # hide
 xs = [0.1] # x0
 n = 15
 for i in 1:(n-1) push!(xs, xs[end] - f(xs[end])/D(f)(xs[end])) end
@@ -569,6 +569,7 @@ xs = xs[repeat(collect(1:n), inner=[2], outer=[1])]
 plot(f, -1.25, 1.5, linewidth=3, legend=false)
 plot!(zero, -1.25, 1.5, linewidth=3)
 plot!(xs, ys)
+show(current())  # hide
 ```
 
 Only a few of the steps are discernible, as the function's relative maximum
