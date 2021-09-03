@@ -446,7 +446,7 @@ This can be solved for different `theta` with `find_zero`. In the
 following, we note that `log(a/(a-x))` will have an asymptote at `a`,
 so we start our search at `a-5`:
 
-```
+```jldoctest roots
 julia> function howfar(theta)
          a = 200*cosd(theta)
          find_zero(x -> flight(x, theta), a-5)  # starting point has type determined by `theta`.
@@ -458,9 +458,10 @@ To visualize the trajectory if shot at ``45`` degrees, we would have:
 
 
 ```@example trajectory; continued = true
-using Plots; unicodeplots()  # hide
+using Roots, Plots, ForwardDiff; unicodeplots()  # hide
 flight(x, theta) = (k = 1/2; a = 200*cosd(theta); b = 32/k ;tand(theta)*x + (b/a)*x - b*log(a/(a-x)))
 howfar(theta) = (a = 200*cosd(theta); find_zero(x -> flight(x, theta), a-5))
+howfarp(t) = ForwardDiff.derivative(howfar,t)
 
 theta = 45
 tstar = find_zero(howfarp, 45)
@@ -512,7 +513,6 @@ to be problematic:
 ```jldoctest roots
 julia> try  find_zero(sin, pi/2, Order1()) catch err  "Convergence failed" end
 "Convergence failed"
-
 ```
 
 (Whereas, starting at `pi/2 + 0.3`--where the slope of the tangent

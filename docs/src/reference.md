@@ -109,14 +109,6 @@ Order8
 Order16
 ```
 
-As with  Newton's method, convergence rates are for simple  zeros. For  non simple zeros there are related methods with varying convergence rates:
-
-```@docs
-Roots.King
-Roots.Esser
-```
-
-
 
 ## Bracketing methods
 
@@ -143,15 +135,14 @@ The order of convergence for most methods is for *simple* zeros, values ``\alpha
 Derivative-free methods for non-simple zeros have the following implemented
 
 ```@docs
-Roots.Order1B
-Roots.Order2B
+Roots.King
+Roots.Esser
 ```
 
 A family of methods for non-simple zeros which require ``k`` derivatives to be order ``k`` are implemented in:
 
 ```@docs
 Roots.AbstractThukralBMethod
-
 ```
 
 
