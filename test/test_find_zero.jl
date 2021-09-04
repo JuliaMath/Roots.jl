@@ -281,7 +281,7 @@ end
     for M in [Order1(), Roots.Order1B(), Order2(), Roots.Order2B(), Order5()]
         @test_throws Roots.ConvergenceFailed find_zero(fn, -1.0, M)
     end
-    for M in [Order0(),  Order8(), Order16()]
+    for M in [Order0(),  Roots.Thukral8(), Roots.Thukral16()]
         @test find_zero(fn, -1.0, M) ≈ xstar
     end
 
@@ -308,7 +308,7 @@ end
         @test_throws Roots.ConvergenceFailed find_zero(fn, x0, M)
     end
     ### these stop but only because rtol is used for checking f(xn) ~ 0
-    for M in [Order8(), Order16()]
+    for M in [Roots.Thukral8(), Roots.Thukral16()]
         @test abs(find_zero(fn, x0, M) -  0.0) >= 100
     end
 
@@ -325,10 +325,10 @@ end
             (m*a+b)/a * (x+a) + (-m*a -b)
         end
     end
-    for M in (Order0(), Order1(), Roots.Order1B(), Order2(), Roots.Order2B())
+    for M in (Order0(), Order1(), Roots.Order1B(), Order2(), Roots.Order2B(), Order5(), Order8())
         @test abs(find_zero(newton_baffler, 1.0, M)) <= 1e-15
     end
-    for M in (Order5(), Order8())
+    for M in (Roots.KumarSinghAkanksha(), Roots.Thukral8(), Roots.Thukral16())
         @test_throws Roots.ConvergenceFailed find_zero(newton_baffler, 1.0, M)
     end
 

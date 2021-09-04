@@ -60,6 +60,7 @@ initial_fncalls(::AbstractSecant) = 2
 """
     Secant()
     Order1()
+    Orderφ()
 
 
 The `Order1()` method is an alias for `Secant`. It specifies the
@@ -67,7 +68,7 @@ The `Order1()` method is an alias for `Secant`. It specifies the
 This method keeps two values in its state, `xₙ` and `xₙ₋₁`. The
 updated point is the intersection point of ``x`` axis with the secant line
 formed from the two points. The secant method uses ``1`` function
-evaluation per step and has order `≈ (1+sqrt(5))/2`.
+evaluation per step and has order `φ≈ (1+sqrt(5))/2`.
 
 The error, `eᵢ = xᵢ - α`, satisfies
 `eᵢ₊₂ = f[xᵢ₊₁,xᵢ,α] / f[xᵢ₊₁,xᵢ] * (xᵢ₊₁-α) * (xᵢ - α)`.
@@ -75,6 +76,7 @@ The error, `eᵢ = xᵢ - α`, satisfies
 """
 struct Secant <: AbstractSecant end
 const Order1 = Secant
+const Orderφ = Secant
 
 # init_state(M,F,x) --> call init_state(M,F,x₀,x₁,fx₀, fx₁)
 function init_state(M::AbstractSecant, F::Callable_Function, x)
@@ -136,7 +138,7 @@ the quadratically converging Newton's method, no derivative is
 necessary, though like Newton's method, two function calls per step
 are. Steffensen's algorithm is more sensitive than Newton's method to
 poor initial guesses when `f(x)` is large, due to how `f'(x)` is
-approximated. This algorithm, `Order2`, replaces a Steffensen step with a secant
+approximated. The `Order2` method replaces a Steffensen step with a secant
 step when `f(x)` is large.
 
 The error, `eᵢ - α`, satisfies
@@ -188,12 +190,14 @@ end
 
 """
     Order5()
+    KumarSinghAkanksha()
 
 Implements an order 5 algorithm from *A New Fifth Order Derivative
 Free Newton-Type Method for Solving Nonlinear Equations* by Manoj
 Kumar, Akhilesh Kumar Singh, and Akanksha, Appl. Math. Inf. Sci. 9,
 No. 3, 1507-1513 (2015), DOI: [10.12785/amis/090346](https://doi.org/10.12785/amis/090346). Four function
-calls per step are needed.
+calls per step are needed.  The `Order5` method replaces a Steffensen step with a secant
+step when `f(x)` is large.
 
 The error, `eᵢ = xᵢ - α`, satisfies
 `eᵢ₊₁ = K₁ ⋅ K₅ ⋅ M ⋅ eᵢ⁵ + O(eᵢ⁶)`
@@ -204,8 +208,11 @@ struct KumarSinghAkanksha <: AbstractSecant end
 
 
 
+function update_state(method::Order5, fs, o::UnivariateZeroState{T,S}, options, l=NullTracks())  where {T, S}
+    update_state_guarded(method, Secant(), KumarSinghAkanksha(), fs, o, options, l)
+end
 
-function update_state(M::Union{Order5, KumarSinghAkanksha}, F, o::AbstractUnivariateZeroState{T,S},
+function update_state(M::KumarSinghAkanksha, F, o::AbstractUnivariateZeroState{T,S},
                       options, l=NullTracks()) where {T, S}
 
     xn = o.xn1
@@ -214,7 +221,7 @@ function update_state(M::Union{Order5, KumarSinghAkanksha}, F, o::AbstractUnivar
     wn::T = steff_step(M, o.xn1, o.fxn1)
 
     fwn::S = F(wn)
-   incfn(l)
+    incfn(l)
 
     fp, issue = _fbracket(o.xn1, wn, o.fxn1, fwn)
     if issue
@@ -314,12 +321,15 @@ end
 ## cf also: https://doi.org/10.1515/tmj-2017-0049
 """
     Order8()
+    Thukral8()
 
 Implements an eighth-order algorithm from *New Eighth-Order
 Derivative-Free Methods for Solving Nonlinear Equations* by Rajinder
 Thukral, International Journal of Mathematics and Mathematical
 Sciences Volume 2012 (2012), Article ID 493456, 12 pages DOI:
-[10.1155/2012/493456](https://doi.org/10.1155/2012/493456). Four function calls per step are required.
+[10.1155/2012/493456](https://doi.org/10.1155/2012/493456). Four
+function calls per step are required.  The `Order8` method replaces a
+Steffensen step with a secant step when `f(x)` is large.
 
 The error, `eᵢ = xᵢ - α`, is expressed as `eᵢ₊₁ = K ⋅ eᵢ⁸` in
 (2.25) of the paper for an explicit `K`.
@@ -328,7 +338,11 @@ The error, `eᵢ = xᵢ - α`, is expressed as `eᵢ₊₁ = K ⋅ eᵢ⁸` in
 struct Order8 <: AbstractSecant end
 struct Thukral8 <: AbstractSecant end
 
-function update_state(M::Union{Thukral8, Order8}, F, o::AbstractUnivariateZeroState{T,S}, options, l=NullTracks()) where {T, S}
+function update_state(method::Order8, fs, o::UnivariateZeroState{T,S}, options, l=NullTracks())  where {T, S}
+    update_state_guarded(method, Secant(), Thukral8(), fs, o, options, l)
+end
+
+function update_state(M::Thukral8, F, o::AbstractUnivariateZeroState{T,S}, options, l=NullTracks()) where {T, S}
 
     xn = o.xn1
     fxn = o.fxn1
@@ -409,6 +423,7 @@ end
 
 """
     Order16()
+    Thukral16()
 
 Implements the order 16 algorithm from
 *New Sixteenth-Order Derivative-Free Methods for Solving Nonlinear Equations*
@@ -420,7 +435,8 @@ DOI: [10.5923/j.ajcam.20120203.08](https://doi.org/10.5923/j.ajcam.20120203.08).
 Five function calls per step are required. Though rapidly converging,
 this method generally isn't faster (fewer function calls/steps) over
 other methods when using `Float64` values, but may be useful for
-solving over `BigFloat`.
+solving over `BigFloat`.  The `Order16` method replaces a Steffensen step with a secant
+step when `f(x)` is large.
 
 The error, `eᵢ = xᵢ - α`, is expressed as `eᵢ₊₁ = K⋅eᵢ¹⁶` for an explicit `K`
 in equation (50) of the paper.
@@ -429,7 +445,11 @@ in equation (50) of the paper.
 struct Order16 <: AbstractSecant end
 struct Thukral16 <: AbstractSecant end
 
-function update_state(M::Union{Thukral16, Order16}, F, o::AbstractUnivariateZeroState{T,S}, options, l=NullTracks()) where {T, S}
+function update_state(method::Order16, fs, o::UnivariateZeroState{T,S}, options, l=NullTracks())  where {T, S}
+    update_state_guarded(method, Secant(), Thukral16(), fs, o, options, l)
+end
+
+function update_state(M::Thukral16, F, o::AbstractUnivariateZeroState{T,S}, options, l=NullTracks()) where {T, S}
     xn = o.xn1
     fxn = o.fxn1
 

@@ -114,6 +114,7 @@ end
 function init_state(L::LithBoonkkampIJzerman{S,D}, F, x) where {S,D}
 
     xs, ys = init_lith(L, F, x) # [x₀,x₁,…,xₛ₋₁], ...
+
     R = eltype(xs)
     T = eltype(ys[1])
 

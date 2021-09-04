@@ -15,7 +15,7 @@ export fzero,
 
 export find_zero, find_zero!, find_zeros,
        ZeroProblem, solve, solve!, init,
-       Order0, Secant, Order1, Steffensen, Order2, Order5, Order8, Order16
+       Order0, Secant, Order1, Orderφ, Steffensen, Order2, Order5, Order8, Order16
 
 export Bisection, A42, AlefeldPotraShi, FalsePosition
 
