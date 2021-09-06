@@ -1,6 +1,7 @@
 # [Lith, Boonkkamp, and IJzerman](https://doi.org/10.1016/j.amc.2017.09.003)
 # A family of different methods that includes the secant method and Newton's method
 
+# return f^(i-1)(x); not the same as default eval call
 function evalf(F::Callable_Function{S,T,𝑭, P}, x, i) where {N,S<:Val{N}, T<:Val{true}, 𝑭, P}
     F.f[i](x)
 end
@@ -97,6 +98,9 @@ may get smaller.
     For the larger values of `S`, the expressions to compute the next value get quite involved.
     The higher convergence rate is likely only to be of help for finding solutions to high precision.
 
+!!! Note:
+    This is not performant, as is
+
 """
 struct LithBoonkkampIJzerman{S,D} <: AbstractNewtonLikeMethod end
 LithBoonkkampIJzerman(s,d) = LithBoonkkampIJzerman{s,d}()
@@ -136,30 +140,6 @@ function init_state(L::LithBoonkkampIJzerman, F, x₀,x₁,fx₀,fx₁)
 end
 initial_fncalls(::LithBoonkkampIJzerman{S,D}) where {S,D} = D
 
-# function init_state(L::LithBoonkkampIJzerman{S,D}, fs, x) where {S,D}
-
-#     xs, ys = init_lith(L, fs, x) # [x₀,x₁,…,xₛ₋₁], ...
-#     R = eltype(xs)
-#     T = eltype(ys[1])
-
-#     ys′ = vcat(ys...)
-#     # skip unit consideration here, as won't fit within storage of ys
-#     state = UnivariateZeroState(xs[end],    # xₙ
-#                                 S >= 2 ? xs[end-1] : one(R)*NaN, # xₙ₋₁
-#                                 one(R)*NaN, # α, or xtar
-#                                 xs,         # all xs (not all but first 2)
-#                                 ys[1][end], # fₙ
-#                                 one(T)*NaN, # fₙ₋₁
-#                                 one(T)*NaN, # f(α)
-#                                 ys′,        # flattened ys, as a vector
-#                                 0,          # no steps
-#                                 iszero(D) + S*(1+D), # no function calls in initialization
-#                                 false,false,false,false,
-#                                 "")
-
-#     state
-# end
-
 
 function update_state(L::LithBoonkkampIJzerman{S,D}, F::Callable_Function, o::LithState,
                       options, l=NullTracks()) where {S,D}
@@ -181,14 +161,6 @@ function update_state(L::LithBoonkkampIJzerman{S,D}, F::Callable_Function, o::Li
         end
         ys[i][end] = evalf(F, xᵢ, i)
     end
-
-    # for (i,fⁱ) ∈ enumerate(F.f)
-    #     for j ∈ 1:S-1
-    #         ys[i][j] = ys[i][j+1]
-    #     end
-    #     ys[i][end] = fⁱ(xᵢ)
-    # end
-
     incfn(l, 1+D)
 
     @set! o.xn0 = o.xn1
@@ -199,11 +171,6 @@ function update_state(L::LithBoonkkampIJzerman{S,D}, F::Callable_Function, o::Li
     @set! o.fm = vcat(ys...)
 
     return (o, false)
-#    o.xn0, o.xn1 = o.xn1, xᵢ
-#    o.fxn0, o.fxn1 = o.fxn1, ys[1][end]
-
-
-    nothing
 
 end
 
@@ -225,9 +192,6 @@ function init_lith(L::LithBoonkkampIJzerman{S,D}, F::Callable_Function{Si,Tup,�
     for i ∈ 1:fn_argout(L)#enumerate(F.f) ## Error if not a Tuple
         ys[i][1] = evalf(F, x̃₀, i)
     end
-#    for (i,fⁱ) ∈ enumerate(F.f) ## Error if not a Tuple
-#        ys[i][1] = fⁱ(x̃₀)
-#    end
 
     # build up to get S of them
     N = 1
@@ -244,9 +208,6 @@ function init_lith(L::LithBoonkkampIJzerman{S,D}, F::Callable_Function{Si,Tup,�
         for j ∈ 1:fn_argout(L)
             ys[j][N+i] = evalf(F, xᵢ, j)
         end
-#        for (j,fʲ) ∈ enumerate(F.f) # XXX
-#            ys[j][N+i] = fʲ(xᵢ)
-#        end
     end
 
     xs, ys
@@ -276,44 +237,49 @@ the next step.
 
 """
 struct LithBoonkkampIJzermanBracket <: AbstractBracketing end
+struct LithBracketState{T,S,R} <: AbstractUnivariateZeroState{T,S}
+    xn1::T
+    xn0::T
+    c::T
+    fxn1::S
+    fxn0::S
+    fc::S
+    fp1::R
+    fp0::R
+    fpc::R
+end
 
-function init_state(L::LithBoonkkampIJzermanBracket, F::Callable_Function, x)
-
-    u, v = promote(float.(x)...)
-    fu,fv = F.f[1](u), F.f[1](v)
-    isbracket(fu, fv) || throw(ArgumentError(bracketing_error))
-
-    if abs(fu) < abs(fv)
-        a,b,fa,fb = v,u,fv,fu
-    else
-        a,b,fa,fb = u,v,fu,fv
+function init_state(L::LithBoonkkampIJzermanBracket, F, x₀,x₁,fx₀,fx₁)
+    a,b,fa,fb =x₀,x₁,fx₀,fx₁
+    if abs(fa) < abs(fb)
+        a,b,fa,fb = b,a,fb,fa
     end
-    f′a,f′b = F.f[2](a), F.f[2](b) # F.fp(a), F.fp(b)
+
+
+    f′a,f′b = evalf(F,a,2), evalf(F,b,2)
     c,fc,f′c = a,fa,f′a
 
 
     # skip unit consideration here, as won't fit within storage of ys
-    state = LithState(b,    # xₙ
+    state = LithBracketState(b,    # xₙ
                       a, # xₙ₋₁
-                      [c],         # all xs (not all but first 2)
+                      c,
                       fb, # fₙ
                       fa, # fₙ₋₁
-                      [fc, f′a, f′c, f′b]       # flattened ys, as a vector
+                      fc,
+                      f′b, f′a, f′c
                       )
 
     state
-end
-function init_state(L::LithBoonkkampIJzermanBracket, F, x₀,x₁,fx₀,fx₁)
-    ## different; as init_state does the work
-    init_state(L, F, x₁)
+
 end
 
 
-function update_state(M::LithBoonkkampIJzermanBracket, F, state::LithState{T,S}, options::UnivariateZeroOptions, l=NullTracks()) where {T,S}
+function update_state(M::LithBoonkkampIJzermanBracket, F, state::LithBracketState{T,S,R}, options::UnivariateZeroOptions, l=NullTracks()) where {T,S,R}
 
-    b::T,c::T,a::T = state.xn1, state.m[1], state.xn0
-    fb::S,fc::S,fa::S = state.fxn1, state.fm[1], state.fxn0
-    f′a::S, f′c::S, f′b::S = state.fm[2],state.fm[3],state.fm[4]
+    b::T,c::T,a::T = state.xn1, state.c, state.xn0
+    fb::S,fc::S,fa::S = state.fxn1, state.fc, state.fxn0
+    f′a::R, f′c::R, f′b::R = state.fp0,state.fpc,state.fp1
 
 
     # Get next interpolating step
@@ -329,14 +295,14 @@ function update_state(M::LithBoonkkampIJzermanBracket, F, state::LithState{T,S},
     if s == 2
         if mc || mb
             # D = 1
-            as, bs = lmm_coefficients(LithBoonkkampIJzerman{s,1}(), (c,b), (fc, fb))
+            a2s, b2s = lmm_coefficients(LithBoonkkampIJzerman{2,1}(), (c,b), (fc, fb))
             h = -fb
 
-            d₀ = -sum(as .* (c,b))
-            mb && (d₀ += h * bs[2]/f′b)
-            mc && (d₀ += h * bs[1]/f′c)
+            d₀ = -sum(a2s .* (c,b))
+            mb && (d₀ += h * b2s[2]/f′b)
+            mc && (d₀ += h * b2s[1]/f′c)
         else
-            d₀ = lmm(LithBoonkkampIJzerman{s, 0}(), (c,b), (fc, fb))
+            d₀ = lmm(LithBoonkkampIJzerman{2, 0}(), (c,b), (fc, fb))
         end
     else
         ma = sign(f′a) == sₘ
@@ -364,14 +330,14 @@ function update_state(M::LithBoonkkampIJzermanBracket, F, state::LithState{T,S},
 
     # compare to bisection step; extra function evalution
     d₁ = a + (b-a)* (0.5) #_middle(a, b)
-    f₀, f₁ = F.f[1](d₀), F.f[1](d₁) # F.f(d₀), F.f(d₁)
+    f₀, f₁ = evalf(F,d₀,1), evalf(F,d₁,1)
 
     # interpolation outside a,b or bisection better use that
     d::T,fd::S,f′d::S = zero(T), zero(S), zero(S)
     if (abs(f₀) < abs(f₁)) && (min(a,b) < d₀ < max(a,b))
-        d,fd,f′d = d₀,f₀, F.f[2](d₀) #F.fp(d₀) # interp
+        d,fd,f′d = d₀,f₀, evalf(F,d₀,2)# interp
     else
-        d,fd,f′d = d₁,f₁, F.f[2](d₁) #F.fp(d₁)  # bisection
+        d,fd,f′d = d₁,f₁,evalf(F,d₁,2)#  bisection
     end
 
     # either [a,d] a bracket or [d,b]
@@ -393,11 +359,13 @@ function update_state(M::LithBoonkkampIJzermanBracket, F, state::LithState{T,S},
     incfn(l, 3)
     @set! state.xn1 = b
     @set! state.xn0 = a
-    @set! state.m = [c]
+    @set! state.c = c
     @set! state.fxn1 = fb
     @set! state.fxn0 = fa
-    @set! state.fm = [fc, f′a, f′c, f′b]
-
+    @set! state.fc = fc
+    @set! state.fp0 = f′a
+    @set! state.fpc = f′c
+    @set! state.fp1 = f′b
 
     return (state, false)
 
