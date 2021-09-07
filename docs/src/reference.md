@@ -176,7 +176,7 @@ secant method. The asymptotic efficiency is ``q^{1/p}``, which
 penalizes function calls. There are other order ``k`` methods taking
 ``k`` function calls per step, e.g., Halley's; others take fewer, as
 seen below. Many use inverse quadratic steps, others inverse
-cubic--these have order ``p`` solving ``p^{s+1}-2p^s+1`` (``s=3`` for
+cubic--these have order ``q`` solving ``q^{s+1}-2q^s+1`` (``s=3`` for
 quadratic). For robust methods, generally ``1`` additional function
 call is needed to achieve the convergence rate, `Schroder` being a
 good example.
