@@ -252,10 +252,10 @@ julia> x, f(x)
 
 ```jldoctest roots
 julia> x = find_zero(f, 2, Order8())
-1.0000000027152591
+1.0000000131073141
 
 julia> x, f(x)
-(1.0000000027152591, 2.949052856287529e-17)
+(1.0000000131073141, 6.87206736323862e-16)
 
 ```
 
@@ -778,7 +778,7 @@ Returning to an earlier example, with `Thukral8` we have a misidentified zero:
 
 ```jldoctest roots
 julia> find_zero(cbrt, 1, Roots.Thukral8())
-2.0998366730115564e23
+1.725042287244107e23
 
 ```
 

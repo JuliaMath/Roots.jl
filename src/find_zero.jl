@@ -865,7 +865,7 @@ A second position argument for `solve` or `init` is used to specify a different 
 
 ```jldoctest find_zero
 julia> solve(fx, Order5(), atol=1/100)
-3.1415926207129554
+3.1425464815525403
 ```
 
 The above is equivalent to:
@@ -875,7 +875,7 @@ julia> problem = init(fx, Order5(), atol=1/100);
 
 
 julia> solve!(problem)
-3.1415926207129554
+3.1425464815525403
 ```
 
 The  argument `p` may be used if the function(s) to be solved depend on a parameter in their second positional argument (e.g., `f(x,p)`). For example
