@@ -561,7 +561,7 @@ A graph shows the issue. Running the following shows ``15`` steps of Newton's
 method, the other algorithms being somewhat similar:
 
 ```@example roots
-#f(x) = x^5 - x - 1; # hide
+f(x) = x^5 - x - 1; # hide
 #D(f) = x -> ForwardDiff.derivative(f,float(x)) # hide
 xs = [0.1] # x0
 n = 15
@@ -774,10 +774,10 @@ This is different from `Julia`'s `isapprox(f(x), 0.0)`, as that would use `abs(f
 
 One issue with relative tolerances is that for functions with
 sublinear growth, extremely large values will be considered zeros.
-Returning to an earlier example, with `Order8` we have a misidentified zero:
+Returning to an earlier example, with `Thukral8` we have a misidentified zero:
 
 ```jldoctest roots
-julia> find_zero(cbrt, 1, Order8())
+julia> find_zero(cbrt, 1, Roots.Thukral8())
 2.0998366730115564e23
 
 ```

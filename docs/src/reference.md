@@ -168,12 +168,22 @@ Roots.Order0
 
 ## Rates of convergence
 
-The order of a method is `q`, where ``e_{i+1} \approx e_i^q``. Newton's method is famously quadratic **for** simple roots; the secant method of arder ``\approx \varphi=1.618\dots``. However, ``p=2`` calls are needed for Newton's method, and only ``p=1`` for the secant method. The asymptotic efficiency is ``q^{1/p}``, which penalizes function calls. There are other order ``k`` methods taking ``k`` function calls per step, e.g., Halley's; others take fewer, as seen below. Many use inverse quadratic steps, others inverse cubic--these have order ``p`` solving ``p^{s+1}-2p^s+1`` (``s=3`` for quadratic). For robust methods, generally ``1`` additional function call is needed to achieve the convergence rate, `Schroder` being a good example.
+The order of a method is ``q``, where ``e_{i+1} \approx
+e_i^q``. Newton's method is famously quadratic **for** simple roots;
+the secant method of order ``q \approx \varphi=1.618\dots``. However,
+``p=2`` calls are needed for Newton's method, and only ``p=1`` for the
+secant method. The asymptotic efficiency is ``q^{1/p}``, which
+penalizes function calls. There are other order ``k`` methods taking
+``k`` function calls per step, e.g., Halley's; others take fewer, as
+seen below. Many use inverse quadratic steps, others inverse
+cubic--these have order ``p`` solving ``p^{s+1}-2p^s+1`` (``s=3`` for
+quadratic). For robust methods, generally ``1`` additional function
+call is needed to achieve the convergence rate, `Schroder` being a
+good example.
 
-```
 | Type            | Method                       | Order                  | F evals | Asymptotic efficiency                 |
 |:--------------- | :--------------------------- | :--------------------- | :------ | :------------------------------------ |
-| Hybrid          | Order0                       |                        |         | ``1.618\dots``                        |
+| Hybrid          | Order0                       |                        |         | ``\approx 1.618\dots``                |
 | Derivative Free | Secant                       | ``\varphi=1.618\dots`` | ``1``   | ``1.618\dots``                        |
 | Derivative Free | Steffensen                   | ``2``                  | ``2``   | ``1.414\dots``                        |
 | Derivative Free | Order5                       | ``5``                  | ``4``   | ``1.495\dots``                        |
@@ -181,7 +191,7 @@ The order of a method is `q`, where ``e_{i+1} \approx e_i^q``. Newton's method i
 | Derivative Free | Order16                      | ``16``                 | ``5``   | ``1.718\dots``                        |
 | Classical       | Newton                       | ``2``                  | ``2``   | ``1.414\dots``                        |
 | Classical       | Halley                       | ``3``                  | ``3``   | ``1.442\dots``                        |
-| MultiStep       | LithBoonkkampIJzerman{S,D}   | ``p^s=\sum p^k(d+\sigma_k)`` | ``D+1`` | varies, ``1.92`` max            |
+| MultiStep       | LithBoonkkampIJzerman{S,D}   | ``p^s=\sum p^k(d+\sigma_k)`` | ``D+1`` | varies, ``1.9\dots2`` max       |
 | Bracketing      | BisectionExact               | ``1``                  | ``1``   | ``1``                                 |
 | Bracketing      | A42                          | ``(2 + 7^{1/2})``      | ``3,4`` |``(2 + 7^{1/2})^{1/3} = 1.6686\dots``  |
 | Bracketing      | AlefeldPotraShi              |                        | ``3,4`` | ``1.618\dots``                        |
@@ -194,7 +204,6 @@ The order of a method is `q`, where ``e_{i+1} \approx e_i^q``. Newton's method i
 | Robust          | Thukral3                     | ``3``                  | ``4``   | ``1.316\dots``                        |
 | Robust          | Thukral4                     | ``4``                  | ``5``   | ``1.319\dots``                        |
 | Robust          | Thukral5                     | ``5``                  | ``6``   | ``1.307\dots``                        |
-```
 
 
 
