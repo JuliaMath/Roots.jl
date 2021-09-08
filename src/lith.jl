@@ -129,7 +129,7 @@ LithBoonkkampIJzerman(s::Int,d::Int) = LithBoonkkampIJzerman{s,d}()
 
 fn_argout(::LithBoonkkampIJzerman{S,D}) where {S, D} = 1 + D
 
-struct LithState{S′,D⁺,T,S} <: AbstractUnivariateZeroState{T,S}
+struct LithBoonkkampIJzermanState{S′,D⁺,T,S} <: AbstractUnivariateZeroState{T,S}
     xn1::T
     xn0::T
     m::NTuple{S′,T}
@@ -154,7 +154,7 @@ function init_state(L::LithBoonkkampIJzerman{S,D}, F, x₀,x₁::R,fx₀,fx₁::
 
     xs, ys = init_lith(L, F, x₁, fx₁,x₀,fx₀) # [x₀,x₁,…,xₛ₋₁], ...
     # skip unit consideration here, as won't fit within storage of ys
-    state = LithState{S,D+1,R,T}(xs[end],    # xₙ
+    state = LithBoonkkampIJzermanState{S,D+1,R,T}(xs[end],    # xₙ
                       S>1 ? xs[end-1] :  nan(xs[end]), # xₙ₋₁
                       xs,         # all xs
                       ys[1][end], # fₙ
@@ -168,7 +168,7 @@ end
 initial_fncalls(::LithBoonkkampIJzerman{S,D}) where {S,D} = S*(D+1)
 
 
-function update_state(L::LithBoonkkampIJzerman{S,D}, F::Callable_Function, o::LithState{S⁺,D′,R,T},
+function update_state(L::LithBoonkkampIJzerman{S,D}, F::Callable_Function, o::LithBoonkkampIJzermanState{S⁺,D′,R,T},
                       options, l=NullTracks()) where {S,D,S⁺,D′,R,T}
 
     xs, ys = o.m, o.fm
@@ -227,7 +227,7 @@ function init_lith(L::LithBoonkkampIJzerman{S,0}, F::Callable_Function{Si,Tup,�
 
 
     for i ∈ 3:S
-        xᵢ::R = lmm(Val(i-1), Val(0), xs, ys) # allocates
+        xᵢ::R = lmm(Val(i-1), Val(0), xs, ys) # XXX allocates
         y1i::T = evalf(F, xᵢ, 1)
         @set! xs[i] = xᵢ
         @set! ys[1][i] = y1i
@@ -252,7 +252,7 @@ function init_lith(L::LithBoonkkampIJzerman{S,D}, F::Callable_Function{Si,Tup,�
 
     # build up to get S of them
     for i ∈ 2:S
-        xᵢ::R = lmm(Val(i-1), Val(D), xs, ys) # allocates!clean up
+        xᵢ::R = lmm(Val(i-1), Val(D), xs, ys) # XXX allocates! clean up
         @set! xs[i] = xᵢ
         for j ∈ 0:D
             yji::T = evalf(F, xᵢ, j+1)
@@ -263,7 +263,6 @@ function init_lith(L::LithBoonkkampIJzerman{S,D}, F::Callable_Function{Si,Tup,�
     xs, ys
 
 end
-
 
 """
     LithBoonkkampIJzermanBracket()
@@ -543,6 +542,8 @@ end
 ## Using coefficients as,bs, ... returned by lmm_coefficients
 ## x = ∑ aᵢxᵢ + ∑ⱼ₊₁ⁿ ∑ᵢ bʲᵢFʲᵢ, where Fʲ is the jth derivative of g⁻¹ (F¹ = 1/f'...)
 ## Using a polynomial interpolant, H(y), going through (xᵢ,fʲ(xᵢ)), j ∈ 0:N)
+
+
 
 function lmm(::Val{S},::Val{D},xs,ys) where {S,D}
     xi=ntuple(ii->xs[ii], Val(S))
