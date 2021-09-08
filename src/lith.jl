@@ -38,8 +38,7 @@ true
 The method can be more robust to the intial condition. This example is from the paper (p13). Newton's method (the `S=1`, `D=1` case) fails if `|x₀| ≥ 1.089` but methods with more memory succeed.
 
 ```jldoctest lith
-julia> fx =  ZeroProblem((tanh,x->sech(x)^2), 1.239) # zero at 0.0
-ZeroProblem{Tuple{typeof(tanh), var"#13#14"}, Float64}((tanh, var"#13#14"()), 1.239)
+julia> fx =  ZeroProblem((tanh,x->sech(x)^2), 1.239); # zero at 0.0
 
 julia> solve(fx, Roots.LithBoonkkampIJzerman(1,1)) |> isnan# Newton, NaN
 true
@@ -126,7 +125,6 @@ may get smaller.
 """
 struct LithBoonkkampIJzerman{S,D} <: AbstractNewtonLikeMethod end
 LithBoonkkampIJzerman(s::Int,d::Int) = LithBoonkkampIJzerman{s,d}()
-
 fn_argout(::LithBoonkkampIJzerman{S,D}) where {S, D} = 1 + D
 
 struct LithBoonkkampIJzermanState{S′,D⁺,T,S} <: AbstractUnivariateZeroState{T,S}
@@ -227,7 +225,7 @@ function init_lith(L::LithBoonkkampIJzerman{S,0}, F::Callable_Function{Si,Tup,�
 
 
     for i ∈ 3:S
-        xᵢ::R = lmm(Val(i-1), Val(0), xs, ys) # XXX allocates
+        xᵢ::R = lmm(Val(i-1), Val(0), xs, ys) # XXX allocates due to runtime i-1
         y1i::T = evalf(F, xᵢ, 1)
         @set! xs[i] = xᵢ
         @set! ys[1][i] = y1i
