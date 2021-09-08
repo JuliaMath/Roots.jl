@@ -1,6 +1,7 @@
 # [Lith, Boonkkamp, and IJzerman](https://doi.org/10.1016/j.amc.2017.09.003)
 # A family of different methods that includes the secant method and Newton's method
 
+# return f^(i-1)(x); not the same as default eval call
 function evalf(F::Callable_Function{S,T,𝑭, P}, x, i) where {N,S<:Val{N}, T<:Val{true}, 𝑭, P}
     F.f[i](x)
 end
@@ -18,42 +19,66 @@ IJzerman](https://doi.org/10.1016/j.amc.2017.09.003).
 
 ## Examples
 
-```
-find_zero(sin, 3, Roots.LithBoonkkampIJzerman(2,0)) # the secant method
-find_zero((sin,cos), 3, Roots.LithBoonkkampIJzerman(1,1)) # Newton's method
-find_zero((sin,cos), 3, Roots.LithBoonkkampIJzerman(3,1)) # Faster convergence rate
-find_zero((sin,cos, x->-sin(x)), 3, Roots.LithBoonkkampIJzerman(1,2)) # Halley-like method
+```jldoctest lith
+julia> using Roots
+
+julia> find_zero(sin, 3, Roots.LithBoonkkampIJzerman(2,0)) ≈ π # the secant method
+true
+
+julia> find_zero((sin,cos), 3, Roots.LithBoonkkampIJzerman(1,1)) ≈ π # Newton's method
+true
+
+julia> find_zero((sin,cos), 3, Roots.LithBoonkkampIJzerman(3,1)) ≈ π # Faster convergence rate
+true
+
+julia> find_zero((sin,cos, x->-sin(x)), 3, Roots.LithBoonkkampIJzerman(1,2)) ≈ π # Halley-like method
+true
 ```
 
 The method can be more robust to the intial condition. This example is from the paper (p13). Newton's method (the `S=1`, `D=1` case) fails if `|x₀| ≥ 1.089` but methods with more memory succeed.
 
-```
-fx =  ZeroProblem((tanh,x->sech(x)^2), 1.239) # zero at 0.0
-solve(fx, Roots.LithBoonkkampIJzerman(1,1)) # Newton, NaN
-p = init(fx, Roots.LithBoonkkampIJzerman(2,1))
-solve!(p); p.state.steps # 6
-p = init(fx, Roots.LithBoonkkampIJzerman(3,1))
-solve!(p); p.state.steps # 7
+```jldoctest lith
+julia> fx =  ZeroProblem((tanh,x->sech(x)^2), 1.239); # zero at 0.0
+
+julia> solve(fx, Roots.LithBoonkkampIJzerman(1,1)) |> isnan# Newton, NaN
+true
+
+julia> solve(fx, Roots.LithBoonkkampIJzerman(2,1)) |> abs |> <(eps())
+true
+
+julia> solve(fx, Roots.LithBoonkkampIJzerman(3,1)) |> abs |> <(eps())
+true
 ```
 
 Multiple derivatives can be constructed automatically using automatic differentiation. For example,
 
-```
-using ForwardDiff
-function δ(f, n::Int=1)
-    n <= 0 && return f
-    n == 1 && return x -> ForwardDiff.derivative(f,float(x))
-    δ(δ(f,1),n-1)
-end
-fs(f,n) = ntuple(i->δ(f,i-1), Val(n+1))
+```jldoctest lith
+julia> using ForwardDiff
 
-f(x) = cbrt(x)*exp(-x^2) # cf. Table 6 in paper
-fx = ZeroProblem(fs(f,1), 0.1147)
-opts = (xatol=2eps(), xrtol=0.0, atol=0.0, rtol=0.0) # converge if |xₙ - xₙ₋₁| <= 2ϵ
-solve(fx, Roots.LithBoonkkampIJzerman(1, 1); opts...) # NaN -- no convergence
-solve(fx, Roots.LithBoonkkampIJzerman(2, 1); opts...) # converges
-fx = ZeroProblem(fs(f,2), 0.06)                       # need better starting point
-solve(fx, Roots.LithBoonkkampIJzerman(2, 2); opts...) # converges
+julia> function δ(f, n::Int=1)
+           n <= 0 && return f
+           n == 1 && return x -> ForwardDiff.derivative(f,float(x))
+           δ(δ(f,1),n-1)
+       end;
+
+julia> fs(f,n) = ntuple(i -> δ(f,i-1), Val(n+1));
+
+julia> f(x) = cbrt(x) * exp(-x^2); # cf. Table 6 in paper, α = 0
+
+julia> fx = ZeroProblem(fs(f,1), 0.1147);
+
+julia> opts = (xatol=2eps(), xrtol=0.0, atol=0.0, rtol=0.0); # converge if |xₙ - xₙ₋₁| <= 2ϵ
+
+julia> solve(fx, Roots.LithBoonkkampIJzerman(1, 1); opts...) |> isnan # NaN -- no convergence
+true
+
+julia> solve(fx, Roots.LithBoonkkampIJzerman(2, 1); opts...) |> abs |> <(eps()) # converges
+true
+
+julia> fx = ZeroProblem(fs(f,2), 0.06);                       # need better starting point
+
+julia> solve(fx, Roots.LithBoonkkampIJzerman(2, 2); opts...) |> abs |> <(eps()) # converges
+true
 ```
 
 For the case `D=1`, a bracketing method based on this approach is implemented in [`LithBoonkkampIJzermanBracket`](@ref)
@@ -99,95 +124,70 @@ may get smaller.
 
 """
 struct LithBoonkkampIJzerman{S,D} <: AbstractNewtonLikeMethod end
-LithBoonkkampIJzerman(s,d) = LithBoonkkampIJzerman{s,d}()
-fn_argout(::LithBoonkkampIJzerman{S,D}) where {S, D} = 1+D
+LithBoonkkampIJzerman(s::Int,d::Int) = LithBoonkkampIJzerman{s,d}()
+fn_argout(::LithBoonkkampIJzerman{S,D}) where {S, D} = 1 + D
 
-struct LithState{T,S} <: AbstractUnivariateZeroState{T,S}
+struct LithBoonkkampIJzermanState{S′,D⁺,T,S} <: AbstractUnivariateZeroState{T,S}
     xn1::T
     xn0::T
-    m::Vector{T}
+    m::NTuple{S′,T}
     fxn1::S
     fxn0::S
-    fm::Vector{S}
+    fm::NTuple{D⁺,NTuple{S′,S}}
+end
+
+function init_state(L::LithBoonkkampIJzerman{S,0}, F, x) where {S}
+    x₀,x₁ = x₀x₁(x)
+    fx₀,fx₁ = evalf(F,x₀,1),evalf(F,x₁,1)
+    state = init_state(L, F, x₀, x₁, fx₀, fx₁)
 end
 
 function init_state(L::LithBoonkkampIJzerman{S,D}, F, x) where {S,D}
+    x₀ = float(first(x))
+    fx₀ = evalf(F,x₀,1)
+    state = init_state(L, F, nan(x₀), x₀, nan(fx₀), fx₀)
+end
 
-    xs, ys = init_lith(L, F, x) # [x₀,x₁,…,xₛ₋₁], ...
-    R = eltype(xs)
-    T = eltype(ys[1])
+function init_state(L::LithBoonkkampIJzerman{S,D}, F, x₀,x₁::R,fx₀,fx₁::T) where {S,D,R,T}
 
-    ys′ = vcat(ys...)
+    xs, ys = init_lith(L, F, x₁, fx₁,x₀,fx₀) # [x₀,x₁,…,xₛ₋₁], ...
     # skip unit consideration here, as won't fit within storage of ys
-    state = LithState(xs[end],    # xₙ
-                      S >= 2 ? xs[end-1] : one(R)*NaN, # xₙ₋₁
-                      xs,         # all xs (not all but first 2)
+    state = LithBoonkkampIJzermanState{S,D+1,R,T}(xs[end],    # xₙ
+                      S>1 ? xs[end-1] :  nan(xs[end]), # xₙ₋₁
+                      xs,         # all xs
                       ys[1][end], # fₙ
-                      one(T)*NaN, # fₙ₋₁
-                      ys′        # flattened ys, as a vector
+                      S > 1 ? ys[1][end-1] : nan(ys[1]), # fₙ₋₁
+                      ys        #
                       )
 
     state
+
 end
-function init_state(L::LithBoonkkampIJzerman, F, x₀,x₁,fx₀,fx₁)
-    ## different; as init_lith does the work
-    init_state(L, F, x₁)
-end
-initial_fncalls(::LithBoonkkampIJzerman{S,D}) where {S,D} = D
-
-# function init_state(L::LithBoonkkampIJzerman{S,D}, fs, x) where {S,D}
-
-#     xs, ys = init_lith(L, fs, x) # [x₀,x₁,…,xₛ₋₁], ...
-#     R = eltype(xs)
-#     T = eltype(ys[1])
-
-#     ys′ = vcat(ys...)
-#     # skip unit consideration here, as won't fit within storage of ys
-#     state = UnivariateZeroState(xs[end],    # xₙ
-#                                 S >= 2 ? xs[end-1] : one(R)*NaN, # xₙ₋₁
-#                                 one(R)*NaN, # α, or xtar
-#                                 xs,         # all xs (not all but first 2)
-#                                 ys[1][end], # fₙ
-#                                 one(T)*NaN, # fₙ₋₁
-#                                 one(T)*NaN, # f(α)
-#                                 ys′,        # flattened ys, as a vector
-#                                 0,          # no steps
-#                                 iszero(D) + S*(1+D), # no function calls in initialization
-#                                 false,false,false,false,
-#                                 "")
-
-#     state
-# end
+initial_fncalls(::LithBoonkkampIJzerman{S,D}) where {S,D} = S*(D+1)
 
 
-function update_state(L::LithBoonkkampIJzerman{S,D}, F::Callable_Function, o::LithState,
-                      options, l=NullTracks()) where {S,D}
+function update_state(L::LithBoonkkampIJzerman{S,D}, F::Callable_Function, o::LithBoonkkampIJzermanState{S⁺,D′,R,T},
+                      options, l=NullTracks()) where {S,D,S⁺,D′,R,T}
 
-    xs, ys′ = o.m, o.fm
-    ys = ntuple(i -> view(ys′, 1 + (i-1)*S:(i*S)), Val(1+D)) # unflatten ys′
+    xs, ys = o.m, o.fm
 
-    xᵢ = lmm(L, xs, ys...)
+    xᵢ::R = lmm(L, xs, ys...)
+    isissue(o.xn1 - xᵢ) && return (o, true)
 
     for i in 1:S-1
-        xs[i] = xs[i+1]
+        @set! xs[i] = xs[i+1]
     end
-    xs[end] = xᵢ
+    @set! xs[end] = xᵢ
 
 
-    for i ∈ 1:fn_argout(L)
+    for i ∈ 0:D
+        i′=i+1
         for j ∈ 1:S-1
-            ys[i][j] = ys[i][j+1]
+            @set! ys[i′][j] = ys[i′][j+1]
         end
-        ys[i][end] = evalf(F, xᵢ, i)
+        yij::T = evalf(F, xᵢ, i′)
+        @set! ys[i′][end] = yij
     end
-
-    # for (i,fⁱ) ∈ enumerate(F.f)
-    #     for j ∈ 1:S-1
-    #         ys[i][j] = ys[i][j+1]
-    #     end
-    #     ys[i][end] = fⁱ(xᵢ)
-    # end
-
     incfn(l, 1+D)
 
     @set! o.xn0 = o.xn1
@@ -195,60 +195,71 @@ function update_state(L::LithBoonkkampIJzerman{S,D}, F::Callable_Function, o::Li
     @set! o.fxn0 = o.fxn1
     @set! o.fxn1 = ys[1][end]
     @set! o.m = xs
-    @set! o.fm = vcat(ys...)
+    @set! o.fm = ys
 
     return (o, false)
-#    o.xn0, o.xn1 = o.xn1, xᵢ
-#    o.fxn0, o.fxn1 = o.fxn1, ys[1][end]
-
-
-    nothing
 
 end
 
 # manufacture initial xs, ys
 # use lower memory terms to boot strap up. Secant uses initial default step
-#function init_lith(L::LithBoonkkampIJzerman{S,D}, F::Callable_Function{Si,Tup,𝑭,P}, x₀) where {S,D,Si, Tup <: Val{true}, 𝑭, P}
-function init_lith(L::LithBoonkkampIJzerman{S,D}, F::Callable_Function{Si,Tup,𝑭,P}, x₀) where {S,D,Si, Tup, 𝑭, P}
-    # initialize xs, ys
-    x̃₀ = float(first(x₀))
-    R = eltype(x̃₀)
-    #f = first(fs)
-    # T = promote_type(R, eltype(f(x̃₀)))
-    f̃₀ = evalf(F, x̃₀, 1)
-    T =  promote_type(R, eltype(f̃₀))
+#D=0, geneate [x0].x1,...,xs
+function init_lith(L::LithBoonkkampIJzerman{S,0}, F::Callable_Function{Si,Tup,𝑭,P}, x₁::R,fx₁::T,x₀::R,fx₀::T) where {S,Si, Tup, 𝑭, P,R,T}
 
-    xs = Vector{T}(undef,S)
-    ys = ntuple(i -> Vector{T}(undef,S), D+1)
-    xs[1] = x̃₀
-    for i ∈ 1:fn_argout(L)#enumerate(F.f) ## Error if not a Tuple
-        ys[i][1] = evalf(F, x̃₀, i)
-    end
-#    for (i,fⁱ) ∈ enumerate(F.f) ## Error if not a Tuple
-#        ys[i][1] = fⁱ(x̃₀)
-#    end
+    xs = NTuple{S,R}(ntuple(_->one(R), Val(S)))
+    yᵢ = NTuple{S,T}(ntuple(_->one(T), Val(S)))
+    ys = NTuple{1,NTuple{S,T}}((yᵢ,))
 
     # build up to get S of them
-    N = 1
-    if D == 0
-        x₀ = _default_secant_step(x̃₀)
-        xs[2] = xs[1] # shift to first
-        xs[1] = x₀
-        ys[1][2] = evalf(F,x₀,1)
-        N += 1
+    if isnan(x₀)
+        x0 = _default_secant_step(x₁)
+        fx0::T = evalf(F,x0,1)
+    else
+        x0,fx0 = x₀, fx₀
     end
-    for (i,S′) ∈ enumerate(N:S-1)
-        xᵢ = lmm(LithBoonkkampIJzerman(S′,D), xs, ys...)
-        xs[N+i] = xᵢ
-        for j ∈ 1:fn_argout(L)
-            ys[j][N+i] = evalf(F, xᵢ, j)
-        end
-#        for (j,fʲ) ∈ enumerate(F.f) # XXX
-#            ys[j][N+i] = fʲ(xᵢ)
-#        end
+
+    @set! xs[1] = x0
+    @set! xs[2] = x₁
+    @set! ys[1][1] = fx0
+    @set! ys[1][2] = fx₁
+
+
+    for i ∈ 3:S
+        xᵢ::R = lmm(Val(i-1), Val(0), xs, ys) # XXX allocates due to runtime i-1
+        y1i::T = evalf(F, xᵢ, 1)
+        @set! xs[i] = xᵢ
+        @set! ys[1][i] = y1i
     end
 
     xs, ys
+end
+
+#D≥1. ignore x₀
+function init_lith(L::LithBoonkkampIJzerman{S,D}, F::Callable_Function{Si,Tup,𝑭,P}, x₁::R,fx₁::T,x₀::R,fx₀::T) where {S,D,Si, Tup, 𝑭, P,R,T}
+
+    xs = NTuple{S,R}(ntuple(_->one(R), Val(S)))
+    yᵢ = NTuple{S,T}(ntuple(_->one(T), Val(S)))
+    ys = NTuple{D+1,NTuple{S,T}}(ntuple(_->yᵢ,Val(D+1)))
+
+    @set! xs[1] = x₁
+    @set! ys[1][1] = fx₁
+    for i ∈ 1:D
+        yi1::T = evalf(F, x₁, i+1)
+        @set! ys[i+1][1] = yi1
+    end
+
+    # build up to get S of them
+    for i ∈ 2:S
+        xᵢ::R = lmm(Val(i-1), Val(D), xs, ys) # XXX allocates! clean up
+        @set! xs[i] = xᵢ
+        for j ∈ 0:D
+            yji::T = evalf(F, xᵢ, j+1)
+            @set! ys[j+1][i] = yji
+        end
+    end
+
+    xs, ys
+
 end
 
 """
@@ -265,7 +276,7 @@ The state includes the 3 points -- a bracket `[a,b]` (`b=xₙ` has
 `f(b)` closest to `0`) and `c=xₙ₋₁` -- and the corresponding values
 for the function and its derivative at these three points.
 
-The next proposed step is either a S=2 or S=3 selection for the
+The next proposed step is either a `S=2` or `S=3` selection for the
 [`LithBoonkkampIJzerman`](@ref) methods with derivative information
 included only if it would be of help. The proposed is modified if it
 is dithering. The proposed is compared against a bisection step; the
@@ -275,44 +286,49 @@ the next step.
 
 """
 struct LithBoonkkampIJzermanBracket <: AbstractBracketing end
+struct LithBoonkkampIJzermanBracketState{T,S,R} <: AbstractUnivariateZeroState{T,S}
+    xn1::T
+    xn0::T
+    c::T
+    fxn1::S
+    fxn0::S
+    fc::S
+    fp1::R
+    fp0::R
+    fpc::R
+end
 
-function init_state(L::LithBoonkkampIJzermanBracket, F::Callable_Function, x)
-
-    u, v = promote(float.(x)...)
-    fu,fv = F.f[1](u), F.f[1](v)
-    isbracket(fu, fv) || throw(ArgumentError(bracketing_error))
-
-    if abs(fu) < abs(fv)
-        a,b,fa,fb = v,u,fv,fu
-    else
-        a,b,fa,fb = u,v,fu,fv
+function init_state(L::LithBoonkkampIJzermanBracket, F, x₀,x₁,fx₀,fx₁)
+    a,b,fa,fb =x₀,x₁,fx₀,fx₁
+    if abs(fa) < abs(fb)
+        a,b,fa,fb = b,a,fb,fa
     end
-    f′a,f′b = F.f[2](a), F.f[2](b) # F.fp(a), F.fp(b)
+
+
+    f′a,f′b = evalf(F,a,2), evalf(F,b,2)
     c,fc,f′c = a,fa,f′a
 
 
     # skip unit consideration here, as won't fit within storage of ys
-    state = LithState(b,    # xₙ
+    state = LithBoonkkampIJzermanBracketState(b,    # xₙ
                       a, # xₙ₋₁
-                      [c],         # all xs (not all but first 2)
+                      c,
                       fb, # fₙ
                       fa, # fₙ₋₁
-                      [fc, f′a, f′c, f′b]       # flattened ys, as a vector
+                      fc,
+                      f′b, f′a, f′c
                       )
 
     state
-end
-function init_state(L::LithBoonkkampIJzermanBracket, F, x₀,x₁,fx₀,fx₁)
-    ## different; as init_state does the work
-    init_state(L, F, x₁)
+
 end
 
 
-function update_state(M::LithBoonkkampIJzermanBracket, F, state::LithState{T,S}, options::UnivariateZeroOptions, l=NullTracks()) where {T,S}
+function update_state(M::LithBoonkkampIJzermanBracket, F, state::LithBoonkkampIJzermanBracketState{T,S,R}, options::UnivariateZeroOptions, l=NullTracks()) where {T,S,R}
 
-    b::T,c::T,a::T = state.xn1, state.m[1], state.xn0
-    fb::S,fc::S,fa::S = state.fxn1, state.fm[1], state.fxn0
-    f′a::S, f′c::S, f′b::S = state.fm[2],state.fm[3],state.fm[4]
+    b::T,c::T,a::T = state.xn1, state.c, state.xn0
+    fb::S,fc::S,fa::S = state.fxn1, state.fc, state.fxn0
+    f′a::R, f′c::R, f′b::R = state.fp0,state.fpc,state.fp1
 
 
     # Get next interpolating step
@@ -328,14 +344,14 @@ function update_state(M::LithBoonkkampIJzermanBracket, F, state::LithState{T,S},
     if s == 2
         if mc || mb
             # D = 1
-            as, bs = lmm_coefficients(LithBoonkkampIJzerman{s,1}(), (c,b), (fc, fb))
+            a2s, b2s = lmm_coefficients(LithBoonkkampIJzerman{2,1}(), (c,b), (fc, fb))
             h = -fb
 
-            d₀ = -sum(as .* (c,b))
-            mb && (d₀ += h * bs[2]/f′b)
-            mc && (d₀ += h * bs[1]/f′c)
+            d₀ = -sum(a2s .* (c,b))
+            mb && (d₀ += h * b2s[2]/f′b)
+            mc && (d₀ += h * b2s[1]/f′c)
         else
-            d₀ = lmm(LithBoonkkampIJzerman{s, 0}(), (c,b), (fc, fb))
+            d₀ = lmm(LithBoonkkampIJzerman{2, 0}(), (c,b), (fc, fb))
         end
     else
         ma = sign(f′a) == sₘ
@@ -363,14 +379,14 @@ function update_state(M::LithBoonkkampIJzermanBracket, F, state::LithState{T,S},
 
     # compare to bisection step; extra function evalution
     d₁ = a + (b-a)* (0.5) #_middle(a, b)
-    f₀, f₁ = F.f[1](d₀), F.f[1](d₁) # F.f(d₀), F.f(d₁)
+    f₀, f₁ = evalf(F,d₀,1), evalf(F,d₁,1)
 
     # interpolation outside a,b or bisection better use that
     d::T,fd::S,f′d::S = zero(T), zero(S), zero(S)
     if (abs(f₀) < abs(f₁)) && (min(a,b) < d₀ < max(a,b))
-        d,fd,f′d = d₀,f₀, F.f[2](d₀) #F.fp(d₀) # interp
+        d,fd,f′d = d₀,f₀, evalf(F,d₀,2)# interp
     else
-        d,fd,f′d = d₁,f₁, F.f[2](d₁) #F.fp(d₁)  # bisection
+        d,fd,f′d = d₁,f₁,evalf(F,d₁,2)#  bisection
     end
 
     # either [a,d] a bracket or [d,b]
@@ -392,11 +408,13 @@ function update_state(M::LithBoonkkampIJzermanBracket, F, state::LithState{T,S},
     incfn(l, 3)
     @set! state.xn1 = b
     @set! state.xn0 = a
-    @set! state.m = [c]
+    @set! state.c = c
     @set! state.fxn1 = fb
     @set! state.fxn0 = fa
-    @set! state.fm = [fc, f′a, f′c, f′b]
-
+    @set! state.fc = fc
+    @set! state.fp0 = f′a
+    @set! state.fpc = f′c
+    @set! state.fp1 = f′b
 
     return (state, false)
 
@@ -523,8 +541,16 @@ end
 ## x = ∑ aᵢxᵢ + ∑ⱼ₊₁ⁿ ∑ᵢ bʲᵢFʲᵢ, where Fʲ is the jth derivative of g⁻¹ (F¹ = 1/f'...)
 ## Using a polynomial interpolant, H(y), going through (xᵢ,fʲ(xᵢ)), j ∈ 0:N)
 
+
+
+function lmm(::Val{S},::Val{D},xs,ys) where {S,D}
+    xi=ntuple(ii->xs[ii], Val(S))
+    yi=ntuple(ii->ntuple(j->ys[ii][j],Val(S)),Val(D+1))
+    lmm(LithBoonkkampIJzerman{S,D}(), xi, yi...)
+end
+
 # secant
-function lmm(::LithBoonkkampIJzerman{2,0}, xs, fs)
+function  lmm(::LithBoonkkampIJzerman{2,0}, xs, fs)
     x0,x1 = xs
     f0,f1 = fs
 

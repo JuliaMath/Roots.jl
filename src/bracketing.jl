@@ -759,16 +759,6 @@ function update_state(M::Brent, f, state::BrentState{T,S},
     s::T = zero(a)
     s = inverse_quadratic_step(a,b,c,fa,fb,fc)
     (isnan(s) || isinf(s)) && (s = secant_step(a,b,fa,fb))
-    fs::S = f(s)
-    incfn(l)
-
-    if iszero(fs)
-        @set! state.xn1 = s
-        @set! state.fxn1 = fs
-        return (state, true)
-    elseif isnan(fs) || isinf(fs)
-        return (state, true)
-    end
 
     # guard step
     u,v = (3a+b)/4, b
@@ -783,20 +773,21 @@ function update_state(M::Brent, f, state::BrentState{T,S},
         (mflag && abs(b-c) <= tol) ||
         (!mflag && abs(c-d) <= tol)
         s = _middle(a, b)
-        fs = f(s)
-        incfn(l)
-
-        if iszero(fs)
-            @set! state.xn1 = s
-            @set! state.fxn1 = fs
-            return (state, true)
-        elseif isnan(fs) || isinf(fs)
-            return (state, true)
-        end
 
         mflag = true
     else
         mflag = false
+    end
+
+    fs = f(s)
+    incfn(l)
+
+    if iszero(fs)
+        @set! state.xn1 = s
+        @set! state.fxn1 = fs
+        return (state, true)
+    elseif isnan(fs) || isinf(fs)
+        return (state, true)
     end
 
     d = c

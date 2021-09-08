@@ -134,11 +134,11 @@ julia> find_zero(sin, (big(3), big(4)))    # uses a different algorithm than for
 The algorithms of Alefeld, Potra, and Shi and the well known algorithm of Brent, also start with a bracketing algorithm. For many problems these will take far fewer steps than the bisection algorithm to reach convergence. These may be called directly. For example,
 
 ```jldoctest roots
-julia> find_zero(sin, (3,4), Roots.A42())
+julia> find_zero(sin, (3,4), A42())
 3.141592653589793
 ```
 
-The above call takes ``9`` function evaluations, the default method takes ``53``. The method is specified above in the third positional argument by `Roots.A42()`, as this method is not exported, it must be qualified.
+The above call takes ``9`` function evaluations, the default method takes ``53``.
 
 
 By default, bisection will converge to machine tolerance. This may
@@ -252,10 +252,10 @@ julia> x, f(x)
 
 ```jldoctest roots
 julia> x = find_zero(f, 2, Order8())
-1.0000000027152591
+1.0000000131073141
 
 julia> x, f(x)
-(1.0000000027152591, 2.949052856287529e-17)
+(1.0000000131073141, 6.87206736323862e-16)
 
 ```
 
@@ -376,7 +376,7 @@ julia> f(x) = sin(x);
 julia> x0 = (3, 4)
 (3, 4)
 
-julia> M = Roots.Secant()
+julia> M = Secant()
 Secant()
 
 julia> Z = ZeroProblem(f, x0)
@@ -389,7 +389,7 @@ julia> solve(Z, M)
 Changing the method is easy:
 
 ```jldoctest roots
-julia> solve(Z, Roots.Order2())
+julia> solve(Z, Order2())
 3.1415926535897944
 ```
 
@@ -401,7 +401,7 @@ julia> g(x, p=1) = cos(x) - x/p;
 julia> Z = ZeroProblem(g, (0.0, pi/2))
 ZeroProblem{typeof(g), Tuple{Float64, Float64}}(g, (0.0, 1.5707963267948966))
 
-julia> solve(Z, Roots.Secant(), 2) # uses p=2
+julia> solve(Z, Secant(), 2) # uses p=2
 1.0298665293222589
 
 julia> solve(Z, Bisection(), 3, xatol=1/16) # p=3; uses keywords for tolerances
@@ -561,8 +561,8 @@ A graph shows the issue. Running the following shows ``15`` steps of Newton's
 method, the other algorithms being somewhat similar:
 
 ```@example roots
-#f(x) = x^5 - x - 1; # hide
-#D(f) = x -> ForwardDiff.derivative(f,float(x)) # hide
+f(x) = x^5 - x - 1; # hide
+D(f) = x -> ForwardDiff.derivative(f,float(x)) # hide
 xs = [0.1] # x0
 n = 15
 for i in 1:(n-1) push!(xs, xs[end] - f(xs[end])/D(f)(xs[end])) end
@@ -774,11 +774,11 @@ This is different from `Julia`'s `isapprox(f(x), 0.0)`, as that would use `abs(f
 
 One issue with relative tolerances is that for functions with
 sublinear growth, extremely large values will be considered zeros.
-Returning to an earlier example, with `Order8` we have a misidentified zero:
+Returning to an earlier example, with `Thukral8` we have a misidentified zero:
 
 ```jldoctest roots
-julia> find_zero(cbrt, 1, Order8())
-2.0998366730115564e23
+julia> find_zero(cbrt, 1, Roots.Thukral8())
+1.725042287244107e23
 
 ```
 
