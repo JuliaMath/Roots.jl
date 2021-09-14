@@ -182,7 +182,7 @@ end
     options = Roots.init_options(M, state, xatol=1/2)
     ZPI = init(M,G1,state,options)
     ϕ = iterate(ZPI)
-    while ϕ != nothing
+    while ϕ !== nothing
         val, st = ϕ
         state, ctr = st
         ϕ = iterate(ZPI, st)
@@ -490,7 +490,7 @@ end
         ZPI = init(ZeroProblem(F, x0), M; kwargs...)
         x = NaN * float(x0)
         ϕ = iterate(ZPI)
-        while ϕ != nothing
+        while ϕ !== nothing
             x, st = ϕ
             F.cnt.contents >= maxfnevals && return NaN*float(x0)
             ϕ = iterate(ZPI, st)
