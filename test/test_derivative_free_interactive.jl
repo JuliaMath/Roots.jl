@@ -319,7 +319,7 @@ function read_in(fname)
     E["residuals"] = Dict()
     for (k,v) in D["residuals"]
         for vi in v
-            vi[vi .== nothing] .= NaN
+            vi[vi .=== nothing] .= NaN
         end
         E["residuals"][k] = vvta1(v, Float64)
     end

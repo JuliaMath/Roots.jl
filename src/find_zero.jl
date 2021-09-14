@@ -185,7 +185,7 @@ Tracks(s::AbstractUnivariateZeroState{T,S}) where {T, S} = Tracks(T,S)
 Tracks(verbose, tracks, state) = (verbose && isa(tracks, NullTracks)) ? Tracks(state) : tracks
 
 function log_step(l::Tracks, M::Any, state, init=nothing)
-    if init != nothing
+    if init !== nothing
         x₀, fx₀ = state.xn0, state.fxn0
         push!(l.xs, x₀)
         push!(l.fs, fx₀)
@@ -194,7 +194,7 @@ function log_step(l::Tracks, M::Any, state, init=nothing)
     push!(l.xs, x₁)
     push!(l.fs, fx₁)
 
-    init == nothing && log_steps(l, 1)
+    init === nothing && log_steps(l, 1)
     nothing
 end
 
@@ -217,8 +217,7 @@ function show_tracks(io::IO, s::Tracks, M::AbstractUnivariateZeroMethod)
 end
 
 function show_trace(io::IO, method, N, state, tracks)
-
-    if state == nothing
+    if state === nothing
         print(io, "Algorithm has not been run")
         return nothing
     end
@@ -228,7 +227,7 @@ function show_trace(io::IO, method, N, state, tracks)
     println(io, "Results of univariate zero finding:\n")
     if converged
         println(io, "* Converged to: $(state.xn1)")
-        if N == nothing || isa(method, AbstractBracketing)
+        if N === nothing || method isa AbstractBracketing
             println(io, "* Algorithm: $(method)")
         else
             println(io, "* Algorithm: $(method), with possible bracketing with $N")
@@ -783,7 +782,7 @@ end
 # This should be deprecated
 function Base.iterate(P::ZeroProblemIterator, st=nothing)
     ## st = (val, (state, ctr, val))
-    if st == nothing
+    if st === nothing
         state = P.state
         ctr = 1
     else
@@ -902,7 +901,7 @@ julia> function order0(f, x)
            fx = ZeroProblem(f, x)
            p = init(fx, Roots.Secant())
            xᵢ,st = ϕ = iterate(p)
-           while ϕ != nothing
+           while ϕ !== nothing
                xᵢ, st = ϕ
                state, ctr = st
                fᵢ₋₁, fᵢ = state.fxn0, state.fxn1

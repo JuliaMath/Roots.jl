@@ -45,8 +45,8 @@ function bisection(f, a::Number, b::Number; xatol=nothing, xrtol=nothing)
     T = eltype(x1)
 
 
-    atol = xatol == nothing ? zero(T) : abs(xatol)
-    rtol = xrtol == nothing ? zero(one(T)) : abs(xrtol)
+    atol = xatol === nothing ? zero(T) : abs(xatol)
+    rtol = xrtol === nothing ? zero(one(T)) : abs(xrtol)
     CT = iszero(atol) && iszero(rtol) ?  Val(:exact) : Val(:inexact)
 
     x1, x2 = float(x1), float(x2)
@@ -313,8 +313,8 @@ function newton(f, x0; xatol=nothing, xrtol=nothing, maxevals = 100)
 
     x = float(x0)
     T = typeof(x)
-    atol = xatol != nothing ? xatol : oneunit(T) * (eps(one(T)))^(4/5)
-    rtol = xrtol != nothing ? xrtol : eps(one(T))^(4/5)
+    atol = xatol !== nothing ? xatol : oneunit(T) * (eps(one(T)))^(4/5)
+    rtol = xrtol !== nothing ? xrtol : eps(one(T))^(4/5)
 
 
     xo = Inf
