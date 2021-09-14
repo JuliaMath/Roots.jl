@@ -33,19 +33,19 @@ struct KingState{T,S} <: AbstractUnivariateZeroState{T,S}
 end
 
 
-function init_state(M::Union{King, Order1B}, F, x₀, x₁::T, fx₀, fx₁::S) where {T,S}
-    fₛ₀ = F(x₀ - fx₀*oneunit(T)/oneunit(S))
+function init_state(::Union{King, Order1B}, F, x₀, x₁, fx₀, fx₁)
+    fₛ₀ = F(x₀ - fx₀ * oneunit(x₀) / oneunit(fx₀))
     G₀ = -fx₀^2 / (fₛ₀ - fx₀)
     KingState(x₁, x₀, fx₁, fx₀, G₀)
 end
 initial_fncalls(::Union{King, Order1B}) = 3
 
-function update_state(method::Order1B, F, o::KingState{T,S}, options, l=NullTracks())  where {T, S}
+function update_state(::Order1B, F, o::KingState, options, l=NullTracks())
     if do_guarded_step(Order1B(), o)
         state, flag = update_state(Order1(), F, o, options, l)
 
         x0,fx0 = state.xn0, state.fxn0 # clunky! Need to update G₀ after Order1() step
-        fₛ = F(x0 - fx0*oneunit(T)/oneunit(S))
+        fₛ = F(x0 - fx0*oneunit(x0)/oneunit(fx0))
         incfn(l)
         G₀ = -fx0^2 / (fₛ - fx0)
         @set! state.G0 = G₀
@@ -57,14 +57,14 @@ function update_state(method::Order1B, F, o::KingState{T,S}, options, l=NullTrac
 end
 
 
-function update_state(method::King, F,
-                      o::KingState{T,S}, options, l=NullTracks())  where {T, S}
+function update_state(::King, F,
+                      o::KingState, options, l=NullTracks())
 
 
     x0, x1 = o.xn0, o.xn1
     fx0, fx1 = o.fxn0, o.fxn1
     G₀ = o.G0
-    fₛ₁ = F(x1 - fx1*oneunit(T)/oneunit(S))
+    fₛ₁ = F(x1 - fx1*oneunit(x1)/oneunit(fx1))
     incfn(l)
     G₁ = -fx1^2 / (fₛ₁ - fx1)
 
@@ -131,8 +131,8 @@ find_zero(g, x0, Roots.Order2B(), verbose=true) #  4 / 10
 struct Esser <: AbstractSecant end
 struct Order2B <: AbstractSecant end
 
-function update_state(method::Order2B, fs, o::AbstractUnivariateZeroState{T,S}, options, l=NullTracks())  where {T, S}
-     update_state_guarded(method, Secant(), Esser(), fs, o, options, l)
+function update_state(method::Order2B, fs, o::AbstractUnivariateZeroState, options, l=NullTracks())
+    update_state_guarded(method, Secant(), Esser(), fs, o, options, l)
 end
 
 function update_state(method::Esser, F,

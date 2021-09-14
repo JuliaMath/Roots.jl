@@ -92,8 +92,7 @@ end
 
 
 
-function update_state(method::Order1, F, o::AbstractUnivariateZeroState{T,S}, options, l=NullTracks()) where {T, S}
-
+function update_state(::Order1, F, o::AbstractUnivariateZeroState, options, l=NullTracks())
     xn0, xn1 = o.xn0, o.xn1
     fxn0, fxn1 = o.fxn0, o.fxn1
     Δ = fxn1 * (xn1 - xn0) / (fxn1 - fxn0)
@@ -208,7 +207,7 @@ struct KumarSinghAkanksha <: AbstractSecant end
 
 
 
-function update_state(method::Order5, fs, o::UnivariateZeroState{T,S}, options, l=NullTracks())  where {T, S}
+function update_state(method::Order5, fs, o::UnivariateZeroState, options, l=NullTracks())
     update_state_guarded(method, Secant(), KumarSinghAkanksha(), fs, o, options, l)
 end
 

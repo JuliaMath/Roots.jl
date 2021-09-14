@@ -271,38 +271,32 @@ end
 # return f(x); (f(x), f(x)/f'(x)); *or* f(x), (f(x)/f'(x), f'(x)/f''(x), ...) # so N=1, 2 are special cased
 # Callable_Function(output_arity, input_arity, F, p)
 # First handle: x -> (f,f/f', f'/f'', ...)
-(F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{1}, T <: Val{false}, 𝑭, P<:Nothing} =
-    first(F.f(x))
-(F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{1}, T <: Val{false}, 𝑭, P} =
-    first(F.f(x, F.p))
+(F::Callable_Function{Val{1},Val{false},𝑭,Nothing})(x) where {𝑭} = first(F.f(x))
+(F::Callable_Function{Val{1},Val{false},𝑭,P})(x) where {𝑭, P} = first(F.f(x, F.p))
 
-(F::Callable_Function{S,T,𝑭,P})(x) where {N, S <: Val{2}, T <: Val{false}, 𝑭, P<:Nothing} =
-    F.f(x)[1:2]
-(F::Callable_Function{S,T,𝑭,P})(x) where {N, S <: Val{2}, T <: Val{false}, 𝑭, P} =
-    F.f(x, F.p)[1:2]
+(F::Callable_Function{Val{2},Val{false},𝑭,Nothing})(x) where {𝑭} = F.f(x)[1:2]
+(F::Callable_Function{Val{2},Val{false},𝑭,P})(x) where {𝑭, P} = F.f(x, F.p)[1:2]
 
 # N ≥ 3 returns (f, (...))
-(F::Callable_Function{S,T,𝑭,P})(x) where {N, S <: Val{N}, T <: Val{false}, 𝑭, P<:Nothing} = begin
+function (F::Callable_Function{Val{N},Val{false},𝑭,Nothing})(x) where {N, 𝑭}
     fs = F.f(x)
     fs[1], ntuple(i->fs[i+1], Val(N-1))
 end
-(F::Callable_Function{S,T,𝑭,P})(x) where {N, S <: Val{N}, T <: Val{false}, 𝑭, P} = begin
+function (F::Callable_Function{Val{N},Val{false},𝑭,P})(x) where {N, 𝑭, P}
     fs = F.f(x, F.p)
     fs[1], ntuple(i->fs[i+1], Val(N-1))
 end
 
 ## f is specified as a tuple (f,f',f'', ...)
 ## N =1  return f(x)
-(F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{1}, T <: Val{true}, 𝑭, P<:Nothing} =
-    first(F.f)(x)
-(F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{1}, T <: Val{true}, 𝑭, P} =
-    first(F.f)(x, F.p)
+(F::Callable_Function{Val{1},Val{true},𝑭,Nothing})(x) where {𝑭} = first(F.f)(x)
+(F::Callable_Function{Val{1},Val{true},𝑭,P})(x) where {𝑭, P} = first(F.f)(x, F.p)
 ## N=2 return (f(x), f(x)/f'(x))
-(F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{2}, T <: Val{true}, 𝑭, P<:Nothing} = begin
+function (F::Callable_Function{Val{2},Val{true},𝑭,Nothing})(x) where {𝑭}
     f, f′ = (F.f[1])(x), (F.f[2])(x)
     f, f/f′
 end
-(F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{2}, T <: Val{true}, 𝑭, P} = begin
+function (F::Callable_Function{Val{2},Val{true},𝑭,P})(x) where {𝑭, P}
     f, f′ = (F.f[1])(x, F.p), (F.f[2])(x, F.p)
     f, f/f′
 end
@@ -310,51 +304,51 @@ end
 ## For N ≥ 3 we return (f, (f/f', f'/f'', ...);
 ## Pay no attention to this code; we hand write a bunch, as the
 ## general formula later runs more slowly.
-(F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{3}, T <: Val{true}, 𝑭, P<:Nothing} = begin
+function (F::Callable_Function{Val{3},Val{true},𝑭,Nothing})(x) where {𝑭}
     f, f′, f′′ = (F.f[1])(x), (F.f[2])(x), (F.f[3])(x)
     f, (f/f′, f′/f′′)
 end
-(F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{3}, T <: Val{true}, 𝑭, P} = begin
+function (F::Callable_Function{Val{3},Val{true},𝑭,P})(x) where {𝑭, P}
     f, f′, f′′ = (F.f[1])(x, F.p), (F.f[2])(x, F.p), (F.f[3])(x, F.p)
     f, (f/f′, f′/f′′)
 end
 
-(F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{4}, T <: Val{true}, 𝑭, P<:Nothing} = begin
+function (F::Callable_Function{Val{4},Val{true},𝑭,Nothing})(x) where {𝑭}
     f, f′, f′′, f′′′ = (F.f[1])(x), (F.f[2])(x), (F.f[3])(x), (F.f[4])(x)
     f, (f/f′, f′/f′′, f′′/f′′′)
 end
-(F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{4}, T <: Val{true}, 𝑭, P} = begin
+function (F::Callable_Function{Val{4},Val{true},𝑭,P})(x) where {𝑭, P}
     f, f′,f′′,f′′′ = (F.f[1])(x, F.p), (F.f[2])(x, F.p), (F.f[3])(x, F.p), (F.f[4])(x, F.p)
     𝐓 = eltype(f/f′)
     f, NTuple{3,𝐓}((f/f′, f′/f′′, f′′/f′′′))
 end
 
-(F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{5}, T <: Val{true}, 𝑭, P<:Nothing} = begin
+function (F::Callable_Function{Val{5},Val{true},𝑭,Nothing})(x) where {𝑭}
     f, f′, f′′, f′′′, f′′′′ = (F.f[1])(x), (F.f[2])(x), (F.f[3])(x), (F.f[4])(x), (F.f[5])(x)
     f, (f/f′, f′/f′′, f′′/f′′′, f′′′/f′′′′)
 end
-(F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{5}, T <: Val{true}, 𝑭, P} = begin
+function (F::Callable_Function{Val{5},Val{true},𝑭,P})(x) where {𝑭, P}
     f, f′,f′′,f′′′,f′′′′ = (F.f[1])(x, F.p), (F.f[2])(x, F.p), (F.f[3])(x, F.p), (F.f[4])(x, F.p), (F.f[5])(x, F.p)
     f, (f/f′, f′/f′′, f′′/f′′′, f′′′/f′′′′)
 end
 
-(F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{6}, T <: Val{true}, 𝑭, P<:Nothing} = begin
+function (F::Callable_Function{Val{6},Val{true},𝑭,Nothing})(x) where {𝑭}
     f, f′, f′′, f′′′, f′′′′, f′′′′′ = (F.f[1])(x), (F.f[2])(x), (F.f[3])(x), (F.f[4])(x), (F.f[5])(x),(F.f[6])(x)
     f, (f/f′, f′/f′′, f′′/f′′′, f′′′/f′′′′, f′′′′/f′′′′′)
 end
-(F::Callable_Function{S,T,𝑭,P})(x) where {S <: Val{6}, T <: Val{true}, 𝑭, P} = begin
+function (F::Callable_Function{Val{6},Val{true},𝑭,P})(x) where {𝑭, P}
     f, f′,f′′,f′′′,f′′′′, f′′′′′ = (F.f[1])(x, F.p), (F.f[2])(x, F.p), (F.f[3])(x, F.p), (F.f[4])(x, F.p), (F.f[5])(x, F.p), (F.f[6])(x, F.p)
     f, (f/f′, f′/f′′, f′′/f′′′, f′′′/f′′′′, f′′′′/f′′′′′)
 end
 
 # faster with the above written out, should generate them...
-(F::Callable_Function{S,T,𝑭,P})(x) where {𝐍, S <: Val{𝐍}, T <: Val{true}, 𝑭, P<:Nothing} = begin
+function (F::Callable_Function{Val{𝐍},Val{true},𝑭,Nothing})(x) where {𝐍, 𝑭}
     fs = ntuple(i -> F.f[i](x), Val(𝐍))
     first(fs), ntuple(i -> fs[i]/fs[i+1], Val(𝐍-1))
 end
 
-(F::Callable_Function{S,T,𝑭,P})(x) where {𝐍, S <: Val{𝐍}, T <: Val{true}, 𝑭, P} = begin
-    fs = ntuple(i -> F.f[i](x, p), Val(𝐍))
+function (F::Callable_Function{Val{𝐍},Val{true},𝑭,P})(x) where {𝐍, 𝑭, P}
+    fs = ntuple(i -> F.f[i](x, F.p), Val(𝐍))
     first(fs), ntuple(i -> fs[i]/fs[i+1], Val(𝐍-1))
 end
 
@@ -397,8 +391,7 @@ In `decide_convergence`, stopped values (and `:x_converged` when `strict=false`)
 
 
 """
-function assess_convergence(method::Any, state::AbstractUnivariateZeroState{T,S}, options) where {T,S}
-
+function assess_convergence(::Any, state::AbstractUnivariateZeroState, options)
     # return convergence_flag, boolean
 
     xn0, xn1 = state.xn0, state.xn1
@@ -433,7 +426,7 @@ end
 
 When the algorithm terminates, this function decides the stopped value or returns NaN
 """
-function decide_convergence(M::AbstractUnivariateZeroMethod,  F, state::AbstractUnivariateZeroState{T,S}, options, val) where {T,S}
+function decide_convergence(::AbstractUnivariateZeroMethod, F, state::AbstractUnivariateZeroState, options, val)
 
     xn0, xn1 = state.xn0, state.xn1
     fxn1 = state.fxn1
@@ -685,7 +678,7 @@ end
 # defaults when method is not specified
 # if a number, use Order0
 # O/w use a bracketing method of an assumed iterable
-find_zero(f, x0::T; kwargs...)  where {T <: Number} = find_zero(f, x0, Order0(); kwargs...)
+find_zero(f, x0::Number; kwargs...) = find_zero(f, x0, Order0(); kwargs...)
 find_zero(f, x0; kwargs...) = find_zero(f, x0, Bisection(); kwargs...)
 
 
