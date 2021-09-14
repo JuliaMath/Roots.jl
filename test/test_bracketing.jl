@@ -315,7 +315,7 @@ end
     end
 
     # Function can be infinite for Bisection and Float64
-    @test find_zero(x -> Inf * sign(x-pi), (-Inf, Inf), Bisection()) ≈ pi
+    @test @inferred(find_zero(x -> Inf * sign(x-pi), (-Inf, Inf), Bisection())) ≈ pi
 
     # finds discontinuities, not necessarily zeros
     f = (x,p = 0.0) -> 1/(x - p) #avoid issue with `0` being identified by `_middle`
@@ -323,7 +323,7 @@ end
         @test find_zero(f, (-1,1), M, p=eps()) ≈ eps() atol = 2eps()
     end
 
-    @test find_zero(f, (-1,1), Roots.Bisection()) == 0.0
+    @test iszero(@inferred(find_zero(f, (-1,1), Roots.Bisection())))
     @test_throws Roots.ConvergenceFailed find_zero(f, (-1,1), Roots.A42())
     @test_throws Roots.ConvergenceFailed find_zero(f, (-1,1), Roots.AlefeldPotraShi())
 
@@ -331,7 +331,7 @@ end
     α = nextfloat(nextfloat(0.0))
     f = x -> x - α
     for M ∈ Ms
-        @test find_zero(f, (-1,1), Bisection()) == α
+        @test find_zero(f, (-1,1), M) == α
     end
 
     # with NaN, not Inf

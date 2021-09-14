@@ -62,7 +62,7 @@ end
 
 ## helper function
 function adjust_bracket(x0)
-    u, v = float.(promote(_extrema(x0)...))
+    u, v = map(float, _extrema(x0))
     if u > v
         u,v = v,u
     end
@@ -72,7 +72,7 @@ function adjust_bracket(x0)
 end
 
 function init_state(M::AbstractBracketing, F::Callable_Function, x)
-    x₀′, x₁′ = float.(_extrema(x))
+    x₀′, x₁′ = map(float, _extrema(x))
     x₀, x₁ = adjust_bracket((x₀′, x₁′))
     fx₀, fx₁ = F(x₀), F(x₁)
     state = init_state(M, F, x₀, x₁, fx₀, fx₁)
@@ -265,14 +265,16 @@ function find_zero(fs, x0, method::Bisection;
                    kwargs...) where {M <: Union{Bisection}}
 
     _options = init_options(Bisection(), Float64, Float64; kwargs...)
-    iszero_tol = all(iszero, (_options.xabstol, _options.xreltol, _options.abstol, _options.reltol))
-    if iszero_tol
-        method = (typeof(float(first(extrema(x0)))) <: FloatNN) ? BisectionExact() : A42()
+    iszero_tol = iszero(_options.xabstol) && iszero(_options.xreltol) &&
+        iszero(_options.abstol) && iszero(_options.reltol)
+
+    _method = if iszero_tol
+        float(first(_extrema(x0))) isa FloatNN ? BisectionExact() : A42()
+    else
+        method
     end
 
-    ZPI = init(ZeroProblem(fs, x0), method, p; verbose=verbose, tracks=tracks, kwargs...)
-    solve!(ZPI, verbose=verbose)
-
+    return solve(ZeroProblem(fs, x0), _method, p; verbose=verbose, tracks=tracks, kwargs...)
 end
 
 

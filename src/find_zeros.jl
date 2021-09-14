@@ -304,7 +304,7 @@ function find_zeros(f, a, b=nothing; no_pts = 12, k=8,
                     )
 
     if b === nothing
-        a0, b0 = promote(float.(_extrema(a))...)
+        a0, b0 = map(float, _extrema(a))
     else
         a0, b0 = promote(float(a), float(b))
     end

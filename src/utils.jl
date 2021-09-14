@@ -35,7 +35,13 @@ _extrema(x::Number) = throw(ArgumentError("Need extrema to return two distinct v
 function _extrema(x)
     a, b = extrema(x)
     a == b && throw(ArgumentError("Need extrema to return two distinct values"))
-    (a,b)
+    a, b
+end
+# fix type instability issues of tuples of mixed types
+function _extrema(x::Tuple{<:Number,<:Number})
+    a, b = x
+    a == b && throw(ArgumentError("Need extrema to return two distinct values"))
+    extrema(promote(a, b))
 end
 
 # used by secant. Get x₀, x₁ for x
