@@ -2,10 +2,11 @@ using Roots
 using Test
 import SpecialFunctions.erf
 
-struct SomeInterval
-    a
-    b
+struct SomeInterval{T}
+    a::T
+    b::T
 end
+SomeInterval(a, b) = SomeInterval(promote(a, b)...)
 Base.extrema(I::SomeInterval) = I.a < I.b ? (I.a, I.b) : (I.b, I.a)
 
 

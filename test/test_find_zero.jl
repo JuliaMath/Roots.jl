@@ -32,8 +32,8 @@ struct Order3_Test <: Roots.AbstractSecant end
 
     ## defaults for method argument
     @test find_zero(sin, 3.0) ≈ pi    # order0()
-    @test find_zero(sin, (3,4)) ≈ π   # Bisection()
-    @test find_zero(sin, [3,4]) ≈ π   # Bisection()
+    @test @inferred(find_zero(sin, (3,4))) ≈ π   # Bisection()
+    @test @inferred(find_zero(sin, [3,4])) ≈ π   # Bisection()
 
 
 
@@ -41,7 +41,7 @@ struct Order3_Test <: Roots.AbstractSecant end
     ## xatol, xrtol, atol, rtol, maxevals, maxfneval, strict
     fn, xstar = x -> sin(x) - x + 1, 1.9345632107520243
     x0, M = 20.0, Order2()
-    @test find_zero(fn, x0, M)  ≈ xstar   # needs 16 iterations, 33 fn evaluations, difference is exact
+    @test find_zero(fn, x0, M) ≈ xstar   # needs 16 iterations, 33 fn evaluations, difference is exact
 
 
     # test of maxevals
@@ -64,7 +64,7 @@ struct Order3_Test <: Roots.AbstractSecant end
     h = 1e-6
     M = Roots.Bisection()
     tracks = Roots.Tracks(Float64, Float64);
-    find_zero(fn, (a,b), M, tracks=tracks, xatol=h, xrtol=0.0)
+    @inferred(find_zero(fn, (a,b), M, tracks=tracks, xatol=h, xrtol=0.0))
     u,v = tracks.xs[end-1:end]
     @test h >= abs(u-v) >= h/2
 
@@ -83,10 +83,10 @@ struct Order3_Test <: Roots.AbstractSecant end
     ## test of extreme values for fn, bisection
     c = pi
     fn = x -> Inf * sign(x - c)
-    find_zero(fn, (-Inf, Inf)) ≈ c
+    @inferred(find_zero(fn, (-Inf, Inf))) ≈ c
 
     fn = x -> Inf * x/abs(x) # stop at NaN values
-    find_zero(fn, (-Inf, Inf)) ≈ 0
+    @inferred(find_zero(fn, (-Inf, Inf))) ≈ 0
 
     bracketing_meths = (Roots.Bisection(),
                         Roots.A42(), Roots.AlefeldPotraShi(),
@@ -96,14 +96,12 @@ struct Order3_Test <: Roots.AbstractSecant end
 
     # test flexbility in interval specification
     for M ∈ bracketing_meths
-        @test find_zero(sin, (3,4)) ≈ pi
-        @test find_zero(sin, [3,4]) ≈ pi
-        @test find_zero(sin, 3:4) ≈ pi
-        @test find_zero(sin, SomeInterval(3,4)) ≈ pi
-        @test find_zero(sin, range(3,stop=4, length=20)) ≈ pi
+        @test @inferred(find_zero(sin, (3,4))) ≈ pi
+        @test @inferred(find_zero(sin, [3,4])) ≈ pi
+        @test @inferred(find_zero(sin, 3:4)) ≈ pi
+        @test @inferred(find_zero(sin, SomeInterval(3,4))) ≈ pi
+        @test @inferred(find_zero(sin, range(3,stop=4, length=20))) ≈ pi
     end
-
-
 end
 
 @testset "non simple zeros" begin
@@ -130,12 +128,12 @@ end
     x0_, xstar_ = (1.0, 2.0), 1.1673039782614187
     M = Roots.A42()
     G1 = Roots.Callable_Function(M, g1)
-    state = Roots.init_state(M, G1, x0_)
-    options = Roots.init_options(M, state)
+    state = @inferred(Roots.init_state(M, G1, x0_))
+    options = @inferred(Roots.init_options(M, state))
     for M in (Roots.A42(), Roots.Bisection(), Roots.FalsePosition())
         Gₘ = Roots.Callable_Function(M, G1)
-        stateₘ = Roots.init_state(M, state, Gₘ)
-        @test solve(M, Gₘ, stateₘ) ≈ xstar_
+        stateₘ = @inferred(Roots.init_state(M, state, Gₘ))
+        @test @inferred(solve(M, Gₘ, stateₘ)) ≈ xstar_
     end
 
     # iterator interface (ZeroProblem, solve; init, solve!)
@@ -157,20 +155,20 @@ end
     # should be positional, but named supported for now
     g2 = (x,p) -> cos(x) - x/p
     fx = ZeroProblem(g2, (0,pi/2))
-    @test solve(fx, 2) ≈ find_zero(x -> cos(x) - x/2, (0, pi/2))
-    @test solve(fx, p=2) ≈ find_zero(x -> cos(x) - x/2, (0, pi/2))
-    @test solve(fx, p=3) ≈ find_zero(x -> cos(x) - x/3, (0, pi/2))
+    @test solve(fx, 2) ≈ @inferred(find_zero(x -> cos(x) - x/2, (0, pi/2)))
+    @test solve(fx, p=2) ≈ @inferred(find_zero(x -> cos(x) - x/2, (0, pi/2)))
+    @test @inferred(solve(fx, p=3)) ≈ @inferred(find_zero(x -> cos(x) - x/3, (0, pi/2)))
     g3 = (x, p) -> cos(x) + p[1]*x - p[2]
     fx = ZeroProblem(g3, (0,pi/2))
-    @test solve(fx, p=[-1/10, 1/10]) ≈ find_zero(x -> cos(x) - x/10 - 1/10, (0, pi/2))
+    @test @inferred(solve(fx, p=[-1/10, 1/10])) ≈ @inferred(find_zero(x -> cos(x) - x/10 - 1/10, (0, pi/2)))
 
     ## test with early evaluation of bracket
     f = x -> sin(x)
     xs = (3.0, 4.0)
     fxs = f.(xs)
     M = Bisection()
-    state = Roots.init_state(M, f, xs..., fxs..., m=3.5, fm=f(3.5))
-    @test find_zero(M, f, state) ≈ π
+    state = @inferred(Roots.init_state(M, f, xs..., fxs..., m=3.5, fm=f(3.5)))
+    @test @inferred(find_zero(M, f, state)) ≈ π
 
 
     #     ## hybrid
@@ -178,9 +176,9 @@ end
     x0_, xstar_ = (5.0, 20.0), 8.613169456441398
     M = Roots.Bisection()
     G1 = Roots.Callable_Function(M, g1)
-    state = Roots.init_state(M, G1, x0_)
-    options = Roots.init_options(M, state, xatol=1/2)
-    ZPI = init(M,G1,state,options)
+    state = @inferred(Roots.init_state(M, G1, x0_))
+    options = @inferred(Roots.init_options(M, state, xatol=1/2))
+    ZPI = @inferred(init(M,G1,state,options))
     ϕ = iterate(ZPI)
     while ϕ !== nothing
         val, st = ϕ
@@ -370,20 +368,22 @@ end
 
     ## Use tolerance on f, not x with bisectoin
     atol = 0.01
-    u = find_zero(sin, (3, 4), atol=atol)
+    u = @inferred(find_zero(sin, (3, 4), atol=atol))
     @test atol >= abs(sin(u)) >= atol^2
 
     ## issue #159 bracket with zeros should be found
-    @test find_zero(x->x+1,(-1,1)) == -1
+    @test @inferred(find_zero(x->x+1,(-1,1))) == -1
 
     ## issue #178 passinig through method
     @test fzero(sin, 3, 4, Roots.Brent()) ≈ π
 
     ## issue #188 with A42
-    f = x -> x*(1-x^2)/((x^2+a^2)*(1+a^2*x^2))
-    a,r = .18, 0.05
+    f = let a=0.18
+        x -> x*(1-x^2)/((x^2+a^2)*(1+a^2*x^2))
+    end
+    r = 0.05
     xs = (r + 1e-12, 1.0)
-    @test find_zero(x -> f(r)-f(x), xs, Roots.A42()) ≈ 0.4715797678171889
+    @test @inferred(find_zero(x -> f(r)-f(x), xs, Roots.A42())) ≈ 0.4715797678171889
 end
 
 
@@ -530,4 +530,12 @@ end
     end
 
 
+end
+
+@testset "_extrema" begin
+    @test @inferred(Roots._extrema((π, 0))) === (0.0, Float64(π))
+    @test @inferred(Roots._extrema([π, 0])) === (0.0, Float64(π))
+    @test_throws ArgumentError Roots._extrema(π)
+    @test_throws ArgumentError Roots._extrema((π, π))
+    @test_throws ArgumentError Roots._extrema([π, π])
 end
