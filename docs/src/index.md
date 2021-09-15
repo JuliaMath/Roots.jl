@@ -7,7 +7,7 @@ Documentation for [Roots.jl](https://github.com/JuliaMath/Roots.jl)
 
 `Roots` is  a `Julia` package  for finding zeros of continuous
 scalar functions of a single real variable. That  is solving ``f(x)=0`` for ``x``.
-The `find_zero`function provides the
+The `find_zero` function provides the
 primary interface. It supports various algorithms through the
 specification of a method. These include:
 

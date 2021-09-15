@@ -118,7 +118,7 @@ derivatives leads to a higher convergence rate. However, the
 interval about `α`, the zero, where the convergence rate is guaranteed
 may get smaller.
 
-!!! Note:
+!!! note
     For the larger values of `S`, the expressions to compute the next value get quite involved.
     The higher convergence rate is likely only to be of help for finding solutions to high precision.
 

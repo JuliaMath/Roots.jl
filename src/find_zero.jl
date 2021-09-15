@@ -569,7 +569,7 @@ For the `Bisection` methods, convergence is guaranteed, so the tolerances are se
 If a bracketing method is passed in after the method specification,
 then whenever a bracket is identified during the algorithm, the method
 will switch to the bracketing method to identify the zero. (Bracketing
-methods are mathematicall guaranteed to converge, non-bracketing methods may or may not converge.)
+methods are mathematically guaranteed to converge, non-bracketing methods may or may not converge.)
 This is what `Order0` does by default, with an initial secant method switching
 to the `AlefeldPotraShi` method should a bracket be encountered.
 
@@ -887,7 +887,7 @@ This would be recommended, as there is no recompilation due to the function chan
 
 The argument `verbose=true` for `init` instructs that steps to be logged;
 
-The iterator interface allows for the creation of hybrid solutions, for example, this is essentially how `Order0` is constructed (`Order0` follows secant steps until a bracket is identified, after which is switches to a bracketing algorithm.)
+The iterator interface allows for the creation of hybrid solutions, for example, this is essentially how `Order0` is constructed (`Order0` follows secant steps until a bracket is identified, after which it switches to a bracketing algorithm.)
 
 ```jldoctest find_zero
 julia> function order0(f, x)

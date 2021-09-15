@@ -31,7 +31,7 @@ found where either `f(c) == 0.0` or  `f(prevfloat(c)) * f(c) < 0` or
 `f(c) * f(nextfloat(c)) < 0`.
 
 To illustrate, consider the function $f(x) = \cos(x) - x$. From trigonometry
-graph we can see readily infer that $[0,\pi/2]$ is a bracket.
+ we can see readily infer that $[0,\pi/2]$ is a bracket.
 
 The `Roots` package includes the bisection algorithm through
 `find_zero`. We use a structure for which `extrema` returns `(a,b)`
@@ -145,7 +145,7 @@ By default, bisection will converge to machine tolerance. This may
 provide more accuracy than desired. A tolerance may be specified to
 terminate early, thereby utilizing fewer resources. For example, this
 uses ``4`` steps to reach accuracy to $1/16$ (without specifying `xatol` it uses
-``51`` steps):
+``53`` steps):
 
 ```jldoctest roots
 julia> rt = find_zero(sin, (3.0, 4.0), xatol=1/16)
@@ -170,7 +170,7 @@ The default algorithm is modeled after an algorithm used for
 algorithm is designed to be more forgiving of the quality of the
 initial guess at the cost of possibly performing  more steps than
 other algorithms, as if the algorithm encounters a bracket, a bracketing method
-will be used.
+will be used (an efficient one, though).
 
 For example, the answer to our initial problem is visibly seen from a
 graph to be near 1. Given this,
@@ -853,7 +853,7 @@ increasing order.  It is assumed that neither endpoint is a zero.
 The algorithm used to search for all zeros in an interval is confounded by a few things:
 
 * too many zeros in the interval $(a,b)$
-* nearby zeros ("nearby" depends on the size of $(a,b)$ as well should this be very wide)
+* nearby zeros ("nearby" depends on the size of $(a,b)$, should this be very wide)
 
 The algorithm is adaptive, so that it can succeed when there are many
 zeros, but it may be necessary to increase `no_pts` from the default
