@@ -171,8 +171,7 @@ end
 
 ## the method converges,
 ## as we bound between x0, nextfloat(x0) is not measured by eps(), but eps(x0)
-function assess_convergence(M::Bisection, state::AbstractUnivariateZeroState{T,S}, options) where {T, S}
-
+function assess_convergence(::Bisection, state::AbstractUnivariateZeroState, options)
     flag, converged = assess_convergence(BisectionExact(), state, options)
     converged && return (flag, converged)
 
@@ -194,8 +193,7 @@ function assess_convergence(M::Bisection, state::AbstractUnivariateZeroState{T,S
 end
 
 # for exact convergence, we can skip some steps
-function assess_convergence(M::BisectionExact, state::UnivariateZeroState{T,S}, options) where {T, S}
-
+function assess_convergence(::BisectionExact, state::UnivariateZeroState, options)
     a,b = state.xn0, state.xn1
     fa, fb = state.fxn0,  state.fxn1
 
@@ -208,8 +206,7 @@ function assess_convergence(M::BisectionExact, state::UnivariateZeroState{T,S}, 
 end
 
 # assumes stopped = :x_converged
-function decide_convergence(M::AbstractBracketing,  F, state::AbstractUnivariateZeroState{T,S}, options, val) where {T,S}
-
+function decide_convergence(::AbstractBracketing,  F, state::AbstractUnivariateZeroState, options, val)
     a,b = state.xn0, state.xn1
     fa, fb = state.fxn0, state.fxn1
 
@@ -262,7 +259,7 @@ function find_zero(fs, x0, method::Bisection;
                    p=nothing,
                    tracks = NullTracks(),
                    verbose=false,
-                   kwargs...) where {M <: Union{Bisection}}
+                   kwargs...)
 
     _options = init_options(Bisection(), Float64, Float64; kwargs...)
     iszero_tol = iszero(_options.xabstol) && iszero(_options.xreltol) &&
@@ -362,8 +359,7 @@ end
 end
 
 # Cubic if possible, if not, quadratic(3)
-function take_a42_step(a::T, b, d, ee, fa, fb, fd, fe, k, delta=zero(T)) where {T}
-
+function take_a42_step(a, b, d, ee, fa, fb, fd, fe, k, delta=zero(a))
     # if r is NaN or Inf we move on by condition. Faster than checking ahead of time for
     # distinctness
     r = ipzero(a,b,d,ee, fa, fb,fd,fe, delta) # let error and see difference in allcoation?
@@ -371,7 +367,7 @@ function take_a42_step(a::T, b, d, ee, fa, fb, fd, fe, k, delta=zero(T)) where {
     r = newton_quadratic(a,b,d,fa,fb,fd, 3, delta)
 end
 
-function ipzero(a::T, b, c, d, fa, fb, fc, fd, delta=zero(T)) where {T}
+function ipzero(a, b, c, d, fa, fb, fc, fd, delta=zero(a))
     Q11 = (c - d)*fc/(fd - fc)
     Q21 = (b - c)*fb/(fc - fb)
     Q31 = (a - b)*fa/(fb - fa)
@@ -391,7 +387,7 @@ end
 
 # return c in (a+delta, b-delta)
 # adds part of `bracket` from paper with `delta`
-function newton_quadratic(a::T, b, d, fa, fb, fd, k::Int, delta=zero(T)) where {T}
+function newton_quadratic(a, b, d, fa, fb, fd, k::Int, delta=zero(a))
 
     A = f_abd(a,b,d,fa,fb,fd)
     r = isbracket(A,fa) ? b : a
@@ -749,8 +745,8 @@ end
 
 
 
-function update_state(M::Brent, f, state::BrentState{T,S},
-                      options::UnivariateZeroOptions, l = NullTracks()) where {T,S}
+function update_state(::Brent, f, state::BrentState,
+                      options::UnivariateZeroOptions, l = NullTracks())
 
 
     mflag = state.mflag
@@ -758,7 +754,6 @@ function update_state(M::Brent, f, state::BrentState{T,S},
     fa, fb, fc = state.fxn0, state.fxn1, state.fc
 
     # next step depends on points; inverse quadratic
-    s::T = zero(a)
     s = inverse_quadratic_step(a,b,c,fa,fb,fc)
     (isnan(s) || isinf(s)) && (s = secant_step(a,b,fa,fb))
 
@@ -855,16 +850,16 @@ find_zero(x -> x^5 - x - 1, (-2, 2), FalsePosition())
 FalsePosition
 FalsePosition(x=:anderson_bjork) = FalsePosition{x}()
 
-function default_tolerances(::FalsePosition{R}, ::Type{T}, ::Type{S}) where {R, T,S}
+function default_tolerances(::FalsePosition, ::Type{T}, ::Type{S}) where {T,S}
     default_tolerances(Secant(), T, S)
 end
 
 # use fallback for derivative free
-function assess_convergence(method::FalsePosition, state::UnivariateZeroState{T,S}, options) where {T,S}
+function assess_convergence(::FalsePosition, state::UnivariateZeroState, options)
     assess_convergence(Any, state, options)
 end
 
-function decide_convergence(M::FalsePosition,  F, state::AbstractUnivariateZeroState{T,S}, options, val) where {T,S}
+function decide_convergence(::FalsePosition,  F, state::AbstractUnivariateZeroState, options, val)
 
     a,b = state.xn0, state.xn1
     fa, fb = state.fxn0, state.fxn1
@@ -890,8 +885,8 @@ function decide_convergence(M::FalsePosition,  F, state::AbstractUnivariateZeroS
 end
 
 
-function update_state(method::FalsePosition, fs, o::AbstractUnivariateZeroState{T,S},
-                      options::UnivariateZeroOptions, l=NullTracks()) where {T,S}
+function update_state(method::FalsePosition, fs, o::AbstractUnivariateZeroState,
+                      options::UnivariateZeroOptions, l=NullTracks())
 
     a, b =  o.xn0, o.xn1
     fa, fb = o.fxn0, o.fxn1
