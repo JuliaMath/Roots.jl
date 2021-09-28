@@ -4,7 +4,6 @@
 # method
 ######
 
-
 """
     Roots.Order1B()
     Roots.King()
@@ -32,20 +31,19 @@ struct KingState{T,S} <: AbstractUnivariateZeroState{T,S}
     G0::S
 end
 
-
-function init_state(::Union{King, Order1B}, F, x₀, x₁, fx₀, fx₁)
+function init_state(::Union{King,Order1B}, F, x₀, x₁, fx₀, fx₁)
     fₛ₀ = F(x₀ - fx₀ * oneunit(x₀) / oneunit(fx₀))
     G₀ = -fx₀^2 / (fₛ₀ - fx₀)
     KingState(x₁, x₀, fx₁, fx₀, G₀)
 end
-initial_fncalls(::Union{King, Order1B}) = 3
+initial_fncalls(::Union{King,Order1B}) = 3
 
 function update_state(::Order1B, F, o::KingState, options, l=NullTracks())
     if do_guarded_step(Order1B(), o)
         state, flag = update_state(Order1(), F, o, options, l)
 
-        x0,fx0 = state.xn0, state.fxn0 # clunky! Need to update G₀ after Order1() step
-        fₛ = F(x0 - fx0*oneunit(x0)/oneunit(fx0))
+        x0, fx0 = state.xn0, state.fxn0 # clunky! Need to update G₀ after Order1() step
+        fₛ = F(x0 - fx0 * oneunit(x0) / oneunit(fx0))
         incfn(l)
         G₀ = -fx0^2 / (fₛ - fx0)
         @set! state.G0 = G₀
@@ -56,19 +54,15 @@ function update_state(::Order1B, F, o::KingState, options, l=NullTracks())
     end
 end
 
-
-function update_state(::King, F,
-                      o::KingState, options, l=NullTracks())
-
-
+function update_state(::King, F, o::KingState, options, l=NullTracks())
     x0, x1 = o.xn0, o.xn1
     fx0, fx1 = o.fxn0, o.fxn1
     G₀ = o.G0
-    fₛ₁ = F(x1 - fx1*oneunit(x1)/oneunit(fx1))
+    fₛ₁ = F(x1 - fx1 * oneunit(x1) / oneunit(fx1))
     incfn(l)
     G₁ = -fx1^2 / (fₛ₁ - fx1)
 
-    m = (x1-x0) / (G₁-G₀) # approximate value of `m`, the multiplicity
+    m = (x1 - x0) / (G₁ - G₀) # approximate value of `m`, the multiplicity
 
     if abs(m) <= 1e-2 * oneunit(m)
         log_message(l, "Estimate for multiplicity has issues. ")
@@ -92,9 +86,7 @@ function update_state(::King, F,
     @set! o.fxn1 = fx1
     @set! o.G0 = G₁
 
-
     return o, false
-
 end
 
 ##################################################
@@ -131,14 +123,23 @@ find_zero(g, x0, Roots.Order2B(), verbose=true) #  4 / 10
 struct Esser <: AbstractSecant end
 struct Order2B <: AbstractSecant end
 
-function update_state(method::Order2B, fs, o::AbstractUnivariateZeroState, options, l=NullTracks())
+function update_state(
+    method::Order2B,
+    fs,
+    o::AbstractUnivariateZeroState,
+    options,
+    l=NullTracks(),
+)
     update_state_guarded(method, Secant(), Esser(), fs, o, options, l)
 end
 
-function update_state(method::Esser, F,
-                      o::AbstractUnivariateZeroState{T,S}, options, l=NullTracks())  where {T, S}
-
-
+function update_state(
+    method::Esser,
+    F,
+    o::AbstractUnivariateZeroState{T,S},
+    options,
+    l=NullTracks(),
+) where {T,S}
     x1, fx1 = o.xn1, o.fxn1
 
     f0 = fx1
@@ -150,10 +151,10 @@ function update_state(method::Esser, F,
     # h = f0
     # r1 = f/f' ~ f/f[x+h,x-h]
     # r2 = f'/f'' ~ f[x+h, x-h]/f[x-h,x,x+h]
-    r1 = f0 * 2*f0 / (f1 - f_1) * oneunit(T) / oneunit(S)
-    r2 = (f1 - f_1)/(f1 - 2*f0 + f_1) * f0/2 * oneunit(T) / oneunit(S)
+    r1 = f0 * 2 * f0 / (f1 - f_1) * oneunit(T) / oneunit(S)
+    r2 = (f1 - f_1) / (f1 - 2 * f0 + f_1) * f0 / 2 * oneunit(T) / oneunit(S)
 
-    k = r2/(r2-r1)  # ~ m
+    k = r2 / (r2 - r1)  # ~ m
 
     if abs(k) <= 1e-2 * oneunit(k)
         log_message(l, "Estimate for multiplicity had issues. ")
@@ -171,17 +172,13 @@ function update_state(method::Esser, F,
     fx0, fx1 = fx1, F(x1)
     incfn(l)
 
-
-
     @set! o.xn0 = x0
     @set! o.xn1 = x1
     @set! o.fxn0 = fx0
     @set! o.fxn1 = fx1
 
     return o, false
-
 end
-
 
 """
     Roots.Schroder()
@@ -222,8 +219,7 @@ the value of `f`, but otherwise would be expensive to compute.
 The error, `eᵢ = xᵢ - α`, is the same as `Newton` with `f` replaced by `f/f'`.
 
 """
-struct Schroder <: AbstractHalleyLikeMethod
-end
+struct Schroder <: AbstractHalleyLikeMethod end
 const Schroeder = Schroder # either spelling
 const Schröder = Schroder
 
@@ -231,19 +227,22 @@ const Schröder = Schroder
 function init_state(M::Schroder, F::Callable_Function, x)
     x₀ = float(first(x))
     fx₀, (Δ, ΔΔ) = F(x₀)
-    x₁ = x₀ - ΔΔ/(ΔΔ - Δ) * Δ # m*r1
+    x₁ = x₀ - ΔΔ / (ΔΔ - Δ) * Δ # m*r1
     state = init_state(M, F, x₀, x₁, fx₀, fx₀)
 end
 
-
-
-function update_state(method::Schroder, F, o::AbstractUnivariateZeroState{T,S},
-                      options::UnivariateZeroOptions, l=NullTracks()) where {T,S}
+function update_state(
+    method::Schroder,
+    F,
+    o::AbstractUnivariateZeroState{T,S},
+    options::UnivariateZeroOptions,
+    l=NullTracks(),
+) where {T,S}
     xn = o.xn1
     fxn = o.fxn1
     r1, r2 = o.Δ, o.ΔΔ
 
-    Δ =  r2 / (r2 - r1) * r1  # m * r1
+    Δ = r2 / (r2 - r1) * r1  # m * r1
 
     if isissue(Δ)
         log_message(l, "Issue with increment")
@@ -253,7 +252,7 @@ function update_state(method::Schroder, F, o::AbstractUnivariateZeroState{T,S},
     xn1::T = xn - Δ
 
     fxn1::S, (r1::T, r2::T) = F(xn1)
-    incfn(l,3)
+    incfn(l, 3)
 
     @set! o.xn0 = xn
     @set! o.xn1 = xn1
@@ -264,7 +263,6 @@ function update_state(method::Schroder, F, o::AbstractUnivariateZeroState{T,S},
 
     return o, false
 end
-
 
 ## Thukral 3,4,5 (2) is Schroder
 """
@@ -314,7 +312,7 @@ fn_argout(::Thukral5B) = 6
 struct ThukralBState{N,T,S} <: AbstractUnivariateZeroState{T,S}
     xn1::T
     xn0::T
-    Δs::NTuple{N, T}
+    Δs::NTuple{N,T}
     fxn1::S
     fxn0::S
 end
@@ -325,13 +323,17 @@ function init_state(M::AbstractThukralBMethod, F::Callable_Function, x)
     state = init_state(M, F, nan(x₁), x₁, nan(fx₁), fx₁; Δs=Δs)
 end
 
-function init_state(M::AbstractThukralBMethod, F, x₀, x₁::T, fx₀, fx₁; Δs = nothing) where {T}
-    ThukralBState(x₁, x₀, NTuple{fn_argout(M)-1,T}(Δs), fx₁, fx₀)
+function init_state(M::AbstractThukralBMethod, F, x₀, x₁::T, fx₀, fx₁; Δs=nothing) where {T}
+    ThukralBState(x₁, x₀, NTuple{fn_argout(M) - 1,T}(Δs), fx₁, fx₀)
 end
 
-function update_state(M::AbstractThukralBMethod, F, o::AbstractUnivariateZeroState{T,S},
-                      options::UnivariateZeroOptions, l=NullTracks()) where {T,S}
-
+function update_state(
+    M::AbstractThukralBMethod,
+    F,
+    o::AbstractUnivariateZeroState{T,S},
+    options::UnivariateZeroOptions,
+    l=NullTracks(),
+) where {T,S}
     x₀ = o.xn1
 
     Δ = compute_thukral_Δ(M, o)
@@ -343,43 +345,43 @@ function update_state(M::AbstractThukralBMethod, F, o::AbstractUnivariateZeroSta
 
     @set! o.xn0 = x₀
     @set! o.fxn0 = o.fxn1
-    @set! o.Δs =  NTuple{fn_argout(M)-1,T}(Δs)
+    @set! o.Δs = NTuple{fn_argout(M) - 1,T}(Δs)
     @set! o.xn1 = x₁
     @set! o.fxn1 = fx₁
 
     return (o, false)
 end
 
-
 function compute_thukral_Δ(M::Thukral2B, o)
     r₁, r₂ = o.Δs
-    t₁, t₂ = 1/r₁, 1/r₂
+    t₁, t₂ = 1 / r₁, 1 / r₂
     Δ = one(o.xn1)
     Δ /= (t₁ - t₂)
     Δ
 end
 
-
 function compute_thukral_Δ(M::Thukral3B, o)
     r₁, r₂, r₃ = o.Δs
-    t₁, t₂, t₃ = 1/r₁, 1/r₂, 1/r₃
+    t₁, t₂, t₃ = 1 / r₁, 1 / r₂, 1 / r₃
     Δ = (2t₁ - 2t₂)
-    Δ /= (2t₁^2 - 3t₁*t₂ + t₂*t₃)
+    Δ /= (2t₁^2 - 3t₁ * t₂ + t₂ * t₃)
     Δ
 end
 
 function compute_thukral_Δ(M::Thukral4B, o)
     r₁, r₂, r₃, r₄ = o.Δs
-    t₁, t₂, t₃, t₄ = 1/r₁, 1/r₂, 1/r₃, 1/r₄
-    Δ = 6t₁^2 - 9t₁*t₂ +3t₂*t₃
-    Δ /= 6t₁^3 - 12 * t₁^2*t₂ + 4t₁*t₂*t₃ - t₂*t₃*t₄ + 3*t₁*t₂^2
+    t₁, t₂, t₃, t₄ = 1 / r₁, 1 / r₂, 1 / r₃, 1 / r₄
+    Δ = 6t₁^2 - 9t₁ * t₂ + 3t₂ * t₃
+    Δ /= 6t₁^3 - 12 * t₁^2 * t₂ + 4t₁ * t₂ * t₃ - t₂ * t₃ * t₄ + 3 * t₁ * t₂^2
     Δ
 end
 
 function compute_thukral_Δ(M::Thukral5B, o)
     r₁, r₂, r₃, r₄, r₅ = o.Δs
-    t₁, t₂, t₃, t₄, t₅ = 1/r₁, 1/r₂, 1/r₃, 1/r₄, 1/r₅
-    Δ = 24*t₁^3 - 48t₁^2*t₂  + 16*t₁*t₂*t₃ - 4*t₂*t₃*t₄ + 12t₁*t₂^2
-    Δ /= 24t₁^4  - 60t₁^3*t₂ + 20*t₁^2*t₂*t₃ - 5*t₁*t₂*t₃*t₄ + 30t₁^2*t₂^2 - 10*t₁*t₂^2*t₃ + t₂*t₃*t₄*t₅
+    t₁, t₂, t₃, t₄, t₅ = 1 / r₁, 1 / r₂, 1 / r₃, 1 / r₄, 1 / r₅
+    Δ = 24 * t₁^3 - 48t₁^2 * t₂ + 16 * t₁ * t₂ * t₃ - 4 * t₂ * t₃ * t₄ + 12t₁ * t₂^2
+    Δ /=
+        24t₁^4 - 60t₁^3 * t₂ + 20 * t₁^2 * t₂ * t₃ - 5 * t₁ * t₂ * t₃ * t₄ + 30t₁^2 * t₂^2 -
+        10 * t₁ * t₂^2 * t₃ + t₂ * t₃ * t₄ * t₅
     Δ
 end

@@ -12,7 +12,6 @@
 ## The latter two come from
 ## [Thukral](http://article.sapub.org/10.5923.j.ajcam.20170702.05.html). They are not implemented.
 
-
 ## Newton
 abstract type AbstractNewtonLikeMethod <: AbstractUnivariateZeroMethod end
 fn_argout(::AbstractNewtonLikeMethod) = 2
@@ -53,7 +52,6 @@ struct NewtonState{T,S} <: AbstractUnivariateZeroState{T,S}
     fxn0::S
 end
 
-
 function init_state(M::Newton, F::Callable_Function, x)
     x₀ = float(first(x))
     fx₀, Δ = F(x₀)
@@ -69,9 +67,13 @@ end
 
 initial_fncalls(M::Newton) = 2
 
-
-function update_state(method::Newton, F, o::NewtonState{T,S}, options, l=NullTracks()) where {T, S}
-
+function update_state(
+    method::Newton,
+    F,
+    o::NewtonState{T,S},
+    options,
+    l=NullTracks(),
+) where {T,S}
     xn0, xn1 = o.xn0, o.xn1
     fxn0, fxn1 = o.fxn0, o.fxn1
     Δ = o.Δ
@@ -81,10 +83,10 @@ function update_state(method::Newton, F, o::NewtonState{T,S}, options, l=NullTra
         return o, true
     end
 
-    xn0, xn1 = xn1, xn1-Δ
+    xn0, xn1 = xn1, xn1 - Δ
     fxn0 = fxn1
     fxn1, Δ = F(xn1)
-    incfn(l,2)
+    incfn(l, 2)
 
     @set! o.xn0 = xn0
     @set! o.xn1 = xn1
@@ -93,11 +95,7 @@ function update_state(method::Newton, F, o::NewtonState{T,S}, options, l=NullTra
     @set! o.fxn1 = fxn1
 
     return o, false
-
-
-
 end
-
 
 """
     Roots.newton(f, fp, x0; kwargs...)
@@ -121,7 +119,6 @@ See also `Roots.newton((f,fp), x0)` and `Roots.newton(fΔf, x0)` for simpler imp
 
 """
 newton(f, fp, x0; kwargs...) = find_zero((f, fp), x0, Newton(); kwargs...)
-
 
 ## Halley
 abstract type AbstractHalleyLikeMethod <: AbstractUnivariateZeroMethod end
@@ -156,8 +153,7 @@ The error, `eᵢ = xᵢ - α`, satisfies
 `eᵢ₊₁ ≈ -(2f'⋅f''' -3⋅(f'')²)/(12⋅(f'')²) ⋅ eᵢ³` (all evaluated at `α`).
 
 """
-struct Halley <: AbstractΔMethod
-end
+struct Halley <: AbstractΔMethod end
 
 struct HalleyState{T,S} <: AbstractUnivariateZeroState{T,S}
     xn1::T
@@ -182,16 +178,22 @@ function init_state(::AbstractHalleyLikeMethod, F, x₀, x₁, fx₀, fx₁)
     HalleyState(x₁, x₀, Δ, ΔΔ, fx₁, fx₀)
 end
 
-initial_fncalls(M::AbstractHalleyLikeMethod) = 2*3
+initial_fncalls(M::AbstractHalleyLikeMethod) = 2 * 3
 
-calculateΔ(method::Halley, r1, r2) = 2r2/(2r2 - r1) * r1
+calculateΔ(method::Halley, r1, r2) = 2r2 / (2r2 - r1) * r1
 
-function update_state(method::AbstractΔMethod, F, o::HalleyState{T,S}, options::UnivariateZeroOptions, l=NullTracks()) where {T,S}
+function update_state(
+    method::AbstractΔMethod,
+    F,
+    o::HalleyState{T,S},
+    options::UnivariateZeroOptions,
+    l=NullTracks(),
+) where {T,S}
     xn = o.xn1
     fxn = o.fxn1
     r1, r2 = o.Δ, o.ΔΔ
 
-    Δ =  calculateΔ(method, r1, r2)
+    Δ = calculateΔ(method, r1, r2)
     if isissue(Δ)
         log_message(l, "Issue with computing `Δ`")
         return (o, true)
@@ -199,8 +201,7 @@ function update_state(method::AbstractΔMethod, F, o::HalleyState{T,S}, options:
 
     xn1::T = xn - Δ
     fxn1::S, (r1::T, r2::T) = F(xn1)
-    incfn(l,3)
-
+    incfn(l, 3)
 
     @set! o.xn0 = xn
     @set! o.xn1 = xn1
@@ -210,7 +211,6 @@ function update_state(method::AbstractΔMethod, F, o::HalleyState{T,S}, options:
     @set! o.ΔΔ = r2
 
     return o, false
-
 end
 
 """
@@ -237,8 +237,6 @@ Keyword arguments are passed to `find_zero` using the `Roots.Halley()` method.
 
 """
 halley(f, fp, fpp, x0; kwargs...) = find_zero((f, fp, fpp), x0, Halley(); kwargs...)
-
-
 
 """
     Roots.QuadraticInverse()
@@ -267,10 +265,9 @@ The error, `eᵢ = xᵢ - α`, [satisfies](https://dl.acm.org/doi/10.1080/002071
 `eᵢ₊₁ ≈ (1/2⋅(f''/f')² - 1/6⋅f'''/f')) ⋅ eᵢ³` (all evaluated at `α`).
 
 """
-struct QuadraticInverse <: AbstractΔMethod
-end
+struct QuadraticInverse <: AbstractΔMethod end
 
-calculateΔ(method::QuadraticInverse, r1, r2) =  (1 + r1/(2r2))*r1
+calculateΔ(method::QuadraticInverse, r1, r2) = (1 + r1 / (2r2)) * r1
 
 """
     Roots.quadratic_inverse(f, fp, fpp, x0; kwargs...)
@@ -295,24 +292,25 @@ Keyword arguments are passed to `find_zero` using the `Roots.QuadraticInverse()`
 
 
 """
-quadratic_inverse(f, fp, fpp, x0; kwargs...) = find_zero((f, fp, fpp), x0, QuadraticInverse(); kwargs...)
+quadratic_inverse(f, fp, fpp, x0; kwargs...) =
+    find_zero((f, fp, fpp), x0, QuadraticInverse(); kwargs...)
 
 """
 CHEBYSHEV-LIKE METHODS AND QUADRATIC EQUATIONS (J. A. EZQUERRO, J. M. GUTIÉRREZ, M. A. HERNÁNDEZ and M. A. SALANOVA)
 """
-struct ChebyshevLike <: AbstractΔMethod
-end
+struct ChebyshevLike <: AbstractΔMethod end
 
-calculateΔ(method::ChebyshevLike, r1, r2) =  (1 + r1/(2r2)*(1+ r1/r2))*r1
+calculateΔ(method::ChebyshevLike, r1, r2) = (1 + r1 / (2r2) * (1 + r1 / r2)) * r1
 
-chebyshev_like(f, fp, fpp, x0; kwargs...) = find_zero((f, fp, fpp), x0, ChebyshevLike(); kwargs...)
+chebyshev_like(f, fp, fpp, x0; kwargs...) =
+    find_zero((f, fp, fpp), x0, ChebyshevLike(); kwargs...)
 
 """
 An acceleration of Newton's method: Super-Halley method (J.M. Gutierrez, M.A. Hernandez
 """
-struct SuperHalley <: AbstractΔMethod
-end
+struct SuperHalley <: AbstractΔMethod end
 
-calculateΔ(method::SuperHalley, r1, r2) =  (1 + r1/(2r2 - 2r1))*r1
+calculateΔ(method::SuperHalley, r1, r2) = (1 + r1 / (2r2 - 2r1)) * r1
 
-superhalley(f, fp, fpp, x0; kwargs...) = find_zero((f, fp, fpp), x0, SuperHalley(); kwargs...)
+superhalley(f, fp, fpp, x0; kwargs...) =
+    find_zero((f, fp, fpp), x0, SuperHalley(); kwargs...)

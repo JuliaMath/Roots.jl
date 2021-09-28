@@ -2,7 +2,6 @@
 ## TODO
 ## * a graphic of trace when verbose=true?
 
-
 #
 # In McNamee & Pan (DOI:10.1016/j.camwa.2011.11.015 there are a number of
 # results on efficiencies of a solution, (1/d) log_10(q)
@@ -17,8 +16,6 @@
 # Order16() 16th order 5 steps .240
 # Order5(): 5th order, 4 steps. 0.1747
 
-
-
 # A zero is found by specifying:
 # the method to use <: AbstractUnivariateZeroMethod
 # the function(s)
@@ -26,7 +23,6 @@
 # the options (e.g., tolerances) <: UnivariateZeroOptions
 
 # The minimal amount needed to add a method, is to define a Method and an update_state method.
-
 
 ### Methods
 abstract type AbstractUnivariateZeroMethod end
@@ -37,10 +33,8 @@ abstract type AbstractSecant <: AbstractNonBracketing end
 # indicate if we expect f() to return one or multiple values (e.g. Newton)
 fn_argout(::AbstractUnivariateZeroMethod) = 1
 
-
-
 ### States
-abstract type  AbstractUnivariateZeroState{T,S} end
+abstract type AbstractUnivariateZeroState{T,S} end
 
 struct UnivariateZeroState{T,S} <: AbstractUnivariateZeroState{T,S}
     xn1::T
@@ -57,7 +51,6 @@ function init_state(M::AbstractUnivariateZeroMethod, state::AbstractUnivariateZe
     init_state(M, F, state.xn0, state.xn1, state.fxn0, state.fxn1)
 end
 
-
 # init_state(M,F,x) --> call init_state(M,F,x₀,x₁,fx₀, fx₁)
 function init_state(M::AbstractUnivariateZeroMethod, F, x)
     error("no default method")
@@ -67,7 +60,6 @@ end
 function init_state(::AbstractUnivariateZeroMethod, F, x₀, x₁, fx₀, fx₁)
     error("no default method")
 end
-
 
 # init_state(M, F, x; kwargs...)
 # init_state(M, F x₀,x₁,fx₀,fx₁; kwargs...)
@@ -110,8 +102,13 @@ tolerances are unitless). For `Complex{T}` values, `T` is used.
 The number of iterations is limited by `maxevals=40`.
 
 """
-default_tolerances(M::AbstractUnivariateZeroMethod) = default_tolerances(M, Float64, Float64)
-function default_tolerances(::AbstractUnivariateZeroMethod, ::Type{T}, ::Type{S}) where {T, S}
+default_tolerances(M::AbstractUnivariateZeroMethod) =
+    default_tolerances(M, Float64, Float64)
+function default_tolerances(
+    ::AbstractUnivariateZeroMethod,
+    ::Type{T},
+    ::Type{S},
+) where {T,S}
     xatol = eps(real(T)) * oneunit(real(T))
     xrtol = eps(real(T))  # unitless
     atol = 4 * eps(real(float(S))) * oneunit(real(S))
@@ -122,24 +119,29 @@ function default_tolerances(::AbstractUnivariateZeroMethod, ::Type{T}, ::Type{S}
     (xatol, xrtol, atol, rtol, maxevals, maxfnevals, strict)
 end
 
-init_options(M::AbstractUnivariateZeroMethod,
-             state::AbstractUnivariateZeroState{T,S};
-             kwargs...
-             ) where {T, S} = init_options(M, T, S; kwargs...)
+init_options(
+    M::AbstractUnivariateZeroMethod,
+    state::AbstractUnivariateZeroState{T,S};
+    kwargs...,
+) where {T,S} = init_options(M, T, S; kwargs...)
 
 function init_options(M, T=Float64, S=Float64; kwargs...)
     d = kwargs
 
     defs = default_tolerances(M, T, S)
-    options = UnivariateZeroOptions(get(d, :xatol, get(d, :xabstol, defs[1])),
-                                    get(d, :xrtol, get(d, :xreltol, defs[2])),
-                                    get(d, :atol,  get(d, :abstol,  defs[3])),
-                                    get(d, :rtol,  get(d, :reltol,  defs[4])),
-                                    get(d, :maxevals,   get(d, :maxsteps, defs[5])),
-                                    get(d, :maxfnevals, defs[6]),
-                                    get(d, :strict,     defs[7]))
+    options = UnivariateZeroOptions(
+        get(d, :xatol, get(d, :xabstol, defs[1])),
+        get(d, :xrtol, get(d, :xreltol, defs[2])),
+        get(d, :atol, get(d, :abstol, defs[3])),
+        get(d, :rtol, get(d, :reltol, defs[4])),
+        get(d, :maxevals, get(d, :maxsteps, defs[5])),
+        get(d, :maxfnevals, defs[6]),
+        get(d, :strict, defs[7]),
+    )
     if haskey(d, :maxfnevals)
-        @warn("maxfnevals is ignored. See the test for an example to implement this featrue")
+        @warn(
+            "maxfnevals is ignored. See the test for an example to implement this featrue"
+        )
     end
     options
 end
@@ -180,9 +182,10 @@ mutable struct Tracks{T,S} <: AbstractTracks
     method
     nmethod
 end
-Tracks(T,S) = Tracks(T[],S[], 0, 0, :not_converged, "", nothing, nothing,nothing)
-Tracks(s::AbstractUnivariateZeroState{T,S}) where {T, S} = Tracks(T,S)
-Tracks(verbose, tracks, state) = (verbose && isa(tracks, NullTracks)) ? Tracks(state) : tracks
+Tracks(T, S) = Tracks(T[], S[], 0, 0, :not_converged, "", nothing, nothing, nothing)
+Tracks(s::AbstractUnivariateZeroState{T,S}) where {T,S} = Tracks(T, S)
+Tracks(verbose, tracks, state) =
+    (verbose && isa(tracks, NullTracks)) ? Tracks(state) : tracks
 
 function log_step(l::Tracks, M::Any, state, init=nothing)
     if init !== nothing
@@ -206,14 +209,22 @@ log_state(l::Tracks, state) = (l.state = state; nothing)
 log_method(l::Tracks, method) = (l.method = method; nothing)
 log_nmethod(l::Tracks, method) = (l.nmethod = method; nothing)
 
-
 Base.show(io::IO, l::Tracks) = show_trace(io, l.method, l.nmethod, l.state, l)
 
 function show_tracks(io::IO, s::Tracks, M::AbstractUnivariateZeroMethod)
     for (i, (xi, fxi)) in enumerate(zip(s.xs, s.fs))
-        println(io,@sprintf("%s = % 18.16f,\t %s = % 18.16f", "x_$(i-1)", float(xi), "fx_$(i-1)", float(fxi)))
+        println(
+            io,
+            @sprintf(
+                "%s = % 18.16f,\t %s = % 18.16f",
+                "x_$(i-1)",
+                float(xi),
+                "fx_$(i-1)",
+                float(fxi)
+            )
+        )
     end
-    println(io,"")
+    println(io, "")
 end
 
 function show_trace(io::IO, method, N, state, tracks)
@@ -221,7 +232,6 @@ function show_trace(io::IO, method, N, state, tracks)
         print(io, "Algorithm has not been run")
         return nothing
     end
-
 
     converged = !isnan(state.xn1)
     println(io, "Results of univariate zero finding:\n")
@@ -234,8 +244,11 @@ function show_trace(io::IO, method, N, state, tracks)
         end
         println(io, "* iterations: $(tracks.steps)")
         println("* function evaluations ≈ $(tracks.fncalls)")
-        tracks.convergence_flag == :x_converged && println(io, "* stopped as x_n ≈ x_{n-1} using atol=xatol, rtol=xrtol")
-        tracks.convergence_flag == :f_converged && tracks.message == "" && println(io, "* stopped as |f(x_n)| ≤ max(δ, |x|⋅ϵ) using δ = atol, ϵ = rtol")
+        tracks.convergence_flag == :x_converged &&
+            println(io, "* stopped as x_n ≈ x_{n-1} using atol=xatol, rtol=xrtol")
+        tracks.convergence_flag == :f_converged &&
+            tracks.message == "" &&
+            println(io, "* stopped as |f(x_n)| ≤ max(δ, |x|⋅ϵ) using δ = atol, ϵ = rtol")
         tracks.message != "" && println(io, "* Note: $(tracks.message)")
     else
         println(io, "* Convergence failed: $(tracks.message)")
@@ -246,12 +259,10 @@ function show_trace(io::IO, method, N, state, tracks)
     show_tracks(io, tracks, method)
 end
 
-
-
 ### Functions
 # A hacky means to call a function so that parameters can be passed as desired
 # and the correct number of outputs are computed
-struct Callable_Function{Single, Tup, F, P}
+struct Callable_Function{Single,Tup,F,P}
     f::F
     p::P
     function Callable_Function(M, f, p=nothing)
@@ -259,11 +270,11 @@ struct Callable_Function{Single, Tup, F, P}
         Tup = Val{isa(f, Tuple)}
         F = typeof(f)
         P = typeof(p)
-        new{Single, Tup, F, P}(f, p)
+        new{Single,Tup,F,P}(f, p)
     end
 end
 
-function Callable_Function(M,F::Callable_Function, p=F.p)
+function Callable_Function(M, F::Callable_Function, p=F.p)
     Callable_Function(M, F.f, p)
 end
 
@@ -271,33 +282,33 @@ end
 # Callable_Function(output_arity, input_arity, F, p)
 # First handle: x -> (f,f/f', f'/f'', ...)
 (F::Callable_Function{Val{1},Val{false},𝑭,Nothing})(x) where {𝑭} = first(F.f(x))
-(F::Callable_Function{Val{1},Val{false},𝑭,P})(x) where {𝑭, P} = first(F.f(x, F.p))
+(F::Callable_Function{Val{1},Val{false},𝑭,P})(x) where {𝑭,P} = first(F.f(x, F.p))
 
 (F::Callable_Function{Val{2},Val{false},𝑭,Nothing})(x) where {𝑭} = F.f(x)[1:2]
-(F::Callable_Function{Val{2},Val{false},𝑭,P})(x) where {𝑭, P} = F.f(x, F.p)[1:2]
+(F::Callable_Function{Val{2},Val{false},𝑭,P})(x) where {𝑭,P} = F.f(x, F.p)[1:2]
 
 # N ≥ 3 returns (f, (...))
-function (F::Callable_Function{Val{N},Val{false},𝑭,Nothing})(x) where {N, 𝑭}
+function (F::Callable_Function{Val{N},Val{false},𝑭,Nothing})(x) where {N,𝑭}
     fs = F.f(x)
-    fs[1], ntuple(i->fs[i+1], Val(N-1))
+    fs[1], ntuple(i -> fs[i + 1], Val(N - 1))
 end
-function (F::Callable_Function{Val{N},Val{false},𝑭,P})(x) where {N, 𝑭, P}
+function (F::Callable_Function{Val{N},Val{false},𝑭,P})(x) where {N,𝑭,P}
     fs = F.f(x, F.p)
-    fs[1], ntuple(i->fs[i+1], Val(N-1))
+    fs[1], ntuple(i -> fs[i + 1], Val(N - 1))
 end
 
 ## f is specified as a tuple (f,f',f'', ...)
 ## N =1  return f(x)
 (F::Callable_Function{Val{1},Val{true},𝑭,Nothing})(x) where {𝑭} = first(F.f)(x)
-(F::Callable_Function{Val{1},Val{true},𝑭,P})(x) where {𝑭, P} = first(F.f)(x, F.p)
+(F::Callable_Function{Val{1},Val{true},𝑭,P})(x) where {𝑭,P} = first(F.f)(x, F.p)
 ## N=2 return (f(x), f(x)/f'(x))
 function (F::Callable_Function{Val{2},Val{true},𝑭,Nothing})(x) where {𝑭}
     f, f′ = (F.f[1])(x), (F.f[2])(x)
-    f, f/f′
+    f, f / f′
 end
-function (F::Callable_Function{Val{2},Val{true},𝑭,P})(x) where {𝑭, P}
+function (F::Callable_Function{Val{2},Val{true},𝑭,P})(x) where {𝑭,P}
     f, f′ = (F.f[1])(x, F.p), (F.f[2])(x, F.p)
-    f, f/f′
+    f, f / f′
 end
 
 ## For N ≥ 3 we return (f, (f/f', f'/f'', ...);
@@ -305,52 +316,63 @@ end
 ## general formula later runs more slowly.
 function (F::Callable_Function{Val{3},Val{true},𝑭,Nothing})(x) where {𝑭}
     f, f′, f′′ = (F.f[1])(x), (F.f[2])(x), (F.f[3])(x)
-    f, (f/f′, f′/f′′)
+    f, (f / f′, f′ / f′′)
 end
-function (F::Callable_Function{Val{3},Val{true},𝑭,P})(x) where {𝑭, P}
+function (F::Callable_Function{Val{3},Val{true},𝑭,P})(x) where {𝑭,P}
     f, f′, f′′ = (F.f[1])(x, F.p), (F.f[2])(x, F.p), (F.f[3])(x, F.p)
-    f, (f/f′, f′/f′′)
+    f, (f / f′, f′ / f′′)
 end
 
 function (F::Callable_Function{Val{4},Val{true},𝑭,Nothing})(x) where {𝑭}
     f, f′, f′′, f′′′ = (F.f[1])(x), (F.f[2])(x), (F.f[3])(x), (F.f[4])(x)
-    f, (f/f′, f′/f′′, f′′/f′′′)
+    f, (f / f′, f′ / f′′, f′′ / f′′′)
 end
-function (F::Callable_Function{Val{4},Val{true},𝑭,P})(x) where {𝑭, P}
-    f, f′,f′′,f′′′ = (F.f[1])(x, F.p), (F.f[2])(x, F.p), (F.f[3])(x, F.p), (F.f[4])(x, F.p)
-    𝐓 = eltype(f/f′)
-    f, NTuple{3,𝐓}((f/f′, f′/f′′, f′′/f′′′))
+function (F::Callable_Function{Val{4},Val{true},𝑭,P})(x) where {𝑭,P}
+    f, f′, f′′, f′′′ =
+        (F.f[1])(x, F.p), (F.f[2])(x, F.p), (F.f[3])(x, F.p), (F.f[4])(x, F.p)
+    𝐓 = eltype(f / f′)
+    f, NTuple{3,𝐓}((f / f′, f′ / f′′, f′′ / f′′′))
 end
 
 function (F::Callable_Function{Val{5},Val{true},𝑭,Nothing})(x) where {𝑭}
-    f, f′, f′′, f′′′, f′′′′ = (F.f[1])(x), (F.f[2])(x), (F.f[3])(x), (F.f[4])(x), (F.f[5])(x)
-    f, (f/f′, f′/f′′, f′′/f′′′, f′′′/f′′′′)
+    f, f′, f′′, f′′′, f′′′′ =
+        (F.f[1])(x), (F.f[2])(x), (F.f[3])(x), (F.f[4])(x), (F.f[5])(x)
+    f, (f / f′, f′ / f′′, f′′ / f′′′, f′′′ / f′′′′)
 end
-function (F::Callable_Function{Val{5},Val{true},𝑭,P})(x) where {𝑭, P}
-    f, f′,f′′,f′′′,f′′′′ = (F.f[1])(x, F.p), (F.f[2])(x, F.p), (F.f[3])(x, F.p), (F.f[4])(x, F.p), (F.f[5])(x, F.p)
-    f, (f/f′, f′/f′′, f′′/f′′′, f′′′/f′′′′)
+function (F::Callable_Function{Val{5},Val{true},𝑭,P})(x) where {𝑭,P}
+    f, f′, f′′, f′′′, f′′′′ = (F.f[1])(x, F.p),
+    (F.f[2])(x, F.p),
+    (F.f[3])(x, F.p),
+    (F.f[4])(x, F.p),
+    (F.f[5])(x, F.p)
+    f, (f / f′, f′ / f′′, f′′ / f′′′, f′′′ / f′′′′)
 end
 
 function (F::Callable_Function{Val{6},Val{true},𝑭,Nothing})(x) where {𝑭}
-    f, f′, f′′, f′′′, f′′′′, f′′′′′ = (F.f[1])(x), (F.f[2])(x), (F.f[3])(x), (F.f[4])(x), (F.f[5])(x),(F.f[6])(x)
-    f, (f/f′, f′/f′′, f′′/f′′′, f′′′/f′′′′, f′′′′/f′′′′′)
+    f, f′, f′′, f′′′, f′′′′, f′′′′′ =
+        (F.f[1])(x), (F.f[2])(x), (F.f[3])(x), (F.f[4])(x), (F.f[5])(x), (F.f[6])(x)
+    f, (f / f′, f′ / f′′, f′′ / f′′′, f′′′ / f′′′′, f′′′′ / f′′′′′)
 end
-function (F::Callable_Function{Val{6},Val{true},𝑭,P})(x) where {𝑭, P}
-    f, f′,f′′,f′′′,f′′′′, f′′′′′ = (F.f[1])(x, F.p), (F.f[2])(x, F.p), (F.f[3])(x, F.p), (F.f[4])(x, F.p), (F.f[5])(x, F.p), (F.f[6])(x, F.p)
-    f, (f/f′, f′/f′′, f′′/f′′′, f′′′/f′′′′, f′′′′/f′′′′′)
+function (F::Callable_Function{Val{6},Val{true},𝑭,P})(x) where {𝑭,P}
+    f, f′, f′′, f′′′, f′′′′, f′′′′′ = (F.f[1])(x, F.p),
+    (F.f[2])(x, F.p),
+    (F.f[3])(x, F.p),
+    (F.f[4])(x, F.p),
+    (F.f[5])(x, F.p),
+    (F.f[6])(x, F.p)
+    f, (f / f′, f′ / f′′, f′′ / f′′′, f′′′ / f′′′′, f′′′′ / f′′′′′)
 end
 
 # faster with the above written out, should generate them...
-function (F::Callable_Function{Val{𝐍},Val{true},𝑭,Nothing})(x) where {𝐍, 𝑭}
+function (F::Callable_Function{Val{𝐍},Val{true},𝑭,Nothing})(x) where {𝐍,𝑭}
     fs = ntuple(i -> F.f[i](x), Val(𝐍))
-    first(fs), ntuple(i -> fs[i]/fs[i+1], Val(𝐍-1))
+    first(fs), ntuple(i -> fs[i] / fs[i + 1], Val(𝐍 - 1))
 end
 
-function (F::Callable_Function{Val{𝐍},Val{true},𝑭,P})(x) where {𝐍, 𝑭, P}
+function (F::Callable_Function{Val{𝐍},Val{true},𝑭,P})(x) where {𝐍,𝑭,P}
     fs = ntuple(i -> F.f[i](x, F.p), Val(𝐍))
-    first(fs), ntuple(i -> fs[i]/fs[i+1], Val(𝐍-1))
+    first(fs), ntuple(i -> fs[i] / fs[i + 1], Val(𝐍 - 1))
 end
-
 
 ## Assess convergence
 @inline function _is_f_approx_0(fa, a, atol, rtol, relaxed::Any)
@@ -418,18 +440,21 @@ function assess_convergence(::Any, state::AbstractUnivariateZeroState, options)
     return (:not_converged, false)
 end
 
-
 # state has stopped, this identifies if it has converged
 """
     decice_convergence(M,F,state,options, convergence_flag)
 
 When the algorithm terminates, this function decides the stopped value or returns NaN
 """
-function decide_convergence(::AbstractUnivariateZeroMethod, F, state::AbstractUnivariateZeroState, options, val)
-
+function decide_convergence(
+    ::AbstractUnivariateZeroMethod,
+    F,
+    state::AbstractUnivariateZeroState,
+    options,
+    val,
+)
     xn0, xn1 = state.xn0, state.xn1
     fxn1 = state.fxn1
-
 
     val ∈ (:f_converged, :exact_zero, :converged) && return xn1
 
@@ -492,7 +517,6 @@ function decide_convergence(::AbstractUnivariateZeroMethod, F, state::AbstractUn
     # end
 
     NaN * xn1
-
 end
 
 ## ----
@@ -658,20 +682,20 @@ the algorithm.
 !!! note
     See [`solve!`](@ref) and [`ZeroProblem`](@ref) for an alternate interface.
 """
-function find_zero(f, x0, M::AbstractUnivariateZeroMethod;
-                   p = nothing,
-                   verbose=false,
-                   tracks::AbstractTracks=NullTracks(),
-                   kwargs...)
-
-    xstar = solve(ZeroProblem(f, x0), M;
-                  p=p, verbose=verbose, tracks=tracks,
-                  kwargs...)
+function find_zero(
+    f,
+    x0,
+    M::AbstractUnivariateZeroMethod;
+    p=nothing,
+    verbose=false,
+    tracks::AbstractTracks=NullTracks(),
+    kwargs...,
+)
+    xstar = solve(ZeroProblem(f, x0), M; p=p, verbose=verbose, tracks=tracks, kwargs...)
 
     isnan(xstar) && throw(ConvergenceFailed("Algorithm failed to converge"))
 
     xstar
-
 end
 
 # defaults when method is not specified
@@ -679,7 +703,6 @@ end
 # O/w use a bracketing method of an assumed iterable
 find_zero(f, x0::Number; kwargs...) = find_zero(f, x0, Order0(); kwargs...)
 find_zero(f, x0; kwargs...) = find_zero(f, x0, Bisection(); kwargs...)
-
 
 """
     find_zero(M, F, state, [options], [l])
@@ -698,16 +721,15 @@ of the processing pipeline is to be adjusted.
 !!! note
     To be deprecated in favor of `solve!(init(...))`.
 """
-function find_zero(M::AbstractUnivariateZeroMethod,
-                   F,
-                   state::AbstractUnivariateZeroState,
-                   options::UnivariateZeroOptions=init_options(M, state),
-                   l::AbstractTracks=NullTracks()
-                   )
+function find_zero(
+    M::AbstractUnivariateZeroMethod,
+    F,
+    state::AbstractUnivariateZeroState,
+    options::UnivariateZeroOptions=init_options(M, state),
+    l::AbstractTracks=NullTracks(),
+)
     solve!(init(M, F, state, options, l))
 end
-
-
 
 ## ---------------
 
@@ -724,8 +746,6 @@ struct ZeroProblem{F,X}
     x₀::X
 end
 
-
-
 ## The actual iterating object
 struct ZeroProblemIterator{M,F,S,O,L}
     M::M
@@ -735,26 +755,29 @@ struct ZeroProblemIterator{M,F,S,O,L}
     logger::L
 end
 
-Base.show(io::IO, Z::ZeroProblemIterator) = print(io, "A problem object to pass to `solve!`")
+Base.show(io::IO, Z::ZeroProblemIterator) =
+    print(io, "A problem object to pass to `solve!`")
 
 ## Initialize a Zero Problem Iterator
 ## init(Z,p)
 ## init(Z,M,p)
 ## init(M,F,state, [options], [logger])
 ## want p to be positional, not named⁺
-function init(𝑭𝑿::ZeroProblem, M::AbstractUnivariateZeroMethod, p′ = nothing;
-              p = nothing,
-              verbose::Bool=false,
-              tracks = NullTracks(),
-              kwargs...)
-
+function init(
+    𝑭𝑿::ZeroProblem,
+    M::AbstractUnivariateZeroMethod,
+    p′=nothing;
+    p=nothing,
+    verbose::Bool=false,
+    tracks=NullTracks(),
+    kwargs...,
+)
     F = Callable_Function(M, 𝑭𝑿.F, p === nothing ? p′ : p)  #⁺
     state = init_state(M, F, 𝑭𝑿.x₀)
     options = init_options(M, state; kwargs...)
     l = Tracks(verbose, tracks, state)
     incfn(l, initial_fncalls(M))
-    ZeroProblemIterator(M,F,state,options,l)
-
+    ZeroProblemIterator(M, F, state, options, l)
 end
 
 function init(𝑭𝑿::ZeroProblem, p′=nothing; kwargs...)
@@ -762,11 +785,14 @@ function init(𝑭𝑿::ZeroProblem, p′=nothing; kwargs...)
     init(𝑭𝑿, M, p′; kwargs...)
 end
 
-function init(M::AbstractUnivariateZeroMethod, F,
-              state::AbstractUnivariateZeroState,
-              options::UnivariateZeroOptions=init_options(M, state),
-              l::AbstractTracks=NullTracks())
-    ZeroProblemIterator(M, Callable_Function(M,F), state, options, l)
+function init(
+    M::AbstractUnivariateZeroMethod,
+    F,
+    state::AbstractUnivariateZeroState,
+    options::UnivariateZeroOptions=init_options(M, state),
+    l::AbstractTracks=NullTracks(),
+)
+    ZeroProblemIterator(M, Callable_Function(M, F), state, options, l)
 end
 
 # Optional iteration interface to handle looping
@@ -783,7 +809,7 @@ function Base.iterate(P::ZeroProblemIterator, st=nothing)
         ctr += 1
     end
     M, options, l = P.M, P.options, P.logger
-    val,stopped = :no_convergence, false
+    val, stopped = :no_convergence, false
     while true
         val, stopped = assess_convergence(M, state, options)
         stopped && break
@@ -804,7 +830,6 @@ function Base.iterate(P::ZeroProblemIterator, st=nothing)
         return (state.xn1, (state, ctr, val))
     end
 end
-
 
 """
     solve(fx::ZeroProblem, [p=nothing]; kwargs...)
@@ -917,7 +942,6 @@ julia> order0(sin, 3)
 
 """
 function solve!(P::ZeroProblemIterator; verbose=false)
-
     M, F, state, options, l = P.M, P.F, P.state, P.options, P.logger
 
     val, stopped = :not_converged, false
@@ -933,19 +957,19 @@ function solve!(P::ZeroProblemIterator; verbose=false)
 
         log_step(l, M, state)
         ctr += 1
-
-
     end
 
     if !(l isa NullTracks)
-        log_convergence(l, val); log_state(l, state); log_method(l, M)
+        log_convergence(l, val)
+        log_state(l, state)
+        log_method(l, M)
         verbose && display(l)
     end
 
     val, stopped = assess_convergence(M, state, options) # udpate val flag
     decide_convergence(M, F, state, options, val)
-
 end
 
 # thread verbose through
-CommonSolve.solve(F::ZeroProblem, args...; verbose=false, kwargs...) = solve!(init(F, args...; verbose=verbose, kwargs...); verbose=verbose)
+CommonSolve.solve(F::ZeroProblem, args...; verbose=false, kwargs...) =
+    solve!(init(F, args...; verbose=verbose, kwargs...); verbose=verbose)

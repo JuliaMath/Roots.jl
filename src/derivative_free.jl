@@ -4,8 +4,6 @@
 # https://content.sciendo.com/view/journals/tmj/10/4/article-p103.xml 7 and 8
 # order8: https://www.hindawi.com/journals/ijmms/2012/493456/ref/
 
-
-
 ##################################################
 ## Guard against non-robust algorithms
 ##
@@ -34,14 +32,24 @@
 ## (f(x+fx) - fx)/fx  ≈ f'(x), we take a Steffensen step if |fx|
 ## is small enough. For this we use |fx| <= x/1000; which
 ## seems to work reasonably well over several different test cases.
-@inline function do_guarded_step(M::AbstractSecant, o::AbstractUnivariateZeroState{T,S}) where {T, S}
+@inline function do_guarded_step(
+    M::AbstractSecant,
+    o::AbstractUnivariateZeroState{T,S},
+) where {T,S}
     x, fx = o.xn1, o.fxn1
-    1000 * abs(fx) >  max(oneunit(S), abs(x) * oneunit(S) /oneunit(T)) * one(T)
+    1000 * abs(fx) > max(oneunit(S), abs(x) * oneunit(S) / oneunit(T)) * one(T)
 end
 
-
 # check if we should guard against step for method M; call N if yes, P if not
-function update_state_guarded(M::AbstractSecant,N::AbstractUnivariateZeroMethod, P::AbstractUnivariateZeroMethod, fs, o, options, l=NullTracks())
+function update_state_guarded(
+    M::AbstractSecant,
+    N::AbstractUnivariateZeroMethod,
+    P::AbstractUnivariateZeroMethod,
+    fs,
+    o,
+    options,
+    l=NullTracks(),
+)
     if do_guarded_step(M, o)
         return update_state(N, fs, o, options, l)
     else
@@ -51,7 +59,6 @@ end
 
 ##################################################
 initial_fncalls(::AbstractSecant) = 2
-
 
 ##################################################
 
@@ -80,7 +87,7 @@ const Orderφ = Secant
 
 # init_state(M,F,x) --> call init_state(M,F,x₀,x₁,fx₀, fx₁)
 function init_state(M::AbstractSecant, F::Callable_Function, x)
-    x₀,x₁ = x₀x₁(x)
+    x₀, x₁ = x₀x₁(x)
     fx₀, fx₁ = first(F(x₀)), first(F(x₁))
     state = init_state(M, F, x₀, x₁, fx₀, fx₁)
 end
@@ -90,23 +97,19 @@ function init_state(::AbstractSecant, F, x₀, x₁, fx₀, fx₁)
     UnivariateZeroState(x₁, x₀, fx₁, fx₀)
 end
 
-
-
 function update_state(::Order1, F, o::AbstractUnivariateZeroState, options, l=NullTracks())
     xn0, xn1 = o.xn0, o.xn1
     fxn0, fxn1 = o.fxn0, o.fxn1
     Δ = fxn1 * (xn1 - xn0) / (fxn1 - fxn0)
 
-
     if isissue(Δ)
         log_message(l, "Increment `Δx` has issues. ")
         return o, true
-     end
+    end
 
-    x0,x1 = xn1, xn1 - Δ
+    x0, x1 = xn1, xn1 - Δ
     fx0, fx1 = fxn1, F(x1)
     incfn(l)
-
 
     @set! o.xn0 = x0
     @set! o.xn1 = x1
@@ -114,13 +117,7 @@ function update_state(::Order1, F, o::AbstractUnivariateZeroState, options, l=Nu
     @set! o.fxn1 = fx1
 
     return o, false
-
 end
-
-
-
-
-
 
 ### Steffensen
 ## https://en.wikipedia.org/wiki/Steffensen's_method#Simple_description
@@ -146,13 +143,23 @@ The error, `eᵢ - α`, satisfies
 struct Steffensen <: AbstractSecant end
 struct Order2 <: AbstractSecant end
 
-function update_state(method::Order2, fs, o::UnivariateZeroState{T,S}, options, l=NullTracks())  where {T, S}
-     update_state_guarded(method, Secant(), Steffensen(), fs, o, options, l)
+function update_state(
+    method::Order2,
+    fs,
+    o::UnivariateZeroState{T,S},
+    options,
+    l=NullTracks(),
+) where {T,S}
+    update_state_guarded(method, Secant(), Steffensen(), fs, o, options, l)
 end
 
-
-function update_state(method::Steffensen, F, o::AbstractUnivariateZeroState{T,S}, options, l=NullTracks())  where {T, S}
-
+function update_state(
+    method::Steffensen,
+    F,
+    o::AbstractUnivariateZeroState{T,S},
+    options,
+    l=NullTracks(),
+) where {T,S}
     x0, x1 = o.xn0, o.xn1
     fx0, fx1 = o.fxn0, o.fxn1
 
@@ -182,9 +189,6 @@ function update_state(method::Steffensen, F, o::AbstractUnivariateZeroState{T,S}
     return o, false
 end
 
-
-
-
 ##################################################
 
 """
@@ -205,15 +209,17 @@ The error, `eᵢ = xᵢ - α`, satisfies
 struct Order5 <: AbstractSecant end
 struct KumarSinghAkanksha <: AbstractSecant end
 
-
-
 function update_state(method::Order5, fs, o::UnivariateZeroState, options, l=NullTracks())
     update_state_guarded(method, Secant(), KumarSinghAkanksha(), fs, o, options, l)
 end
 
-function update_state(M::KumarSinghAkanksha, F, o::AbstractUnivariateZeroState{T,S},
-                      options, l=NullTracks()) where {T, S}
-
+function update_state(
+    M::KumarSinghAkanksha,
+    F,
+    o::AbstractUnivariateZeroState{T,S},
+    options,
+    l=NullTracks(),
+) where {T,S}
     xn = o.xn1
     fxn = o.fxn1
 
@@ -237,7 +243,6 @@ function update_state(M::KumarSinghAkanksha, F, o::AbstractUnivariateZeroState{T
     fyn::S = F(yn)
     incfn(l)
 
-
     zn::T = xn - (fxn + fyn) / fp
     fzn::S = F(zn)
     incfn(l)
@@ -251,30 +256,31 @@ function update_state(M::KumarSinghAkanksha, F, o::AbstractUnivariateZeroState{T
         @set! o.fxn1 = fyn
 
         return o, true
-
     end
 
     @set! o.xn0 = o.xn1
     @set! o.fxn0 = o.fxn1
-    @set! o.xn1 = zn  - fzn  / fp
+    @set! o.xn1 = zn - fzn / fp
     @set! o.fxn1 = F(o.xn1)
     incfn(l)
 
     return o, false
 
-
-#    nothing
+    #    nothing
 end
 
 struct Order5Derivative <: AbstractSecant end
 fn_argout(::Order5Derivative) = 2
-function update_state(method::Order5Derivative, f,
-                      o::AbstractUnivariateZeroState{T,S}, options, l=NullTracks())  where {T, S}
-
-
+function update_state(
+    method::Order5Derivative,
+    f,
+    o::AbstractUnivariateZeroState{T,S},
+    options,
+    l=NullTracks(),
+) where {T,S}
     xn, fxn = o.xn1, o.fxn1
     a::T, b::S = f(xn)
-    fpxn = a/b
+    fpxn = a / b
     incfn(l)
 
     if isissue(fpxn)
@@ -296,13 +302,12 @@ function update_state(method::Order5Derivative, f,
         return o, true
     end
 
-
-    zn::T = xn  - (fxn + fyn) / fpxn
+    zn::T = xn - (fxn + fyn) / fpxn
     fzn::S, _ = f(zn)
     incfn(l, 2)
 
     xn1 = zn - fzn / fpyn
-    fxn1,_ = f(xn1)
+    fxn1, _ = f(xn1)
     incfn(l, 2)
 
     @set! o.xn0 = xn
@@ -311,11 +316,9 @@ function update_state(method::Order5Derivative, f,
     @set! o.fxn1 = fxn1
 
     return o
-
 end
 
 ##################################################
-
 
 ## cf also: https://doi.org/10.1515/tmj-2017-0049
 """
@@ -337,12 +340,23 @@ The error, `eᵢ = xᵢ - α`, is expressed as `eᵢ₊₁ = K ⋅ eᵢ⁸` in
 struct Order8 <: AbstractSecant end
 struct Thukral8 <: AbstractSecant end
 
-function update_state(method::Order8, fs, o::UnivariateZeroState{T,S}, options, l=NullTracks())  where {T, S}
+function update_state(
+    method::Order8,
+    fs,
+    o::UnivariateZeroState{T,S},
+    options,
+    l=NullTracks(),
+) where {T,S}
     update_state_guarded(method, Secant(), Thukral8(), fs, o, options, l)
 end
 
-function update_state(M::Thukral8, F, o::AbstractUnivariateZeroState{T,S}, options, l=NullTracks()) where {T, S}
-
+function update_state(
+    M::Thukral8,
+    F,
+    o::AbstractUnivariateZeroState{T,S},
+    options,
+    l=NullTracks(),
+) where {T,S}
     xn = o.xn1
     fxn = o.fxn1
 
@@ -359,8 +373,6 @@ function update_state(M::Thukral8, F, o::AbstractUnivariateZeroState{T,S}, optio
 
         return o, true
     end
-
-
 
     fp, issue = _fbracket(xn, wn, fxn, fwn)
 
@@ -384,13 +396,12 @@ function update_state(M::Thukral8, F, o::AbstractUnivariateZeroState{T,S}, optio
         return o, true
     end
 
-
     phi = (1 + fyn / fwn)           # pick one of options
-    zn =  yn - phi * fyn / fp
+    zn = yn - phi * fyn / fp
     fzn::S = F(zn)
     incfn(l)
 
-    fp, issue =  _fbracket_diff(xn, yn, zn, fxn, fyn, fzn)
+    fp, issue = _fbracket_diff(xn, yn, zn, fxn, fyn, fzn)
     if issue
         log_message(l, "issue with divided difference  f[y,z] - f[x,y] + f[x,z]. ")
         @set! o.xn0 = xn
@@ -401,9 +412,9 @@ function update_state(M::Thukral8, F, o::AbstractUnivariateZeroState{T,S}, optio
         return o, true
     end
 
-    w = 1 / (1 - fzn/fwn)
+    w = 1 / (1 - fzn / fwn)
 
-    xi = (1 - 2fyn*fyn*fyn / (fwn * fwn * fxn))
+    xi = (1 - 2fyn * fyn * fyn / (fwn * fwn * fxn))
 
     xn1 = zn - w * xi * fzn / fp
     fxn1::S = F(xn1)
@@ -415,7 +426,6 @@ function update_state(M::Thukral8, F, o::AbstractUnivariateZeroState{T,S}, optio
     @set! o.fxn1 = fxn1
 
     return o, false
-
 end
 
 ##################################################
@@ -444,11 +454,23 @@ in equation (50) of the paper.
 struct Order16 <: AbstractSecant end
 struct Thukral16 <: AbstractSecant end
 
-function update_state(method::Order16, fs, o::UnivariateZeroState{T,S}, options, l=NullTracks())  where {T, S}
+function update_state(
+    method::Order16,
+    fs,
+    o::UnivariateZeroState{T,S},
+    options,
+    l=NullTracks(),
+) where {T,S}
     update_state_guarded(method, Secant(), Thukral16(), fs, o, options, l)
 end
 
-function update_state(M::Thukral16, F, o::AbstractUnivariateZeroState{T,S}, options, l=NullTracks()) where {T, S}
+function update_state(
+    M::Thukral16,
+    F,
+    o::AbstractUnivariateZeroState{T,S},
+    options,
+    l=NullTracks(),
+) where {T,S}
     xn = o.xn1
     fxn = o.fxn1
 
@@ -457,7 +479,6 @@ function update_state(M::Thukral16, F, o::AbstractUnivariateZeroState{T,S}, opti
     incfn(l)
 
     fp, issue = _fbracket(xn, wn, fxn, fwn)
-
 
     if issue
         log_message(l, "issue with f[xn,wn]")
@@ -483,17 +504,14 @@ function update_state(M::Thukral16, F, o::AbstractUnivariateZeroState{T,S}, opti
         return o, true
     end
 
-
-
     zn = yn - fyn / fp
     fzn::S = F(zn)
     incfn(l)
 
     fp, issue = _fbracket_diff(xn, yn, zn, fxn, fyn, fzn)
-    u2, u3, u4 = fzn/fwn, fyn/fxn, fyn/fwn
+    u2, u3, u4 = fzn / fwn, fyn / fxn, fyn / fwn
 
-
-    eta = 1 / (1 + 2*u3*u4^2) / (1 - u2)
+    eta = 1 / (1 + 2 * u3 * u4^2) / (1 - u2)
     if issue
         log_message(l, "Approximate derivative failed")
         @set! o.xn0 = o.xn1
@@ -508,7 +526,6 @@ function update_state(M::Thukral16, F, o::AbstractUnivariateZeroState{T,S}, opti
     fan::S = F(an)
     incfn(l)
 
-
     fp, issue = _fbracket_ratio(an, yn, zn, fan, fyn, fzn)
     if issue
         log_message(l, "Approximate derivative failed")
@@ -520,13 +537,17 @@ function update_state(M::Thukral16, F, o::AbstractUnivariateZeroState{T,S}, opti
         return o, true
     end
 
-    u1, u5, u6 = fzn/fxn, fan/fxn, fan/fwn
+    u1, u5, u6 = fzn / fxn, fan / fxn, fan / fwn
 
-    fp1, issue = _fbracket(xn,yn, fxn, fyn)
+    fp1, issue = _fbracket(xn, yn, fxn, fyn)
 
-    sigma =  1 + u1*u2 - u1*u3*u4^2 + u5 + u6 + u1^2*u4 +
-    u2^2*u3 + 3*u1*u4^2*(u3^2 - u4^2)/(fp1/oneunit(fp1))
-
+    sigma =
+        1 + u1 * u2 - u1 * u3 * u4^2 +
+        u5 +
+        u6 +
+        u1^2 * u4 +
+        u2^2 * u3 +
+        3 * u1 * u4^2 * (u3^2 - u4^2) / (fp1 / oneunit(fp1))
 
     xn1 = an - sigma * fan / fp
     fxn1::S = F(xn1)
@@ -543,12 +564,10 @@ end
 ##################################################
 ## some means of guarding against large fx when taking a secant step
 ## TODO: rework this
-function steff_step(M::Union{Order5, Order8, Order16}, x::S, fx::T) where {S, T}
+function steff_step(M::Union{Order5,Order8,Order16}, x::S, fx::T) where {S,T}
+    xbar, fxbar = real(x / oneunit(x)), fx / oneunit(fx)
+    thresh = max(1, abs(xbar)) * sqrt(eps(one(xbar))) #^(1/2) # max(1, sqrt(abs(x/fx))) * 1e-6
 
-    xbar, fxbar = real(x/oneunit(x)), fx/oneunit(fx)
-    thresh =  max(1, abs(xbar)) * sqrt(eps(one(xbar))) #^(1/2) # max(1, sqrt(abs(x/fx))) * 1e-6
-
-    out = abs(fxbar) <= thresh ? fxbar  : sign(fx) * thresh
+    out = abs(fxbar) <= thresh ? fxbar : sign(fx) * thresh
     x + out * oneunit(x)
-
 end
