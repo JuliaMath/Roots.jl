@@ -9,7 +9,6 @@ struct FnWrapper
 end
 (F::FnWrapper)(x::Number) = first(F.f(x))
 
-
 """
     fzero(f, x0; order=0; kwargs...)
     fzero(f, x0, M; kwargs...)
@@ -78,64 +77,55 @@ function fzero(f, x0, M::AbstractUnivariateZeroMethod, N::AbstractBracketing; kw
     find_zero(FnWrapper(f), x0, M, N; kwargs...)
 end
 
-function fzero(f, bracket::Tuple{T,S}; kwargs...)  where {T <: Number, S<:Number}
+function fzero(f, bracket::Tuple{T,S}; kwargs...) where {T<:Number,S<:Number}
     d = Dict(kwargs)
     if haskey(d, :order)
         find_zero(FnWrapper(f), bracket, _method_lookup[d[:order]]; kwargs...)
     else
-        find_zero(FnWrapper(f), bracket, Bisection();kwargs...)
+        find_zero(FnWrapper(f), bracket, Bisection(); kwargs...)
     end
 end
 
-fzero(f, a::Number, b::Number,args...; kwargs...) = fzero(f, (a,b), args...; kwargs...)
-fzero(f, bracket::Vector{T}, args...; kwargs...)  where {T <: Number} = fzero(f,(bracket[1],bracket[2]),args...; kwargs...)
+fzero(f, a::Number, b::Number, args...; kwargs...) = fzero(f, (a, b), args...; kwargs...)
+fzero(f, bracket::Vector{T}, args...; kwargs...) where {T<:Number} =
+    fzero(f, (bracket[1], bracket[2]), args...; kwargs...)
 
-
-fzero(f::Function, fp::Function, x0::Real; kwargs...) = find_zero((f,fp), x0, Newton(); kwargs...)
-
-
-
-
+fzero(f::Function, fp::Function, x0::Real; kwargs...) =
+    find_zero((f, fp), x0, Newton(); kwargs...)
 
 # match fzero up with find_zero
-_method_lookup = Dict(0   => Order0(),
-                     :0  => Order0(),
-                     "0" => Order0(),
-
-                      1    => Order1(),
-                      :1   => Order1(),
-                      "1"  => Order1(),
-                      :secant => Order1(),
-                      :Secant => Order1(),
-                      "1B" => Order1B(),
-                      :king => Order1B(),
-                      :King => Order1B(),
-
-                     2    => Order2(),
-                     :2   => Order2(),
-                     :steffensen   => Order2(),
-                     :Steffensen   => Order2(),
-                     "2"  => Order2(),
-                     "2B" => Order2B(),
-                     :esser   => Order2B(),
-                     :Esser   => Order2B(),
-
-                      5  => Order5(),
-                     :5  => Order5(),
-                     "5" => Order5(),
-
-                     8   => Order8(),
-                     :8  => Order8(),
-                     "8" => Order8(),
-
-                     16   => Order16(),
-                     :16  => Order16(),
-                     "16" => Order16(),
+_method_lookup = Dict(
+    0   => Order0(),
+    :0  => Order0(),
+    "0" => Order0(),
+    1 => Order1(),
+    :1 => Order1(),
+    "1" => Order1(),
+    :secant => Order1(),
+    :Secant => Order1(),
+    "1B" => Order1B(),
+    :king => Order1B(),
+    :King => Order1B(),
+    2           => Order2(),
+    :2          => Order2(),
+    :steffensen => Order2(),
+    :Steffensen => Order2(),
+    "2"         => Order2(),
+    "2B"        => Order2B(),
+    :esser      => Order2B(),
+    :Esser      => Order2B(),
+    5   => Order5(),
+    :5  => Order5(),
+    "5" => Order5(),
+    8   => Order8(),
+    :8  => Order8(),
+    "8" => Order8(),
+    16   => Order16(),
+    :16  => Order16(),
+    "16" => Order16(),
 )
 
 @noinline function derivative_free(f, x0; order=0, kwargs...)
-
-
     if haskey(_method_lookup, order)
         M = _method_lookup[order]
     else
@@ -150,20 +140,14 @@ _method_lookup = Dict(0   => Order0(),
     #      kv[1] => kv[1] for kv in kwargs)
 
     d = Dict(kwargs)
-     for (o, n) in ((:ftol, :atol), (:ftolrel, :rtol),
-                    (:xtol, :xatol), (:xtolrel, :xrtol))
-         if haskey(d, o)
-             d[n] = d[o]
-         end
-     end
+    for (o, n) in ((:ftol, :atol), (:ftolrel, :rtol), (:xtol, :xatol), (:xtolrel, :xrtol))
+        if haskey(d, o)
+            d[n] = d[o]
+        end
+    end
 
     find_zero(FnWrapper(f), x0, M; d...)
 end
-
-
-
-
-
 
 ## fzeros
 """
@@ -177,5 +161,7 @@ Dispatches to `find_zeros(f, a, b; kwargs...)`.
 function fzeros(f, a::Number, b::Number; kwargs...)
     find_zeros(FnWrapper(f), float(a), float(b); kwargs...)
 end
-fzeros(f, bracket::Vector{T}; kwargs...) where {T <: Number} = fzeros(f, bracket[1], bracket[2]; kwargs...)
-fzeros(f, bracket::Tuple{T,S}; kwargs...) where {T <: Number, S<:Number} = fzeros(f, bracket[1], bracket[2]; kwargs...)
+fzeros(f, bracket::Vector{T}; kwargs...) where {T<:Number} =
+    fzeros(f, bracket[1], bracket[2]; kwargs...)
+fzeros(f, bracket::Tuple{T,S}; kwargs...) where {T<:Number,S<:Number} =
+    fzeros(f, bracket[1], bracket[2]; kwargs...)

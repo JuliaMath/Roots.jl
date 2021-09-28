@@ -9,7 +9,6 @@ end
 SomeInterval(a, b) = SomeInterval(promote(a, b)...)
 Base.extrema(I::SomeInterval) = I.a < I.b ? (I.a, I.b) : (I.b, I.a)
 
-
 include("./test_find_zero.jl")
 include("./test_bracketing.jl")
 include("./test_derivative_free.jl")

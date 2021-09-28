@@ -2,13 +2,17 @@
 # A family of different methods that includes the secant method and Newton's method
 
 # return f^(i-1)(x); not the same as default eval call
-function evalf(F::Callable_Function{S,T,𝑭, P}, x, i) where {N,S<:Val{N}, T<:Val{true}, 𝑭, P}
+function evalf(F::Callable_Function{S,T,𝑭,P}, x, i) where {N,S<:Val{N},T<:Val{true},𝑭,P}
     F.f[i](x)
 end
-function evalf(F::Callable_Function{S,T,𝑭, P}, x, i) where {S<:Val{1}, T<:Val{false}, 𝑭, P}
+function evalf(F::Callable_Function{S,T,𝑭,P}, x, i) where {S<:Val{1},T<:Val{false},𝑭,P}
     F.f(x)
 end
-evalf(::Callable_Function, x, i) = throw(ArgumentError("LithBoonkkampIJzerman expects functions to be defined singly or as tuples"))
+evalf(::Callable_Function, x, i) = throw(
+    ArgumentError(
+        "LithBoonkkampIJzerman expects functions to be defined singly or as tuples",
+    ),
+)
 
 """
     LithBoonkkampIJzerman{S,D} <: AbstractNewtonLikeMethod
@@ -124,8 +128,8 @@ may get smaller.
 
 """
 struct LithBoonkkampIJzerman{S,D} <: AbstractNewtonLikeMethod end
-LithBoonkkampIJzerman(s::Int,d::Int) = LithBoonkkampIJzerman{s,d}()
-fn_argout(::LithBoonkkampIJzerman{S,D}) where {S, D} = 1 + D
+LithBoonkkampIJzerman(s::Int, d::Int) = LithBoonkkampIJzerman{s,d}()
+fn_argout(::LithBoonkkampIJzerman{S,D}) where {S,D} = 1 + D
 
 struct LithBoonkkampIJzermanState{S′,D⁺,T,S} <: AbstractUnivariateZeroState{T,S}
     xn1::T
@@ -137,58 +141,66 @@ struct LithBoonkkampIJzermanState{S′,D⁺,T,S} <: AbstractUnivariateZeroState{
 end
 
 function init_state(L::LithBoonkkampIJzerman{S,0}, F, x) where {S}
-    x₀,x₁ = x₀x₁(x)
-    fx₀,fx₁ = evalf(F,x₀,1),evalf(F,x₁,1)
+    x₀, x₁ = x₀x₁(x)
+    fx₀, fx₁ = evalf(F, x₀, 1), evalf(F, x₁, 1)
     state = init_state(L, F, x₀, x₁, fx₀, fx₁)
 end
 
 function init_state(L::LithBoonkkampIJzerman{S,D}, F, x) where {S,D}
     x₀ = float(first(x))
-    fx₀ = evalf(F,x₀,1)
+    fx₀ = evalf(F, x₀, 1)
     state = init_state(L, F, nan(x₀), x₀, nan(fx₀), fx₀)
 end
 
-function init_state(L::LithBoonkkampIJzerman{S,D}, F, x₀,x₁::R,fx₀,fx₁::T) where {S,D,R,T}
-
-    xs, ys = init_lith(L, F, x₁, fx₁,x₀,fx₀) # [x₀,x₁,…,xₛ₋₁], ...
+function init_state(
+    L::LithBoonkkampIJzerman{S,D},
+    F,
+    x₀,
+    x₁::R,
+    fx₀,
+    fx₁::T,
+) where {S,D,R,T}
+    xs, ys = init_lith(L, F, x₁, fx₁, x₀, fx₀) # [x₀,x₁,…,xₛ₋₁], ...
     # skip unit consideration here, as won't fit within storage of ys
-    state = LithBoonkkampIJzermanState{S,D+1,R,T}(xs[end],    # xₙ
-                      S>1 ? xs[end-1] :  nan(xs[end]), # xₙ₋₁
-                      xs,         # all xs
-                      ys[1][end], # fₙ
-                      S > 1 ? ys[1][end-1] : nan(ys[1]), # fₙ₋₁
-                      ys        #
-                      )
+    state = LithBoonkkampIJzermanState{S,D + 1,R,T}(
+        xs[end],    # xₙ
+        S > 1 ? xs[end - 1] : nan(xs[end]), # xₙ₋₁
+        xs,         # all xs
+        ys[1][end], # fₙ
+        S > 1 ? ys[1][end - 1] : nan(ys[1]), # fₙ₋₁
+        ys,        #
+    )
 
     state
-
 end
-initial_fncalls(::LithBoonkkampIJzerman{S,D}) where {S,D} = S*(D+1)
+initial_fncalls(::LithBoonkkampIJzerman{S,D}) where {S,D} = S * (D + 1)
 
-
-function update_state(L::LithBoonkkampIJzerman{S,D}, F::Callable_Function, o::LithBoonkkampIJzermanState{S⁺,D′,R,T},
-                      options, l=NullTracks()) where {S,D,S⁺,D′,R,T}
-
+function update_state(
+    L::LithBoonkkampIJzerman{S,D},
+    F::Callable_Function,
+    o::LithBoonkkampIJzermanState{S⁺,D′,R,T},
+    options,
+    l=NullTracks(),
+) where {S,D,S⁺,D′,R,T}
     xs, ys = o.m, o.fm
 
     xᵢ::R = lmm(L, xs, ys...)
     isissue(o.xn1 - xᵢ) && return (o, true)
 
-    for i in 1:S-1
-        @set! xs[i] = xs[i+1]
+    for i in 1:(S - 1)
+        @set! xs[i] = xs[i + 1]
     end
     @set! xs[end] = xᵢ
 
-
-    for i ∈ 0:D
-        i′=i+1
-        for j ∈ 1:S-1
-            @set! ys[i′][j] = ys[i′][j+1]
+    for i in 0:D
+        i′ = i + 1
+        for j in 1:(S - 1)
+            @set! ys[i′][j] = ys[i′][j + 1]
         end
         yij::T = evalf(F, xᵢ, i′)
         @set! ys[i′][end] = yij
     end
-    incfn(l, 1+D)
+    incfn(l, 1 + D)
 
     @set! o.xn0 = o.xn1
     @set! o.xn1 = xᵢ
@@ -198,24 +210,29 @@ function update_state(L::LithBoonkkampIJzerman{S,D}, F::Callable_Function, o::Li
     @set! o.fm = ys
 
     return (o, false)
-
 end
 
 # manufacture initial xs, ys
 # use lower memory terms to boot strap up. Secant uses initial default step
 #D=0, geneate [x0].x1,...,xs
-function init_lith(L::LithBoonkkampIJzerman{S,0}, F::Callable_Function{Si,Tup,𝑭,P}, x₁::R,fx₁::T,x₀::R,fx₀::T) where {S,Si, Tup, 𝑭, P,R,T}
-
-    xs = NTuple{S,R}(ntuple(_->one(R), Val(S)))
-    yᵢ = NTuple{S,T}(ntuple(_->one(T), Val(S)))
+function init_lith(
+    L::LithBoonkkampIJzerman{S,0},
+    F::Callable_Function{Si,Tup,𝑭,P},
+    x₁::R,
+    fx₁::T,
+    x₀::R,
+    fx₀::T,
+) where {S,Si,Tup,𝑭,P,R,T}
+    xs = NTuple{S,R}(ntuple(_ -> one(R), Val(S)))
+    yᵢ = NTuple{S,T}(ntuple(_ -> one(T), Val(S)))
     ys = NTuple{1,NTuple{S,T}}((yᵢ,))
 
     # build up to get S of them
     if isnan(x₀)
         x0 = _default_secant_step(x₁)
-        fx0::T = evalf(F,x0,1)
+        fx0::T = evalf(F, x0, 1)
     else
-        x0,fx0 = x₀, fx₀
+        x0, fx0 = x₀, fx₀
     end
 
     @set! xs[1] = x0
@@ -223,9 +240,8 @@ function init_lith(L::LithBoonkkampIJzerman{S,0}, F::Callable_Function{Si,Tup,�
     @set! ys[1][1] = fx0
     @set! ys[1][2] = fx₁
 
-
-    for i ∈ 3:S
-        xᵢ::R = lmm(Val(i-1), Val(0), xs, ys) # XXX allocates due to runtime i-1
+    for i in 3:S
+        xᵢ::R = lmm(Val(i - 1), Val(0), xs, ys) # XXX allocates due to runtime i-1
         y1i::T = evalf(F, xᵢ, 1)
         @set! xs[i] = xᵢ
         @set! ys[1][i] = y1i
@@ -235,31 +251,36 @@ function init_lith(L::LithBoonkkampIJzerman{S,0}, F::Callable_Function{Si,Tup,�
 end
 
 #D≥1. ignore x₀
-function init_lith(L::LithBoonkkampIJzerman{S,D}, F::Callable_Function{Si,Tup,𝑭,P}, x₁::R,fx₁::T,x₀::R,fx₀::T) where {S,D,Si, Tup, 𝑭, P,R,T}
-
-    xs = NTuple{S,R}(ntuple(_->one(R), Val(S)))
-    yᵢ = NTuple{S,T}(ntuple(_->one(T), Val(S)))
-    ys = NTuple{D+1,NTuple{S,T}}(ntuple(_->yᵢ,Val(D+1)))
+function init_lith(
+    L::LithBoonkkampIJzerman{S,D},
+    F::Callable_Function{Si,Tup,𝑭,P},
+    x₁::R,
+    fx₁::T,
+    x₀::R,
+    fx₀::T,
+) where {S,D,Si,Tup,𝑭,P,R,T}
+    xs = NTuple{S,R}(ntuple(_ -> one(R), Val(S)))
+    yᵢ = NTuple{S,T}(ntuple(_ -> one(T), Val(S)))
+    ys = NTuple{D + 1,NTuple{S,T}}(ntuple(_ -> yᵢ, Val(D + 1)))
 
     @set! xs[1] = x₁
     @set! ys[1][1] = fx₁
-    for i ∈ 1:D
-        yi1::T = evalf(F, x₁, i+1)
-        @set! ys[i+1][1] = yi1
+    for i in 1:D
+        yi1::T = evalf(F, x₁, i + 1)
+        @set! ys[i + 1][1] = yi1
     end
 
     # build up to get S of them
-    for i ∈ 2:S
-        xᵢ::R = lmm(Val(i-1), Val(D), xs, ys) # XXX allocates! clean up
+    for i in 2:S
+        xᵢ::R = lmm(Val(i - 1), Val(D), xs, ys) # XXX allocates! clean up
         @set! xs[i] = xᵢ
-        for j ∈ 0:D
-            yji::T = evalf(F, xᵢ, j+1)
-            @set! ys[j+1][i] = yji
+        for j in 0:D
+            yji::T = evalf(F, xᵢ, j + 1)
+            @set! ys[j + 1][i] = yji
         end
     end
 
     xs, ys
-
 end
 
 """
@@ -298,38 +319,41 @@ struct LithBoonkkampIJzermanBracketState{T,S,R} <: AbstractUnivariateZeroState{T
     fpc::R
 end
 
-function init_state(L::LithBoonkkampIJzermanBracket, F, x₀,x₁,fx₀,fx₁)
-    a,b,fa,fb =x₀,x₁,fx₀,fx₁
+function init_state(L::LithBoonkkampIJzermanBracket, F, x₀, x₁, fx₀, fx₁)
+    a, b, fa, fb = x₀, x₁, fx₀, fx₁
     if abs(fa) < abs(fb)
-        a,b,fa,fb = b,a,fb,fa
+        a, b, fa, fb = b, a, fb, fa
     end
 
-
-    f′a,f′b = evalf(F,a,2), evalf(F,b,2)
-    c,fc,f′c = a,fa,f′a
-
+    f′a, f′b = evalf(F, a, 2), evalf(F, b, 2)
+    c, fc, f′c = a, fa, f′a
 
     # skip unit consideration here, as won't fit within storage of ys
-    state = LithBoonkkampIJzermanBracketState(b,    # xₙ
-                      a, # xₙ₋₁
-                      c,
-                      fb, # fₙ
-                      fa, # fₙ₋₁
-                      fc,
-                      f′b, f′a, f′c
-                      )
+    state = LithBoonkkampIJzermanBracketState(
+        b,    # xₙ
+        a, # xₙ₋₁
+        c,
+        fb, # fₙ
+        fa, # fₙ₋₁
+        fc,
+        f′b,
+        f′a,
+        f′c,
+    )
 
     state
-
 end
 
-
-function update_state(M::LithBoonkkampIJzermanBracket, F, state::LithBoonkkampIJzermanBracketState{T,S,R}, options::UnivariateZeroOptions, l=NullTracks()) where {T,S,R}
-
-    b::T,c::T,a::T = state.xn1, state.c, state.xn0
-    fb::S,fc::S,fa::S = state.fxn1, state.fc, state.fxn0
-    f′a::R, f′c::R, f′b::R = state.fp0,state.fpc,state.fp1
-
+function update_state(
+    M::LithBoonkkampIJzermanBracket,
+    F,
+    state::LithBoonkkampIJzermanBracketState{T,S,R},
+    options::UnivariateZeroOptions,
+    l=NullTracks(),
+) where {T,S,R}
+    b::T, c::T, a::T = state.xn1, state.c, state.xn0
+    fb::S, fc::S, fa::S = state.fxn1, state.fc, state.fxn0
+    f′a::R, f′c::R, f′b::R = state.fp0, state.fpc, state.fp1
 
     # Get next interpolating step
     # decide on S and D;
@@ -337,35 +361,35 @@ function update_state(M::LithBoonkkampIJzermanBracket, F, state::LithBoonkkampIJ
     s::Int = ((a == c) || (b == c)) ? 2 : 3
 
     # which derivatives do we include
-    sₘ = sign((fb-fa)/(b-a))
+    sₘ = sign((fb - fa) / (b - a))
     mc, mb = sign(f′c) == sₘ, sign(f′b) == sₘ
 
     d₀::S = zero(S)
     if s == 2
         if mc || mb
             # D = 1
-            a2s, b2s = lmm_coefficients(LithBoonkkampIJzerman{2,1}(), (c,b), (fc, fb))
+            a2s, b2s = lmm_coefficients(LithBoonkkampIJzerman{2,1}(), (c, b), (fc, fb))
             h = -fb
 
-            d₀ = -sum(a2s .* (c,b))
-            mb && (d₀ += h * b2s[2]/f′b)
-            mc && (d₀ += h * b2s[1]/f′c)
+            d₀ = -sum(a2s .* (c, b))
+            mb && (d₀ += h * b2s[2] / f′b)
+            mc && (d₀ += h * b2s[1] / f′c)
         else
-            d₀ = lmm(LithBoonkkampIJzerman{2, 0}(), (c,b), (fc, fb))
+            d₀ = lmm(LithBoonkkampIJzerman{2,0}(), (c, b), (fc, fb))
         end
     else
         ma = sign(f′a) == sₘ
         if mc || mb || ma
             # D = 1
-            as, bs = lmm_coefficients(LithBoonkkampIJzerman{3,1}(),(a,c,b), (fa,fc,fb))
+            as, bs = lmm_coefficients(LithBoonkkampIJzerman{3,1}(), (a, c, b), (fa, fc, fb))
             h = -fb
 
-            d₀ = -sum(as .* (a,c,b))
-            mb && (d₀ += h * bs[end]/f′b) # only when helpful
-            mc && (d₀ += h * bs[end-1]/f′c)
-            ma && (d₀ += h * bs[end-2]/f′a)
+            d₀ = -sum(as .* (a, c, b))
+            mb && (d₀ += h * bs[end] / f′b) # only when helpful
+            mc && (d₀ += h * bs[end - 1] / f′c)
+            ma && (d₀ += h * bs[end - 2] / f′a)
         else
-            d₀ = lmm(LithBoonkkampIJzerman{3, 0}(), (a,c,b), (fa, fc,fb))
+            d₀ = lmm(LithBoonkkampIJzerman{3,0}(), (a, c, b), (fa, fc, fb))
         end
     end
 
@@ -374,19 +398,19 @@ function update_state(M::LithBoonkkampIJzermanBracket, F, state::LithBoonkkampIJ
     δ = xatol + abs(b) * xrtol
     Δ₀ = b - d₀
     if abs(Δ₀) <= δ
-        d₀ = b - sign(Δ₀)*δ
+        d₀ = b - sign(Δ₀) * δ
     end
 
     # compare to bisection step; extra function evalution
-    d₁ = a + (b-a)* (0.5) #_middle(a, b)
-    f₀, f₁ = evalf(F,d₀,1), evalf(F,d₁,1)
+    d₁ = a + (b - a) * (0.5) #_middle(a, b)
+    f₀, f₁ = evalf(F, d₀, 1), evalf(F, d₁, 1)
 
     # interpolation outside a,b or bisection better use that
-    d::T,fd::S,f′d::S = zero(T), zero(S), zero(S)
-    if (abs(f₀) < abs(f₁)) && (min(a,b) < d₀ < max(a,b))
-        d,fd,f′d = d₀,f₀, evalf(F,d₀,2)# interp
+    d::T, fd::S, f′d::S = zero(T), zero(S), zero(S)
+    if (abs(f₀) < abs(f₁)) && (min(a, b) < d₀ < max(a, b))
+        d, fd, f′d = d₀, f₀, evalf(F, d₀, 2)# interp
     else
-        d,fd,f′d = d₁,f₁,evalf(F,d₁,2)#  bisection
+        d, fd, f′d = d₁, f₁, evalf(F, d₁, 2)#  bisection
     end
 
     # either [a,d] a bracket or [d,b]
@@ -396,13 +420,13 @@ function update_state(M::LithBoonkkampIJzermanBracket, F, state::LithBoonkkampIJ
         c, fc, f′c = b, fb, f′b
         b, fb, f′b = d, fd, f′d
     else
-        a,fa,f′a = d, fd, f′d
+        a, fa, f′a = d, fd, f′d
     end
 
     # a,b bracket; keep |fb| ≤ |fa|
     if abs(fa) < abs(fb)
-        c, fc,f′c = b, fb, f′b
-        a,b,fa,fb,f′a,f′b = b,a,fb,fa,f′b,f′a
+        c, fc, f′c = b, fb, f′b
+        a, b, fa, fb, f′a, f′b = b, a, fb, fa, f′b, f′a
     end
 
     incfn(l, 3)
@@ -417,10 +441,13 @@ function update_state(M::LithBoonkkampIJzermanBracket, F, state::LithBoonkkampIJ
     @set! state.fp1 = f′b
 
     return (state, false)
-
 end
 
-function default_tolerances(::M, ::Type{T}, ::Type{S}) where {M<:LithBoonkkampIJzermanBracket,T,S}
+function default_tolerances(
+    ::M,
+    ::Type{T},
+    ::Type{S},
+) where {M<:LithBoonkkampIJzermanBracket,T,S}
     xatol = 2eps(T)
     xrtol = zero(one(T))
     atol = zero(float(one(S))) * oneunit(S)
@@ -430,7 +457,6 @@ function default_tolerances(::M, ::Type{T}, ::Type{S}) where {M<:LithBoonkkampIJ
     strict = true
     (xatol, xrtol, atol, rtol, maxevals, maxfnevals, strict)
 end
-
 
 ### ------
 # Script used to generate expressions
@@ -495,7 +521,6 @@ function inverse_polynomial_interpretation(s=2,d=2)
     subs(H(0), D) |> simplify
 end
 
-
 # For g = f⁻¹ return [g', g'', g''',..., g⁽ⁿ⁾]
 # (cf [Liptaj](https://vixra.org/pdf/1703.0295v1.pdf)
 function liptag(N)
@@ -523,7 +548,6 @@ function liptag(N)
 end
 =#
 
-
 # have computed these
 # S/D 0 1 2 3 4  5 6
 # 1   x ✓ ✓ ✓ ✓ ✓ ✓
@@ -541,54 +565,224 @@ end
 ## x = ∑ aᵢxᵢ + ∑ⱼ₊₁ⁿ ∑ᵢ bʲᵢFʲᵢ, where Fʲ is the jth derivative of g⁻¹ (F¹ = 1/f'...)
 ## Using a polynomial interpolant, H(y), going through (xᵢ,fʲ(xᵢ)), j ∈ 0:N)
 
-
-
-function lmm(::Val{S},::Val{D},xs,ys) where {S,D}
-    xi=ntuple(ii->xs[ii], Val(S))
-    yi=ntuple(ii->ntuple(j->ys[ii][j],Val(S)),Val(D+1))
+function lmm(::Val{S}, ::Val{D}, xs, ys) where {S,D}
+    xi = ntuple(ii -> xs[ii], Val(S))
+    yi = ntuple(ii -> ntuple(j -> ys[ii][j], Val(S)), Val(D + 1))
     lmm(LithBoonkkampIJzerman{S,D}(), xi, yi...)
 end
 
 # secant
-function  lmm(::LithBoonkkampIJzerman{2,0}, xs, fs)
-    x0,x1 = xs
-    f0,f1 = fs
+function lmm(::LithBoonkkampIJzerman{2,0}, xs, fs)
+    x0, x1 = xs
+    f0, f1 = fs
 
-    (f0*x1 - f1*x0)/(f0 - f1)
+    (f0 * x1 - f1 * x0) / (f0 - f1)
 end
 
 function lmm(::LithBoonkkampIJzerman{3,0}, xs, fs)
-    x0,x1,x2 = xs
-    f0,f1,f2 = fs
+    x0, x1, x2 = xs
+    f0, f1, f2 = fs
 
-    (f0^2*f1*x2 - f0^2*f2*x1 - f0*f1^2*x2 + f0*f2^2*x1 + f1^2*f2*x0 - f1*f2^2*x0)/(f0^2*f1 - f0^2*f2 - f0*f1^2 + f0*f2^2 + f1^2*f2 - f1*f2^2)
-
+    (
+        f0^2 * f1 * x2 - f0^2 * f2 * x1 - f0 * f1^2 * x2 + f0 * f2^2 * x1 + f1^2 * f2 * x0 -
+        f1 * f2^2 * x0
+    ) / (f0^2 * f1 - f0^2 * f2 - f0 * f1^2 + f0 * f2^2 + f1^2 * f2 - f1 * f2^2)
 end
 
-function lmm(::LithBoonkkampIJzerman{4,0},xs,fs)
-    x0,x1,x2,x3 = xs
-    f0,f1,f2,f3 = fs
+function lmm(::LithBoonkkampIJzerman{4,0}, xs, fs)
+    x0, x1, x2, x3 = xs
+    f0, f1, f2, f3 = fs
 
-    (f0^3*f1^2*f2*x3 - f0^3*f1^2*f3*x2 - f0^3*f1*f2^2*x3 + f0^3*f1*f3^2*x2 + f0^3*f2^2*f3*x1 - f0^3*f2*f3^2*x1 - f0^2*f1^3*f2*x3 + f0^2*f1^3*f3*x2 + f0^2*f1*f2^3*x3 - f0^2*f1*f3^3*x2 - f0^2*f2^3*f3*x1 + f0^2*f2*f3^3*x1 + f0*f1^3*f2^2*x3 - f0*f1^3*f3^2*x2 - f0*f1^2*f2^3*x3 + f0*f1^2*f3^3*x2 + f0*f2^3*f3^2*x1 - f0*f2^2*f3^3*x1 - f1^3*f2^2*f3*x0 + f1^3*f2*f3^2*x0 + f1^2*f2^3*f3*x0 - f1^2*f2*f3^3*x0 - f1*f2^3*f3^2*x0 + f1*f2^2*f3^3*x0)/(f0^3*f1^2*f2 - f0^3*f1^2*f3 - f0^3*f1*f2^2 + f0^3*f1*f3^2 + f0^3*f2^2*f3 - f0^3*f2*f3^2 - f0^2*f1^3*f2 + f0^2*f1^3*f3 + f0^2*f1*f2^3 - f0^2*f1*f3^3 - f0^2*f2^3*f3 + f0^2*f2*f3^3 + f0*f1^3*f2^2 - f0*f1^3*f3^2 - f0*f1^2*f2^3 + f0*f1^2*f3^3 + f0*f2^3*f3^2 - f0*f2^2*f3^3 - f1^3*f2^2*f3 + f1^3*f2*f3^2 + f1^2*f2^3*f3 - f1^2*f2*f3^3 - f1*f2^3*f3^2 + f1*f2^2*f3^3)
-
+    (
+        f0^3 * f1^2 * f2 * x3 - f0^3 * f1^2 * f3 * x2 - f0^3 * f1 * f2^2 * x3 +
+        f0^3 * f1 * f3^2 * x2 +
+        f0^3 * f2^2 * f3 * x1 - f0^3 * f2 * f3^2 * x1 - f0^2 * f1^3 * f2 * x3 +
+        f0^2 * f1^3 * f3 * x2 +
+        f0^2 * f1 * f2^3 * x3 - f0^2 * f1 * f3^3 * x2 - f0^2 * f2^3 * f3 * x1 +
+        f0^2 * f2 * f3^3 * x1 +
+        f0 * f1^3 * f2^2 * x3 - f0 * f1^3 * f3^2 * x2 - f0 * f1^2 * f2^3 * x3 +
+        f0 * f1^2 * f3^3 * x2 +
+        f0 * f2^3 * f3^2 * x1 - f0 * f2^2 * f3^3 * x1 - f1^3 * f2^2 * f3 * x0 +
+        f1^3 * f2 * f3^2 * x0 +
+        f1^2 * f2^3 * f3 * x0 - f1^2 * f2 * f3^3 * x0 - f1 * f2^3 * f3^2 * x0 +
+        f1 * f2^2 * f3^3 * x0
+    ) / (
+        f0^3 * f1^2 * f2 - f0^3 * f1^2 * f3 - f0^3 * f1 * f2^2 +
+        f0^3 * f1 * f3^2 +
+        f0^3 * f2^2 * f3 - f0^3 * f2 * f3^2 - f0^2 * f1^3 * f2 +
+        f0^2 * f1^3 * f3 +
+        f0^2 * f1 * f2^3 - f0^2 * f1 * f3^3 - f0^2 * f2^3 * f3 +
+        f0^2 * f2 * f3^3 +
+        f0 * f1^3 * f2^2 - f0 * f1^3 * f3^2 - f0 * f1^2 * f2^3 +
+        f0 * f1^2 * f3^3 +
+        f0 * f2^3 * f3^2 - f0 * f2^2 * f3^3 - f1^3 * f2^2 * f3 +
+        f1^3 * f2 * f3^2 +
+        f1^2 * f2^3 * f3 - f1^2 * f2 * f3^3 - f1 * f2^3 * f3^2 + f1 * f2^2 * f3^3
+    )
 end
 
-function lmm(::LithBoonkkampIJzerman{5,0},xs,fs)
-    x0,x1,x2,x3,x4 = xs
-    f0,f1,f2,f3,f4 = fs
+function lmm(::LithBoonkkampIJzerman{5,0}, xs, fs)
+    x0, x1, x2, x3, x4 = xs
+    f0, f1, f2, f3, f4 = fs
 
-    (f0^4*f1^3*f2^2*f3*x4 - f0^4*f1^3*f2^2*f4*x3 - f0^4*f1^3*f2*f3^2*x4 + f0^4*f1^3*f2*f4^2*x3 + f0^4*f1^3*f3^2*f4*x2 - f0^4*f1^3*f3*f4^2*x2 - f0^4*f1^2*f2^3*f3*x4 + f0^4*f1^2*f2^3*f4*x3 + f0^4*f1^2*f2*f3^3*x4 - f0^4*f1^2*f2*f4^3*x3 - f0^4*f1^2*f3^3*f4*x2 + f0^4*f1^2*f3*f4^3*x2 + f0^4*f1*f2^3*f3^2*x4 - f0^4*f1*f2^3*f4^2*x3 - f0^4*f1*f2^2*f3^3*x4 + f0^4*f1*f2^2*f4^3*x3 + f0^4*f1*f3^3*f4^2*x2 - f0^4*f1*f3^2*f4^3*x2 - f0^4*f2^3*f3^2*f4*x1 + f0^4*f2^3*f3*f4^2*x1 + f0^4*f2^2*f3^3*f4*x1 - f0^4*f2^2*f3*f4^3*x1 - f0^4*f2*f3^3*f4^2*x1 + f0^4*f2*f3^2*f4^3*x1 - f0^3*f1^4*f2^2*f3*x4 + f0^3*f1^4*f2^2*f4*x3 + f0^3*f1^4*f2*f3^2*x4 - f0^3*f1^4*f2*f4^2*x3 - f0^3*f1^4*f3^2*f4*x2 + f0^3*f1^4*f3*f4^2*x2 + f0^3*f1^2*f2^4*f3*x4 - f0^3*f1^2*f2^4*f4*x3 - f0^3*f1^2*f2*f3^4*x4 + f0^3*f1^2*f2*f4^4*x3 + f0^3*f1^2*f3^4*f4*x2 - f0^3*f1^2*f3*f4^4*x2 - f0^3*f1*f2^4*f3^2*x4 + f0^3*f1*f2^4*f4^2*x3 + f0^3*f1*f2^2*f3^4*x4 - f0^3*f1*f2^2*f4^4*x3 - f0^3*f1*f3^4*f4^2*x2 + f0^3*f1*f3^2*f4^4*x2 + f0^3*f2^4*f3^2*f4*x1 - f0^3*f2^4*f3*f4^2*x1 - f0^3*f2^2*f3^4*f4*x1 + f0^3*f2^2*f3*f4^4*x1 + f0^3*f2*f3^4*f4^2*x1 - f0^3*f2*f3^2*f4^4*x1 + f0^2*f1^4*f2^3*f3*x4 - f0^2*f1^4*f2^3*f4*x3 - f0^2*f1^4*f2*f3^3*x4 + f0^2*f1^4*f2*f4^3*x3 + f0^2*f1^4*f3^3*f4*x2 - f0^2*f1^4*f3*f4^3*x2 - f0^2*f1^3*f2^4*f3*x4 + f0^2*f1^3*f2^4*f4*x3 + f0^2*f1^3*f2*f3^4*x4 - f0^2*f1^3*f2*f4^4*x3 - f0^2*f1^3*f3^4*f4*x2 + f0^2*f1^3*f3*f4^4*x2 + f0^2*f1*f2^4*f3^3*x4 - f0^2*f1*f2^4*f4^3*x3 - f0^2*f1*f2^3*f3^4*x4 + f0^2*f1*f2^3*f4^4*x3 + f0^2*f1*f3^4*f4^3*x2 - f0^2*f1*f3^3*f4^4*x2 - f0^2*f2^4*f3^3*f4*x1 + f0^2*f2^4*f3*f4^3*x1 + f0^2*f2^3*f3^4*f4*x1 - f0^2*f2^3*f3*f4^4*x1 - f0^2*f2*f3^4*f4^3*x1 + f0^2*f2*f3^3*f4^4*x1 - f0*f1^4*f2^3*f3^2*x4 + f0*f1^4*f2^3*f4^2*x3 + f0*f1^4*f2^2*f3^3*x4 - f0*f1^4*f2^2*f4^3*x3 - f0*f1^4*f3^3*f4^2*x2 + f0*f1^4*f3^2*f4^3*x2 + f0*f1^3*f2^4*f3^2*x4 - f0*f1^3*f2^4*f4^2*x3 - f0*f1^3*f2^2*f3^4*x4 + f0*f1^3*f2^2*f4^4*x3 + f0*f1^3*f3^4*f4^2*x2 - f0*f1^3*f3^2*f4^4*x2 - f0*f1^2*f2^4*f3^3*x4 + f0*f1^2*f2^4*f4^3*x3 + f0*f1^2*f2^3*f3^4*x4 - f0*f1^2*f2^3*f4^4*x3 - f0*f1^2*f3^4*f4^3*x2 + f0*f1^2*f3^3*f4^4*x2 + f0*f2^4*f3^3*f4^2*x1 - f0*f2^4*f3^2*f4^3*x1 - f0*f2^3*f3^4*f4^2*x1 + f0*f2^3*f3^2*f4^4*x1 + f0*f2^2*f3^4*f4^3*x1 - f0*f2^2*f3^3*f4^4*x1 + f1^4*f2^3*f3^2*f4*x0 - f1^4*f2^3*f3*f4^2*x0 - f1^4*f2^2*f3^3*f4*x0 + f1^4*f2^2*f3*f4^3*x0 + f1^4*f2*f3^3*f4^2*x0 - f1^4*f2*f3^2*f4^3*x0 - f1^3*f2^4*f3^2*f4*x0 + f1^3*f2^4*f3*f4^2*x0 + f1^3*f2^2*f3^4*f4*x0 - f1^3*f2^2*f3*f4^4*x0 - f1^3*f2*f3^4*f4^2*x0 + f1^3*f2*f3^2*f4^4*x0 + f1^2*f2^4*f3^3*f4*x0 - f1^2*f2^4*f3*f4^3*x0 - f1^2*f2^3*f3^4*f4*x0 + f1^2*f2^3*f3*f4^4*x0 + f1^2*f2*f3^4*f4^3*x0 - f1^2*f2*f3^3*f4^4*x0 - f1*f2^4*f3^3*f4^2*x0 + f1*f2^4*f3^2*f4^3*x0 + f1*f2^3*f3^4*f4^2*x0 - f1*f2^3*f3^2*f4^4*x0 - f1*f2^2*f3^4*f4^3*x0 + f1*f2^2*f3^3*f4^4*x0)/(f0^4*f1^3*f2^2*f3 - f0^4*f1^3*f2^2*f4 - f0^4*f1^3*f2*f3^2 + f0^4*f1^3*f2*f4^2 + f0^4*f1^3*f3^2*f4 - f0^4*f1^3*f3*f4^2 - f0^4*f1^2*f2^3*f3 + f0^4*f1^2*f2^3*f4 + f0^4*f1^2*f2*f3^3 - f0^4*f1^2*f2*f4^3 - f0^4*f1^2*f3^3*f4 + f0^4*f1^2*f3*f4^3 + f0^4*f1*f2^3*f3^2 - f0^4*f1*f2^3*f4^2 - f0^4*f1*f2^2*f3^3 + f0^4*f1*f2^2*f4^3 + f0^4*f1*f3^3*f4^2 - f0^4*f1*f3^2*f4^3 - f0^4*f2^3*f3^2*f4 + f0^4*f2^3*f3*f4^2 + f0^4*f2^2*f3^3*f4 - f0^4*f2^2*f3*f4^3 - f0^4*f2*f3^3*f4^2 + f0^4*f2*f3^2*f4^3 - f0^3*f1^4*f2^2*f3 + f0^3*f1^4*f2^2*f4 + f0^3*f1^4*f2*f3^2 - f0^3*f1^4*f2*f4^2 - f0^3*f1^4*f3^2*f4 + f0^3*f1^4*f3*f4^2 + f0^3*f1^2*f2^4*f3 - f0^3*f1^2*f2^4*f4 - f0^3*f1^2*f2*f3^4 + f0^3*f1^2*f2*f4^4 + f0^3*f1^2*f3^4*f4 - f0^3*f1^2*f3*f4^4 - f0^3*f1*f2^4*f3^2 + f0^3*f1*f2^4*f4^2 + f0^3*f1*f2^2*f3^4 - f0^3*f1*f2^2*f4^4 - f0^3*f1*f3^4*f4^2 + f0^3*f1*f3^2*f4^4 + f0^3*f2^4*f3^2*f4 - f0^3*f2^4*f3*f4^2 - f0^3*f2^2*f3^4*f4 + f0^3*f2^2*f3*f4^4 + f0^3*f2*f3^4*f4^2 - f0^3*f2*f3^2*f4^4 + f0^2*f1^4*f2^3*f3 - f0^2*f1^4*f2^3*f4 - f0^2*f1^4*f2*f3^3 + f0^2*f1^4*f2*f4^3 + f0^2*f1^4*f3^3*f4 - f0^2*f1^4*f3*f4^3 - f0^2*f1^3*f2^4*f3 + f0^2*f1^3*f2^4*f4 + f0^2*f1^3*f2*f3^4 - f0^2*f1^3*f2*f4^4 - f0^2*f1^3*f3^4*f4 + f0^2*f1^3*f3*f4^4 + f0^2*f1*f2^4*f3^3 - f0^2*f1*f2^4*f4^3 - f0^2*f1*f2^3*f3^4 + f0^2*f1*f2^3*f4^4 + f0^2*f1*f3^4*f4^3 - f0^2*f1*f3^3*f4^4 - f0^2*f2^4*f3^3*f4 + f0^2*f2^4*f3*f4^3 + f0^2*f2^3*f3^4*f4 - f0^2*f2^3*f3*f4^4 - f0^2*f2*f3^4*f4^3 + f0^2*f2*f3^3*f4^4 - f0*f1^4*f2^3*f3^2 + f0*f1^4*f2^3*f4^2 + f0*f1^4*f2^2*f3^3 - f0*f1^4*f2^2*f4^3 - f0*f1^4*f3^3*f4^2 + f0*f1^4*f3^2*f4^3 + f0*f1^3*f2^4*f3^2 - f0*f1^3*f2^4*f4^2 - f0*f1^3*f2^2*f3^4 + f0*f1^3*f2^2*f4^4 + f0*f1^3*f3^4*f4^2 - f0*f1^3*f3^2*f4^4 - f0*f1^2*f2^4*f3^3 + f0*f1^2*f2^4*f4^3 + f0*f1^2*f2^3*f3^4 - f0*f1^2*f2^3*f4^4 - f0*f1^2*f3^4*f4^3 + f0*f1^2*f3^3*f4^4 + f0*f2^4*f3^3*f4^2 - f0*f2^4*f3^2*f4^3 - f0*f2^3*f3^4*f4^2 + f0*f2^3*f3^2*f4^4 + f0*f2^2*f3^4*f4^3 - f0*f2^2*f3^3*f4^4 + f1^4*f2^3*f3^2*f4 - f1^4*f2^3*f3*f4^2 - f1^4*f2^2*f3^3*f4 + f1^4*f2^2*f3*f4^3 + f1^4*f2*f3^3*f4^2 - f1^4*f2*f3^2*f4^3 - f1^3*f2^4*f3^2*f4 + f1^3*f2^4*f3*f4^2 + f1^3*f2^2*f3^4*f4 - f1^3*f2^2*f3*f4^4 - f1^3*f2*f3^4*f4^2 + f1^3*f2*f3^2*f4^4 + f1^2*f2^4*f3^3*f4 - f1^2*f2^4*f3*f4^3 - f1^2*f2^3*f3^4*f4 + f1^2*f2^3*f3*f4^4 + f1^2*f2*f3^4*f4^3 - f1^2*f2*f3^3*f4^4 - f1*f2^4*f3^3*f4^2 + f1*f2^4*f3^2*f4^3 + f1*f2^3*f3^4*f4^2 - f1*f2^3*f3^2*f4^4 - f1*f2^2*f3^4*f4^3 + f1*f2^2*f3^3*f4^4)
-
+    (
+        f0^4 * f1^3 * f2^2 * f3 * x4 - f0^4 * f1^3 * f2^2 * f4 * x3 -
+        f0^4 * f1^3 * f2 * f3^2 * x4 +
+        f0^4 * f1^3 * f2 * f4^2 * x3 +
+        f0^4 * f1^3 * f3^2 * f4 * x2 - f0^4 * f1^3 * f3 * f4^2 * x2 -
+        f0^4 * f1^2 * f2^3 * f3 * x4 +
+        f0^4 * f1^2 * f2^3 * f4 * x3 +
+        f0^4 * f1^2 * f2 * f3^3 * x4 - f0^4 * f1^2 * f2 * f4^3 * x3 -
+        f0^4 * f1^2 * f3^3 * f4 * x2 +
+        f0^4 * f1^2 * f3 * f4^3 * x2 +
+        f0^4 * f1 * f2^3 * f3^2 * x4 - f0^4 * f1 * f2^3 * f4^2 * x3 -
+        f0^4 * f1 * f2^2 * f3^3 * x4 +
+        f0^4 * f1 * f2^2 * f4^3 * x3 +
+        f0^4 * f1 * f3^3 * f4^2 * x2 - f0^4 * f1 * f3^2 * f4^3 * x2 -
+        f0^4 * f2^3 * f3^2 * f4 * x1 +
+        f0^4 * f2^3 * f3 * f4^2 * x1 +
+        f0^4 * f2^2 * f3^3 * f4 * x1 - f0^4 * f2^2 * f3 * f4^3 * x1 -
+        f0^4 * f2 * f3^3 * f4^2 * x1 + f0^4 * f2 * f3^2 * f4^3 * x1 -
+        f0^3 * f1^4 * f2^2 * f3 * x4 +
+        f0^3 * f1^4 * f2^2 * f4 * x3 +
+        f0^3 * f1^4 * f2 * f3^2 * x4 - f0^3 * f1^4 * f2 * f4^2 * x3 -
+        f0^3 * f1^4 * f3^2 * f4 * x2 +
+        f0^3 * f1^4 * f3 * f4^2 * x2 +
+        f0^3 * f1^2 * f2^4 * f3 * x4 - f0^3 * f1^2 * f2^4 * f4 * x3 -
+        f0^3 * f1^2 * f2 * f3^4 * x4 +
+        f0^3 * f1^2 * f2 * f4^4 * x3 +
+        f0^3 * f1^2 * f3^4 * f4 * x2 - f0^3 * f1^2 * f3 * f4^4 * x2 -
+        f0^3 * f1 * f2^4 * f3^2 * x4 +
+        f0^3 * f1 * f2^4 * f4^2 * x3 +
+        f0^3 * f1 * f2^2 * f3^4 * x4 - f0^3 * f1 * f2^2 * f4^4 * x3 -
+        f0^3 * f1 * f3^4 * f4^2 * x2 +
+        f0^3 * f1 * f3^2 * f4^4 * x2 +
+        f0^3 * f2^4 * f3^2 * f4 * x1 - f0^3 * f2^4 * f3 * f4^2 * x1 -
+        f0^3 * f2^2 * f3^4 * f4 * x1 +
+        f0^3 * f2^2 * f3 * f4^4 * x1 +
+        f0^3 * f2 * f3^4 * f4^2 * x1 - f0^3 * f2 * f3^2 * f4^4 * x1 +
+        f0^2 * f1^4 * f2^3 * f3 * x4 - f0^2 * f1^4 * f2^3 * f4 * x3 -
+        f0^2 * f1^4 * f2 * f3^3 * x4 +
+        f0^2 * f1^4 * f2 * f4^3 * x3 +
+        f0^2 * f1^4 * f3^3 * f4 * x2 - f0^2 * f1^4 * f3 * f4^3 * x2 -
+        f0^2 * f1^3 * f2^4 * f3 * x4 +
+        f0^2 * f1^3 * f2^4 * f4 * x3 +
+        f0^2 * f1^3 * f2 * f3^4 * x4 - f0^2 * f1^3 * f2 * f4^4 * x3 -
+        f0^2 * f1^3 * f3^4 * f4 * x2 +
+        f0^2 * f1^3 * f3 * f4^4 * x2 +
+        f0^2 * f1 * f2^4 * f3^3 * x4 - f0^2 * f1 * f2^4 * f4^3 * x3 -
+        f0^2 * f1 * f2^3 * f3^4 * x4 +
+        f0^2 * f1 * f2^3 * f4^4 * x3 +
+        f0^2 * f1 * f3^4 * f4^3 * x2 - f0^2 * f1 * f3^3 * f4^4 * x2 -
+        f0^2 * f2^4 * f3^3 * f4 * x1 +
+        f0^2 * f2^4 * f3 * f4^3 * x1 +
+        f0^2 * f2^3 * f3^4 * f4 * x1 - f0^2 * f2^3 * f3 * f4^4 * x1 -
+        f0^2 * f2 * f3^4 * f4^3 * x1 + f0^2 * f2 * f3^3 * f4^4 * x1 -
+        f0 * f1^4 * f2^3 * f3^2 * x4 +
+        f0 * f1^4 * f2^3 * f4^2 * x3 +
+        f0 * f1^4 * f2^2 * f3^3 * x4 - f0 * f1^4 * f2^2 * f4^3 * x3 -
+        f0 * f1^4 * f3^3 * f4^2 * x2 +
+        f0 * f1^4 * f3^2 * f4^3 * x2 +
+        f0 * f1^3 * f2^4 * f3^2 * x4 - f0 * f1^3 * f2^4 * f4^2 * x3 -
+        f0 * f1^3 * f2^2 * f3^4 * x4 +
+        f0 * f1^3 * f2^2 * f4^4 * x3 +
+        f0 * f1^3 * f3^4 * f4^2 * x2 - f0 * f1^3 * f3^2 * f4^4 * x2 -
+        f0 * f1^2 * f2^4 * f3^3 * x4 +
+        f0 * f1^2 * f2^4 * f4^3 * x3 +
+        f0 * f1^2 * f2^3 * f3^4 * x4 - f0 * f1^2 * f2^3 * f4^4 * x3 -
+        f0 * f1^2 * f3^4 * f4^3 * x2 +
+        f0 * f1^2 * f3^3 * f4^4 * x2 +
+        f0 * f2^4 * f3^3 * f4^2 * x1 - f0 * f2^4 * f3^2 * f4^3 * x1 -
+        f0 * f2^3 * f3^4 * f4^2 * x1 +
+        f0 * f2^3 * f3^2 * f4^4 * x1 +
+        f0 * f2^2 * f3^4 * f4^3 * x1 - f0 * f2^2 * f3^3 * f4^4 * x1 +
+        f1^4 * f2^3 * f3^2 * f4 * x0 - f1^4 * f2^3 * f3 * f4^2 * x0 -
+        f1^4 * f2^2 * f3^3 * f4 * x0 +
+        f1^4 * f2^2 * f3 * f4^3 * x0 +
+        f1^4 * f2 * f3^3 * f4^2 * x0 - f1^4 * f2 * f3^2 * f4^3 * x0 -
+        f1^3 * f2^4 * f3^2 * f4 * x0 +
+        f1^3 * f2^4 * f3 * f4^2 * x0 +
+        f1^3 * f2^2 * f3^4 * f4 * x0 - f1^3 * f2^2 * f3 * f4^4 * x0 -
+        f1^3 * f2 * f3^4 * f4^2 * x0 +
+        f1^3 * f2 * f3^2 * f4^4 * x0 +
+        f1^2 * f2^4 * f3^3 * f4 * x0 - f1^2 * f2^4 * f3 * f4^3 * x0 -
+        f1^2 * f2^3 * f3^4 * f4 * x0 +
+        f1^2 * f2^3 * f3 * f4^4 * x0 +
+        f1^2 * f2 * f3^4 * f4^3 * x0 - f1^2 * f2 * f3^3 * f4^4 * x0 -
+        f1 * f2^4 * f3^3 * f4^2 * x0 +
+        f1 * f2^4 * f3^2 * f4^3 * x0 +
+        f1 * f2^3 * f3^4 * f4^2 * x0 - f1 * f2^3 * f3^2 * f4^4 * x0 -
+        f1 * f2^2 * f3^4 * f4^3 * x0 + f1 * f2^2 * f3^3 * f4^4 * x0
+    ) / (
+        f0^4 * f1^3 * f2^2 * f3 - f0^4 * f1^3 * f2^2 * f4 - f0^4 * f1^3 * f2 * f3^2 +
+        f0^4 * f1^3 * f2 * f4^2 +
+        f0^4 * f1^3 * f3^2 * f4 - f0^4 * f1^3 * f3 * f4^2 - f0^4 * f1^2 * f2^3 * f3 +
+        f0^4 * f1^2 * f2^3 * f4 +
+        f0^4 * f1^2 * f2 * f3^3 - f0^4 * f1^2 * f2 * f4^3 - f0^4 * f1^2 * f3^3 * f4 +
+        f0^4 * f1^2 * f3 * f4^3 +
+        f0^4 * f1 * f2^3 * f3^2 - f0^4 * f1 * f2^3 * f4^2 - f0^4 * f1 * f2^2 * f3^3 +
+        f0^4 * f1 * f2^2 * f4^3 +
+        f0^4 * f1 * f3^3 * f4^2 - f0^4 * f1 * f3^2 * f4^3 - f0^4 * f2^3 * f3^2 * f4 +
+        f0^4 * f2^3 * f3 * f4^2 +
+        f0^4 * f2^2 * f3^3 * f4 - f0^4 * f2^2 * f3 * f4^3 - f0^4 * f2 * f3^3 * f4^2 +
+        f0^4 * f2 * f3^2 * f4^3 - f0^3 * f1^4 * f2^2 * f3 +
+        f0^3 * f1^4 * f2^2 * f4 +
+        f0^3 * f1^4 * f2 * f3^2 - f0^3 * f1^4 * f2 * f4^2 - f0^3 * f1^4 * f3^2 * f4 +
+        f0^3 * f1^4 * f3 * f4^2 +
+        f0^3 * f1^2 * f2^4 * f3 - f0^3 * f1^2 * f2^4 * f4 - f0^3 * f1^2 * f2 * f3^4 +
+        f0^3 * f1^2 * f2 * f4^4 +
+        f0^3 * f1^2 * f3^4 * f4 - f0^3 * f1^2 * f3 * f4^4 - f0^3 * f1 * f2^4 * f3^2 +
+        f0^3 * f1 * f2^4 * f4^2 +
+        f0^3 * f1 * f2^2 * f3^4 - f0^3 * f1 * f2^2 * f4^4 - f0^3 * f1 * f3^4 * f4^2 +
+        f0^3 * f1 * f3^2 * f4^4 +
+        f0^3 * f2^4 * f3^2 * f4 - f0^3 * f2^4 * f3 * f4^2 - f0^3 * f2^2 * f3^4 * f4 +
+        f0^3 * f2^2 * f3 * f4^4 +
+        f0^3 * f2 * f3^4 * f4^2 - f0^3 * f2 * f3^2 * f4^4 + f0^2 * f1^4 * f2^3 * f3 -
+        f0^2 * f1^4 * f2^3 * f4 - f0^2 * f1^4 * f2 * f3^3 +
+        f0^2 * f1^4 * f2 * f4^3 +
+        f0^2 * f1^4 * f3^3 * f4 - f0^2 * f1^4 * f3 * f4^3 - f0^2 * f1^3 * f2^4 * f3 +
+        f0^2 * f1^3 * f2^4 * f4 +
+        f0^2 * f1^3 * f2 * f3^4 - f0^2 * f1^3 * f2 * f4^4 - f0^2 * f1^3 * f3^4 * f4 +
+        f0^2 * f1^3 * f3 * f4^4 +
+        f0^2 * f1 * f2^4 * f3^3 - f0^2 * f1 * f2^4 * f4^3 - f0^2 * f1 * f2^3 * f3^4 +
+        f0^2 * f1 * f2^3 * f4^4 +
+        f0^2 * f1 * f3^4 * f4^3 - f0^2 * f1 * f3^3 * f4^4 - f0^2 * f2^4 * f3^3 * f4 +
+        f0^2 * f2^4 * f3 * f4^3 +
+        f0^2 * f2^3 * f3^4 * f4 - f0^2 * f2^3 * f3 * f4^4 - f0^2 * f2 * f3^4 * f4^3 +
+        f0^2 * f2 * f3^3 * f4^4 - f0 * f1^4 * f2^3 * f3^2 +
+        f0 * f1^4 * f2^3 * f4^2 +
+        f0 * f1^4 * f2^2 * f3^3 - f0 * f1^4 * f2^2 * f4^3 - f0 * f1^4 * f3^3 * f4^2 +
+        f0 * f1^4 * f3^2 * f4^3 +
+        f0 * f1^3 * f2^4 * f3^2 - f0 * f1^3 * f2^4 * f4^2 - f0 * f1^3 * f2^2 * f3^4 +
+        f0 * f1^3 * f2^2 * f4^4 +
+        f0 * f1^3 * f3^4 * f4^2 - f0 * f1^3 * f3^2 * f4^4 - f0 * f1^2 * f2^4 * f3^3 +
+        f0 * f1^2 * f2^4 * f4^3 +
+        f0 * f1^2 * f2^3 * f3^4 - f0 * f1^2 * f2^3 * f4^4 - f0 * f1^2 * f3^4 * f4^3 +
+        f0 * f1^2 * f3^3 * f4^4 +
+        f0 * f2^4 * f3^3 * f4^2 - f0 * f2^4 * f3^2 * f4^3 - f0 * f2^3 * f3^4 * f4^2 +
+        f0 * f2^3 * f3^2 * f4^4 +
+        f0 * f2^2 * f3^4 * f4^3 - f0 * f2^2 * f3^3 * f4^4 + f1^4 * f2^3 * f3^2 * f4 -
+        f1^4 * f2^3 * f3 * f4^2 - f1^4 * f2^2 * f3^3 * f4 +
+        f1^4 * f2^2 * f3 * f4^3 +
+        f1^4 * f2 * f3^3 * f4^2 - f1^4 * f2 * f3^2 * f4^3 - f1^3 * f2^4 * f3^2 * f4 +
+        f1^3 * f2^4 * f3 * f4^2 +
+        f1^3 * f2^2 * f3^4 * f4 - f1^3 * f2^2 * f3 * f4^4 - f1^3 * f2 * f3^4 * f4^2 +
+        f1^3 * f2 * f3^2 * f4^4 +
+        f1^2 * f2^4 * f3^3 * f4 - f1^2 * f2^4 * f3 * f4^3 - f1^2 * f2^3 * f3^4 * f4 +
+        f1^2 * f2^3 * f3 * f4^4 +
+        f1^2 * f2 * f3^4 * f4^3 - f1^2 * f2 * f3^3 * f4^4 - f1 * f2^4 * f3^3 * f4^2 +
+        f1 * f2^4 * f3^2 * f4^3 +
+        f1 * f2^3 * f3^4 * f4^2 - f1 * f2^3 * f3^2 * f4^4 - f1 * f2^2 * f3^4 * f4^3 +
+        f1 * f2^2 * f3^3 * f4^4
+    )
 end
 
-function lmm(::LithBoonkkampIJzerman{6,0},xs,fs)
-    x0,x1,x2,x3,x4,x5 = xs
-    f0,f1,f2,f3,f4,f5 = fs
+function lmm(::LithBoonkkampIJzerman{6,0}, xs, fs)
+    x0, x1, x2, x3, x4, x5 = xs
+    f0, f1, f2, f3, f4, f5 = fs
 
     error("not implemented")
-
 end
-
 
 ## d = 1; Newton-like
 
@@ -599,39 +793,36 @@ function lmm_coefficients(::LithBoonkkampIJzerman{1,1}, xs, fs)
     b0 = one(fs[1])
 
     return (a0,), (b0,)
-
 end
 
 function lmm_coefficients(::LithBoonkkampIJzerman{2,1}, xs, fs)
-    q = fs[1]/fs[2]
+    q = fs[1] / fs[2]
 
     # from the paper
     # x2 + a1 x1 + a0x0 =  h3 * (b1 * 1/fp1 + b0 * 1/fp0)
-    a0 = (1-3q)/(q-1)^3
+    a0 = (1 - 3q) / (q - 1)^3
     a1 = -1 - a0
-    b0 = q/(q-1)^2
+    b0 = q / (q - 1)^2
     b1 = q * b0
 
-    return (a0,a1), (b0,b1)
-
+    return (a0, a1), (b0, b1)
 end
-
 
 function lmm_coefficients(::LithBoonkkampIJzerman{3,1}, xs, fs)
 
     # from the paper
-    q0 = fs[3-2]/fs[3]
-    q1 = fs[3-1]/fs[3]
+    q0 = fs[3 - 2] / fs[3]
+    q1 = fs[3 - 1] / fs[3]
 
-    a0 = (q1^2 * (q0 * (3 + 3q1 - 5q0) - q1)) /  ((q0-1)^3 * (q0-q1)^3)
-    a1 = (q0^2 *  (q1 * (5q1 - 3q0 - 3)+q0))  /  ((q1-1)^3 * (q0-q1)^3)
-    a2 = (q0^2*q1^2*(3q1 - q0*(q1-3) - 5))   /   ((q0-1)^3 * (q1-1)^3) # minor typo in (27c)
+    a0 = (q1^2 * (q0 * (3 + 3q1 - 5q0) - q1)) / ((q0 - 1)^3 * (q0 - q1)^3)
+    a1 = (q0^2 * (q1 * (5q1 - 3q0 - 3) + q0)) / ((q1 - 1)^3 * (q0 - q1)^3)
+    a2 = (q0^2 * q1^2 * (3q1 - q0 * (q1 - 3) - 5)) / ((q0 - 1)^3 * (q1 - 1)^3) # minor typo in (27c)
 
-    b0 = (q0*q1^2)   / ((q0-1)^2 * (q0-q1)^2)
-    b1 = (q0^2*q1)   / ((q0-q1)^2* (q1-1)^2)
-    b2 = (q0^2*q1^2) / ((q0-1)^2 * (q1-1)^2)
+    b0 = (q0 * q1^2) / ((q0 - 1)^2 * (q0 - q1)^2)
+    b1 = (q0^2 * q1) / ((q0 - q1)^2 * (q1 - 1)^2)
+    b2 = (q0^2 * q1^2) / ((q0 - 1)^2 * (q1 - 1)^2)
 
-    return (a0,a1,a2), (b0,b1,b2)
+    return (a0, a1, a2), (b0, b1, b2)
 end
 
 function lmm_coefficients(::LithBoonkkampIJzerman{S,1}, xs, fs) where {S}
@@ -639,110 +830,151 @@ function lmm_coefficients(::LithBoonkkampIJzerman{S,1}, xs, fs) where {S}
 end
 
 function lmm(L::LithBoonkkampIJzerman{S,1}, xs, fs, f′s) where {S}
-
-
     as, bs = lmm_coefficients(L, xs, fs)
     Fs = 1 ./ f′s # F = (g⁻¹)'
     h = -fs[S]
 
-    -sum(as[i] * xs[i] for i ∈ 1:S) + h * sum(bs[i] * Fs[i] for i ∈ 1:S )
-
+    -sum(as[i] * xs[i] for i in 1:S) + h * sum(bs[i] * Fs[i] for i in 1:S)
 end
 
-function lmm(::LithBoonkkampIJzerman{4,1},xs, fs, f′s)
-    x0,x1,x2,x3 = xs
-    f0,f1,f2,f3 = fs
-    f′0,f′1,f′2,f′3 = f′s
+function lmm(::LithBoonkkampIJzerman{4,1}, xs, fs, f′s)
+    x0, x1, x2, x3 = xs
+    f0, f1, f2, f3 = fs
+    f′0, f′1, f′2, f′3 = f′s
 
     # can get with script, but too long as found
     error("not implemented")
-
 end
 
 ## d = 2; Halley-like
-function lmm(::LithBoonkkampIJzerman{1,2}, xs, fs, f′s,f′′s)
+function lmm(::LithBoonkkampIJzerman{1,2}, xs, fs, f′s, f′′s)
     x0 = xs[1]
     f0 = fs[1]
     f′0 = f′s[1]
     f′′0 = f′′s[1]
 
-    -f0^2*f′′0/(2*f′0^3) - f0/f′0 + x0
-
+    -f0^2 * f′′0 / (2 * f′0^3) - f0 / f′0 + x0
 end
 
+function lmm(::LithBoonkkampIJzerman{2,2}, xs, fs, f′s, f′′s)
+    x0, x1 = xs
+    f0, f1 = fs
+    f′0, f′1 = f′s
+    f′′0, f′′1 = f′′s
 
-function lmm(::LithBoonkkampIJzerman{2,2}, xs, fs, f′s,f′′s)
-    x0,x1 = xs
-    f0,f1 = fs
-    f′0,f′1 = f′s
-    f′′0,f′′1 = f′′s
-
-    (-f0^5*f1^2*f′0^3*f′′1/2 - f0^5*f1*f′0^3*f′1^2 + f0^5*f′0^3*f′1^3*x1 + f0^4*f1^3*f′0^3*f′′1 + f0^4*f1^3*f′1^3*f′′0/2 + 5*f0^4*f1^2*f′0^3*f′1^2 - 5*f0^4*f1*f′0^3*f′1^3*x1 - f0^3*f1^4*f′0^3*f′′1/2 - f0^3*f1^4*f′1^3*f′′0 - 4*f0^3*f1^3*f′0^3*f′1^2 + 4*f0^3*f1^3*f′0^2*f′1^3 + 10*f0^3*f1^2*f′0^3*f′1^3*x1 + f0^2*f1^5*f′1^3*f′′0/2 - 5*f0^2*f1^4*f′0^2*f′1^3 - 10*f0^2*f1^3*f′0^3*f′1^3*x0 + f0*f1^5*f′0^2*f′1^3 + 5*f0*f1^4*f′0^3*f′1^3*x0 - f1^5*f′0^3*f′1^3*x0)/(f′0^3*f′1^3*(f0^5 - 5*f0^4*f1 + 10*f0^3*f1^2 - 10*f0^2*f1^3 + 5*f0*f1^4 - f1^5))
-
+    (
+        -f0^5 * f1^2 * f′0^3 * f′′1 / 2 - f0^5 * f1 * f′0^3 * f′1^2 +
+        f0^5 * f′0^3 * f′1^3 * x1 +
+        f0^4 * f1^3 * f′0^3 * f′′1 +
+        f0^4 * f1^3 * f′1^3 * f′′0 / 2 +
+        5 * f0^4 * f1^2 * f′0^3 * f′1^2 - 5 * f0^4 * f1 * f′0^3 * f′1^3 * x1 -
+        f0^3 * f1^4 * f′0^3 * f′′1 / 2 - f0^3 * f1^4 * f′1^3 * f′′0 -
+        4 * f0^3 * f1^3 * f′0^3 * f′1^2 +
+        4 * f0^3 * f1^3 * f′0^2 * f′1^3 +
+        10 * f0^3 * f1^2 * f′0^3 * f′1^3 * x1 +
+        f0^2 * f1^5 * f′1^3 * f′′0 / 2 - 5 * f0^2 * f1^4 * f′0^2 * f′1^3 -
+        10 * f0^2 * f1^3 * f′0^3 * f′1^3 * x0 +
+        f0 * f1^5 * f′0^2 * f′1^3 +
+        5 * f0 * f1^4 * f′0^3 * f′1^3 * x0 - f1^5 * f′0^3 * f′1^3 * x0
+    ) / (
+        f′0^3 *
+        f′1^3 *
+        (f0^5 - 5 * f0^4 * f1 + 10 * f0^3 * f1^2 - 10 * f0^2 * f1^3 + 5 * f0 * f1^4 - f1^5)
+    )
 end
 
-
-function lmm(::LithBoonkkampIJzerman{3,2}, xs, fs, f′s,f′′s)
-    x0,x1,x2 = xs
-    f0,f1,f2 = fs
-    f′0,f′1,f′2 = f′s
-    f′′0,f′′1,f′′2 = f′′s
+function lmm(::LithBoonkkampIJzerman{3,2}, xs, fs, f′s, f′′s)
+    x0, x1, x2 = xs
+    f0, f1, f2 = fs
+    f′0, f′1, f′2 = f′s
+    f′′0, f′′1, f′′2 = f′′s
 
     ## can get from script, but too long for inclusion here
     error("not implemented")
-
 end
 
-function lmm(::LithBoonkkampIJzerman{4,2}, xs, fs, f′s,f′′s)
+function lmm(::LithBoonkkampIJzerman{4,2}, xs, fs, f′s, f′′s)
     error("Not computed")
 end
 
 ## d = 3
-function lmm(::LithBoonkkampIJzerman{1,3}, xs,  fs, f′s,f′′s, f′′′s)
+function lmm(::LithBoonkkampIJzerman{1,3}, xs, fs, f′s, f′′s, f′′′s)
     x0 = xs[1]
     f0 = fs[1]
     f′0 = f′s[1]
     f′′0 = f′′s[1]
     f′′′0 = f′′′s[1]
 
-    (f0^3*(f′0*f′′′0 - 3*f′′0^2)/6 - f0^2*f′0^2*f′′0/2 - f0*f′0^4 + f′0^5*x0)/f′0^5
-
-
+    (
+        f0^3 * (f′0 * f′′′0 - 3 * f′′0^2) / 6 - f0^2 * f′0^2 * f′′0 / 2 - f0 * f′0^4 +
+        f′0^5 * x0
+    ) / f′0^5
 end
 
-function lmm(::LithBoonkkampIJzerman{2,3}, xs,  fs, f′s, f′′s, f′′′s)
-    x0,x1 = xs
-    f0,f1 = fs
-    f′0,f′1 = f′s
-    f′′0,f′′1 = f′′s
-    f′′′0,f′′′1 = f′′′s
+function lmm(::LithBoonkkampIJzerman{2,3}, xs, fs, f′s, f′′s, f′′′s)
+    x0, x1 = xs
+    f0, f1 = fs
+    f′0, f′1 = f′s
+    f′′0, f′′1 = f′′s
+    f′′′0, f′′′1 = f′′′s
 
-    (f0^7*f1^3*f′0^5*f′1*f′′′1 - 3*f0^7*f1^3*f′0^5*f′′1^2 - 3*f0^7*f1^2*f′0^5*f′1^2*f′′1 - 6*f0^7*f1*f′0^5*f′1^4 + 6*f0^7*f′0^5*f′1^5*x1 - 3*f0^6*f1^4*f′0^5*f′1*f′′′1 + 9*f0^6*f1^4*f′0^5*f′′1^2 + f0^6*f1^4*f′0*f′1^5*f′′′0 - 3*f0^6*f1^4*f′1^5*f′′0^2 + 21*f0^6*f1^3*f′0^5*f′1^2*f′′1 + 42*f0^6*f1^2*f′0^5*f′1^4 - 42*f0^6*f1*f′0^5*f′1^5*x1 + 3*f0^5*f1^5*f′0^5*f′1*f′′′1 - 9*f0^5*f1^5*f′0^5*f′′1^2 - 3*f0^5*f1^5*f′0*f′1^5*f′′′0 + 9*f0^5*f1^5*f′1^5*f′′0^2 - 33*f0^5*f1^4*f′0^5*f′1^2*f′′1 - 15*f0^5*f1^4*f′0^2*f′1^5*f′′0 - 126*f0^5*f1^3*f′0^5*f′1^4 + 126*f0^5*f1^2*f′0^5*f′1^5*x1 - f0^4*f1^6*f′0^5*f′1*f′′′1 + 3*f0^4*f1^6*f′0^5*f′′1^2 + 3*f0^4*f1^6*f′0*f′1^5*f′′′0 - 9*f0^4*f1^6*f′1^5*f′′0^2 + 15*f0^4*f1^5*f′0^5*f′1^2*f′′1 + 33*f0^4*f1^5*f′0^2*f′1^5*f′′0 + 90*f0^4*f1^4*f′0^5*f′1^4 - 90*f0^4*f1^4*f′0^4*f′1^5 - 210*f0^4*f1^3*f′0^5*f′1^5*x1 - f0^3*f1^7*f′0*f′1^5*f′′′0 + 3*f0^3*f1^7*f′1^5*f′′0^2 - 21*f0^3*f1^6*f′0^2*f′1^5*f′′0 + 126*f0^3*f1^5*f′0^4*f′1^5 + 210*f0^3*f1^4*f′0^5*f′1^5*x0 + 3*f0^2*f1^7*f′0^2*f′1^5*f′′0 - 42*f0^2*f1^6*f′0^4*f′1^5 - 126*f0^2*f1^5*f′0^5*f′1^5*x0 + 6*f0*f1^7*f′0^4*f′1^5 + 42*f0*f1^6*f′0^5*f′1^5*x0 - 6*f1^7*f′0^5*f′1^5*x0)/(6*f′0^5*f′1^5*(f0^7 - 7*f0^6*f1 + 21*f0^5*f1^2 - 35*f0^4*f1^3 + 35*f0^3*f1^4 - 21*f0^2*f1^5 + 7*f0*f1^6 - f1^7))
-
+    (
+        f0^7 * f1^3 * f′0^5 * f′1 * f′′′1 - 3 * f0^7 * f1^3 * f′0^5 * f′′1^2 -
+        3 * f0^7 * f1^2 * f′0^5 * f′1^2 * f′′1 - 6 * f0^7 * f1 * f′0^5 * f′1^4 +
+        6 * f0^7 * f′0^5 * f′1^5 * x1 - 3 * f0^6 * f1^4 * f′0^5 * f′1 * f′′′1 +
+        9 * f0^6 * f1^4 * f′0^5 * f′′1^2 +
+        f0^6 * f1^4 * f′0 * f′1^5 * f′′′0 - 3 * f0^6 * f1^4 * f′1^5 * f′′0^2 +
+        21 * f0^6 * f1^3 * f′0^5 * f′1^2 * f′′1 +
+        42 * f0^6 * f1^2 * f′0^5 * f′1^4 - 42 * f0^6 * f1 * f′0^5 * f′1^5 * x1 +
+        3 * f0^5 * f1^5 * f′0^5 * f′1 * f′′′1 - 9 * f0^5 * f1^5 * f′0^5 * f′′1^2 -
+        3 * f0^5 * f1^5 * f′0 * f′1^5 * f′′′0 + 9 * f0^5 * f1^5 * f′1^5 * f′′0^2 -
+        33 * f0^5 * f1^4 * f′0^5 * f′1^2 * f′′1 - 15 * f0^5 * f1^4 * f′0^2 * f′1^5 * f′′0 -
+        126 * f0^5 * f1^3 * f′0^5 * f′1^4 + 126 * f0^5 * f1^2 * f′0^5 * f′1^5 * x1 -
+        f0^4 * f1^6 * f′0^5 * f′1 * f′′′1 +
+        3 * f0^4 * f1^6 * f′0^5 * f′′1^2 +
+        3 * f0^4 * f1^6 * f′0 * f′1^5 * f′′′0 - 9 * f0^4 * f1^6 * f′1^5 * f′′0^2 +
+        15 * f0^4 * f1^5 * f′0^5 * f′1^2 * f′′1 +
+        33 * f0^4 * f1^5 * f′0^2 * f′1^5 * f′′0 +
+        90 * f0^4 * f1^4 * f′0^5 * f′1^4 - 90 * f0^4 * f1^4 * f′0^4 * f′1^5 -
+        210 * f0^4 * f1^3 * f′0^5 * f′1^5 * x1 - f0^3 * f1^7 * f′0 * f′1^5 * f′′′0 +
+        3 * f0^3 * f1^7 * f′1^5 * f′′0^2 - 21 * f0^3 * f1^6 * f′0^2 * f′1^5 * f′′0 +
+        126 * f0^3 * f1^5 * f′0^4 * f′1^5 +
+        210 * f0^3 * f1^4 * f′0^5 * f′1^5 * x0 +
+        3 * f0^2 * f1^7 * f′0^2 * f′1^5 * f′′0 - 42 * f0^2 * f1^6 * f′0^4 * f′1^5 -
+        126 * f0^2 * f1^5 * f′0^5 * f′1^5 * x0 +
+        6 * f0 * f1^7 * f′0^4 * f′1^5 +
+        42 * f0 * f1^6 * f′0^5 * f′1^5 * x0 - 6 * f1^7 * f′0^5 * f′1^5 * x0
+    ) / (
+        6 *
+        f′0^5 *
+        f′1^5 *
+        (
+            f0^7 - 7 * f0^6 * f1 + 21 * f0^5 * f1^2 - 35 * f0^4 * f1^3 + 35 * f0^3 * f1^4 -
+            21 * f0^2 * f1^5 + 7 * f0 * f1^6 - f1^7
+        )
+    )
 end
 
-function lmm(::LithBoonkkampIJzerman{3,3} ,xs,  fs, f′s, f′′s, f′′′s)
-    x0,x1,x2 = xs
-    f0,f1,f2 = fs
-    f′0,f′1,f′2 = f′s
-    f′′0,f′′1,f′′2 = f′′s
-    f′′′0,f′′′1,f′′′2 = f′′′s
+function lmm(::LithBoonkkampIJzerman{3,3}, xs, fs, f′s, f′′s, f′′′s)
+    x0, x1, x2 = xs
+    f0, f1, f2 = fs
+    f′0, f′1, f′2 = f′s
+    f′′0, f′′1, f′′2 = f′′s
+    f′′′0, f′′′1, f′′′2 = f′′′s
 
     # can get from script, but too long for inclusion here
     error("not implemented")
-
 end
 
-function lmm(::LithBoonkkampIJzerman{4,3}, xs,  fs, f′s, f′′s, f′′′s)
-    x0,x1,x2,x3 = xs
-    f0,f1,f2,f3 = fs
-    f′0,f′1,f′2,f′3 = f′s
-    f′′0,f′′1,f′′2,f′′3 = f′′s
-    f′′′0,f′′′1,f′′′2,f′′′3 = f′′′s
+function lmm(::LithBoonkkampIJzerman{4,3}, xs, fs, f′s, f′′s, f′′′s)
+    x0, x1, x2, x3 = xs
+    f0, f1, f2, f3 = fs
+    f′0, f′1, f′2, f′3 = f′s
+    f′′0, f′′1, f′′2, f′′3 = f′′s
+    f′′′0, f′′′1, f′′′2, f′′′3 = f′′′s
 
     error("not computed")
 end
-
 
 ## d = 4
 function lmm(::LithBoonkkampIJzerman{1,4}, xs, fs, f′s, f′′s, f′′′s, f′′′′s)
@@ -753,80 +985,315 @@ function lmm(::LithBoonkkampIJzerman{1,4}, xs, fs, f′s, f′′s, f′′′s,
     f′′′0 = f′′′s[1]
     f′′′′0 = f′′′′s[1]
 
-    (-f0^4*(f′0^2*f′′′′0 + 10*f′0*f′′0*f′′′0 + 15*f′′0^2)/24 + f0^3*f′0^2*(f′0*f′′′0 - 3*f′′0^2)/6 - f0^2*f′0^4*f′′0/2 - f0*f′0^6 + f′0^7*x0)/f′0^7
-
+    (
+        -f0^4 * (f′0^2 * f′′′′0 + 10 * f′0 * f′′0 * f′′′0 + 15 * f′′0^2) / 24 +
+        f0^3 * f′0^2 * (f′0 * f′′′0 - 3 * f′′0^2) / 6 - f0^2 * f′0^4 * f′′0 / 2 -
+        f0 * f′0^6 + f′0^7 * x0
+    ) / f′0^7
 end
 
 function lmm(::LithBoonkkampIJzerman{2,4}, xs, fs, f′s, f′′s, f′′′s, f′′′′s)
-    x0,x1 = xs
-    f0,f1 = fs
-    f′0,f′1 = f′s
-    f′′0,f′′1 = f′′s
-    f′′′0,f′′′1 = f′′′s
-    f′′′′0,f′′′′1 = f′′′′s
+    x0, x1 = xs
+    f0, f1 = fs
+    f′0, f′1 = f′s
+    f′′0, f′′1 = f′′s
+    f′′′0, f′′′1 = f′′′s
+    f′′′′0, f′′′′1 = f′′′′s
 
-    (-f0^9*f1^4*f′0^7*f′1^2*f′′′′1 - 10*f0^9*f1^4*f′0^7*f′1*f′′1*f′′′1 - 15*f0^9*f1^4*f′0^7*f′′1^2 + 4*f0^9*f1^3*f′0^7*f′1^3*f′′′1 - 12*f0^9*f1^3*f′0^7*f′1^2*f′′1^2 - 12*f0^9*f1^2*f′0^7*f′1^4*f′′1 - 24*f0^9*f1*f′0^7*f′1^6 + 24*f0^9*f′0^7*f′1^7*x1 + 4*f0^8*f1^5*f′0^7*f′1^2*f′′′′1 + 40*f0^8*f1^5*f′0^7*f′1*f′′1*f′′′1 + 60*f0^8*f1^5*f′0^7*f′′1^2 + f0^8*f1^5*f′0^2*f′1^7*f′′′′0 + 10*f0^8*f1^5*f′0*f′1^7*f′′0*f′′′0 + 15*f0^8*f1^5*f′1^7*f′′0^2 - 36*f0^8*f1^4*f′0^7*f′1^3*f′′′1 + 108*f0^8*f1^4*f′0^7*f′1^2*f′′1^2 + 108*f0^8*f1^3*f′0^7*f′1^4*f′′1 + 216*f0^8*f1^2*f′0^7*f′1^6 - 216*f0^8*f1*f′0^7*f′1^7*x1 - 6*f0^7*f1^6*f′0^7*f′1^2*f′′′′1 - 60*f0^7*f1^6*f′0^7*f′1*f′′1*f′′′1 - 90*f0^7*f1^6*f′0^7*f′′1^2 - 4*f0^7*f1^6*f′0^2*f′1^7*f′′′′0 - 40*f0^7*f1^6*f′0*f′1^7*f′′0*f′′′0 - 60*f0^7*f1^6*f′1^7*f′′0^2 + 84*f0^7*f1^5*f′0^7*f′1^3*f′′′1 - 252*f0^7*f1^5*f′0^7*f′1^2*f′′1^2 - 24*f0^7*f1^5*f′0^3*f′1^7*f′′′0 + 72*f0^7*f1^5*f′0^2*f′1^7*f′′0^2 - 432*f0^7*f1^4*f′0^7*f′1^4*f′′1 - 864*f0^7*f1^3*f′0^7*f′1^6 + 864*f0^7*f1^2*f′0^7*f′1^7*x1 + 4*f0^6*f1^7*f′0^7*f′1^2*f′′′′1 + 40*f0^6*f1^7*f′0^7*f′1*f′′1*f′′′1 + 60*f0^6*f1^7*f′0^7*f′′1^2 + 6*f0^6*f1^7*f′0^2*f′1^7*f′′′′0 + 60*f0^6*f1^7*f′0*f′1^7*f′′0*f′′′0 + 90*f0^6*f1^7*f′1^7*f′′0^2 - 76*f0^6*f1^6*f′0^7*f′1^3*f′′′1 + 228*f0^6*f1^6*f′0^7*f′1^2*f′′1^2 + 76*f0^6*f1^6*f′0^3*f′1^7*f′′′0 - 228*f0^6*f1^6*f′0^2*f′1^7*f′′0^2 + 588*f0^6*f1^5*f′0^7*f′1^4*f′′1 + 252*f0^6*f1^5*f′0^4*f′1^7*f′′0 + 2016*f0^6*f1^4*f′0^7*f′1^6 - 2016*f0^6*f1^3*f′0^7*f′1^7*x1 - f0^5*f1^8*f′0^7*f′1^2*f′′′′1 - 10*f0^5*f1^8*f′0^7*f′1*f′′1*f′′′1 - 15*f0^5*f1^8*f′0^7*f′′1^2 - 4*f0^5*f1^8*f′0^2*f′1^7*f′′′′0 - 40*f0^5*f1^8*f′0*f′1^7*f′′0*f′′′0 - 60*f0^5*f1^8*f′1^7*f′′0^2 + 24*f0^5*f1^7*f′0^7*f′1^3*f′′′1 - 72*f0^5*f1^7*f′0^7*f′1^2*f′′1^2 - 84*f0^5*f1^7*f′0^3*f′1^7*f′′′0 + 252*f0^5*f1^7*f′0^2*f′1^7*f′′0^2 - 252*f0^5*f1^6*f′0^7*f′1^4*f′′1 - 588*f0^5*f1^6*f′0^4*f′1^7*f′′0 - 1344*f0^5*f1^5*f′0^7*f′1^6 + 1344*f0^5*f1^5*f′0^6*f′1^7 + 3024*f0^5*f1^4*f′0^7*f′1^7*x1 + f0^4*f1^9*f′0^2*f′1^7*f′′′′0 + 10*f0^4*f1^9*f′0*f′1^7*f′′0*f′′′0 + 15*f0^4*f1^9*f′1^7*f′′0^2 + 36*f0^4*f1^8*f′0^3*f′1^7*f′′′0 - 108*f0^4*f1^8*f′0^2*f′1^7*f′′0^2 + 432*f0^4*f1^7*f′0^4*f′1^7*f′′0 - 2016*f0^4*f1^6*f′0^6*f′1^7 - 3024*f0^4*f1^5*f′0^7*f′1^7*x0 - 4*f0^3*f1^9*f′0^3*f′1^7*f′′′0 + 12*f0^3*f1^9*f′0^2*f′1^7*f′′0^2 - 108*f0^3*f1^8*f′0^4*f′1^7*f′′0 + 864*f0^3*f1^7*f′0^6*f′1^7 + 2016*f0^3*f1^6*f′0^7*f′1^7*x0 + 12*f0^2*f1^9*f′0^4*f′1^7*f′′0 - 216*f0^2*f1^8*f′0^6*f′1^7 - 864*f0^2*f1^7*f′0^7*f′1^7*x0 + 24*f0*f1^9*f′0^6*f′1^7 + 216*f0*f1^8*f′0^7*f′1^7*x0 - 24*f1^9*f′0^7*f′1^7*x0)/(24*f′0^7*f′1^7*(f0^9 - 9*f0^8*f1 + 36*f0^7*f1^2 - 84*f0^6*f1^3 + 126*f0^5*f1^4 - 126*f0^4*f1^5 + 84*f0^3*f1^6 - 36*f0^2*f1^7 + 9*f0*f1^8 - f1^9))
-
+    (
+        -f0^9 * f1^4 * f′0^7 * f′1^2 * f′′′′1 -
+        10 * f0^9 * f1^4 * f′0^7 * f′1 * f′′1 * f′′′1 - 15 * f0^9 * f1^4 * f′0^7 * f′′1^2 +
+        4 * f0^9 * f1^3 * f′0^7 * f′1^3 * f′′′1 -
+        12 * f0^9 * f1^3 * f′0^7 * f′1^2 * f′′1^2 -
+        12 * f0^9 * f1^2 * f′0^7 * f′1^4 * f′′1 - 24 * f0^9 * f1 * f′0^7 * f′1^6 +
+        24 * f0^9 * f′0^7 * f′1^7 * x1 +
+        4 * f0^8 * f1^5 * f′0^7 * f′1^2 * f′′′′1 +
+        40 * f0^8 * f1^5 * f′0^7 * f′1 * f′′1 * f′′′1 +
+        60 * f0^8 * f1^5 * f′0^7 * f′′1^2 +
+        f0^8 * f1^5 * f′0^2 * f′1^7 * f′′′′0 +
+        10 * f0^8 * f1^5 * f′0 * f′1^7 * f′′0 * f′′′0 +
+        15 * f0^8 * f1^5 * f′1^7 * f′′0^2 - 36 * f0^8 * f1^4 * f′0^7 * f′1^3 * f′′′1 +
+        108 * f0^8 * f1^4 * f′0^7 * f′1^2 * f′′1^2 +
+        108 * f0^8 * f1^3 * f′0^7 * f′1^4 * f′′1 +
+        216 * f0^8 * f1^2 * f′0^7 * f′1^6 - 216 * f0^8 * f1 * f′0^7 * f′1^7 * x1 -
+        6 * f0^7 * f1^6 * f′0^7 * f′1^2 * f′′′′1 -
+        60 * f0^7 * f1^6 * f′0^7 * f′1 * f′′1 * f′′′1 - 90 * f0^7 * f1^6 * f′0^7 * f′′1^2 -
+        4 * f0^7 * f1^6 * f′0^2 * f′1^7 * f′′′′0 -
+        40 * f0^7 * f1^6 * f′0 * f′1^7 * f′′0 * f′′′0 - 60 * f0^7 * f1^6 * f′1^7 * f′′0^2 +
+        84 * f0^7 * f1^5 * f′0^7 * f′1^3 * f′′′1 -
+        252 * f0^7 * f1^5 * f′0^7 * f′1^2 * f′′1^2 -
+        24 * f0^7 * f1^5 * f′0^3 * f′1^7 * f′′′0 +
+        72 * f0^7 * f1^5 * f′0^2 * f′1^7 * f′′0^2 -
+        432 * f0^7 * f1^4 * f′0^7 * f′1^4 * f′′1 - 864 * f0^7 * f1^3 * f′0^7 * f′1^6 +
+        864 * f0^7 * f1^2 * f′0^7 * f′1^7 * x1 +
+        4 * f0^6 * f1^7 * f′0^7 * f′1^2 * f′′′′1 +
+        40 * f0^6 * f1^7 * f′0^7 * f′1 * f′′1 * f′′′1 +
+        60 * f0^6 * f1^7 * f′0^7 * f′′1^2 +
+        6 * f0^6 * f1^7 * f′0^2 * f′1^7 * f′′′′0 +
+        60 * f0^6 * f1^7 * f′0 * f′1^7 * f′′0 * f′′′0 +
+        90 * f0^6 * f1^7 * f′1^7 * f′′0^2 - 76 * f0^6 * f1^6 * f′0^7 * f′1^3 * f′′′1 +
+        228 * f0^6 * f1^6 * f′0^7 * f′1^2 * f′′1^2 +
+        76 * f0^6 * f1^6 * f′0^3 * f′1^7 * f′′′0 -
+        228 * f0^6 * f1^6 * f′0^2 * f′1^7 * f′′0^2 +
+        588 * f0^6 * f1^5 * f′0^7 * f′1^4 * f′′1 +
+        252 * f0^6 * f1^5 * f′0^4 * f′1^7 * f′′0 +
+        2016 * f0^6 * f1^4 * f′0^7 * f′1^6 - 2016 * f0^6 * f1^3 * f′0^7 * f′1^7 * x1 -
+        f0^5 * f1^8 * f′0^7 * f′1^2 * f′′′′1 -
+        10 * f0^5 * f1^8 * f′0^7 * f′1 * f′′1 * f′′′1 - 15 * f0^5 * f1^8 * f′0^7 * f′′1^2 -
+        4 * f0^5 * f1^8 * f′0^2 * f′1^7 * f′′′′0 -
+        40 * f0^5 * f1^8 * f′0 * f′1^7 * f′′0 * f′′′0 - 60 * f0^5 * f1^8 * f′1^7 * f′′0^2 +
+        24 * f0^5 * f1^7 * f′0^7 * f′1^3 * f′′′1 -
+        72 * f0^5 * f1^7 * f′0^7 * f′1^2 * f′′1^2 -
+        84 * f0^5 * f1^7 * f′0^3 * f′1^7 * f′′′0 +
+        252 * f0^5 * f1^7 * f′0^2 * f′1^7 * f′′0^2 -
+        252 * f0^5 * f1^6 * f′0^7 * f′1^4 * f′′1 -
+        588 * f0^5 * f1^6 * f′0^4 * f′1^7 * f′′0 - 1344 * f0^5 * f1^5 * f′0^7 * f′1^6 +
+        1344 * f0^5 * f1^5 * f′0^6 * f′1^7 +
+        3024 * f0^5 * f1^4 * f′0^7 * f′1^7 * x1 +
+        f0^4 * f1^9 * f′0^2 * f′1^7 * f′′′′0 +
+        10 * f0^4 * f1^9 * f′0 * f′1^7 * f′′0 * f′′′0 +
+        15 * f0^4 * f1^9 * f′1^7 * f′′0^2 +
+        36 * f0^4 * f1^8 * f′0^3 * f′1^7 * f′′′0 -
+        108 * f0^4 * f1^8 * f′0^2 * f′1^7 * f′′0^2 +
+        432 * f0^4 * f1^7 * f′0^4 * f′1^7 * f′′0 - 2016 * f0^4 * f1^6 * f′0^6 * f′1^7 -
+        3024 * f0^4 * f1^5 * f′0^7 * f′1^7 * x0 - 4 * f0^3 * f1^9 * f′0^3 * f′1^7 * f′′′0 +
+        12 * f0^3 * f1^9 * f′0^2 * f′1^7 * f′′0^2 -
+        108 * f0^3 * f1^8 * f′0^4 * f′1^7 * f′′0 +
+        864 * f0^3 * f1^7 * f′0^6 * f′1^7 +
+        2016 * f0^3 * f1^6 * f′0^7 * f′1^7 * x0 +
+        12 * f0^2 * f1^9 * f′0^4 * f′1^7 * f′′0 - 216 * f0^2 * f1^8 * f′0^6 * f′1^7 -
+        864 * f0^2 * f1^7 * f′0^7 * f′1^7 * x0 +
+        24 * f0 * f1^9 * f′0^6 * f′1^7 +
+        216 * f0 * f1^8 * f′0^7 * f′1^7 * x0 - 24 * f1^9 * f′0^7 * f′1^7 * x0
+    ) / (
+        24 *
+        f′0^7 *
+        f′1^7 *
+        (
+            f0^9 - 9 * f0^8 * f1 + 36 * f0^7 * f1^2 - 84 * f0^6 * f1^3 + 126 * f0^5 * f1^4 -
+            126 * f0^4 * f1^5 + 84 * f0^3 * f1^6 - 36 * f0^2 * f1^7 + 9 * f0 * f1^8 - f1^9
+        )
+    )
 end
 
 function lmm(::LithBoonkkampIJzerman{3,4}, xs, fs, f′s, f′′s, f′′′s, f′′′′s)
-    x0,x1,x2 = xs
-    f0,f1,f2 = fs
-    f′0,f′1,f′2 = f′s
-    f′′0,f′′1,f′′2 = f′′s
-    f′′′0,f′′′1,f′′′2 = f′′′s
-    f′′′′0,f′′′′1,f′′′′2 = f′′′′s
+    x0, x1, x2 = xs
+    f0, f1, f2 = fs
+    f′0, f′1, f′2 = f′s
+    f′′0, f′′1, f′′2 = f′′s
+    f′′′0, f′′′1, f′′′2 = f′′′s
+    f′′′′0, f′′′′1, f′′′′2 = f′′′′s
 
     error("not computed")
-
 end
 
 # n = 5
 
 function lmm(::LithBoonkkampIJzerman{1,5}, xs, fs, f′s, f′′s, f′′′s, f′′′′s, f′′′′′s)
     x0 = xs[1]
-    f0= fs[1]
+    f0 = fs[1]
     f′0 = f′s[1]
     f′′0 = f′′s[1]
     f′′′0 = f′′′s[1]
     f′′′′0 = f′′′′s[1]
     f′′′′′0 = f′′′′′s[1]
 
-    (f0^5*(f′0^3*f′′′′′0 - 15*f′0^2*f′′0*f′′′′0 - 10*f′0^2*f′′′0^2 + 105*f′0*f′′0^2*f′′′0 - 105*f′′0^4) - 5*f0^4*f′0^2*(f′0^2*f′′′′0 + 10*f′0*f′′0*f′′′0 + 15*f′′0^2) + 20*f0^3*f′0^4*(f′0*f′′′0 - 3*f′′0^2) - 60*f0^2*f′0^6*f′′0 - 120*f0*f′0^8 + 120*f′0^9*x0)/(120*f′0^9)
-
+    (
+        f0^5 * (
+            f′0^3 * f′′′′′0 - 15 * f′0^2 * f′′0 * f′′′′0 - 10 * f′0^2 * f′′′0^2 +
+            105 * f′0 * f′′0^2 * f′′′0 - 105 * f′′0^4
+        ) - 5 * f0^4 * f′0^2 * (f′0^2 * f′′′′0 + 10 * f′0 * f′′0 * f′′′0 + 15 * f′′0^2) +
+        20 * f0^3 * f′0^4 * (f′0 * f′′′0 - 3 * f′′0^2) - 60 * f0^2 * f′0^6 * f′′0 -
+        120 * f0 * f′0^8 + 120 * f′0^9 * x0
+    ) / (120 * f′0^9)
 end
 
 function lmm(::LithBoonkkampIJzerman{2,5}, xs, fs, f′s, f′′s, f′′′s, f′′′′s, f′′′′′s)
-    x0,x1 = xs
-    f0,f1 = fs
-    f′0,f′1 = f′s
-    f′′0,f′′1 = f′′s
-    f′′′0,f′′′1 = f′′′s
-    f′′′′0,f′′′′1 = f′′′′s
-    f′′′′′0,f′′′′′1 = f′′′′′s
+    x0, x1 = xs
+    f0, f1 = fs
+    f′0, f′1 = f′s
+    f′′0, f′′1 = f′′s
+    f′′′0, f′′′1 = f′′′s
+    f′′′′0, f′′′′1 = f′′′′s
+    f′′′′′0, f′′′′′1 = f′′′′′s
 
-    (f0^11*f1^5*f′0^9*f′1^3*f′′′′′1 - 15*f0^11*f1^5*f′0^9*f′1^2*f′′1*f′′′′1 - 10*f0^11*f1^5*f′0^9*f′1^2*f′′′1^2 + 105*f0^11*f1^5*f′0^9*f′1*f′′1^2*f′′′1 - 105*f0^11*f1^5*f′0^9*f′′1^4 - 5*f0^11*f1^4*f′0^9*f′1^4*f′′′′1 - 50*f0^11*f1^4*f′0^9*f′1^3*f′′1*f′′′1 - 75*f0^11*f1^4*f′0^9*f′1^2*f′′1^2 + 20*f0^11*f1^3*f′0^9*f′1^5*f′′′1 - 60*f0^11*f1^3*f′0^9*f′1^4*f′′1^2 - 60*f0^11*f1^2*f′0^9*f′1^6*f′′1 - 120*f0^11*f1*f′0^9*f′1^8 + 120*f0^11*f′0^9*f′1^9*x1 - 5*f0^10*f1^6*f′0^9*f′1^3*f′′′′′1 + 75*f0^10*f1^6*f′0^9*f′1^2*f′′1*f′′′′1 + 50*f0^10*f1^6*f′0^9*f′1^2*f′′′1^2 - 525*f0^10*f1^6*f′0^9*f′1*f′′1^2*f′′′1 + 525*f0^10*f1^6*f′0^9*f′′1^4 + f0^10*f1^6*f′0^3*f′1^9*f′′′′′0 - 15*f0^10*f1^6*f′0^2*f′1^9*f′′0*f′′′′0 - 10*f0^10*f1^6*f′0^2*f′1^9*f′′′0^2 + 105*f0^10*f1^6*f′0*f′1^9*f′′0^2*f′′′0 - 105*f0^10*f1^6*f′1^9*f′′0^4 + 55*f0^10*f1^5*f′0^9*f′1^4*f′′′′1 + 550*f0^10*f1^5*f′0^9*f′1^3*f′′1*f′′′1 + 825*f0^10*f1^5*f′0^9*f′1^2*f′′1^2 - 220*f0^10*f1^4*f′0^9*f′1^5*f′′′1 + 660*f0^10*f1^4*f′0^9*f′1^4*f′′1^2 + 660*f0^10*f1^3*f′0^9*f′1^6*f′′1 + 1320*f0^10*f1^2*f′0^9*f′1^8 - 1320*f0^10*f1*f′0^9*f′1^9*x1 + 10*f0^9*f1^7*f′0^9*f′1^3*f′′′′′1 - 150*f0^9*f1^7*f′0^9*f′1^2*f′′1*f′′′′1 - 100*f0^9*f1^7*f′0^9*f′1^2*f′′′1^2 + 1050*f0^9*f1^7*f′0^9*f′1*f′′1^2*f′′′1 - 1050*f0^9*f1^7*f′0^9*f′′1^4 - 5*f0^9*f1^7*f′0^3*f′1^9*f′′′′′0 + 75*f0^9*f1^7*f′0^2*f′1^9*f′′0*f′′′′0 + 50*f0^9*f1^7*f′0^2*f′1^9*f′′′0^2 - 525*f0^9*f1^7*f′0*f′1^9*f′′0^2*f′′′0 + 525*f0^9*f1^7*f′1^9*f′′0^4 - 170*f0^9*f1^6*f′0^9*f′1^4*f′′′′1 - 1700*f0^9*f1^6*f′0^9*f′1^3*f′′1*f′′′1 - 2550*f0^9*f1^6*f′0^9*f′1^2*f′′1^2 - 35*f0^9*f1^6*f′0^4*f′1^9*f′′′′0 - 350*f0^9*f1^6*f′0^3*f′1^9*f′′0*f′′′0 - 525*f0^9*f1^6*f′0^2*f′1^9*f′′0^2 + 1100*f0^9*f1^5*f′0^9*f′1^5*f′′′1 - 3300*f0^9*f1^5*f′0^9*f′1^4*f′′1^2 - 3300*f0^9*f1^4*f′0^9*f′1^6*f′′1 - 6600*f0^9*f1^3*f′0^9*f′1^8 + 6600*f0^9*f1^2*f′0^9*f′1^9*x1 - 10*f0^8*f1^8*f′0^9*f′1^3*f′′′′′1 + 150*f0^8*f1^8*f′0^9*f′1^2*f′′1*f′′′′1 + 100*f0^8*f1^8*f′0^9*f′1^2*f′′′1^2 - 1050*f0^8*f1^8*f′0^9*f′1*f′′1^2*f′′′1 + 1050*f0^8*f1^8*f′0^9*f′′1^4 + 10*f0^8*f1^8*f′0^3*f′1^9*f′′′′′0 - 150*f0^8*f1^8*f′0^2*f′1^9*f′′0*f′′′′0 - 100*f0^8*f1^8*f′0^2*f′1^9*f′′′0^2 + 1050*f0^8*f1^8*f′0*f′1^9*f′′0^2*f′′′0 - 1050*f0^8*f1^8*f′1^9*f′′0^4 + 230*f0^8*f1^7*f′0^9*f′1^4*f′′′′1 + 2300*f0^8*f1^7*f′0^9*f′1^3*f′′1*f′′′1 + 3450*f0^8*f1^7*f′0^9*f′1^2*f′′1^2 + 145*f0^8*f1^7*f′0^4*f′1^9*f′′′′0 + 1450*f0^8*f1^7*f′0^3*f′1^9*f′′0*f′′′0 + 2175*f0^8*f1^7*f′0^2*f′1^9*f′′0^2 - 2180*f0^8*f1^6*f′0^9*f′1^5*f′′′1 + 6540*f0^8*f1^6*f′0^9*f′1^4*f′′1^2 + 560*f0^8*f1^6*f′0^5*f′1^9*f′′′0 - 1680*f0^8*f1^6*f′0^4*f′1^9*f′′0^2 + 9900*f0^8*f1^5*f′0^9*f′1^6*f′′1 + 19800*f0^8*f1^4*f′0^9*f′1^8 - 19800*f0^8*f1^3*f′0^9*f′1^9*x1 + 5*f0^7*f1^9*f′0^9*f′1^3*f′′′′′1 - 75*f0^7*f1^9*f′0^9*f′1^2*f′′1*f′′′′1 - 50*f0^7*f1^9*f′0^9*f′1^2*f′′′1^2 + 525*f0^7*f1^9*f′0^9*f′1*f′′1^2*f′′′1 - 525*f0^7*f1^9*f′0^9*f′′1^4 - 10*f0^7*f1^9*f′0^3*f′1^9*f′′′′′0 + 150*f0^7*f1^9*f′0^2*f′1^9*f′′0*f′′′′0 + 100*f0^7*f1^9*f′0^2*f′1^9*f′′′0^2 - 1050*f0^7*f1^9*f′0*f′1^9*f′′0^2*f′′′0 + 1050*f0^7*f1^9*f′1^9*f′′0^4 - 145*f0^7*f1^8*f′0^9*f′1^4*f′′′′1 - 1450*f0^7*f1^8*f′0^9*f′1^3*f′′1*f′′′1 - 2175*f0^7*f1^8*f′0^9*f′1^2*f′′1^2 - 230*f0^7*f1^8*f′0^4*f′1^9*f′′′′0 - 2300*f0^7*f1^8*f′0^3*f′1^9*f′′0*f′′′0 - 3450*f0^7*f1^8*f′0^2*f′1^9*f′′0^2 + 1840*f0^7*f1^7*f′0^9*f′1^5*f′′′1 - 5520*f0^7*f1^7*f′0^9*f′1^4*f′′1^2 - 1840*f0^7*f1^7*f′0^5*f′1^9*f′′′0 + 5520*f0^7*f1^7*f′0^4*f′1^9*f′′0^2 - 12240*f0^7*f1^6*f′0^9*f′1^6*f′′1 - 5040*f0^7*f1^6*f′0^6*f′1^9*f′′0 - 39600*f0^7*f1^5*f′0^9*f′1^8 + 39600*f0^7*f1^4*f′0^9*f′1^9*x1 - f0^6*f1^10*f′0^9*f′1^3*f′′′′′1 + 15*f0^6*f1^10*f′0^9*f′1^2*f′′1*f′′′′1 + 10*f0^6*f1^10*f′0^9*f′1^2*f′′′1^2 - 105*f0^6*f1^10*f′0^9*f′1*f′′1^2*f′′′1 + 105*f0^6*f1^10*f′0^9*f′′1^4 + 5*f0^6*f1^10*f′0^3*f′1^9*f′′′′′0 - 75*f0^6*f1^10*f′0^2*f′1^9*f′′0*f′′′′0 - 50*f0^6*f1^10*f′0^2*f′1^9*f′′′0^2 + 525*f0^6*f1^10*f′0*f′1^9*f′′0^2*f′′′0 - 525*f0^6*f1^10*f′1^9*f′′0^4 + 35*f0^6*f1^9*f′0^9*f′1^4*f′′′′1 + 350*f0^6*f1^9*f′0^9*f′1^3*f′′1*f′′′1 + 525*f0^6*f1^9*f′0^9*f′1^2*f′′1^2 + 170*f0^6*f1^9*f′0^4*f′1^9*f′′′′0 + 1700*f0^6*f1^9*f′0^3*f′1^9*f′′0*f′′′0 + 2550*f0^6*f1^9*f′0^2*f′1^9*f′′0^2 - 560*f0^6*f1^8*f′0^9*f′1^5*f′′′1 + 1680*f0^6*f1^8*f′0^9*f′1^4*f′′1^2 + 2180*f0^6*f1^8*f′0^5*f′1^9*f′′′0 - 6540*f0^6*f1^8*f′0^4*f′1^9*f′′0^2 + 5040*f0^6*f1^7*f′0^9*f′1^6*f′′1 + 12240*f0^6*f1^7*f′0^6*f′1^9*f′′0 + 25200*f0^6*f1^6*f′0^9*f′1^8 - 25200*f0^6*f1^6*f′0^8*f′1^9 - 55440*f0^6*f1^5*f′0^9*f′1^9*x1 - f0^5*f1^11*f′0^3*f′1^9*f′′′′′0 + 15*f0^5*f1^11*f′0^2*f′1^9*f′′0*f′′′′0 + 10*f0^5*f1^11*f′0^2*f′1^9*f′′′0^2 - 105*f0^5*f1^11*f′0*f′1^9*f′′0^2*f′′′0 + 105*f0^5*f1^11*f′1^9*f′′0^4 - 55*f0^5*f1^10*f′0^4*f′1^9*f′′′′0 - 550*f0^5*f1^10*f′0^3*f′1^9*f′′0*f′′′0 - 825*f0^5*f1^10*f′0^2*f′1^9*f′′0^2 - 1100*f0^5*f1^9*f′0^5*f′1^9*f′′′0 + 3300*f0^5*f1^9*f′0^4*f′1^9*f′′0^2 - 9900*f0^5*f1^8*f′0^6*f′1^9*f′′0 + 39600*f0^5*f1^7*f′0^8*f′1^9 + 55440*f0^5*f1^6*f′0^9*f′1^9*x0 + 5*f0^4*f1^11*f′0^4*f′1^9*f′′′′0 + 50*f0^4*f1^11*f′0^3*f′1^9*f′′0*f′′′0 + 75*f0^4*f1^11*f′0^2*f′1^9*f′′0^2 + 220*f0^4*f1^10*f′0^5*f′1^9*f′′′0 - 660*f0^4*f1^10*f′0^4*f′1^9*f′′0^2 + 3300*f0^4*f1^9*f′0^6*f′1^9*f′′0 - 19800*f0^4*f1^8*f′0^8*f′1^9 - 39600*f0^4*f1^7*f′0^9*f′1^9*x0 - 20*f0^3*f1^11*f′0^5*f′1^9*f′′′0 + 60*f0^3*f1^11*f′0^4*f′1^9*f′′0^2 - 660*f0^3*f1^10*f′0^6*f′1^9*f′′0 + 6600*f0^3*f1^9*f′0^8*f′1^9 + 19800*f0^3*f1^8*f′0^9*f′1^9*x0 + 60*f0^2*f1^11*f′0^6*f′1^9*f′′0 - 1320*f0^2*f1^10*f′0^8*f′1^9 - 6600*f0^2*f1^9*f′0^9*f′1^9*x0 + 120*f0*f1^11*f′0^8*f′1^9 + 1320*f0*f1^10*f′0^9*f′1^9*x0 - 120*f1^11*f′0^9*f′1^9*x0)/(120*f′0^9*f′1^9*(f0^11 - 11*f0^10*f1 + 55*f0^9*f1^2 - 165*f0^8*f1^3 + 330*f0^7*f1^4 - 462*f0^6*f1^5 + 462*f0^5*f1^6 - 330*f0^4*f1^7 + 165*f0^3*f1^8 - 55*f0^2*f1^9 + 11*f0*f1^10 - f1^11))
-
+    (
+        f0^11 * f1^5 * f′0^9 * f′1^3 * f′′′′′1 -
+        15 * f0^11 * f1^5 * f′0^9 * f′1^2 * f′′1 * f′′′′1 -
+        10 * f0^11 * f1^5 * f′0^9 * f′1^2 * f′′′1^2 +
+        105 * f0^11 * f1^5 * f′0^9 * f′1 * f′′1^2 * f′′′1 -
+        105 * f0^11 * f1^5 * f′0^9 * f′′1^4 - 5 * f0^11 * f1^4 * f′0^9 * f′1^4 * f′′′′1 -
+        50 * f0^11 * f1^4 * f′0^9 * f′1^3 * f′′1 * f′′′1 -
+        75 * f0^11 * f1^4 * f′0^9 * f′1^2 * f′′1^2 +
+        20 * f0^11 * f1^3 * f′0^9 * f′1^5 * f′′′1 -
+        60 * f0^11 * f1^3 * f′0^9 * f′1^4 * f′′1^2 -
+        60 * f0^11 * f1^2 * f′0^9 * f′1^6 * f′′1 - 120 * f0^11 * f1 * f′0^9 * f′1^8 +
+        120 * f0^11 * f′0^9 * f′1^9 * x1 - 5 * f0^10 * f1^6 * f′0^9 * f′1^3 * f′′′′′1 +
+        75 * f0^10 * f1^6 * f′0^9 * f′1^2 * f′′1 * f′′′′1 +
+        50 * f0^10 * f1^6 * f′0^9 * f′1^2 * f′′′1^2 -
+        525 * f0^10 * f1^6 * f′0^9 * f′1 * f′′1^2 * f′′′1 +
+        525 * f0^10 * f1^6 * f′0^9 * f′′1^4 +
+        f0^10 * f1^6 * f′0^3 * f′1^9 * f′′′′′0 -
+        15 * f0^10 * f1^6 * f′0^2 * f′1^9 * f′′0 * f′′′′0 -
+        10 * f0^10 * f1^6 * f′0^2 * f′1^9 * f′′′0^2 +
+        105 * f0^10 * f1^6 * f′0 * f′1^9 * f′′0^2 * f′′′0 -
+        105 * f0^10 * f1^6 * f′1^9 * f′′0^4 +
+        55 * f0^10 * f1^5 * f′0^9 * f′1^4 * f′′′′1 +
+        550 * f0^10 * f1^5 * f′0^9 * f′1^3 * f′′1 * f′′′1 +
+        825 * f0^10 * f1^5 * f′0^9 * f′1^2 * f′′1^2 -
+        220 * f0^10 * f1^4 * f′0^9 * f′1^5 * f′′′1 +
+        660 * f0^10 * f1^4 * f′0^9 * f′1^4 * f′′1^2 +
+        660 * f0^10 * f1^3 * f′0^9 * f′1^6 * f′′1 +
+        1320 * f0^10 * f1^2 * f′0^9 * f′1^8 - 1320 * f0^10 * f1 * f′0^9 * f′1^9 * x1 +
+        10 * f0^9 * f1^7 * f′0^9 * f′1^3 * f′′′′′1 -
+        150 * f0^9 * f1^7 * f′0^9 * f′1^2 * f′′1 * f′′′′1 -
+        100 * f0^9 * f1^7 * f′0^9 * f′1^2 * f′′′1^2 +
+        1050 * f0^9 * f1^7 * f′0^9 * f′1 * f′′1^2 * f′′′1 -
+        1050 * f0^9 * f1^7 * f′0^9 * f′′1^4 - 5 * f0^9 * f1^7 * f′0^3 * f′1^9 * f′′′′′0 +
+        75 * f0^9 * f1^7 * f′0^2 * f′1^9 * f′′0 * f′′′′0 +
+        50 * f0^9 * f1^7 * f′0^2 * f′1^9 * f′′′0^2 -
+        525 * f0^9 * f1^7 * f′0 * f′1^9 * f′′0^2 * f′′′0 +
+        525 * f0^9 * f1^7 * f′1^9 * f′′0^4 - 170 * f0^9 * f1^6 * f′0^9 * f′1^4 * f′′′′1 -
+        1700 * f0^9 * f1^6 * f′0^9 * f′1^3 * f′′1 * f′′′1 -
+        2550 * f0^9 * f1^6 * f′0^9 * f′1^2 * f′′1^2 -
+        35 * f0^9 * f1^6 * f′0^4 * f′1^9 * f′′′′0 -
+        350 * f0^9 * f1^6 * f′0^3 * f′1^9 * f′′0 * f′′′0 -
+        525 * f0^9 * f1^6 * f′0^2 * f′1^9 * f′′0^2 +
+        1100 * f0^9 * f1^5 * f′0^9 * f′1^5 * f′′′1 -
+        3300 * f0^9 * f1^5 * f′0^9 * f′1^4 * f′′1^2 -
+        3300 * f0^9 * f1^4 * f′0^9 * f′1^6 * f′′1 - 6600 * f0^9 * f1^3 * f′0^9 * f′1^8 +
+        6600 * f0^9 * f1^2 * f′0^9 * f′1^9 * x1 -
+        10 * f0^8 * f1^8 * f′0^9 * f′1^3 * f′′′′′1 +
+        150 * f0^8 * f1^8 * f′0^9 * f′1^2 * f′′1 * f′′′′1 +
+        100 * f0^8 * f1^8 * f′0^9 * f′1^2 * f′′′1^2 -
+        1050 * f0^8 * f1^8 * f′0^9 * f′1 * f′′1^2 * f′′′1 +
+        1050 * f0^8 * f1^8 * f′0^9 * f′′1^4 +
+        10 * f0^8 * f1^8 * f′0^3 * f′1^9 * f′′′′′0 -
+        150 * f0^8 * f1^8 * f′0^2 * f′1^9 * f′′0 * f′′′′0 -
+        100 * f0^8 * f1^8 * f′0^2 * f′1^9 * f′′′0^2 +
+        1050 * f0^8 * f1^8 * f′0 * f′1^9 * f′′0^2 * f′′′0 -
+        1050 * f0^8 * f1^8 * f′1^9 * f′′0^4 +
+        230 * f0^8 * f1^7 * f′0^9 * f′1^4 * f′′′′1 +
+        2300 * f0^8 * f1^7 * f′0^9 * f′1^3 * f′′1 * f′′′1 +
+        3450 * f0^8 * f1^7 * f′0^9 * f′1^2 * f′′1^2 +
+        145 * f0^8 * f1^7 * f′0^4 * f′1^9 * f′′′′0 +
+        1450 * f0^8 * f1^7 * f′0^3 * f′1^9 * f′′0 * f′′′0 +
+        2175 * f0^8 * f1^7 * f′0^2 * f′1^9 * f′′0^2 -
+        2180 * f0^8 * f1^6 * f′0^9 * f′1^5 * f′′′1 +
+        6540 * f0^8 * f1^6 * f′0^9 * f′1^4 * f′′1^2 +
+        560 * f0^8 * f1^6 * f′0^5 * f′1^9 * f′′′0 -
+        1680 * f0^8 * f1^6 * f′0^4 * f′1^9 * f′′0^2 +
+        9900 * f0^8 * f1^5 * f′0^9 * f′1^6 * f′′1 +
+        19800 * f0^8 * f1^4 * f′0^9 * f′1^8 - 19800 * f0^8 * f1^3 * f′0^9 * f′1^9 * x1 +
+        5 * f0^7 * f1^9 * f′0^9 * f′1^3 * f′′′′′1 -
+        75 * f0^7 * f1^9 * f′0^9 * f′1^2 * f′′1 * f′′′′1 -
+        50 * f0^7 * f1^9 * f′0^9 * f′1^2 * f′′′1^2 +
+        525 * f0^7 * f1^9 * f′0^9 * f′1 * f′′1^2 * f′′′1 -
+        525 * f0^7 * f1^9 * f′0^9 * f′′1^4 - 10 * f0^7 * f1^9 * f′0^3 * f′1^9 * f′′′′′0 +
+        150 * f0^7 * f1^9 * f′0^2 * f′1^9 * f′′0 * f′′′′0 +
+        100 * f0^7 * f1^9 * f′0^2 * f′1^9 * f′′′0^2 -
+        1050 * f0^7 * f1^9 * f′0 * f′1^9 * f′′0^2 * f′′′0 +
+        1050 * f0^7 * f1^9 * f′1^9 * f′′0^4 - 145 * f0^7 * f1^8 * f′0^9 * f′1^4 * f′′′′1 -
+        1450 * f0^7 * f1^8 * f′0^9 * f′1^3 * f′′1 * f′′′1 -
+        2175 * f0^7 * f1^8 * f′0^9 * f′1^2 * f′′1^2 -
+        230 * f0^7 * f1^8 * f′0^4 * f′1^9 * f′′′′0 -
+        2300 * f0^7 * f1^8 * f′0^3 * f′1^9 * f′′0 * f′′′0 -
+        3450 * f0^7 * f1^8 * f′0^2 * f′1^9 * f′′0^2 +
+        1840 * f0^7 * f1^7 * f′0^9 * f′1^5 * f′′′1 -
+        5520 * f0^7 * f1^7 * f′0^9 * f′1^4 * f′′1^2 -
+        1840 * f0^7 * f1^7 * f′0^5 * f′1^9 * f′′′0 +
+        5520 * f0^7 * f1^7 * f′0^4 * f′1^9 * f′′0^2 -
+        12240 * f0^7 * f1^6 * f′0^9 * f′1^6 * f′′1 -
+        5040 * f0^7 * f1^6 * f′0^6 * f′1^9 * f′′0 - 39600 * f0^7 * f1^5 * f′0^9 * f′1^8 +
+        39600 * f0^7 * f1^4 * f′0^9 * f′1^9 * x1 - f0^6 * f1^10 * f′0^9 * f′1^3 * f′′′′′1 +
+        15 * f0^6 * f1^10 * f′0^9 * f′1^2 * f′′1 * f′′′′1 +
+        10 * f0^6 * f1^10 * f′0^9 * f′1^2 * f′′′1^2 -
+        105 * f0^6 * f1^10 * f′0^9 * f′1 * f′′1^2 * f′′′1 +
+        105 * f0^6 * f1^10 * f′0^9 * f′′1^4 +
+        5 * f0^6 * f1^10 * f′0^3 * f′1^9 * f′′′′′0 -
+        75 * f0^6 * f1^10 * f′0^2 * f′1^9 * f′′0 * f′′′′0 -
+        50 * f0^6 * f1^10 * f′0^2 * f′1^9 * f′′′0^2 +
+        525 * f0^6 * f1^10 * f′0 * f′1^9 * f′′0^2 * f′′′0 -
+        525 * f0^6 * f1^10 * f′1^9 * f′′0^4 +
+        35 * f0^6 * f1^9 * f′0^9 * f′1^4 * f′′′′1 +
+        350 * f0^6 * f1^9 * f′0^9 * f′1^3 * f′′1 * f′′′1 +
+        525 * f0^6 * f1^9 * f′0^9 * f′1^2 * f′′1^2 +
+        170 * f0^6 * f1^9 * f′0^4 * f′1^9 * f′′′′0 +
+        1700 * f0^6 * f1^9 * f′0^3 * f′1^9 * f′′0 * f′′′0 +
+        2550 * f0^6 * f1^9 * f′0^2 * f′1^9 * f′′0^2 -
+        560 * f0^6 * f1^8 * f′0^9 * f′1^5 * f′′′1 +
+        1680 * f0^6 * f1^8 * f′0^9 * f′1^4 * f′′1^2 +
+        2180 * f0^6 * f1^8 * f′0^5 * f′1^9 * f′′′0 -
+        6540 * f0^6 * f1^8 * f′0^4 * f′1^9 * f′′0^2 +
+        5040 * f0^6 * f1^7 * f′0^9 * f′1^6 * f′′1 +
+        12240 * f0^6 * f1^7 * f′0^6 * f′1^9 * f′′0 +
+        25200 * f0^6 * f1^6 * f′0^9 * f′1^8 - 25200 * f0^6 * f1^6 * f′0^8 * f′1^9 -
+        55440 * f0^6 * f1^5 * f′0^9 * f′1^9 * x1 - f0^5 * f1^11 * f′0^3 * f′1^9 * f′′′′′0 +
+        15 * f0^5 * f1^11 * f′0^2 * f′1^9 * f′′0 * f′′′′0 +
+        10 * f0^5 * f1^11 * f′0^2 * f′1^9 * f′′′0^2 -
+        105 * f0^5 * f1^11 * f′0 * f′1^9 * f′′0^2 * f′′′0 +
+        105 * f0^5 * f1^11 * f′1^9 * f′′0^4 - 55 * f0^5 * f1^10 * f′0^4 * f′1^9 * f′′′′0 -
+        550 * f0^5 * f1^10 * f′0^3 * f′1^9 * f′′0 * f′′′0 -
+        825 * f0^5 * f1^10 * f′0^2 * f′1^9 * f′′0^2 -
+        1100 * f0^5 * f1^9 * f′0^5 * f′1^9 * f′′′0 +
+        3300 * f0^5 * f1^9 * f′0^4 * f′1^9 * f′′0^2 -
+        9900 * f0^5 * f1^8 * f′0^6 * f′1^9 * f′′0 +
+        39600 * f0^5 * f1^7 * f′0^8 * f′1^9 +
+        55440 * f0^5 * f1^6 * f′0^9 * f′1^9 * x0 +
+        5 * f0^4 * f1^11 * f′0^4 * f′1^9 * f′′′′0 +
+        50 * f0^4 * f1^11 * f′0^3 * f′1^9 * f′′0 * f′′′0 +
+        75 * f0^4 * f1^11 * f′0^2 * f′1^9 * f′′0^2 +
+        220 * f0^4 * f1^10 * f′0^5 * f′1^9 * f′′′0 -
+        660 * f0^4 * f1^10 * f′0^4 * f′1^9 * f′′0^2 +
+        3300 * f0^4 * f1^9 * f′0^6 * f′1^9 * f′′0 - 19800 * f0^4 * f1^8 * f′0^8 * f′1^9 -
+        39600 * f0^4 * f1^7 * f′0^9 * f′1^9 * x0 -
+        20 * f0^3 * f1^11 * f′0^5 * f′1^9 * f′′′0 +
+        60 * f0^3 * f1^11 * f′0^4 * f′1^9 * f′′0^2 -
+        660 * f0^3 * f1^10 * f′0^6 * f′1^9 * f′′0 +
+        6600 * f0^3 * f1^9 * f′0^8 * f′1^9 +
+        19800 * f0^3 * f1^8 * f′0^9 * f′1^9 * x0 +
+        60 * f0^2 * f1^11 * f′0^6 * f′1^9 * f′′0 - 1320 * f0^2 * f1^10 * f′0^8 * f′1^9 -
+        6600 * f0^2 * f1^9 * f′0^9 * f′1^9 * x0 +
+        120 * f0 * f1^11 * f′0^8 * f′1^9 +
+        1320 * f0 * f1^10 * f′0^9 * f′1^9 * x0 - 120 * f1^11 * f′0^9 * f′1^9 * x0
+    ) / (
+        120 *
+        f′0^9 *
+        f′1^9 *
+        (
+            f0^11 - 11 * f0^10 * f1 + 55 * f0^9 * f1^2 - 165 * f0^8 * f1^3 +
+            330 * f0^7 * f1^4 - 462 * f0^6 * f1^5 + 462 * f0^5 * f1^6 - 330 * f0^4 * f1^7 +
+            165 * f0^3 * f1^8 - 55 * f0^2 * f1^9 + 11 * f0 * f1^10 - f1^11
+        )
+    )
 end
 
 function lmm(::LithBoonkkampIJzerman{3,5}, xs, fs, f′s, f′′s, f′′′s, f′′′′s, f′′′′′s)
-    x0,x1,x2 = xs
-    f0,f1,f2 = fs
-    f′0,f′1,f′2 = f′s
-    f′′0,f′′1,f′′2 = f′′s
-    f′′′0,f′′′1,f′′′2 = f′′′s
-    f′′′′0,f′′′′1,f′′′′2 = f′′′′s
-    f′′′′′0,f′′′′′1,f′′′′′2 = f′′′′′s
+    x0, x1, x2 = xs
+    f0, f1, f2 = fs
+    f′0, f′1, f′2 = f′s
+    f′′0, f′′1, f′′2 = f′′s
+    f′′′0, f′′′1, f′′′2 = f′′′s
+    f′′′′0, f′′′′1, f′′′′2 = f′′′′s
+    f′′′′′0, f′′′′′1, f′′′′′2 = f′′′′′s
 
     error("not computed")
-
 end
 
 ## n = 6
-function lmm(::LithBoonkkampIJzerman{1,6}, xs, fs, f′s, f′′s, f′′′s, f′′′′s, f′′′′′s, f′′′′′′s)
-
+function lmm(
+    ::LithBoonkkampIJzerman{1,6},
+    xs,
+    fs,
+    f′s,
+    f′′s,
+    f′′′s,
+    f′′′′s,
+    f′′′′′s,
+    f′′′′′′s,
+)
     x0 = xs[1]
-    f0= fs[1]
+    f0 = fs[1]
     f′0 = f′s[1]
     f′′0 = f′′s[1]
     f′′′0 = f′′′s[1]
@@ -834,25 +1301,343 @@ function lmm(::LithBoonkkampIJzerman{1,6}, xs, fs, f′s, f′′s, f′′′s,
     f′′′′′0 = f′′′′′s[1]
     f′′′′′′0 = f′′′′′′s[1]
 
-    (f0^6*(-f′0^4*f′′′′′′0 + 21*f′0^3*f′′0*f′′′′′0 + 35*f′0^3*f′′′0*f′′′′0 - 210*f′0^2*f′′0^2*f′′′′0 - 280*f′0^2*f′′0*f′′′0^2 + 1260*f′0*f′′0^3*f′′′0 - 945*f′′0^5) + 6*f0^5*f′0^2*(f′0^3*f′′′′′0 - 15*f′0^2*f′′0*f′′′′0 - 10*f′0^2*f′′′0^2 + 105*f′0*f′′0^2*f′′′0 - 105*f′′0^4) - 30*f0^4*f′0^4*(f′0^2*f′′′′0 + 10*f′0*f′′0*f′′′0 + 15*f′′0^2) + 120*f0^3*f′0^6*(f′0*f′′′0 - 3*f′′0^2) - 360*f0^2*f′0^8*f′′0 - 720*f0*f′0^10 + 720*f′0^11*x0)/(720*f′0^11)
-
-
+    (
+        f0^6 * (
+            -f′0^4 * f′′′′′′0 + 21 * f′0^3 * f′′0 * f′′′′′0 + 35 * f′0^3 * f′′′0 * f′′′′0 -
+            210 * f′0^2 * f′′0^2 * f′′′′0 - 280 * f′0^2 * f′′0 * f′′′0^2 +
+            1260 * f′0 * f′′0^3 * f′′′0 - 945 * f′′0^5
+        ) +
+        6 *
+        f0^5 *
+        f′0^2 *
+        (
+            f′0^3 * f′′′′′0 - 15 * f′0^2 * f′′0 * f′′′′0 - 10 * f′0^2 * f′′′0^2 +
+            105 * f′0 * f′′0^2 * f′′′0 - 105 * f′′0^4
+        ) - 30 * f0^4 * f′0^4 * (f′0^2 * f′′′′0 + 10 * f′0 * f′′0 * f′′′0 + 15 * f′′0^2) +
+        120 * f0^3 * f′0^6 * (f′0 * f′′′0 - 3 * f′′0^2) - 360 * f0^2 * f′0^8 * f′′0 -
+        720 * f0 * f′0^10 + 720 * f′0^11 * x0
+    ) / (720 * f′0^11)
 end
 
-function lmm(::LithBoonkkampIJzerman{2,6}, xs, fs, f′s, f′′s, f′′′s, f′′′′s, f′′′′′s, f′′′′′′s)
+function lmm(
+    ::LithBoonkkampIJzerman{2,6},
+    xs,
+    fs,
+    f′s,
+    f′′s,
+    f′′′s,
+    f′′′′s,
+    f′′′′′s,
+    f′′′′′′s,
+)
+    x0, x1 = xs
+    f0, f1 = fs
+    f′0, f′1 = f′s
+    f′′0, f′′1 = f′′s
+    f′′′0, f′′′1 = f′′′s
+    f′′′′0, f′′′′1 = f′′′′s
+    f′′′′′0, f′′′′′1 = f′′′′′s
+    f′′′′′′0, f′′′′′′1 = f′′′′′′s
 
-    x0,x1 = xs
-    f0,f1 = fs
-    f′0,f′1 = f′s
-    f′′0,f′′1 = f′′s
-    f′′′0,f′′′1 = f′′′s
-    f′′′′0,f′′′′1 = f′′′′s
-    f′′′′′0,f′′′′′1 = f′′′′′s
-    f′′′′′′0,f′′′′′′1 = f′′′′′′s
-
-    (-f0^13*f1^6*f′0^11*f′1^4*f′′′′′′1 + 21*f0^13*f1^6*f′0^11*f′1^3*f′′1*f′′′′′1 + 35*f0^13*f1^6*f′0^11*f′1^3*f′′′1*f′′′′1 - 210*f0^13*f1^6*f′0^11*f′1^2*f′′1^2*f′′′′1 - 280*f0^13*f1^6*f′0^11*f′1^2*f′′1*f′′′1^2 + 1260*f0^13*f1^6*f′0^11*f′1*f′′1^3*f′′′1 - 945*f0^13*f1^6*f′0^11*f′′1^5 + 6*f0^13*f1^5*f′0^11*f′1^5*f′′′′′1 - 90*f0^13*f1^5*f′0^11*f′1^4*f′′1*f′′′′1 - 60*f0^13*f1^5*f′0^11*f′1^4*f′′′1^2 + 630*f0^13*f1^5*f′0^11*f′1^3*f′′1^2*f′′′1 - 630*f0^13*f1^5*f′0^11*f′1^2*f′′1^4 - 30*f0^13*f1^4*f′0^11*f′1^6*f′′′′1 - 300*f0^13*f1^4*f′0^11*f′1^5*f′′1*f′′′1 - 450*f0^13*f1^4*f′0^11*f′1^4*f′′1^2 + 120*f0^13*f1^3*f′0^11*f′1^7*f′′′1 - 360*f0^13*f1^3*f′0^11*f′1^6*f′′1^2 - 360*f0^13*f1^2*f′0^11*f′1^8*f′′1 - 720*f0^13*f1*f′0^11*f′1^10 + 720*f0^13*f′0^11*f′1^11*x1 + 6*f0^12*f1^7*f′0^11*f′1^4*f′′′′′′1 - 126*f0^12*f1^7*f′0^11*f′1^3*f′′1*f′′′′′1 - 210*f0^12*f1^7*f′0^11*f′1^3*f′′′1*f′′′′1 + 1260*f0^12*f1^7*f′0^11*f′1^2*f′′1^2*f′′′′1 + 1680*f0^12*f1^7*f′0^11*f′1^2*f′′1*f′′′1^2 - 7560*f0^12*f1^7*f′0^11*f′1*f′′1^3*f′′′1 + 5670*f0^12*f1^7*f′0^11*f′′1^5 + f0^12*f1^7*f′0^4*f′1^11*f′′′′′′0 - 21*f0^12*f1^7*f′0^3*f′1^11*f′′0*f′′′′′0 - 35*f0^12*f1^7*f′0^3*f′1^11*f′′′0*f′′′′0 + 210*f0^12*f1^7*f′0^2*f′1^11*f′′0^2*f′′′′0 + 280*f0^12*f1^7*f′0^2*f′1^11*f′′0*f′′′0^2 - 1260*f0^12*f1^7*f′0*f′1^11*f′′0^3*f′′′0 + 945*f0^12*f1^7*f′1^11*f′′0^5 - 78*f0^12*f1^6*f′0^11*f′1^5*f′′′′′1 + 1170*f0^12*f1^6*f′0^11*f′1^4*f′′1*f′′′′1 + 780*f0^12*f1^6*f′0^11*f′1^4*f′′′1^2 - 8190*f0^12*f1^6*f′0^11*f′1^3*f′′1^2*f′′′1 + 8190*f0^12*f1^6*f′0^11*f′1^2*f′′1^4 + 390*f0^12*f1^5*f′0^11*f′1^6*f′′′′1 + 3900*f0^12*f1^5*f′0^11*f′1^5*f′′1*f′′′1 + 5850*f0^12*f1^5*f′0^11*f′1^4*f′′1^2 - 1560*f0^12*f1^4*f′0^11*f′1^7*f′′′1 + 4680*f0^12*f1^4*f′0^11*f′1^6*f′′1^2 + 4680*f0^12*f1^3*f′0^11*f′1^8*f′′1 + 9360*f0^12*f1^2*f′0^11*f′1^10 - 9360*f0^12*f1*f′0^11*f′1^11*x1 - 15*f0^11*f1^8*f′0^11*f′1^4*f′′′′′′1 + 315*f0^11*f1^8*f′0^11*f′1^3*f′′1*f′′′′′1 + 525*f0^11*f1^8*f′0^11*f′1^3*f′′′1*f′′′′1 - 3150*f0^11*f1^8*f′0^11*f′1^2*f′′1^2*f′′′′1 - 4200*f0^11*f1^8*f′0^11*f′1^2*f′′1*f′′′1^2 + 18900*f0^11*f1^8*f′0^11*f′1*f′′1^3*f′′′1 - 14175*f0^11*f1^8*f′0^11*f′′1^5 - 6*f0^11*f1^8*f′0^4*f′1^11*f′′′′′′0 + 126*f0^11*f1^8*f′0^3*f′1^11*f′′0*f′′′′′0 + 210*f0^11*f1^8*f′0^3*f′1^11*f′′′0*f′′′′0 - 1260*f0^11*f1^8*f′0^2*f′1^11*f′′0^2*f′′′′0 - 1680*f0^11*f1^8*f′0^2*f′1^11*f′′0*f′′′0^2 + 7560*f0^11*f1^8*f′0*f′1^11*f′′0^3*f′′′0 - 5670*f0^11*f1^8*f′1^11*f′′0^5 + 300*f0^11*f1^7*f′0^11*f′1^5*f′′′′′1 - 4500*f0^11*f1^7*f′0^11*f′1^4*f′′1*f′′′′1 - 3000*f0^11*f1^7*f′0^11*f′1^4*f′′′1^2 + 31500*f0^11*f1^7*f′0^11*f′1^3*f′′1^2*f′′′1 - 31500*f0^11*f1^7*f′0^11*f′1^2*f′′1^4 - 48*f0^11*f1^7*f′0^5*f′1^11*f′′′′′0 + 720*f0^11*f1^7*f′0^4*f′1^11*f′′0*f′′′′0 + 480*f0^11*f1^7*f′0^4*f′1^11*f′′′0^2 - 5040*f0^11*f1^7*f′0^3*f′1^11*f′′0^2*f′′′0 + 5040*f0^11*f1^7*f′0^2*f′1^11*f′′0^4 - 2340*f0^11*f1^6*f′0^11*f′1^6*f′′′′1 - 23400*f0^11*f1^6*f′0^11*f′1^5*f′′1*f′′′1 - 35100*f0^11*f1^6*f′0^11*f′1^4*f′′1^2 + 9360*f0^11*f1^5*f′0^11*f′1^7*f′′′1 - 28080*f0^11*f1^5*f′0^11*f′1^6*f′′1^2 - 28080*f0^11*f1^4*f′0^11*f′1^8*f′′1 - 56160*f0^11*f1^3*f′0^11*f′1^10 + 56160*f0^11*f1^2*f′0^11*f′1^11*x1 + 20*f0^10*f1^9*f′0^11*f′1^4*f′′′′′′1 - 420*f0^10*f1^9*f′0^11*f′1^3*f′′1*f′′′′′1 - 700*f0^10*f1^9*f′0^11*f′1^3*f′′′1*f′′′′1 + 4200*f0^10*f1^9*f′0^11*f′1^2*f′′1^2*f′′′′1 + 5600*f0^10*f1^9*f′0^11*f′1^2*f′′1*f′′′1^2 - 25200*f0^10*f1^9*f′0^11*f′1*f′′1^3*f′′′1 + 18900*f0^10*f1^9*f′0^11*f′′1^5 + 15*f0^10*f1^9*f′0^4*f′1^11*f′′′′′′0 - 315*f0^10*f1^9*f′0^3*f′1^11*f′′0*f′′′′′0 - 525*f0^10*f1^9*f′0^3*f′1^11*f′′′0*f′′′′0 + 3150*f0^10*f1^9*f′0^2*f′1^11*f′′0^2*f′′′′0 + 4200*f0^10*f1^9*f′0^2*f′1^11*f′′0*f′′′0^2 - 18900*f0^10*f1^9*f′0*f′1^11*f′′0^3*f′′′0 + 14175*f0^10*f1^9*f′1^11*f′′0^5 - 540*f0^10*f1^8*f′0^11*f′1^5*f′′′′′1 + 8100*f0^10*f1^8*f′0^11*f′1^4*f′′1*f′′′′1 + 5400*f0^10*f1^8*f′0^11*f′1^4*f′′′1^2 - 56700*f0^10*f1^8*f′0^11*f′1^3*f′′1^2*f′′′1 + 56700*f0^10*f1^8*f′0^11*f′1^2*f′′1^4 + 246*f0^10*f1^8*f′0^5*f′1^11*f′′′′′0 - 3690*f0^10*f1^8*f′0^4*f′1^11*f′′0*f′′′′0 - 2460*f0^10*f1^8*f′0^4*f′1^11*f′′′0^2 + 25830*f0^10*f1^8*f′0^3*f′1^11*f′′0^2*f′′′0 - 25830*f0^10*f1^8*f′0^2*f′1^11*f′′0^4 + 6060*f0^10*f1^7*f′0^11*f′1^6*f′′′′1 + 60600*f0^10*f1^7*f′0^11*f′1^5*f′′1*f′′′1 + 90900*f0^10*f1^7*f′0^11*f′1^4*f′′1^2 + 1080*f0^10*f1^7*f′0^6*f′1^11*f′′′′0 + 10800*f0^10*f1^7*f′0^5*f′1^11*f′′0*f′′′0 + 16200*f0^10*f1^7*f′0^4*f′1^11*f′′0^2 - 34320*f0^10*f1^6*f′0^11*f′1^7*f′′′1 + 102960*f0^10*f1^6*f′0^11*f′1^6*f′′1^2 + 102960*f0^10*f1^5*f′0^11*f′1^8*f′′1 + 205920*f0^10*f1^4*f′0^11*f′1^10 - 205920*f0^10*f1^3*f′0^11*f′1^11*x1 - 15*f0^9*f1^10*f′0^11*f′1^4*f′′′′′′1 + 315*f0^9*f1^10*f′0^11*f′1^3*f′′1*f′′′′′1 + 525*f0^9*f1^10*f′0^11*f′1^3*f′′′1*f′′′′1 - 3150*f0^9*f1^10*f′0^11*f′1^2*f′′1^2*f′′′′1 - 4200*f0^9*f1^10*f′0^11*f′1^2*f′′1*f′′′1^2 + 18900*f0^9*f1^10*f′0^11*f′1*f′′1^3*f′′′1 - 14175*f0^9*f1^10*f′0^11*f′′1^5 - 20*f0^9*f1^10*f′0^4*f′1^11*f′′′′′′0 + 420*f0^9*f1^10*f′0^3*f′1^11*f′′0*f′′′′′0 + 700*f0^9*f1^10*f′0^3*f′1^11*f′′′0*f′′′′0 - 4200*f0^9*f1^10*f′0^2*f′1^11*f′′0^2*f′′′′0 - 5600*f0^9*f1^10*f′0^2*f′1^11*f′′0*f′′′0^2 + 25200*f0^9*f1^10*f′0*f′1^11*f′′0^3*f′′′0 - 18900*f0^9*f1^10*f′1^11*f′′0^5 + 510*f0^9*f1^9*f′0^11*f′1^5*f′′′′′1 - 7650*f0^9*f1^9*f′0^11*f′1^4*f′′1*f′′′′1 - 5100*f0^9*f1^9*f′0^11*f′1^4*f′′′1^2 + 53550*f0^9*f1^9*f′0^11*f′1^3*f′′1^2*f′′′1 - 53550*f0^9*f1^9*f′0^11*f′1^2*f′′1^4 - 510*f0^9*f1^9*f′0^5*f′1^11*f′′′′′0 + 7650*f0^9*f1^9*f′0^4*f′1^11*f′′0*f′′′′0 + 5100*f0^9*f1^9*f′0^4*f′1^11*f′′′0^2 - 53550*f0^9*f1^9*f′0^3*f′1^11*f′′0^2*f′′′0 + 53550*f0^9*f1^9*f′0^2*f′1^11*f′′0^4 - 7590*f0^9*f1^8*f′0^11*f′1^6*f′′′′1 - 75900*f0^9*f1^8*f′0^11*f′1^5*f′′1*f′′′1 - 113850*f0^9*f1^8*f′0^11*f′1^4*f′′1^2 - 4590*f0^9*f1^8*f′0^6*f′1^11*f′′′′0 - 45900*f0^9*f1^8*f′0^5*f′1^11*f′′0*f′′′0 - 68850*f0^9*f1^8*f′0^4*f′1^11*f′′0^2 + 60600*f0^9*f1^7*f′0^11*f′1^7*f′′′1 - 181800*f0^9*f1^7*f′0^11*f′1^6*f′′1^2 - 14400*f0^9*f1^7*f′0^7*f′1^11*f′′′0 + 43200*f0^9*f1^7*f′0^6*f′1^11*f′′0^2 - 257400*f0^9*f1^6*f′0^11*f′1^8*f′′1 - 514800*f0^9*f1^5*f′0^11*f′1^10 + 514800*f0^9*f1^4*f′0^11*f′1^11*x1 + 6*f0^8*f1^11*f′0^11*f′1^4*f′′′′′′1 - 126*f0^8*f1^11*f′0^11*f′1^3*f′′1*f′′′′′1 - 210*f0^8*f1^11*f′0^11*f′1^3*f′′′1*f′′′′1 + 1260*f0^8*f1^11*f′0^11*f′1^2*f′′1^2*f′′′′1 + 1680*f0^8*f1^11*f′0^11*f′1^2*f′′1*f′′′1^2 - 7560*f0^8*f1^11*f′0^11*f′1*f′′1^3*f′′′1 + 5670*f0^8*f1^11*f′0^11*f′′1^5 + 15*f0^8*f1^11*f′0^4*f′1^11*f′′′′′′0 - 315*f0^8*f1^11*f′0^3*f′1^11*f′′0*f′′′′′0 - 525*f0^8*f1^11*f′0^3*f′1^11*f′′′0*f′′′′0 + 3150*f0^8*f1^11*f′0^2*f′1^11*f′′0^2*f′′′′0 + 4200*f0^8*f1^11*f′0^2*f′1^11*f′′0*f′′′0^2 - 18900*f0^8*f1^11*f′0*f′1^11*f′′0^3*f′′′0 + 14175*f0^8*f1^11*f′1^11*f′′0^5 - 246*f0^8*f1^10*f′0^11*f′1^5*f′′′′′1 + 3690*f0^8*f1^10*f′0^11*f′1^4*f′′1*f′′′′1 + 2460*f0^8*f1^10*f′0^11*f′1^4*f′′′1^2 - 25830*f0^8*f1^10*f′0^11*f′1^3*f′′1^2*f′′′1 + 25830*f0^8*f1^10*f′0^11*f′1^2*f′′1^4 + 540*f0^8*f1^10*f′0^5*f′1^11*f′′′′′0 - 8100*f0^8*f1^10*f′0^4*f′1^11*f′′0*f′′′′0 - 5400*f0^8*f1^10*f′0^4*f′1^11*f′′′0^2 + 56700*f0^8*f1^10*f′0^3*f′1^11*f′′0^2*f′′′0 - 56700*f0^8*f1^10*f′0^2*f′1^11*f′′0^4 + 4590*f0^8*f1^9*f′0^11*f′1^6*f′′′′1 + 45900*f0^8*f1^9*f′0^11*f′1^5*f′′1*f′′′1 + 68850*f0^8*f1^9*f′0^11*f′1^4*f′′1^2 + 7590*f0^8*f1^9*f′0^6*f′1^11*f′′′′0 + 75900*f0^8*f1^9*f′0^5*f′1^11*f′′0*f′′′0 + 113850*f0^8*f1^9*f′0^4*f′1^11*f′′0^2 - 48600*f0^8*f1^8*f′0^11*f′1^7*f′′′1 + 145800*f0^8*f1^8*f′0^11*f′1^6*f′′1^2 + 48600*f0^8*f1^8*f′0^7*f′1^11*f′′′0 - 145800*f0^8*f1^8*f′0^6*f′1^11*f′′0^2 + 297000*f0^8*f1^7*f′0^11*f′1^8*f′′1 + 118800*f0^8*f1^7*f′0^8*f′1^11*f′′0 + 926640*f0^8*f1^6*f′0^11*f′1^10 - 926640*f0^8*f1^5*f′0^11*f′1^11*x1 - f0^7*f1^12*f′0^11*f′1^4*f′′′′′′1 + 21*f0^7*f1^12*f′0^11*f′1^3*f′′1*f′′′′′1 + 35*f0^7*f1^12*f′0^11*f′1^3*f′′′1*f′′′′1 - 210*f0^7*f1^12*f′0^11*f′1^2*f′′1^2*f′′′′1 - 280*f0^7*f1^12*f′0^11*f′1^2*f′′1*f′′′1^2 + 1260*f0^7*f1^12*f′0^11*f′1*f′′1^3*f′′′1 - 945*f0^7*f1^12*f′0^11*f′′1^5 - 6*f0^7*f1^12*f′0^4*f′1^11*f′′′′′′0 + 126*f0^7*f1^12*f′0^3*f′1^11*f′′0*f′′′′′0 + 210*f0^7*f1^12*f′0^3*f′1^11*f′′′0*f′′′′0 - 1260*f0^7*f1^12*f′0^2*f′1^11*f′′0^2*f′′′′0 - 1680*f0^7*f1^12*f′0^2*f′1^11*f′′0*f′′′0^2 + 7560*f0^7*f1^12*f′0*f′1^11*f′′0^3*f′′′0 - 5670*f0^7*f1^12*f′1^11*f′′0^5 + 48*f0^7*f1^11*f′0^11*f′1^5*f′′′′′1 - 720*f0^7*f1^11*f′0^11*f′1^4*f′′1*f′′′′1 - 480*f0^7*f1^11*f′0^11*f′1^4*f′′′1^2 + 5040*f0^7*f1^11*f′0^11*f′1^3*f′′1^2*f′′′1 - 5040*f0^7*f1^11*f′0^11*f′1^2*f′′1^4 - 300*f0^7*f1^11*f′0^5*f′1^11*f′′′′′0 + 4500*f0^7*f1^11*f′0^4*f′1^11*f′′0*f′′′′0 + 3000*f0^7*f1^11*f′0^4*f′1^11*f′′′0^2 - 31500*f0^7*f1^11*f′0^3*f′1^11*f′′0^2*f′′′0 + 31500*f0^7*f1^11*f′0^2*f′1^11*f′′0^4 - 1080*f0^7*f1^10*f′0^11*f′1^6*f′′′′1 - 10800*f0^7*f1^10*f′0^11*f′1^5*f′′1*f′′′1 - 16200*f0^7*f1^10*f′0^11*f′1^4*f′′1^2 - 6060*f0^7*f1^10*f′0^6*f′1^11*f′′′′0 - 60600*f0^7*f1^10*f′0^5*f′1^11*f′′0*f′′′0 - 90900*f0^7*f1^10*f′0^4*f′1^11*f′′0^2 + 14400*f0^7*f1^9*f′0^11*f′1^7*f′′′1 - 43200*f0^7*f1^9*f′0^11*f′1^6*f′′1^2 - 60600*f0^7*f1^9*f′0^7*f′1^11*f′′′0 + 181800*f0^7*f1^9*f′0^6*f′1^11*f′′0^2 - 118800*f0^7*f1^8*f′0^11*f′1^8*f′′1 - 297000*f0^7*f1^8*f′0^8*f′1^11*f′′0 - 570240*f0^7*f1^7*f′0^11*f′1^10 + 570240*f0^7*f1^7*f′0^10*f′1^11 + 1235520*f0^7*f1^6*f′0^11*f′1^11*x1 + f0^6*f1^13*f′0^4*f′1^11*f′′′′′′0 - 21*f0^6*f1^13*f′0^3*f′1^11*f′′0*f′′′′′0 - 35*f0^6*f1^13*f′0^3*f′1^11*f′′′0*f′′′′0 + 210*f0^6*f1^13*f′0^2*f′1^11*f′′0^2*f′′′′0 + 280*f0^6*f1^13*f′0^2*f′1^11*f′′0*f′′′0^2 - 1260*f0^6*f1^13*f′0*f′1^11*f′′0^3*f′′′0 + 945*f0^6*f1^13*f′1^11*f′′0^5 + 78*f0^6*f1^12*f′0^5*f′1^11*f′′′′′0 - 1170*f0^6*f1^12*f′0^4*f′1^11*f′′0*f′′′′0 - 780*f0^6*f1^12*f′0^4*f′1^11*f′′′0^2 + 8190*f0^6*f1^12*f′0^3*f′1^11*f′′0^2*f′′′0 - 8190*f0^6*f1^12*f′0^2*f′1^11*f′′0^4 + 2340*f0^6*f1^11*f′0^6*f′1^11*f′′′′0 + 23400*f0^6*f1^11*f′0^5*f′1^11*f′′0*f′′′0 + 35100*f0^6*f1^11*f′0^4*f′1^11*f′′0^2 + 34320*f0^6*f1^10*f′0^7*f′1^11*f′′′0 - 102960*f0^6*f1^10*f′0^6*f′1^11*f′′0^2 + 257400*f0^6*f1^9*f′0^8*f′1^11*f′′0 - 926640*f0^6*f1^8*f′0^10*f′1^11 - 1235520*f0^6*f1^7*f′0^11*f′1^11*x0 - 6*f0^5*f1^13*f′0^5*f′1^11*f′′′′′0 + 90*f0^5*f1^13*f′0^4*f′1^11*f′′0*f′′′′0 + 60*f0^5*f1^13*f′0^4*f′1^11*f′′′0^2 - 630*f0^5*f1^13*f′0^3*f′1^11*f′′0^2*f′′′0 + 630*f0^5*f1^13*f′0^2*f′1^11*f′′0^4 - 390*f0^5*f1^12*f′0^6*f′1^11*f′′′′0 - 3900*f0^5*f1^12*f′0^5*f′1^11*f′′0*f′′′0 - 5850*f0^5*f1^12*f′0^4*f′1^11*f′′0^2 - 9360*f0^5*f1^11*f′0^7*f′1^11*f′′′0 + 28080*f0^5*f1^11*f′0^6*f′1^11*f′′0^2 - 102960*f0^5*f1^10*f′0^8*f′1^11*f′′0 + 514800*f0^5*f1^9*f′0^10*f′1^11 + 926640*f0^5*f1^8*f′0^11*f′1^11*x0 + 30*f0^4*f1^13*f′0^6*f′1^11*f′′′′0 + 300*f0^4*f1^13*f′0^5*f′1^11*f′′0*f′′′0 + 450*f0^4*f1^13*f′0^4*f′1^11*f′′0^2 + 1560*f0^4*f1^12*f′0^7*f′1^11*f′′′0 - 4680*f0^4*f1^12*f′0^6*f′1^11*f′′0^2 + 28080*f0^4*f1^11*f′0^8*f′1^11*f′′0 - 205920*f0^4*f1^10*f′0^10*f′1^11 - 514800*f0^4*f1^9*f′0^11*f′1^11*x0 - 120*f0^3*f1^13*f′0^7*f′1^11*f′′′0 + 360*f0^3*f1^13*f′0^6*f′1^11*f′′0^2 - 4680*f0^3*f1^12*f′0^8*f′1^11*f′′0 + 56160*f0^3*f1^11*f′0^10*f′1^11 + 205920*f0^3*f1^10*f′0^11*f′1^11*x0 + 360*f0^2*f1^13*f′0^8*f′1^11*f′′0 - 9360*f0^2*f1^12*f′0^10*f′1^11 - 56160*f0^2*f1^11*f′0^11*f′1^11*x0 + 720*f0*f1^13*f′0^10*f′1^11 + 9360*f0*f1^12*f′0^11*f′1^11*x0 - 720*f1^13*f′0^11*f′1^11*x0)/(720*f′0^11*f′1^11*(f0^13 - 13*f0^12*f1 + 78*f0^11*f1^2 - 286*f0^10*f1^3 + 715*f0^9*f1^4 - 1287*f0^8*f1^5 + 1716*f0^7*f1^6 - 1716*f0^6*f1^7 + 1287*f0^5*f1^8 - 715*f0^4*f1^9 + 286*f0^3*f1^10 - 78*f0^2*f1^11 + 13*f0*f1^12 - f1^13))
+    (
+        -f0^13 * f1^6 * f′0^11 * f′1^4 * f′′′′′′1 +
+        21 * f0^13 * f1^6 * f′0^11 * f′1^3 * f′′1 * f′′′′′1 +
+        35 * f0^13 * f1^6 * f′0^11 * f′1^3 * f′′′1 * f′′′′1 -
+        210 * f0^13 * f1^6 * f′0^11 * f′1^2 * f′′1^2 * f′′′′1 -
+        280 * f0^13 * f1^6 * f′0^11 * f′1^2 * f′′1 * f′′′1^2 +
+        1260 * f0^13 * f1^6 * f′0^11 * f′1 * f′′1^3 * f′′′1 -
+        945 * f0^13 * f1^6 * f′0^11 * f′′1^5 + 6 * f0^13 * f1^5 * f′0^11 * f′1^5 * f′′′′′1 -
+        90 * f0^13 * f1^5 * f′0^11 * f′1^4 * f′′1 * f′′′′1 -
+        60 * f0^13 * f1^5 * f′0^11 * f′1^4 * f′′′1^2 +
+        630 * f0^13 * f1^5 * f′0^11 * f′1^3 * f′′1^2 * f′′′1 -
+        630 * f0^13 * f1^5 * f′0^11 * f′1^2 * f′′1^4 -
+        30 * f0^13 * f1^4 * f′0^11 * f′1^6 * f′′′′1 -
+        300 * f0^13 * f1^4 * f′0^11 * f′1^5 * f′′1 * f′′′1 -
+        450 * f0^13 * f1^4 * f′0^11 * f′1^4 * f′′1^2 +
+        120 * f0^13 * f1^3 * f′0^11 * f′1^7 * f′′′1 -
+        360 * f0^13 * f1^3 * f′0^11 * f′1^6 * f′′1^2 -
+        360 * f0^13 * f1^2 * f′0^11 * f′1^8 * f′′1 - 720 * f0^13 * f1 * f′0^11 * f′1^10 +
+        720 * f0^13 * f′0^11 * f′1^11 * x1 +
+        6 * f0^12 * f1^7 * f′0^11 * f′1^4 * f′′′′′′1 -
+        126 * f0^12 * f1^7 * f′0^11 * f′1^3 * f′′1 * f′′′′′1 -
+        210 * f0^12 * f1^7 * f′0^11 * f′1^3 * f′′′1 * f′′′′1 +
+        1260 * f0^12 * f1^7 * f′0^11 * f′1^2 * f′′1^2 * f′′′′1 +
+        1680 * f0^12 * f1^7 * f′0^11 * f′1^2 * f′′1 * f′′′1^2 -
+        7560 * f0^12 * f1^7 * f′0^11 * f′1 * f′′1^3 * f′′′1 +
+        5670 * f0^12 * f1^7 * f′0^11 * f′′1^5 +
+        f0^12 * f1^7 * f′0^4 * f′1^11 * f′′′′′′0 -
+        21 * f0^12 * f1^7 * f′0^3 * f′1^11 * f′′0 * f′′′′′0 -
+        35 * f0^12 * f1^7 * f′0^3 * f′1^11 * f′′′0 * f′′′′0 +
+        210 * f0^12 * f1^7 * f′0^2 * f′1^11 * f′′0^2 * f′′′′0 +
+        280 * f0^12 * f1^7 * f′0^2 * f′1^11 * f′′0 * f′′′0^2 -
+        1260 * f0^12 * f1^7 * f′0 * f′1^11 * f′′0^3 * f′′′0 +
+        945 * f0^12 * f1^7 * f′1^11 * f′′0^5 -
+        78 * f0^12 * f1^6 * f′0^11 * f′1^5 * f′′′′′1 +
+        1170 * f0^12 * f1^6 * f′0^11 * f′1^4 * f′′1 * f′′′′1 +
+        780 * f0^12 * f1^6 * f′0^11 * f′1^4 * f′′′1^2 -
+        8190 * f0^12 * f1^6 * f′0^11 * f′1^3 * f′′1^2 * f′′′1 +
+        8190 * f0^12 * f1^6 * f′0^11 * f′1^2 * f′′1^4 +
+        390 * f0^12 * f1^5 * f′0^11 * f′1^6 * f′′′′1 +
+        3900 * f0^12 * f1^5 * f′0^11 * f′1^5 * f′′1 * f′′′1 +
+        5850 * f0^12 * f1^5 * f′0^11 * f′1^4 * f′′1^2 -
+        1560 * f0^12 * f1^4 * f′0^11 * f′1^7 * f′′′1 +
+        4680 * f0^12 * f1^4 * f′0^11 * f′1^6 * f′′1^2 +
+        4680 * f0^12 * f1^3 * f′0^11 * f′1^8 * f′′1 +
+        9360 * f0^12 * f1^2 * f′0^11 * f′1^10 - 9360 * f0^12 * f1 * f′0^11 * f′1^11 * x1 -
+        15 * f0^11 * f1^8 * f′0^11 * f′1^4 * f′′′′′′1 +
+        315 * f0^11 * f1^8 * f′0^11 * f′1^3 * f′′1 * f′′′′′1 +
+        525 * f0^11 * f1^8 * f′0^11 * f′1^3 * f′′′1 * f′′′′1 -
+        3150 * f0^11 * f1^8 * f′0^11 * f′1^2 * f′′1^2 * f′′′′1 -
+        4200 * f0^11 * f1^8 * f′0^11 * f′1^2 * f′′1 * f′′′1^2 +
+        18900 * f0^11 * f1^8 * f′0^11 * f′1 * f′′1^3 * f′′′1 -
+        14175 * f0^11 * f1^8 * f′0^11 * f′′1^5 -
+        6 * f0^11 * f1^8 * f′0^4 * f′1^11 * f′′′′′′0 +
+        126 * f0^11 * f1^8 * f′0^3 * f′1^11 * f′′0 * f′′′′′0 +
+        210 * f0^11 * f1^8 * f′0^3 * f′1^11 * f′′′0 * f′′′′0 -
+        1260 * f0^11 * f1^8 * f′0^2 * f′1^11 * f′′0^2 * f′′′′0 -
+        1680 * f0^11 * f1^8 * f′0^2 * f′1^11 * f′′0 * f′′′0^2 +
+        7560 * f0^11 * f1^8 * f′0 * f′1^11 * f′′0^3 * f′′′0 -
+        5670 * f0^11 * f1^8 * f′1^11 * f′′0^5 +
+        300 * f0^11 * f1^7 * f′0^11 * f′1^5 * f′′′′′1 -
+        4500 * f0^11 * f1^7 * f′0^11 * f′1^4 * f′′1 * f′′′′1 -
+        3000 * f0^11 * f1^7 * f′0^11 * f′1^4 * f′′′1^2 +
+        31500 * f0^11 * f1^7 * f′0^11 * f′1^3 * f′′1^2 * f′′′1 -
+        31500 * f0^11 * f1^7 * f′0^11 * f′1^2 * f′′1^4 -
+        48 * f0^11 * f1^7 * f′0^5 * f′1^11 * f′′′′′0 +
+        720 * f0^11 * f1^7 * f′0^4 * f′1^11 * f′′0 * f′′′′0 +
+        480 * f0^11 * f1^7 * f′0^4 * f′1^11 * f′′′0^2 -
+        5040 * f0^11 * f1^7 * f′0^3 * f′1^11 * f′′0^2 * f′′′0 +
+        5040 * f0^11 * f1^7 * f′0^2 * f′1^11 * f′′0^4 -
+        2340 * f0^11 * f1^6 * f′0^11 * f′1^6 * f′′′′1 -
+        23400 * f0^11 * f1^6 * f′0^11 * f′1^5 * f′′1 * f′′′1 -
+        35100 * f0^11 * f1^6 * f′0^11 * f′1^4 * f′′1^2 +
+        9360 * f0^11 * f1^5 * f′0^11 * f′1^7 * f′′′1 -
+        28080 * f0^11 * f1^5 * f′0^11 * f′1^6 * f′′1^2 -
+        28080 * f0^11 * f1^4 * f′0^11 * f′1^8 * f′′1 -
+        56160 * f0^11 * f1^3 * f′0^11 * f′1^10 +
+        56160 * f0^11 * f1^2 * f′0^11 * f′1^11 * x1 +
+        20 * f0^10 * f1^9 * f′0^11 * f′1^4 * f′′′′′′1 -
+        420 * f0^10 * f1^9 * f′0^11 * f′1^3 * f′′1 * f′′′′′1 -
+        700 * f0^10 * f1^9 * f′0^11 * f′1^3 * f′′′1 * f′′′′1 +
+        4200 * f0^10 * f1^9 * f′0^11 * f′1^2 * f′′1^2 * f′′′′1 +
+        5600 * f0^10 * f1^9 * f′0^11 * f′1^2 * f′′1 * f′′′1^2 -
+        25200 * f0^10 * f1^9 * f′0^11 * f′1 * f′′1^3 * f′′′1 +
+        18900 * f0^10 * f1^9 * f′0^11 * f′′1^5 +
+        15 * f0^10 * f1^9 * f′0^4 * f′1^11 * f′′′′′′0 -
+        315 * f0^10 * f1^9 * f′0^3 * f′1^11 * f′′0 * f′′′′′0 -
+        525 * f0^10 * f1^9 * f′0^3 * f′1^11 * f′′′0 * f′′′′0 +
+        3150 * f0^10 * f1^9 * f′0^2 * f′1^11 * f′′0^2 * f′′′′0 +
+        4200 * f0^10 * f1^9 * f′0^2 * f′1^11 * f′′0 * f′′′0^2 -
+        18900 * f0^10 * f1^9 * f′0 * f′1^11 * f′′0^3 * f′′′0 +
+        14175 * f0^10 * f1^9 * f′1^11 * f′′0^5 -
+        540 * f0^10 * f1^8 * f′0^11 * f′1^5 * f′′′′′1 +
+        8100 * f0^10 * f1^8 * f′0^11 * f′1^4 * f′′1 * f′′′′1 +
+        5400 * f0^10 * f1^8 * f′0^11 * f′1^4 * f′′′1^2 -
+        56700 * f0^10 * f1^8 * f′0^11 * f′1^3 * f′′1^2 * f′′′1 +
+        56700 * f0^10 * f1^8 * f′0^11 * f′1^2 * f′′1^4 +
+        246 * f0^10 * f1^8 * f′0^5 * f′1^11 * f′′′′′0 -
+        3690 * f0^10 * f1^8 * f′0^4 * f′1^11 * f′′0 * f′′′′0 -
+        2460 * f0^10 * f1^8 * f′0^4 * f′1^11 * f′′′0^2 +
+        25830 * f0^10 * f1^8 * f′0^3 * f′1^11 * f′′0^2 * f′′′0 -
+        25830 * f0^10 * f1^8 * f′0^2 * f′1^11 * f′′0^4 +
+        6060 * f0^10 * f1^7 * f′0^11 * f′1^6 * f′′′′1 +
+        60600 * f0^10 * f1^7 * f′0^11 * f′1^5 * f′′1 * f′′′1 +
+        90900 * f0^10 * f1^7 * f′0^11 * f′1^4 * f′′1^2 +
+        1080 * f0^10 * f1^7 * f′0^6 * f′1^11 * f′′′′0 +
+        10800 * f0^10 * f1^7 * f′0^5 * f′1^11 * f′′0 * f′′′0 +
+        16200 * f0^10 * f1^7 * f′0^4 * f′1^11 * f′′0^2 -
+        34320 * f0^10 * f1^6 * f′0^11 * f′1^7 * f′′′1 +
+        102960 * f0^10 * f1^6 * f′0^11 * f′1^6 * f′′1^2 +
+        102960 * f0^10 * f1^5 * f′0^11 * f′1^8 * f′′1 +
+        205920 * f0^10 * f1^4 * f′0^11 * f′1^10 -
+        205920 * f0^10 * f1^3 * f′0^11 * f′1^11 * x1 -
+        15 * f0^9 * f1^10 * f′0^11 * f′1^4 * f′′′′′′1 +
+        315 * f0^9 * f1^10 * f′0^11 * f′1^3 * f′′1 * f′′′′′1 +
+        525 * f0^9 * f1^10 * f′0^11 * f′1^3 * f′′′1 * f′′′′1 -
+        3150 * f0^9 * f1^10 * f′0^11 * f′1^2 * f′′1^2 * f′′′′1 -
+        4200 * f0^9 * f1^10 * f′0^11 * f′1^2 * f′′1 * f′′′1^2 +
+        18900 * f0^9 * f1^10 * f′0^11 * f′1 * f′′1^3 * f′′′1 -
+        14175 * f0^9 * f1^10 * f′0^11 * f′′1^5 -
+        20 * f0^9 * f1^10 * f′0^4 * f′1^11 * f′′′′′′0 +
+        420 * f0^9 * f1^10 * f′0^3 * f′1^11 * f′′0 * f′′′′′0 +
+        700 * f0^9 * f1^10 * f′0^3 * f′1^11 * f′′′0 * f′′′′0 -
+        4200 * f0^9 * f1^10 * f′0^2 * f′1^11 * f′′0^2 * f′′′′0 -
+        5600 * f0^9 * f1^10 * f′0^2 * f′1^11 * f′′0 * f′′′0^2 +
+        25200 * f0^9 * f1^10 * f′0 * f′1^11 * f′′0^3 * f′′′0 -
+        18900 * f0^9 * f1^10 * f′1^11 * f′′0^5 +
+        510 * f0^9 * f1^9 * f′0^11 * f′1^5 * f′′′′′1 -
+        7650 * f0^9 * f1^9 * f′0^11 * f′1^4 * f′′1 * f′′′′1 -
+        5100 * f0^9 * f1^9 * f′0^11 * f′1^4 * f′′′1^2 +
+        53550 * f0^9 * f1^9 * f′0^11 * f′1^3 * f′′1^2 * f′′′1 -
+        53550 * f0^9 * f1^9 * f′0^11 * f′1^2 * f′′1^4 -
+        510 * f0^9 * f1^9 * f′0^5 * f′1^11 * f′′′′′0 +
+        7650 * f0^9 * f1^9 * f′0^4 * f′1^11 * f′′0 * f′′′′0 +
+        5100 * f0^9 * f1^9 * f′0^4 * f′1^11 * f′′′0^2 -
+        53550 * f0^9 * f1^9 * f′0^3 * f′1^11 * f′′0^2 * f′′′0 +
+        53550 * f0^9 * f1^9 * f′0^2 * f′1^11 * f′′0^4 -
+        7590 * f0^9 * f1^8 * f′0^11 * f′1^6 * f′′′′1 -
+        75900 * f0^9 * f1^8 * f′0^11 * f′1^5 * f′′1 * f′′′1 -
+        113850 * f0^9 * f1^8 * f′0^11 * f′1^4 * f′′1^2 -
+        4590 * f0^9 * f1^8 * f′0^6 * f′1^11 * f′′′′0 -
+        45900 * f0^9 * f1^8 * f′0^5 * f′1^11 * f′′0 * f′′′0 -
+        68850 * f0^9 * f1^8 * f′0^4 * f′1^11 * f′′0^2 +
+        60600 * f0^9 * f1^7 * f′0^11 * f′1^7 * f′′′1 -
+        181800 * f0^9 * f1^7 * f′0^11 * f′1^6 * f′′1^2 -
+        14400 * f0^9 * f1^7 * f′0^7 * f′1^11 * f′′′0 +
+        43200 * f0^9 * f1^7 * f′0^6 * f′1^11 * f′′0^2 -
+        257400 * f0^9 * f1^6 * f′0^11 * f′1^8 * f′′1 -
+        514800 * f0^9 * f1^5 * f′0^11 * f′1^10 +
+        514800 * f0^9 * f1^4 * f′0^11 * f′1^11 * x1 +
+        6 * f0^8 * f1^11 * f′0^11 * f′1^4 * f′′′′′′1 -
+        126 * f0^8 * f1^11 * f′0^11 * f′1^3 * f′′1 * f′′′′′1 -
+        210 * f0^8 * f1^11 * f′0^11 * f′1^3 * f′′′1 * f′′′′1 +
+        1260 * f0^8 * f1^11 * f′0^11 * f′1^2 * f′′1^2 * f′′′′1 +
+        1680 * f0^8 * f1^11 * f′0^11 * f′1^2 * f′′1 * f′′′1^2 -
+        7560 * f0^8 * f1^11 * f′0^11 * f′1 * f′′1^3 * f′′′1 +
+        5670 * f0^8 * f1^11 * f′0^11 * f′′1^5 +
+        15 * f0^8 * f1^11 * f′0^4 * f′1^11 * f′′′′′′0 -
+        315 * f0^8 * f1^11 * f′0^3 * f′1^11 * f′′0 * f′′′′′0 -
+        525 * f0^8 * f1^11 * f′0^3 * f′1^11 * f′′′0 * f′′′′0 +
+        3150 * f0^8 * f1^11 * f′0^2 * f′1^11 * f′′0^2 * f′′′′0 +
+        4200 * f0^8 * f1^11 * f′0^2 * f′1^11 * f′′0 * f′′′0^2 -
+        18900 * f0^8 * f1^11 * f′0 * f′1^11 * f′′0^3 * f′′′0 +
+        14175 * f0^8 * f1^11 * f′1^11 * f′′0^5 -
+        246 * f0^8 * f1^10 * f′0^11 * f′1^5 * f′′′′′1 +
+        3690 * f0^8 * f1^10 * f′0^11 * f′1^4 * f′′1 * f′′′′1 +
+        2460 * f0^8 * f1^10 * f′0^11 * f′1^4 * f′′′1^2 -
+        25830 * f0^8 * f1^10 * f′0^11 * f′1^3 * f′′1^2 * f′′′1 +
+        25830 * f0^8 * f1^10 * f′0^11 * f′1^2 * f′′1^4 +
+        540 * f0^8 * f1^10 * f′0^5 * f′1^11 * f′′′′′0 -
+        8100 * f0^8 * f1^10 * f′0^4 * f′1^11 * f′′0 * f′′′′0 -
+        5400 * f0^8 * f1^10 * f′0^4 * f′1^11 * f′′′0^2 +
+        56700 * f0^8 * f1^10 * f′0^3 * f′1^11 * f′′0^2 * f′′′0 -
+        56700 * f0^8 * f1^10 * f′0^2 * f′1^11 * f′′0^4 +
+        4590 * f0^8 * f1^9 * f′0^11 * f′1^6 * f′′′′1 +
+        45900 * f0^8 * f1^9 * f′0^11 * f′1^5 * f′′1 * f′′′1 +
+        68850 * f0^8 * f1^9 * f′0^11 * f′1^4 * f′′1^2 +
+        7590 * f0^8 * f1^9 * f′0^6 * f′1^11 * f′′′′0 +
+        75900 * f0^8 * f1^9 * f′0^5 * f′1^11 * f′′0 * f′′′0 +
+        113850 * f0^8 * f1^9 * f′0^4 * f′1^11 * f′′0^2 -
+        48600 * f0^8 * f1^8 * f′0^11 * f′1^7 * f′′′1 +
+        145800 * f0^8 * f1^8 * f′0^11 * f′1^6 * f′′1^2 +
+        48600 * f0^8 * f1^8 * f′0^7 * f′1^11 * f′′′0 -
+        145800 * f0^8 * f1^8 * f′0^6 * f′1^11 * f′′0^2 +
+        297000 * f0^8 * f1^7 * f′0^11 * f′1^8 * f′′1 +
+        118800 * f0^8 * f1^7 * f′0^8 * f′1^11 * f′′0 +
+        926640 * f0^8 * f1^6 * f′0^11 * f′1^10 -
+        926640 * f0^8 * f1^5 * f′0^11 * f′1^11 * x1 -
+        f0^7 * f1^12 * f′0^11 * f′1^4 * f′′′′′′1 +
+        21 * f0^7 * f1^12 * f′0^11 * f′1^3 * f′′1 * f′′′′′1 +
+        35 * f0^7 * f1^12 * f′0^11 * f′1^3 * f′′′1 * f′′′′1 -
+        210 * f0^7 * f1^12 * f′0^11 * f′1^2 * f′′1^2 * f′′′′1 -
+        280 * f0^7 * f1^12 * f′0^11 * f′1^2 * f′′1 * f′′′1^2 +
+        1260 * f0^7 * f1^12 * f′0^11 * f′1 * f′′1^3 * f′′′1 -
+        945 * f0^7 * f1^12 * f′0^11 * f′′1^5 -
+        6 * f0^7 * f1^12 * f′0^4 * f′1^11 * f′′′′′′0 +
+        126 * f0^7 * f1^12 * f′0^3 * f′1^11 * f′′0 * f′′′′′0 +
+        210 * f0^7 * f1^12 * f′0^3 * f′1^11 * f′′′0 * f′′′′0 -
+        1260 * f0^7 * f1^12 * f′0^2 * f′1^11 * f′′0^2 * f′′′′0 -
+        1680 * f0^7 * f1^12 * f′0^2 * f′1^11 * f′′0 * f′′′0^2 +
+        7560 * f0^7 * f1^12 * f′0 * f′1^11 * f′′0^3 * f′′′0 -
+        5670 * f0^7 * f1^12 * f′1^11 * f′′0^5 +
+        48 * f0^7 * f1^11 * f′0^11 * f′1^5 * f′′′′′1 -
+        720 * f0^7 * f1^11 * f′0^11 * f′1^4 * f′′1 * f′′′′1 -
+        480 * f0^7 * f1^11 * f′0^11 * f′1^4 * f′′′1^2 +
+        5040 * f0^7 * f1^11 * f′0^11 * f′1^3 * f′′1^2 * f′′′1 -
+        5040 * f0^7 * f1^11 * f′0^11 * f′1^2 * f′′1^4 -
+        300 * f0^7 * f1^11 * f′0^5 * f′1^11 * f′′′′′0 +
+        4500 * f0^7 * f1^11 * f′0^4 * f′1^11 * f′′0 * f′′′′0 +
+        3000 * f0^7 * f1^11 * f′0^4 * f′1^11 * f′′′0^2 -
+        31500 * f0^7 * f1^11 * f′0^3 * f′1^11 * f′′0^2 * f′′′0 +
+        31500 * f0^7 * f1^11 * f′0^2 * f′1^11 * f′′0^4 -
+        1080 * f0^7 * f1^10 * f′0^11 * f′1^6 * f′′′′1 -
+        10800 * f0^7 * f1^10 * f′0^11 * f′1^5 * f′′1 * f′′′1 -
+        16200 * f0^7 * f1^10 * f′0^11 * f′1^4 * f′′1^2 -
+        6060 * f0^7 * f1^10 * f′0^6 * f′1^11 * f′′′′0 -
+        60600 * f0^7 * f1^10 * f′0^5 * f′1^11 * f′′0 * f′′′0 -
+        90900 * f0^7 * f1^10 * f′0^4 * f′1^11 * f′′0^2 +
+        14400 * f0^7 * f1^9 * f′0^11 * f′1^7 * f′′′1 -
+        43200 * f0^7 * f1^9 * f′0^11 * f′1^6 * f′′1^2 -
+        60600 * f0^7 * f1^9 * f′0^7 * f′1^11 * f′′′0 +
+        181800 * f0^7 * f1^9 * f′0^6 * f′1^11 * f′′0^2 -
+        118800 * f0^7 * f1^8 * f′0^11 * f′1^8 * f′′1 -
+        297000 * f0^7 * f1^8 * f′0^8 * f′1^11 * f′′0 -
+        570240 * f0^7 * f1^7 * f′0^11 * f′1^10 +
+        570240 * f0^7 * f1^7 * f′0^10 * f′1^11 +
+        1235520 * f0^7 * f1^6 * f′0^11 * f′1^11 * x1 +
+        f0^6 * f1^13 * f′0^4 * f′1^11 * f′′′′′′0 -
+        21 * f0^6 * f1^13 * f′0^3 * f′1^11 * f′′0 * f′′′′′0 -
+        35 * f0^6 * f1^13 * f′0^3 * f′1^11 * f′′′0 * f′′′′0 +
+        210 * f0^6 * f1^13 * f′0^2 * f′1^11 * f′′0^2 * f′′′′0 +
+        280 * f0^6 * f1^13 * f′0^2 * f′1^11 * f′′0 * f′′′0^2 -
+        1260 * f0^6 * f1^13 * f′0 * f′1^11 * f′′0^3 * f′′′0 +
+        945 * f0^6 * f1^13 * f′1^11 * f′′0^5 +
+        78 * f0^6 * f1^12 * f′0^5 * f′1^11 * f′′′′′0 -
+        1170 * f0^6 * f1^12 * f′0^4 * f′1^11 * f′′0 * f′′′′0 -
+        780 * f0^6 * f1^12 * f′0^4 * f′1^11 * f′′′0^2 +
+        8190 * f0^6 * f1^12 * f′0^3 * f′1^11 * f′′0^2 * f′′′0 -
+        8190 * f0^6 * f1^12 * f′0^2 * f′1^11 * f′′0^4 +
+        2340 * f0^6 * f1^11 * f′0^6 * f′1^11 * f′′′′0 +
+        23400 * f0^6 * f1^11 * f′0^5 * f′1^11 * f′′0 * f′′′0 +
+        35100 * f0^6 * f1^11 * f′0^4 * f′1^11 * f′′0^2 +
+        34320 * f0^6 * f1^10 * f′0^7 * f′1^11 * f′′′0 -
+        102960 * f0^6 * f1^10 * f′0^6 * f′1^11 * f′′0^2 +
+        257400 * f0^6 * f1^9 * f′0^8 * f′1^11 * f′′0 -
+        926640 * f0^6 * f1^8 * f′0^10 * f′1^11 -
+        1235520 * f0^6 * f1^7 * f′0^11 * f′1^11 * x0 -
+        6 * f0^5 * f1^13 * f′0^5 * f′1^11 * f′′′′′0 +
+        90 * f0^5 * f1^13 * f′0^4 * f′1^11 * f′′0 * f′′′′0 +
+        60 * f0^5 * f1^13 * f′0^4 * f′1^11 * f′′′0^2 -
+        630 * f0^5 * f1^13 * f′0^3 * f′1^11 * f′′0^2 * f′′′0 +
+        630 * f0^5 * f1^13 * f′0^2 * f′1^11 * f′′0^4 -
+        390 * f0^5 * f1^12 * f′0^6 * f′1^11 * f′′′′0 -
+        3900 * f0^5 * f1^12 * f′0^5 * f′1^11 * f′′0 * f′′′0 -
+        5850 * f0^5 * f1^12 * f′0^4 * f′1^11 * f′′0^2 -
+        9360 * f0^5 * f1^11 * f′0^7 * f′1^11 * f′′′0 +
+        28080 * f0^5 * f1^11 * f′0^6 * f′1^11 * f′′0^2 -
+        102960 * f0^5 * f1^10 * f′0^8 * f′1^11 * f′′0 +
+        514800 * f0^5 * f1^9 * f′0^10 * f′1^11 +
+        926640 * f0^5 * f1^8 * f′0^11 * f′1^11 * x0 +
+        30 * f0^4 * f1^13 * f′0^6 * f′1^11 * f′′′′0 +
+        300 * f0^4 * f1^13 * f′0^5 * f′1^11 * f′′0 * f′′′0 +
+        450 * f0^4 * f1^13 * f′0^4 * f′1^11 * f′′0^2 +
+        1560 * f0^4 * f1^12 * f′0^7 * f′1^11 * f′′′0 -
+        4680 * f0^4 * f1^12 * f′0^6 * f′1^11 * f′′0^2 +
+        28080 * f0^4 * f1^11 * f′0^8 * f′1^11 * f′′0 -
+        205920 * f0^4 * f1^10 * f′0^10 * f′1^11 -
+        514800 * f0^4 * f1^9 * f′0^11 * f′1^11 * x0 -
+        120 * f0^3 * f1^13 * f′0^7 * f′1^11 * f′′′0 +
+        360 * f0^3 * f1^13 * f′0^6 * f′1^11 * f′′0^2 -
+        4680 * f0^3 * f1^12 * f′0^8 * f′1^11 * f′′0 +
+        56160 * f0^3 * f1^11 * f′0^10 * f′1^11 +
+        205920 * f0^3 * f1^10 * f′0^11 * f′1^11 * x0 +
+        360 * f0^2 * f1^13 * f′0^8 * f′1^11 * f′′0 - 9360 * f0^2 * f1^12 * f′0^10 * f′1^11 -
+        56160 * f0^2 * f1^11 * f′0^11 * f′1^11 * x0 +
+        720 * f0 * f1^13 * f′0^10 * f′1^11 +
+        9360 * f0 * f1^12 * f′0^11 * f′1^11 * x0 - 720 * f1^13 * f′0^11 * f′1^11 * x0
+    ) / (
+        720 *
+        f′0^11 *
+        f′1^11 *
+        (
+            f0^13 - 13 * f0^12 * f1 + 78 * f0^11 * f1^2 - 286 * f0^10 * f1^3 +
+            715 * f0^9 * f1^4 - 1287 * f0^8 * f1^5 + 1716 * f0^7 * f1^6 -
+            1716 * f0^6 * f1^7 + 1287 * f0^5 * f1^8 - 715 * f0^4 * f1^9 +
+            286 * f0^3 * f1^10 - 78 * f0^2 * f1^11 + 13 * f0 * f1^12 - f1^13
+        )
+    )
 end
 
-function lmm(::LithBoonkkampIJzerman{3,6}, xs, fs, f′s, f′′s, f′′′s, f′′′′s, f′′′′′s, f′′′′′′s)
+function lmm(
+    ::LithBoonkkampIJzerman{3,6},
+    xs,
+    fs,
+    f′s,
+    f′′s,
+    f′′′s,
+    f′′′′s,
+    f′′′′′s,
+    f′′′′′′s,
+)
     error("not computed")
 end

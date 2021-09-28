@@ -21,7 +21,6 @@ using BenchmarkTools
     xrt = Roots.secant_method(fpoly, (1, 2))
     @test abs(fpoly(xrt)) <= 1e-14
 
-
     # muller
     fpoly = x -> x^5 - x - 1
     xrt = Roots.muller(fpoly, 1.0)
@@ -29,14 +28,14 @@ using BenchmarkTools
     @test abs(fpoly(xrt)) <= 1e-15
 
     @test_throws DomainError Roots.muller(fpoly, -1.0)
-    xrt = Roots.muller(fpoly, -1.0+0im)
+    xrt = Roots.muller(fpoly, -1.0 + 0im)
     @test xrt isa Complex
     @test abs(fpoly(xrt)) <= 1e-15
 
-    @test Roots.muller(cos, 1.0) ≈ π/2
-    expoly(z) = log(-z)*asin(z)/tanh(z)
+    @test Roots.muller(cos, 1.0) ≈ π / 2
+    expoly(z) = log(-z) * asin(z) / tanh(z)
 
-    @test Roots.muller(expoly, -0.7-0.5im) ≈ -1.0
+    @test Roots.muller(expoly, -0.7 - 0.5im) ≈ -1.0
 
     # dfree
     fpoly = x -> x^5 - x - 1
@@ -44,7 +43,7 @@ using BenchmarkTools
     @test abs(fpoly(xrt)) <= 1e-14
 
     # newton
-    @test Roots.newton((sin, cos), 3.0)  ≈ pi
-    u = Roots.newton(x -> (sin(x), sin(x)/cos(x)), 3.0, xatol=1e-10, xrtol=1e-10)
-    @test abs(u -pi) <= 1e-8
+    @test Roots.newton((sin, cos), 3.0) ≈ pi
+    u = Roots.newton(x -> (sin(x), sin(x) / cos(x)), 3.0, xatol=1e-10, xrtol=1e-10)
+    @test abs(u - pi) <= 1e-8
 end

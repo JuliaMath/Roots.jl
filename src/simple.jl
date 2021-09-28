@@ -40,19 +40,17 @@ or `Float16` values, the process will terminate at a value `x` with
 
 """
 function bisection(f, a::Number, b::Number; xatol=nothing, xrtol=nothing)
-
-    x1, x2 = adjust_bracket(float.((a,b)))
+    x1, x2 = adjust_bracket(float.((a, b)))
     T = eltype(x1)
-
 
     atol = xatol === nothing ? zero(T) : abs(xatol)
     rtol = xrtol === nothing ? zero(one(T)) : abs(xrtol)
-    CT = iszero(atol) && iszero(rtol) ?  Val(:exact) : Val(:inexact)
+    CT = iszero(atol) && iszero(rtol) ? Val(:exact) : Val(:inexact)
 
     x1, x2 = float(x1), float(x2)
     y1, y2 = f(x1), f(x2)
 
-    _unitless(y1 * y2) >= 0  && error("the interval provided does not bracket a root")
+    _unitless(y1 * y2) >= 0 && error("the interval provided does not bracket a root")
 
     if isneg(y2)
         x1, x2, y1, y2 = x2, x1, y2, y1
@@ -62,7 +60,6 @@ function bisection(f, a::Number, b::Number; xatol=nothing, xrtol=nothing)
     ym = f(xm)
 
     while true
-
         if has_converged(CT, x1, x2, xm, ym, atol, rtol)
             return xm
         end
@@ -73,16 +70,13 @@ function bisection(f, a::Number, b::Number; xatol=nothing, xrtol=nothing)
             x2, y2 = xm, ym
         end
 
-        xm = Roots.__middle(x1,x2)
+        xm = Roots.__middle(x1, x2)
         ym = f(xm)
-
-
     end
-
 end
 
 # -0.0 not returned by __middle, so isneg true on [-Inf, 0.0)
-@inline isneg(x::T) where {T <: AbstractFloat} = signbit(x)
+@inline isneg(x::T) where {T<:AbstractFloat} = signbit(x)
 @inline isneg(x) = _unitless(x) < 0
 
 @inline function has_converged(::Val{:exact}, x1, x2, m, ym, atol, rtol)
@@ -98,7 +92,6 @@ end
     val = abs(x1 - x2) <= atol + max(abs(x1), abs(x2)) * rtol
     return val
 end
-
 
 """
     secant_method(f, xs; [atol=0.0, rtol=8eps(), maxevals=1000])
@@ -136,13 +129,18 @@ Roots.secant_method(x -> x^5 -x - 1, 1.1)
     ones.
 
 """
-function secant_method(f, xs; atol=zero(float(real(first(xs)))), rtol=8eps(one(float(real(first(xs))))), maxevals=100)
-
+function secant_method(
+    f,
+    xs;
+    atol=zero(float(real(first(xs)))),
+    rtol=8eps(one(float(real(first(xs))))),
+    maxevals=100,
+)
     if length(xs) == 1 # secant needs x0, x1; only x0 given
         a = float(xs[1])
 
-        h = eps(one(real(a)))^(1/3)
-        da = h*oneunit(a) + abs(a)*h^2 # adjust for if eps(a) > h
+        h = eps(one(real(a)))^(1 / 3)
+        da = h * oneunit(a) + abs(a) * h^2 # adjust for if eps(a) > h
         b = a + da
 
     else
@@ -151,19 +149,18 @@ function secant_method(f, xs; atol=zero(float(real(first(xs)))), rtol=8eps(one(f
     secant(f, a, b, atol, rtol, maxevals)
 end
 
-
 function secant(f, a::T, b::T, atol=zero(T), rtol=8eps(T), maxevals=100) where {T}
-    nan = (0a)/(0a)
+    nan = (0a) / (0a)
     cnt = 0
 
     fa, fb = f(a), f(b)
     fb == fa && return nan
 
     uatol = atol / oneunit(atol) * oneunit(real(a))
-    adjustunit = oneunit(real(fb))/oneunit(real(b))
+    adjustunit = oneunit(real(fb)) / oneunit(real(b))
 
     while cnt < maxevals
-        m = b - (b-a)*fb/(fb - fa)
+        m = b - (b - a) * fb / (fb - fa)
         fm = f(m)
 
         iszero(fm) && return m
@@ -175,7 +172,7 @@ function secant(f, a::T, b::T, atol=zero(T), rtol=8eps(T), maxevals=100) where {
             return nan
         end
 
-        a,b,fa,fb = b,m,fb,fm
+        a, b, fa, fb = b, m, fb, fm
 
         cnt += 1
     end
@@ -216,22 +213,28 @@ muller(x->x^3-1, 1.5, 1.0, 2.0) # → 2.0, Not converged
 ```
 
 """
-muller(f, x₀::T; kwargs...) where T = muller(f, (rand(T, 2).*x₀)..., x₀; kwargs...)
+muller(f, x₀::T; kwargs...) where {T} = muller(f, (rand(T, 2) .* x₀)..., x₀; kwargs...)
 
-muller(f, xᵢ₋₂, xᵢ₋₁, xᵢ; kwargs...) =
-    muller(f, promote(xᵢ₋₂, xᵢ₋₁, xᵢ)...; kwargs...)
+muller(f, xᵢ₋₂, xᵢ₋₁, xᵢ; kwargs...) = muller(f, promote(xᵢ₋₂, xᵢ₋₁, xᵢ)...; kwargs...)
 
-function muller(f, oldest::T, older::T, old::T;
-    xatol=nothing, xrtol=nothing, maxevals=300) where {T}
+function muller(
+    f,
+    oldest::T,
+    older::T,
+    old::T;
+    xatol=nothing,
+    xrtol=nothing,
+    maxevals=300,
+) where {T}
     @assert old ≠ older ≠ oldest ≠ old # we want q to be non-degenerate
     xᵢ₋₂, xᵢ₋₁, xᵢ = oldest, older, old
     fxᵢ₋₂, fxᵢ₋₁ = f(xᵢ₋₂), f(xᵢ₋₁)
 
     RT = typeof(abs(oldest))
-    atol = xatol !== nothing ? xatol : oneunit(RT) * (eps(one(RT)))^(4/5)
-    rtol = xrtol !== nothing ? xrtol : eps(one(RT))^(4/5)
+    atol = xatol !== nothing ? xatol : oneunit(RT) * (eps(one(RT)))^(4 / 5)
+    rtol = xrtol !== nothing ? xrtol : eps(one(RT))^(4 / 5)
 
-    for i in 1:maxevals÷3
+    for i in 1:(maxevals ÷ 3)
         # one evaluation per iteration
         fxᵢ = f(xᵢ)
         x = muller_step(xᵢ₋₂, xᵢ₋₁, xᵢ, fxᵢ₋₂, fxᵢ₋₁, fxᵢ)
@@ -247,33 +250,39 @@ function muller(f, oldest::T, older::T, old::T;
         #stopping criterion
         isapprox(xᵢ, xᵢ₋₁, atol=atol, rtol=rtol) && return xᵢ
     end
-    @warn "The algorithm might not have converged, maxevals limit hit:" abs(xᵢ₋₁- xᵢ)
+    @warn "The algorithm might not have converged, maxevals limit hit:" abs(xᵢ₋₁ - xᵢ)
     return xᵢ
 end
 
-function muller_step(a,b,c,fa,fb,fc)
-    a,b,c = promote(a,b,c)
+function muller_step(a, b, c, fa, fb, fc)
+    a, b, c = promote(a, b, c)
     q = qq(a, b, c)
     q² = q^2
-    q1 = q+one(q)
+    q1 = q + one(q)
 
-    A =      q*fc - q*q1*fb + q²*fa
-    B = (q1+q)*fc - q1^2*fb + q²*fa
-    C =     q1*fc
+    A = q * fc - q * q1 * fb + q² * fa
+    B = (q1 + q) * fc - q1^2 * fb + q² * fa
+    C = q1 * fc
 
     den = let
-        Δ = B^2 - 4A*C
-        typeof(Δ) <: Real && Δ < 0 && throw(
-            DomainError(Δ, "Discriminant is negative and the function most likely has complex roots. You might want to call muller with complex input."))
+        Δ = B^2 - 4A * C
+        typeof(Δ) <: Real &&
+            Δ < 0 &&
+            throw(
+                DomainError(
+                    Δ,
+                    "Discriminant is negative and the function most likely has complex roots. You might want to call muller with complex input.",
+                ),
+            )
         Δ = √Δ
         d⁺ = B + Δ
         d⁻ = B - Δ
         abs(d⁺) > abs(d⁻) ? d⁺ : d⁻
     end
-    return c - (c - b)*2C/den
+    return c - (c - b) * 2C / den
 end
 
-@inline qq(a, b, c) = (c - b)/(b - a)
+@inline qq(a, b, c) = (c - b) / (b - a)
 
 """
     newton((f, f'), x0; xatol=nothing, xrtol=nothing, maxevals=100)
@@ -299,27 +308,24 @@ Convergence here is decided by x_n ≈ x_{n-1} using the tolerances specified, w
 If the convergence fails, will return a `ConvergenceFailed` error.
 
 """
-struct TupleWrapper{F, Fp}
-f::F
-fp::Fp
+struct TupleWrapper{F,Fp}
+    f::F
+    fp::Fp
 end
 (F::TupleWrapper)(x) = begin
     u, v = F.f(x), F.fp(x)
-    return (u, u/v)
+    return (u, u / v)
 end
 
-newton(f::Tuple, x0; kwargs...) = newton(TupleWrapper(f[1],f[2]), x0; kwargs...)
-function newton(f, x0; xatol=nothing, xrtol=nothing, maxevals = 100)
-
+newton(f::Tuple, x0; kwargs...) = newton(TupleWrapper(f[1], f[2]), x0; kwargs...)
+function newton(f, x0; xatol=nothing, xrtol=nothing, maxevals=100)
     x = float(x0)
     T = typeof(x)
-    atol = xatol !== nothing ? xatol : oneunit(T) * (eps(one(T)))^(4/5)
-    rtol = xrtol !== nothing ? xrtol : eps(one(T))^(4/5)
-
+    atol = xatol !== nothing ? xatol : oneunit(T) * (eps(one(T)))^(4 / 5)
+    rtol = xrtol !== nothing ? xrtol : eps(one(T))^(4 / 5)
 
     xo = Inf
     for i in 1:maxevals
-
         fx, Δx = f(x)
         iszero(fx) && return x
 
@@ -334,9 +340,6 @@ function newton(f, x0; xatol=nothing, xrtol=nothing, maxevals = 100)
 
     throw(ConvergenceFailed("No convergence"))
 end
-
-
-
 
 ## This is basically Order0(), but with different, default, tolerances employed
 ## It takes more function calls, but works harder to find exact zeros
@@ -377,13 +380,12 @@ Roots.dfree(x -> x^5 - x - 1, 1.0)
 
 """
 function dfree(f, xs)
-
     if length(xs) == 1
         a = float(xs[1])
         fa = f(a)
 
-        h = eps(one(a))^(1/3)
-        da = h*oneunit(a) + abs(a)*h^2 # adjust for if eps(a) > h
+        h = eps(one(a))^(1 / 3)
+        da = h * oneunit(a) + abs(a) * h^2 # adjust for if eps(a) > h
         b = float(a + da)
         fb = f(b)
     else
@@ -391,13 +393,12 @@ function dfree(f, xs)
         fa, fb = f(a), f(b)
     end
 
-
-    nan = (0*a)/(0*a) # try to preserve type
+    nan = (0 * a) / (0 * a) # try to preserve type
     cnt, MAXCNT = 0, 5 * ceil(Int, -log(eps(one(a))))  # must be higher for BigFloat
     MAXQUAD = 3
 
     if abs(fa) > abs(fb)
-        a,fa,b,fb=b,fb,a,fa
+        a, fa, b, fb = b, fb, a, fa
     end
 
     # we keep a, b, fa, fb, gamma, fgamma
@@ -410,12 +411,12 @@ function dfree(f, xs)
         end
 
         # take a secant step
-        gamma =  float(b - (b-a) * fb / (fb - fa))
+        gamma = float(b - (b - a) * fb / (fb - fa))
         # modify if gamma is too small or too big
-        if iszero(abs(gamma-b))
-            gamma = b + 1/1000 * abs(b-a)  # too small
-        elseif abs(gamma-b)  >= 100 * abs(b-a)
-            gamma = b + sign(gamma-b) * 100 * abs(b-a)  ## too big
+        if iszero(abs(gamma - b))
+            gamma = b + 1 / 1000 * abs(b - a)  # too small
+        elseif abs(gamma - b) >= 100 * abs(b - a)
+            gamma = b + sign(gamma - b) * 100 * abs(b - a)  ## too big
         end
         fgamma = f(gamma)
 
@@ -426,40 +427,37 @@ function dfree(f, xs)
 
         # decreasing
         if abs(fgamma) < abs(fb)
-            a,fa, b,fb = b, fb, gamma, fgamma
+            a, fa, b, fb = b, fb, gamma, fgamma
             quad_ctr = 0
             cnt < MAXCNT && continue
         end
 
-        gamma = float(quad_vertex(a,fa,b,fb,gamma,fgamma))
+        gamma = float(quad_vertex(a, fa, b, fb, gamma, fgamma))
         fgamma = f(gamma)
         # decreasing now?
         if abs(fgamma) < abs(fb)
-            a,fa, b,fb = b, fb, gamma, fgamma
+            a, fa, b, fb = b, fb, gamma, fgamma
             quad_ctr = 0
             cnt < MAXCNT && continue
         end
 
-
         quad_ctr += 1
-        if (quad_ctr > MAXQUAD) || (cnt > MAXCNT) || iszero(gamma - b)  || isnan(gamma)
+        if (quad_ctr > MAXQUAD) || (cnt > MAXCNT) || iszero(gamma - b) || isnan(gamma)
             bprev, bnext = prevfloat(b), nextfloat(b)
             fbprev, fbnext = f(bprev), f(bnext)
             sign(fb) * sign(fbprev) < 0 && return b
             sign(fb) * sign(fbnext) < 0 && return b
-            for (u,fu) in ((b,fb), (bprev, fbprev), (bnext, fbnext))
-                abs(fu)/oneunit(fu) <= 2^3*eps(u/oneunit(u)) && return u
+            for (u, fu) in ((b, fb), (bprev, fbprev), (bnext, fbnext))
+                abs(fu) / oneunit(fu) <= 2^3 * eps(u / oneunit(u)) && return u
             end
             return nan # Failed.
         end
 
         if abs(fgamma) < abs(fb)
-            b,fb, a,fa = gamma, fgamma, b, fb
+            b, fb, a, fa = gamma, fgamma, b, fb
         else
             a, fa = gamma, fgamma
         end
-
     end
     b
-
 end

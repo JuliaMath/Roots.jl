@@ -2,7 +2,6 @@
 
 # Algorithm due to @djsegal in https://github.com/JuliaMath/Roots.jl/pull/113
 
-
 # A naive approach to find zeros: split (a,b) by n points, look into each for a zero
 # * k is oversampling rate for bisection. (It is relatively cheap to check for a bracket so we
 #   oversample our intervals looking for brackets
@@ -14,8 +13,7 @@ function _fz(f, a, b, no_pts, k=4)
 end
 
 function _fz!(zs, f, a::T, b, no_pts, k=4) where {T}
-
-    pts = range(a, stop=b, length=(no_pts-1)*k+1)
+    pts = range(a, stop=b, length=(no_pts - 1) * k + 1)
     n::Int = length(pts)
 
     fs = f.(pts)
@@ -24,14 +22,14 @@ function _fz!(zs, f, a::T, b, no_pts, k=4) where {T}
     u::T = first(pts)  # keep track of bigger interval
     found_bisection_zero = false
 
-    for (i,x) in enumerate(pts[1:end])
-        q,r = divrem(i-1, k)
+    for (i, x) in enumerate(pts[1:end])
+        q, r = divrem(i - 1, k)
 
         if i > 1 && iszero(r)
             v::T = x
             if !found_bisection_zero
                 try
-                    p1::T = identify_starting_point(u, v, sfs[(i-k):i])
+                    p1::T = identify_starting_point(u, v, sfs[(i - k):i])
                     rt::T = dfree(f, p1)
                     if !isnan(rt) && u < rt <= v
                         push!(zs, rt)
@@ -44,12 +42,12 @@ function _fz!(zs, f, a::T, b, no_pts, k=4) where {T}
         end
 
         if i < n
-            if iszero(fs[i+1])
+            if iszero(fs[i + 1])
                 found_bisection_zero = true # kinda
-                push!(zs, pts[i+1])
-            elseif  sfs[i] * sfs[i+1] < 0
+                push!(zs, pts[i + 1])
+            elseif sfs[i] * sfs[i + 1] < 0
                 found_bisection_zero = true
-                rt = bisection(f, x, pts[i+1])
+                rt = bisection(f, x, pts[i + 1])
                 push!(zs, rt)
             end
         end
@@ -61,29 +59,29 @@ end
 # the algorithm first scans for zeros using the naive approach, then
 # splits (a,b) by these zeros. This struct holds the subintervals
 struct Interval{T}
-a::T
-b::T
-depth::Int
+    a::T
+    b::T
+    depth::Int
 end
 
 Base.show(io::IO, alpha::Interval) = print(io, "($(alpha.a), $(alpha.b))")
 
 # check if f(a) is non zero using tolerances max(atol, eps()), rtol
 function _non_zero(fa, a::T, atol, rtol) where {T}
-    abs(fa) >= max(atol, abs(a)*rtol*oneunit(fa)/oneunit(a), oneunit(fa)*eps(T))
+    abs(fa) >= max(atol, abs(a) * rtol * oneunit(fa) / oneunit(a), oneunit(fa) * eps(T))
 end
 
 # After splitting by zeros we have intervals (zm, zn) this is used to shrink
 # to (zm+, zn-) where both are non-zeros, as defined above
 function find_non_zero(f, a::T, barrier, xatol, xrtol, atol, rtol) where {T}
-    nan = (0*a)/(0*a) # try to get typed NaN
+    nan = (0 * a) / (0 * a) # try to get typed NaN
     xtol = max(xatol, abs(a) * xrtol, oneunit(a) * eps(T))
     sgn = barrier > a ? 1 : -1
     ctr = 0
-    x = a + 2^ctr*sgn*xtol
+    x = a + 2^ctr * sgn * xtol
     while !_non_zero(f(x), x, atol, rtol)
         ctr += 1
-        x += 2^ctr*sgn*xtol
+        x += 2^ctr * sgn * xtol
         ((sgn > 0 && x > barrier) || (sgn < 0 && x < barrier)) && return nan
         ctr > 100 && return nan
     end
@@ -96,7 +94,7 @@ end
 function make_intervals!(ints, f, a, b, zs, depth, xatol, xrtol, atol, rtol)
     pts = vcat(a, zs, b)
 
-    for (u,v) in zip(pts[1:end-1], pts[2:end])
+    for (u, v) in zip(pts[1:(end - 1)], pts[2:end])
         ur = find_non_zero(f, u, v, xatol, xrtol, atol, rtol)
         isnan(ur) && continue
 
@@ -106,7 +104,6 @@ function make_intervals!(ints, f, a, b, zs, depth, xatol, xrtol, atol, rtol)
         push!(ints, Interval(ur, vl, depth))
     end
 end
-
 
 # adjust what we mean by x1 ~ x2 for purposes of adding a new zero
 function approx_close(z1, z2, xatol, xrtol)
@@ -119,14 +116,14 @@ function not_near(proposed, xs, xatol, xrtol)
     n = length(xs)
     n <= 1 && return true
     ind = n + 1
-    for (i,rt) in enumerate(xs)
+    for (i, rt) in enumerate(xs)
         if proposed < rt
             ind = i
             break
         end
     end
     if ind > 1 # xs[ind-1] <= propose < xs[ind]
-        rt = xs[ind-1]
+        rt = xs[ind - 1]
         approx_close(proposed, rt, xatol, xrtol) && return false
     end
     if ind <= n # value to right
@@ -135,7 +132,6 @@ function not_near(proposed, xs, xatol, xrtol)
     end
     return true
 end
-
 
 """
     find_zeros(f, a, b=nothing; [no_pts=12, k=8, naive=false, xatol, xrtol, atol, rtol])
@@ -298,11 +294,7 @@ julia> find_zeros(g, -20, 20)
 ```
 
 """
-function find_zeros(f, a, b=nothing; no_pts = 12, k=8,
-                    naive = false,
-                    kwargs...
-                    )
-
+function find_zeros(f, a, b=nothing; no_pts=12, k=8, naive=false, kwargs...)
     if b === nothing
         a0, b0 = map(float, _extrema(a))
     else
@@ -313,12 +305,12 @@ function find_zeros(f, a, b=nothing; no_pts = 12, k=8,
 
     # set tolerances if not specified
     fa0, fb0 = f(a0), f(b0)
-    d = Dict(kwargs)
-    T, S = eltype(a0), eltype(fa0)
-    xatol::T = get(d, :xatol, eps(one(T))^(4//5) * oneunit(T))
-    xrtol = get(d, :xrtol, eps(one(T)) * one(T))
-    atol::S  = get(d, :atol,  eps(float(S)) * oneunit(S))
-    rtol  = get(d, :rtol,  eps(float(S)) * one(S))
+    d        = Dict(kwargs)
+    T, S     = eltype(a0), eltype(fa0)
+    xatol::T = get(d, :xatol, eps(one(T))^(4 // 5) * oneunit(T))
+    xrtol    = get(d, :xrtol, eps(one(T)) * one(T))
+    atol::S  = get(d, :atol, eps(float(S)) * oneunit(S))
+    rtol     = get(d, :rtol, eps(float(S)) * one(S))
 
     zs = T[]  # collect zeros
 
@@ -328,11 +320,12 @@ function find_zeros(f, a, b=nothing; no_pts = 12, k=8,
     a0 = find_non_zero(f, a0, b0, xatol, xrtol, atol, rtol)
     b0 = find_non_zero(f, b0, a0, xatol, xrtol, atol, rtol)
 
-
-    _fz!(zs, f, a0, b0, no_pts,k)  # initial zeros
+    _fz!(zs, f, a0, b0, no_pts, k)  # initial zeros
 
     ints = Interval{T}[] # collect subintervals
-    !naive && !isempty(zs) &&  make_intervals!(ints, f, a0, b0, zs, 1, xatol, xrtol, atol, rtol)
+    !naive &&
+        !isempty(zs) &&
+        make_intervals!(ints, f, a0, b0, zs, 1, xatol, xrtol, atol, rtol)
 
     nzs = T[]
     cnt = 0
@@ -350,7 +343,7 @@ function find_zeros(f, a, b=nothing; no_pts = 12, k=8,
         # sub_no_pts = ceil(Int, (i.b - i.a) / (b-a) * no_pts * 2^(i.depth))
         #sub_no_pts <= 2 && continue  # stop on depth, always divide if roots
         #sub_no_pts = max(3, floor(Int, no_pts  / (2.0)^(i.depth)))
-        sub_no_pts = floor(Int, no_pts  / (2.0)^(i.depth))
+        sub_no_pts = floor(Int, no_pts / (2.0)^(i.depth))
 
         empty!(nzs)
         if sub_no_pts >= 2
@@ -358,12 +351,12 @@ function find_zeros(f, a, b=nothing; no_pts = 12, k=8,
         end
 
         if !isempty(nzs)
-            azs = filter(rt->not_near(rt, zs, xatol, xrtol), nzs) # trim out nearby roots
+            azs = filter(rt -> not_near(rt, zs, xatol, xrtol), nzs) # trim out nearby roots
             length(azs) == 0 && continue
             append!(zs, azs)
             sort!(zs)
             i.depth > 4 && continue
-            make_intervals!(ints, f, i.a, i.b, azs, i.depth+1, xatol, xrtol, atol, rtol)
+            make_intervals!(ints, f, i.a, i.b, azs, i.depth + 1, xatol, xrtol, atol, rtol)
         end
     end
 
@@ -380,9 +373,8 @@ function find_zeros(f, a, b=nothing; no_pts = 12, k=8,
         if !approx_close(z1, z2, xatol, xrtol)
             push!(inds, i)
         end
-        z1=z2
+        z1 = z2
     end
 
     return zs[inds]
-
 end

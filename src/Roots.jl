@@ -9,13 +9,24 @@ import CommonSolve
 import CommonSolve: solve, solve!, init
 using Setfield
 
-export fzero,
-       fzeros,
-       secant_method
+export fzero, fzeros, secant_method
 
-export find_zero, find_zero!, find_zeros,
-       ZeroProblem, solve, solve!, init,
-       Order0, Secant, Order1, Orderφ, Steffensen, Order2, Order5, Order8, Order16
+export find_zero,
+    find_zero!,
+    find_zeros,
+    ZeroProblem,
+    solve,
+    solve!,
+    init,
+    Order0,
+    Secant,
+    Order1,
+    Orderφ,
+    Steffensen,
+    Order2,
+    Order5,
+    Order8,
+    Order16
 
 export Bisection, A42, AlefeldPotraShi, FalsePosition
 

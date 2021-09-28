@@ -23,26 +23,31 @@ superlinear, and relatively robust to non-reasonable starting points.
 """
 struct Order0 <: AbstractSecant end
 
-function find_zero(fs, x0, method::Order0;
-                   p=nothing,
-                   tracks::AbstractTracks=NullTracks(),
-                   verbose=false,
-                   kwargs...)
+function find_zero(
+    fs,
+    x0,
+    method::Order0;
+    p=nothing,
+    tracks::AbstractTracks=NullTracks(),
+    verbose=false,
+    kwargs...,
+)
     M = Order1()
     N = AlefeldPotraShi()
-    find_zero(fs, x0, M, N; p=p, tracks=tracks,verbose=verbose, kwargs...)
+    find_zero(fs, x0, M, N; p=p, tracks=tracks, verbose=verbose, kwargs...)
 end
 
-
 # todo: consolidate this with find_zero(M,N,f, x0)...
-function find_zero(fs, x0,
-                   M::AbstractUnivariateZeroMethod,
-                   N::AbstractBracketing;
-                   p = nothing,
-                   tracks::AbstractTracks=NullTracks(),
-                   verbose=false,
-                   kwargs...)
-
+function find_zero(
+    fs,
+    x0,
+    M::AbstractUnivariateZeroMethod,
+    N::AbstractBracketing;
+    p=nothing,
+    tracks::AbstractTracks=NullTracks(),
+    verbose=false,
+    kwargs...,
+)
     F = Callable_Function(M, fs, p)
     state = init_state(M, F, x0)
     options = init_options(M, state; kwargs...)
@@ -52,9 +57,7 @@ function find_zero(fs, x0,
     isnan(xstar) && throw(ConvergenceFailed("Stopped"))
 
     return xstar
-
 end
-
 
 # Robust version using some tricks: idea from algorithm described in
 # [The SOLVE button from the
@@ -63,24 +66,24 @@ end
 # * limit steps so as not too far or too near the previous one
 # * if not decreasing, use a quad step upto 4 times to bounce out of trap, if possible
 # First uses M, then N if bracket is identified
-function find_zero(M::AbstractUnivariateZeroMethod,
-                   N::AbstractBracketing,
-                   F,
-                   state::AbstractUnivariateZeroState,
-                   options::UnivariateZeroOptions,
-                   l::AbstractTracks=NullTracks(),
-                   verbose=false
-                   )
-
-    incfn(l,2)
+function find_zero(
+    M::AbstractUnivariateZeroMethod,
+    N::AbstractBracketing,
+    F,
+    state::AbstractUnivariateZeroState,
+    options::UnivariateZeroOptions,
+    l::AbstractTracks=NullTracks(),
+    verbose=false,
+)
+    incfn(l, 2)
     log_step(l, M, state, :init)
-    log_method(l,M)
-    log_nmethod(l,N)
+    log_method(l, M)
+    log_nmethod(l, N)
 
     quad_ctr = 0
     flag = :not_converged
     ctr = 0
-    α = NaN*state.xn1
+    α = NaN * state.xn1
     while true
         ctr += 1
         flag, converged = assess_convergence(M, state, options)
@@ -96,28 +99,28 @@ function find_zero(M::AbstractUnivariateZeroMethod,
             state = state0
             break
         elseif sign(state0.fxn0) * sign(state0.fxn1) < 0
-
-            !isa(l, NullTracks) && log_message(l, "Used bracketing method $N on  [$(state0.xn0),$(state0.xn1)], those steps not recorded")
+            !isa(l, NullTracks) && log_message(
+                l,
+                "Used bracketing method $N on  [$(state0.xn0),$(state0.xn1)], those steps not recorded",
+            )
 
             Fₙ = Callable_Function(N, F)
             stateₙ = init_state(N, state0, Fₙ) # save function calls by using state0 values
             optionsₙ = init_options(N, stateₙ)
             α = solve!(init(N, Fₙ, stateₙ, optionsₙ))
             break
-
         end
-
 
         ## did we move too far?
         adj = false
         r, a, b = state0.xn1, state.xn0, state.xn1
         Δr = abs(r - b)
         Δx = abs(b - a)
-        ts,TB = 1e-3, 1e2 # too small, too big
-        if  Δr >= TB * Δx
+        ts, TB = 1e-3, 1e2 # too small, too big
+        if Δr >= TB * Δx
             adj = true
-            r = b + sign(r-b) * TB * Δx  ## too big
-        elseif Δr  <= ts *  Δx
+            r = b + sign(r - b) * TB * Δx  ## too big
+        elseif Δr <= ts * Δx
             adj = true
             r = b + sign(r - b) * ts * Δx
         end
@@ -131,19 +134,24 @@ function find_zero(M::AbstractUnivariateZeroMethod,
             a, b = state.xn1, state0.xn1
             fa, fb = state.fxn1, state0.fxn1
 
-            !isa(l, NullTracks) && log_message(l, "Used bracketing method $N on  [$a,$b], those steps not recorded")
+            !isa(l, NullTracks) && log_message(
+                l,
+                "Used bracketing method $N on  [$a,$b], those steps not recorded",
+            )
 
             Fₙ = Callable_Function(N, F)
             stateₙ = init_state(N, Fₙ, a, b, fa, fb)
             optionsₙ = init_options(N, stateₙ)
-            α = solve!(init(N,Fₙ,stateₙ,optionsₙ))
+            α = solve!(init(N, Fₙ, stateₙ, optionsₙ))
             break
         end
 
-
         ## did we improve?
         if adj || abs(state0.fxn1) < abs(state.fxn1)
-            if isnan(state0.xn1) || isnan(state0.fxn1) || isinf(state0.xn1) || isinf(state0.fxn1)
+            if isnan(state0.xn1) ||
+               isnan(state0.fxn1) ||
+               isinf(state0.xn1) ||
+               isinf(state0.fxn1)
                 break
             end
             state = state0
@@ -158,7 +166,14 @@ function find_zero(M::AbstractUnivariateZeroMethod,
             break
         else
             quad_ctr += 1
-            r = quad_vertex(state0.xn1, state0.fxn1, state.xn1, state.fxn1, state.xn0, state.fxn0)
+            r = quad_vertex(
+                state0.xn1,
+                state0.fxn1,
+                state.xn1,
+                state.fxn1,
+                state.xn0,
+                state.fxn0,
+            )
 
             if isnan(r) || isinf(r)
                 state = state0
@@ -179,7 +194,6 @@ function find_zero(M::AbstractUnivariateZeroMethod,
 
     flag, converged = assess_convergence(M, state, options)
     isnan(α) ? decide_convergence(M, F, state, options, flag) : α
-
 end
 
 # Switch to bracketing method
@@ -189,7 +203,7 @@ function run_bisection(N::AbstractBracketing, f, ab, state)
     init_state!(state, N, f; clear=true)
     find_zero(N, f, state, init_options(N, state))
     a, b = _extrema(ab)
-    u,v = a > b ? (b, a) : (a, b)
+    u, v = a > b ? (b, a) : (a, b)
     state.message *= "Bracketing used over ($u, $v), those steps not shown. "
     return nothing
 end
