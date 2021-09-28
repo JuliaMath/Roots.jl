@@ -81,6 +81,9 @@ As well,  if  ``f''`` is too  big near ``\alpha``, or  ``f'`` too small near  ``
 ```@docs
 Roots.Newton
 Roots.Halley
+Roots.QuadraticInverse
+Roots.ChebyshevLike
+Roots.SuperHalley
 ```
 
 Newton and Halley's method are members of this family of methods:
@@ -191,6 +194,9 @@ good example.
 | Derivative Free | Order16                      | ``16``                 | ``5``   | ``1.718\dots``                        |
 | Classical       | Newton                       | ``2``                  | ``2``   | ``1.414\dots``                        |
 | Classical       | Halley                       | ``3``                  | ``3``   | ``1.442\dots``                        |
+| Classical       | QuadraticInverse             | ``3``                  | ``3``   | ``1.442\dots``                        |
+| Classical       | ChebyshevLike                | ``3``                  | ``3``   | ``1.442\dots``                        |
+| Classical       | SuperHalley                  | ``3``                  | ``3``   | ``1.442\dots``                        |
 | MultiStep       | LithBoonkkampIJzerman{S,D}   | ``p^s=\sum p^k(d+\sigma_k)`` | ``D+1`` | varies, ``1.92\dots`` max       |
 | Bracketing      | BisectionExact               | ``1``                  | ``1``   | ``1``                                 |
 | Bracketing      | A42                          | ``(2 + 7^{1/2})``      | ``3,4`` |``(2 + 7^{1/2})^{1/3} = 1.6686\dots``  |
