@@ -142,6 +142,8 @@ other methods.
 Example
 
 ```jldoctest with_derivative
+julia> using Roots
+
 julia> find_zero((sin, cos, x->-sin(x)), 3.0, Roots.Halley()) ≈ π
 true
 ```
@@ -257,6 +259,8 @@ other methods.
 Example
 
 ```jldoctest with_derivative
+julia> using Roots
+
 julia> find_zero((sin, cos, x->-sin(x)), 3.0, Roots.QuadraticInverse()) ≈ π
 true
 ```
