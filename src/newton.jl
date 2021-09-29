@@ -25,14 +25,19 @@ Implements Newton's [method](http://tinyurl.com/b4d7vls):
 one derivative. Two function calls per step.
 
 Example
-```
-find_zero((sin,cos), 3.0, Roots.Newton())
+
+```jldoctest with_derivative
+julia> using Roots
+
+julia> find_zero((sin,cos), 3.0, Roots.Newton()) ≈ π
+true
 ```
 
 If function evaluations are expensive one can pass in a function which returns (f, f/f') as follows
 
-```
-find_zero(x -> (sin(x), sin(x)/cos(x)), 3.0, Roots.Newton())
+```jldoctest with_derivative
+julia> find_zero(x -> (sin(x), sin(x)/cos(x)), 3.0, Roots.Newton()) ≈ π
+true
 ```
 
 This can be advantageous if the derivative is easily computed from the
@@ -135,15 +140,20 @@ This method is cubically converging, but requires more function calls per step (
 other methods.
 
 Example
-```
-find_zero((sin, cos, x->-sin(x)), 3.0, Roots.Halley())
+
+```jldoctest with_derivative
+julia> using Roots
+
+julia> find_zero((sin, cos, x->-sin(x)), 3.0, Roots.Halley()) ≈ π
+true
 ```
 
 If function evaluations are expensive one can pass in a function which
 returns `(f, f/f',f'/f'')` as follows
 
-```
-find_zero(x -> (sin(x), sin(x)/cos(x), -cos(x)/sin(x)), 3.0, Roots.Halley())
+```jldoctest with_derivative
+julia> find_zero(x -> (sin(x), sin(x)/cos(x), -cos(x)/sin(x)), 3.0, Roots.Halley()) ≈ π
+true
 ```
 
 This can be advantageous if the derivatives are easily computed from
@@ -242,20 +252,25 @@ halley(f, fp, fpp, x0; kwargs...) = find_zero((f, fp, fpp), x0, Halley(); kwargs
     Roots.QuadraticInverse()
 
 Implements the [quadratic inverse method](https://doi.org/10.2307/2322644) also known as [Chebyshev's method]((https://dl.acm.org/doi/10.1080/00207160802208358)),
-`xᵢ₊₁ = xᵢ - (f/f')(xᵢ) * (1 + (f/f')(xᵢ) * (f''/f')(xᵢ) * 1/2)
+`xᵢ₊₁ = xᵢ - (f/f')(xᵢ) * (1 + (f/f')(xᵢ) * (f''/f')(xᵢ) * 1/2)`.
 This method is cubically converging, but requires more function calls per step (3) than
 other methods.
 
 Example
-```
-find_zero((sin, cos, x->-sin(x)), 3.0, Roots.QuadraticInverse())
+
+```jldoctest with_derivative
+julia> using Roots
+
+julia> find_zero((sin, cos, x->-sin(x)), 3.0, Roots.QuadraticInverse()) ≈ π
+true
 ```
 
 If function evaluations are expensive one can pass in a function which
 returns `(f, f/f',f'/f'')` as follows
 
-```
-find_zero(x -> (sin(x), sin(x)/cos(x), -cos(x)/sin(x)), 3.0, Roots.QuadraticInverse())
+```jldoctest with_derivative
+julia> find_zero(x -> (sin(x), sin(x)/cos(x), -cos(x)/sin(x)), 3.0, Roots.QuadraticInverse()) ≈ π
+true
 ```
 
 This can be advantageous if the derivatives are easily computed from
