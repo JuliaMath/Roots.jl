@@ -148,7 +148,7 @@ true
 ### The CommonSolve interface
 
 The
-(DifferentialEquations)[https://github.com/SciML/DifferentialEquations.jl]
+[DifferentialEquations](https://github.com/SciML/DifferentialEquations.jl)
 interface of setting up a problem; initializing the problem; then
 solving the problem is also implemented using the methods
 `ZeroProblem`, `init`, `solve!` and `solve`.
