@@ -971,5 +971,10 @@ function solve!(P::ZeroProblemIterator; verbose=false)
 end
 
 # thread verbose through
+"""
+    solve(𝐙::ZeroProblem, args...; verbose=false, kwargs...)
+
+Disptaches to `solve!(init(𝐙, args...; kwargs...))`. See [`solve!`](@ref) for details.
+"""
 CommonSolve.solve(F::ZeroProblem, args...; verbose=false, kwargs...) =
     solve!(init(F, args...; verbose=verbose, kwargs...); verbose=verbose)

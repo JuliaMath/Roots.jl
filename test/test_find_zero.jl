@@ -156,6 +156,7 @@ end
 
     # iterator interface (ZeroProblem, solve; init, solve!)
     meths = [
+        Order0(),
         Order1(),
         Roots.Order1B(),
         Roots.King(),

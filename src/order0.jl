@@ -59,6 +59,20 @@ function find_zero(
     return xstar
 end
 
+# give solve interface for Order0
+# XXX should creat iterator object for hybrid, rather than call out to
+# this version of find_zero...
+function solve!(𝐙::ZeroProblemIterator{<:Order0}; verbose=false)
+    F = 𝐙.F
+    M = Order1()
+    N = AlefeldPotraShi()
+    state = 𝐙.state
+    options = 𝐙.options
+    find_zero(M,N,F,
+              𝐙.state, 𝐙.options, 𝐙.logger, verbose)
+end
+
+
 # Robust version using some tricks: idea from algorithm described in
 # [The SOLVE button from the
 # HP-34]C(http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1979-12.pdf).
