@@ -23,54 +23,42 @@ superlinear, and relatively robust to non-reasonable starting points.
 """
 struct Order0 <: AbstractSecant end
 
-function find_zero(
-    fs,
-    x0,
-    method::Order0;
+# special case Order0 to be hybrid
+function init(
+    𝑭𝑿::ZeroProblem,
+    M::Order0,
+    p′=nothing;
     p=nothing,
-    tracks::AbstractTracks=NullTracks(),
-    verbose=false,
+    verbose::Bool=false,
+    tracks=NullTracks(),
     kwargs...,
 )
-    M = Order1()
-    N = AlefeldPotraShi()
-    find_zero(fs, x0, M, N; p=p, tracks=tracks, verbose=verbose, kwargs...)
+    p = p′ === nothing ? p : p′
+    init(𝑭𝑿, Secant(), AlefeldPotraShi();
+         p=p, verbose=verbose, tracks=tracks,
+         kwargs...)
+
 end
 
-# todo: consolidate this with find_zero(M,N,f, x0)...
-function find_zero(
-    fs,
-    x0,
+## When passing 2 methods, any parameters must be passed as a named argument through
+## the keyword p
+function init(
+    𝑭𝑿::ZeroProblem,
     M::AbstractUnivariateZeroMethod,
     N::AbstractBracketing;
     p=nothing,
-    tracks::AbstractTracks=NullTracks(),
-    verbose=false,
+    verbose::Bool=false,
+    tracks=NullTracks(),
     kwargs...,
 )
-    F = Callable_Function(M, fs, p)
-    state = init_state(M, F, x0)
+    F = Callable_Function(M, 𝑭𝑿.F, p)
+    state = init_state(M, F, 𝑭𝑿.x₀)
     options = init_options(M, state; kwargs...)
     l = Tracks(verbose, tracks, state)
-
-    xstar = find_zero(M, N, F, state, options, l, verbose)
-    isnan(xstar) && throw(ConvergenceFailed("Stopped"))
-
-    return xstar
+    incfn(l, initial_fncalls(M))
+    ZeroProblemIterator(M, N, F, state, options, l)
 end
 
-# give solve interface for Order0
-# XXX should creat iterator object for hybrid, rather than call out to
-# this version of find_zero...
-function solve!(𝐙::ZeroProblemIterator{<:Order0}; verbose=false)
-    F = 𝐙.F
-    M = Order1()
-    N = AlefeldPotraShi()
-    state = 𝐙.state
-    options = 𝐙.options
-    find_zero(M,N,F,
-              𝐙.state, 𝐙.options, 𝐙.logger, verbose)
-end
 
 
 # Robust version using some tricks: idea from algorithm described in
@@ -80,15 +68,10 @@ end
 # * limit steps so as not too far or too near the previous one
 # * if not decreasing, use a quad step upto 4 times to bounce out of trap, if possible
 # First uses M, then N if bracket is identified
-function find_zero(
-    M::AbstractUnivariateZeroMethod,
-    N::AbstractBracketing,
-    F,
-    state::AbstractUnivariateZeroState,
-    options::UnivariateZeroOptions,
-    l::AbstractTracks=NullTracks(),
-    verbose=false,
-)
+function solve!(𝐙::ZeroProblemIterator{𝐌,𝐍}; verbose=false) where {𝐌,𝐍<:AbstractBracketing}
+
+    M,N,F,state,options,l = 𝐙.M, 𝐙.N, 𝐙.F, 𝐙.state, 𝐙.options, 𝐙.logger
+
     incfn(l, 2)
     log_step(l, M, state, :init)
     log_method(l, M)
@@ -210,7 +193,19 @@ function find_zero(
     isnan(α) ? decide_convergence(M, F, state, options, flag) : α
 end
 
+function find_zero(
+    fs, x0,
+    M::AbstractUnivariateZeroMethod,
+    N::AbstractBracketing;
+    verbose=false,
+    kwargs...)
+    𝐏 = ZeroProblem(fs, x0)
+    solve!(init(𝐏, M, N; verbose=verbose, kwargs...), verbose=verbose)
+end
+
+
 # Switch to bracketing method
+# deprecate soon, not used
 function run_bisection(N::AbstractBracketing, f, ab, state)
     steps, fnevals = state.steps, state.fnevals
     f = Callable_Function(N, f)

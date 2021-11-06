@@ -747,8 +747,9 @@ struct ZeroProblem{F,X}
 end
 
 ## The actual iterating object
-struct ZeroProblemIterator{M,F,S,O,L}
+struct ZeroProblemIterator{M,N,F,S,O,L}
     M::M
+    N::N
     F::F
     state::S
     options::O
@@ -777,7 +778,7 @@ function init(
     options = init_options(M, state; kwargs...)
     l = Tracks(verbose, tracks, state)
     incfn(l, initial_fncalls(M))
-    ZeroProblemIterator(M, F, state, options, l)
+    ZeroProblemIterator(M, nothing, F, state, options, l)
 end
 
 function init(𝑭𝑿::ZeroProblem, p′=nothing; kwargs...)
@@ -792,7 +793,7 @@ function init(
     options::UnivariateZeroOptions=init_options(M, state),
     l::AbstractTracks=NullTracks(),
 )
-    ZeroProblemIterator(M, Callable_Function(M, F), state, options, l)
+    ZeroProblemIterator(M, Nothing, Callable_Function(M, F), state, options, l)
 end
 
 # Optional iteration interface to handle looping
