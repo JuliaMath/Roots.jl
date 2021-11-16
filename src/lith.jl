@@ -228,6 +228,7 @@ function init_lith(
     ys = NTuple{1,NTuple{S,T}}((yᵢ,))
 
     # build up to get S of them
+    x0::R = zero(R)
     if isnan(x₀)
         x0 = _default_secant_step(x₁)
         fx0::T = evalf(F, x0, 1)
