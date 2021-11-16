@@ -59,14 +59,15 @@ end
 
 function init_state(M::Newton, F::Callable_Function, x)
     x₀ = float(first(x))
-    fx₀, Δ = F(x₀)
-    x₁ = x₀ - Δ
+    T = eltype(x₀)
+    fx₀, Δ::T = F(x₀)
+    x₁::T = x₀ - Δ
     state = init_state(M, F, x₀, x₁, fx₀, fx₀)
 end
 
 # compute fx₁, Δ
-function init_state(::Newton, F, x₀, x₁, fx₀, fx₁)
-    fx₁, Δ = F(x₁)
+function init_state(::Newton, F, x₀::T, x₁::T, fx₀, fx₁) where {T}
+    fx₁, Δ::T = F(x₁)
     NewtonState(x₁, x₀, Δ, fx₁, fx₀)
 end
 
@@ -81,7 +82,7 @@ function update_state(
 ) where {T,S}
     xn0, xn1 = o.xn0, o.xn1
     fxn0, fxn1 = o.fxn0, o.fxn1
-    Δ = o.Δ
+    Δ::T = o.Δ
 
     if isissue(Δ)
         log_message(l, "Issue with `f/f′'")
@@ -177,14 +178,15 @@ end
 # we compute one step here to get x₁
 function init_state(M::AbstractHalleyLikeMethod, F::Callable_Function, x)
     x₀ = float(first(x))
+    T = eltype(x₀)
     fx₀, (Δ, ΔΔ) = F(x₀)
     Δx = calculateΔ(M, Δ, ΔΔ)
-    x₁ = x₀ - Δ
+    x₁::T = x₀ - Δ
     state = init_state(M, F, x₀, x₁, fx₀, fx₀)
 end
 
-function init_state(::AbstractHalleyLikeMethod, F, x₀, x₁, fx₀, fx₁)
-    fx₁, (Δ, ΔΔ) = F(x₁)
+function init_state(::AbstractHalleyLikeMethod, F, x₀::T, x₁::T, fx₀, fx₁) where {T}
+    fx₁, (Δ::T, ΔΔ::T) = F(x₁)
     HalleyState(x₁, x₀, Δ, ΔΔ, fx₁, fx₀)
 end
 
@@ -203,7 +205,7 @@ function update_state(
     fxn = o.fxn1
     r1, r2 = o.Δ, o.ΔΔ
 
-    Δ = calculateΔ(method, r1, r2)
+    Δ::T = calculateΔ(method, r1, r2)
     if isissue(Δ)
         log_message(l, "Issue with computing `Δ`")
         return (o, true)

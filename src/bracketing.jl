@@ -732,15 +732,15 @@ function update_state(
     ::Brent,
     f,
     state::BrentState,
-    options::UnivariateZeroOptions,
+    options::UnivariateZeroOptions{T,S},
     l=NullTracks(),
-)
+) where {T,S}
     mflag = state.mflag
     a, b, c, d = state.xn0, state.xn1, state.c, state.d
     fa, fb, fc = state.fxn0, state.fxn1, state.fc
 
     # next step depends on points; inverse quadratic
-    s = inverse_quadratic_step(a, b, c, fa, fb, fc)
+    s::T = inverse_quadratic_step(a, b, c, fa, fb, fc)
     (isnan(s) || isinf(s)) && (s = secant_step(a, b, fa, fb))
 
     # guard step
@@ -847,10 +847,10 @@ end
 function decide_convergence(
     ::FalsePosition,
     F,
-    state::AbstractUnivariateZeroState,
+    state::AbstractUnivariateZeroState{T,S},
     options,
     val,
-)
+) where {T,S}
     a, b = state.xn0, state.xn1
     fa, fb = state.fxn0, state.fxn1
 
@@ -874,10 +874,10 @@ end
 function update_state(
     method::FalsePosition,
     fs,
-    o::AbstractUnivariateZeroState,
+    o::AbstractUnivariateZeroState{T,S},
     options::UnivariateZeroOptions,
     l=NullTracks(),
-)
+) where {T,S}
     a, b = o.xn0, o.xn1
     fa, fb = o.fxn0, o.fxn1
 
@@ -887,7 +887,7 @@ function update_state(
         lambda = 1 / 2
     end
 
-    x = b - lambda * (b - a)
+    x::T = b - lambda * (b - a)
     fx = fs(x)
     incfn(l)
 

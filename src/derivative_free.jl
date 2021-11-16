@@ -97,7 +97,7 @@ function init_state(::AbstractSecant, F, x₀, x₁, fx₀, fx₁)
     UnivariateZeroState(x₁, x₀, fx₁, fx₀)
 end
 
-function update_state(::Order1, F, o::AbstractUnivariateZeroState, options, l=NullTracks())
+function update_state(::Order1, F, o::AbstractUnivariateZeroState{T,S}, options, l=NullTracks()) where {T,S}
     xn0, xn1 = o.xn0, o.xn1
     fxn0, fxn1 = o.fxn0, o.fxn1
     Δ = fxn1 * (xn1 - xn0) / (fxn1 - fxn0)
@@ -107,7 +107,7 @@ function update_state(::Order1, F, o::AbstractUnivariateZeroState, options, l=Nu
         return o, true
     end
 
-    x0, x1 = xn1, xn1 - Δ
+    x0, x1::T = xn1, xn1 - Δ
     fx0, fx1 = fxn1, F(x1)
     incfn(l)
 
@@ -177,7 +177,7 @@ function update_state(
         return o, true
     end
 
-    x0, x1 = x1, x1 - delta
+    x0, x1::T = x1, x1 - delta
     fx0, fx1 = fx1, F(x1)
     incfn(l)
 
@@ -260,7 +260,8 @@ function update_state(
 
     @set! o.xn0 = o.xn1
     @set! o.fxn0 = o.fxn1
-    @set! o.xn1 = zn - fzn / fp
+    x₁::T = zn - fzn / fp
+    @set! o.xn1 = x₁
     @set! o.fxn1 = F(o.xn1)
     incfn(l)
 
@@ -306,7 +307,7 @@ function update_state(
     fzn::S, _ = f(zn)
     incfn(l, 2)
 
-    xn1 = zn - fzn / fpyn
+    xn1::T = zn - fzn / fpyn
     fxn1, _ = f(xn1)
     incfn(l, 2)
 
@@ -397,7 +398,7 @@ function update_state(
     end
 
     phi = (1 + fyn / fwn)           # pick one of options
-    zn = yn - phi * fyn / fp
+    zn::T = yn - phi * fyn / fp
     fzn::S = F(zn)
     incfn(l)
 
@@ -416,7 +417,7 @@ function update_state(
 
     xi = (1 - 2fyn * fyn * fyn / (fwn * fwn * fxn))
 
-    xn1 = zn - w * xi * fzn / fp
+    xn1::T = zn - w * xi * fzn / fp
     fxn1::S = F(xn1)
     incfn(l)
 
@@ -504,7 +505,7 @@ function update_state(
         return o, true
     end
 
-    zn = yn - fyn / fp
+    zn::T = yn - fyn / fp
     fzn::S = F(zn)
     incfn(l)
 
@@ -522,7 +523,7 @@ function update_state(
         return o, true
     end
 
-    an = zn - eta * fzn / fp
+    an::T = zn - eta * fzn / fp
     fan::S = F(an)
     incfn(l)
 
@@ -549,7 +550,7 @@ function update_state(
         u2^2 * u3 +
         3 * u1 * u4^2 * (u3^2 - u4^2) / (fp1 / oneunit(fp1))
 
-    xn1 = an - sigma * fan / fp
+    xn1::T = an - sigma * fan / fp
     fxn1::S = F(xn1)
     incfn(l)
 
