@@ -255,7 +255,7 @@ The algorithm is derived from one in a
 
 !!! note
     The `IntervalRootFinding` package provides a rigorous alternative to this heuristic one.
-    That package use interval arithmetic, so can compute bounds on the size of the image of
+    That package uses interval arithmetic, so can compute bounds on the size of the image of
     an interval under `f`. If this image includes `0`, then it can look for the zero.
     Bisection, on the other hand, only will look for a zero if the two endpoints have different signs,
     a much more rigid condition for a potential zero.
@@ -304,7 +304,7 @@ function find_zeros(f, a, b=nothing; no_pts=12, k=8, naive=false, kwargs...)
     b0 = isinf(b0) ? prevfloat(b0) : b0
 
     # set tolerances if not specified
-    fa0, fb0 = f(a0), f(b0)
+    fa0, fb0 = promote(float(f(a0)), float(f(b0)))
     d        = Dict(kwargs)
     T, S     = eltype(a0), eltype(fa0)
     xatol::T = get(d, :xatol, eps(one(T))^(4 / 5) * oneunit(T))
