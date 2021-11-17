@@ -114,6 +114,9 @@ end
     @test find_zeros(sin, 3:4) ≈ [float(pi)]
     @test find_zeros(sin, SomeInterval(3, 4)) ≈ [float(pi)]
     @test find_zeros(sin, range(3, stop=4, length=20)) ≈ [float(pi)]
+
+    # test with constant function
+    @test isempty(find_zeros(x -> 4, -10, 10))
 end
 
 @testset "find_zeros: not Float64 types" begin
