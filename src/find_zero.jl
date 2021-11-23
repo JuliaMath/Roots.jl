@@ -243,7 +243,7 @@ function show_trace(io::IO, method, N, state, tracks)
             println(io, "* Algorithm: $(method), with possible bracketing with $N")
         end
         println(io, "* iterations: $(tracks.steps)")
-        println("* function evaluations ≈ $(tracks.fncalls)")
+        println(io, "* function evaluations ≈ $(tracks.fncalls)")
         tracks.convergence_flag == :x_converged &&
             println(io, "* stopped as x_n ≈ x_{n-1} using atol=xatol, rtol=xrtol")
         tracks.convergence_flag == :f_converged &&
