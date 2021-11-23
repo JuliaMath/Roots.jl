@@ -170,6 +170,20 @@ log_nmethod(::NullTracks, method) = nothing
 Construct a `Tracks` object used to record the progress of the algorithm.
 
 By default, a null tracks object used, but if `verbose=true` is specified of a `Tracks` object passed to the keyword `tracks` then the steps of the algorithm are recorded in the `Tracks` object. If `verbose=true`, the `Tracks` object will be shown.
+
+Alternatively, a `Tracks` object can be constructed and then shown; `find_zero` modifies a `Tracks` object.
+
+## Example
+
+(This example uses a default type for `Tracks` which may not be suitable for some uses.)
+
+```
+julia> tracks = Roots.Tracks()  # default type is Float64 for both x, fx values
+julia> find_zero(sin, 3, Secant(); tracks=tracks)
+julia> tracks.steps # 4
+julia> tracks  # show summary of algorithm
+```
+
 """
 mutable struct Tracks{T,S} <: AbstractTracks
     xs::Vector{T}
@@ -186,6 +200,7 @@ Tracks(T, S) = Tracks(T[], S[], 0, 0, :not_converged, "", nothing, nothing, noth
 Tracks(s::AbstractUnivariateZeroState{T,S}) where {T,S} = Tracks(T, S)
 Tracks(verbose, tracks, state) =
     (verbose && isa(tracks, NullTracks)) ? Tracks(state) : tracks
+Tracks() = Tracks(Float64, Float64) # give default
 
 function log_step(l::Tracks, M::Any, state, init=nothing)
     if init !== nothing
