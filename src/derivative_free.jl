@@ -97,7 +97,13 @@ function init_state(::AbstractSecant, F, x₀, x₁, fx₀, fx₁)
     UnivariateZeroState(x₁, x₀, fx₁, fx₀)
 end
 
-function update_state(::Order1, F, o::AbstractUnivariateZeroState{T,S}, options, l=NullTracks()) where {T,S}
+function update_state(
+    ::Order1,
+    F,
+    o::AbstractUnivariateZeroState{T,S},
+    options,
+    l=NullTracks(),
+) where {T,S}
     xn0, xn1 = o.xn0, o.xn1
     fxn0, fxn1 = o.fxn0, o.fxn1
     Δ = fxn1 * (xn1 - xn0) / (fxn1 - fxn0)
