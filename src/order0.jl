@@ -34,10 +34,7 @@ function init(
     kwargs...,
 )
     p = p′ === nothing ? p : p′
-    init(𝑭𝑿, Secant(), AlefeldPotraShi();
-         p=p, verbose=verbose, tracks=tracks,
-         kwargs...)
-
+    init(𝑭𝑿, Secant(), AlefeldPotraShi(); p=p, verbose=verbose, tracks=tracks, kwargs...)
 end
 
 ## When passing 2 methods, any parameters must be passed as a named argument through
@@ -59,8 +56,6 @@ function init(
     ZeroProblemIterator(M, N, F, state, options, l)
 end
 
-
-
 # Robust version using some tricks: idea from algorithm described in
 # [The SOLVE button from the
 # HP-34]C(http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1979-12.pdf).
@@ -69,8 +64,7 @@ end
 # * if not decreasing, use a quad step upto 4 times to bounce out of trap, if possible
 # First uses M, then N if bracket is identified
 function solve!(𝐙::ZeroProblemIterator{𝐌,𝐍}; verbose=false) where {𝐌,𝐍<:AbstractBracketing}
-
-    M,N,F,state,options,l = 𝐙.M, 𝐙.N, 𝐙.F, 𝐙.state, 𝐙.options, 𝐙.logger
+    M, N, F, state, options, l = 𝐙.M, 𝐙.N, 𝐙.F, 𝐙.state, 𝐙.options, 𝐙.logger
 
     incfn(l, 2)
     log_step(l, M, state, :init)
@@ -194,15 +188,16 @@ function solve!(𝐙::ZeroProblemIterator{𝐌,𝐍}; verbose=false) where {𝐌
 end
 
 function find_zero(
-    fs, x0,
+    fs,
+    x0,
     M::AbstractUnivariateZeroMethod,
     N::AbstractBracketing;
     verbose=false,
-    kwargs...)
+    kwargs...,
+)
     𝐏 = ZeroProblem(fs, x0)
     solve!(init(𝐏, M, N; verbose=verbose, kwargs...), verbose=verbose)
 end
-
 
 # Switch to bracketing method
 # deprecate soon, not used
