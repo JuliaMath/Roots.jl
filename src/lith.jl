@@ -326,6 +326,8 @@ function init_state(L::LithBoonkkampIJzermanBracket, F, x₀, x₁, fx₀, fx₁
         a, b, fa, fb = b, a, fb, fa
     end
 
+    assert_bracket(fa, fb)
+
     f′a, f′b = evalf(F, a, 2), evalf(F, b, 2)
     c, fc, f′c = a, fa, f′a
 
