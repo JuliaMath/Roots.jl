@@ -78,23 +78,31 @@ function init_state(M::AbstractBracketing, F::Callable_Function, x)
     x₀′, x₁′ = map(float, _extrema(x))
     x₀, x₁ = adjust_bracket((x₀′, x₁′))
     fx₀, fx₁ = F(x₀), F(x₁)
+
     state = init_state(M, F, x₀, x₁, fx₀, fx₁)
 end
 
 function init_state(::AbstractBracketing, F, x₀, x₁, fx₀, fx₁; m=_middle(x₀, x₁), fm=F(m))
-    (iszero(fx₀) || iszero(fx₁)) && return UnivariateZeroState(x₁, x₀, fx₁, fx₀)
 
-    assert_bracket(fx₀, fx₁)
     if x₀ > x₁
         x₀, x₁, fx₀, fx₁ = x₁, x₀, fx₁, fx₀
     end
 
+    # handle interval if fa*fb ≥ 0 (explicit, but also not needed)
+    (iszero(fx₀) || iszero(fx₁)) && return UnivariateZeroState(x₁,x₀,fx₁,fx₀)
+    assert_bracket(fx₀, fx₁)
+
     #    xₘ = Roots._middle(x₀, x₁) # for possibly mixed sign x1, x2
+
     if sign(fm) * fx₀ < 0
-        UnivariateZeroState(m, x₀, fm, fx₀)
+        a,b,fa,fb = x₀, m, fx₀, fm
     else
-        UnivariateZeroState(x₁, m, fx₁, fm)
+        a,b,fa,fb = m, x₁, fm, fx₁
     end
+
+    UnivariateZeroState(b,a,fb,fa)
+
+
 end
 
 initial_fncalls(::Roots.AbstractBracketing) = 3
@@ -457,10 +465,16 @@ struct A42State{T,S} <: AbstractUnivariateZeroState{T,S}
 end
 
 function init_state(::A42, F, x₀, x₁, fx₀, fx₁; c=_middle(x₀, x₁), fc=F(c))
+
     a, b, fa, fb = x₀, x₁, fx₀, fx₁
+
     if a > b
         a, b, fa, fb = b, a, fb, fa
     end
+
+    # check if fa*fb ≥ 0
+    (iszero(fa) || iszero(fb)) && return A42State(b, a, a, a, fb, fa, fa, fa)
+    assert_bracket(fa, fb)
 
     a, b, d, fa, fb, fd = bracket(a, b, c, fa, fb, fc)
     ee, fe = NaN * d, fd # use NaN for initial
@@ -589,9 +603,14 @@ end
 
 function init_state(::AlefeldPotraShi, F, x₀, x₁, fx₀, fx₁; c=_middle(x₀, x₁), fc=F(c))
     a, b, fa, fb = x₀, x₁, fx₀, fx₁
+
     if a > b
         a, b, fa, fb = b, a, fb, fa
     end
+
+    # check if fa*fb ≥ 0
+    (iszero(fa) || iszero(fb)) && return AlefeldPotraShiState(b, a, a, fb, fa, fa)
+    assert_bracket(fa, fb)
 
     a, b, d, fa, fb, fd = bracket(a, b, c, fa, fb, fc)
     return AlefeldPotraShiState(b, a, d, fb, fa, fd)
@@ -721,9 +740,14 @@ end
 # # we store mflag as -1, or +1 in state.mflag
 function init_state(::Brent, F, x₀, x₁, fx₀, fx₁)
     u, v, fu, fv = x₀, x₁, fx₀, fx₁
+
     if abs(fu) > abs(fv)
         u, v, fu, fv = v, u, fv, fu
     end
+
+    # check if fu*fv ≥ 0
+    (iszero(fu) || iszero(fv)) && return BrentState(u, v, v, v, fu, fv, fv, true)
+    assert_bracket(fu, fv)
 
     BrentState(u, v, v, v, fu, fv, fv, true)
 end

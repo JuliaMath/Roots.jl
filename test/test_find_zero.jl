@@ -95,6 +95,7 @@ struct Order3_Test <: Roots.AbstractSecant end
     fn = x -> Inf * sign(x - c)
     @inferred(find_zero(fn, (-Inf, Inf))) ≈ c
 
+
     fn = x -> Inf * x / abs(x) # stop at NaN values
     @inferred(find_zero(fn, (-Inf, Inf))) ≈ 0
 
