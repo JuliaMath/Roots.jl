@@ -295,6 +295,11 @@ end
         @test solve(Za, M, p=2) ≈ α₂
         @test solve!(init(Za, M, 2)) ≈ α₂
     end
+
+    ## test broadcasting semantics with ZeroProblem
+    Z = ZeroProblem((x,p) -> cos(x) - p, pi/4)
+    @test all(solve.(Z, (1,2)) .≈ (solve(Z, 1), solve(Z,2)))
+
 end
 
 @testset "find_zero issue tests" begin

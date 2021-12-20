@@ -760,6 +760,7 @@ struct ZeroProblem{F,X}
     F::F
     x₀::X
 end
+Base.broadcastable(p::ZeroProblem) = Ref(p)
 
 ## The actual iterating object
 struct ZeroProblemIterator{M,N,F,S,O,L}
