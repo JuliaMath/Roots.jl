@@ -95,7 +95,6 @@ struct Order3_Test <: Roots.AbstractSecant end
     fn = x -> Inf * sign(x - c)
     @inferred(find_zero(fn, (-Inf, Inf))) ≈ c
 
-
     fn = x -> Inf * x / abs(x) # stop at NaN values
     @inferred(find_zero(fn, (-Inf, Inf))) ≈ 0
 
@@ -298,9 +297,8 @@ end
     end
 
     ## test broadcasting semantics with ZeroProblem
-    Z = ZeroProblem((x,p) -> cos(x) - p, pi/4)
-    @test all(solve.(Z, (1,2)) .≈ (solve(Z, 1), solve(Z,2)))
-
+    Z = ZeroProblem((x, p) -> cos(x) - p, pi / 4)
+    @test all(solve.(Z, (1, 2)) .≈ (solve(Z, 1), solve(Z, 2)))
 end
 
 @testset "find_zero issue tests" begin
