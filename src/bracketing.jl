@@ -92,13 +92,15 @@ function init_state(::AbstractBracketing, F, x₀, x₁, fx₀, fx₁; m=_middle
     (iszero(fx₀) || iszero(fx₁)) && return UnivariateZeroState(x₁,x₀,fx₁,fx₀)
     assert_bracket(fx₀, fx₁)
 
-    #    xₘ = Roots._middle(x₀, x₁) # for possibly mixed sign x1, x2
-
     if sign(fm) * fx₀ < 0
         a,b,fa,fb = x₀, m, fx₀, fm
     else
         a,b,fa,fb = m, x₁, fm, fx₁
     end
+
+    iszero(a) && (a = sign(b)*a)
+    iszero(b) && (b = sign(a)*b)
+    sign(a) * sign(b) >= 0 || throw(ArgumentError("_middle should return 0"))
 
     UnivariateZeroState(b,a,fb,fa)
 
@@ -231,7 +233,7 @@ function update_state(M::AbstractBisection, F, o, options, l=NullTracks())
     a, b = o.xn0, o.xn1
     fa, fb = o.fxn0, o.fxn1
 
-    c = _middle(a, b)
+    c = __middle(a, b)
     fc = F(c)
     incfn(l)
 
@@ -479,6 +481,10 @@ function init_state(::A42, F, x₀, x₁, fx₀, fx₁; c=_middle(x₀, x₁), f
     a, b, d, fa, fb, fd = bracket(a, b, c, fa, fb, fc)
     ee, fe = NaN * d, fd # use NaN for initial
 
+    iszero(a) && (a = sign(b)*a)
+    iszero(b) && (b = sign(a)*b)
+    sign(a) * sign(b) >= 0 || throw(ArgumentError("_middle error"))
+
     A42State(b, a, d, ee, fb, fa, fd, fe)
 end
 initial_fncalls(::A42) = 3
@@ -536,7 +542,7 @@ function update_state(M::A42, F, state::A42State{T,S}, options, l=NullTracks()) 
     cb = u - 2 * fu * (bb - ab) / (fbb - fab)
     ch::T = cb
     if abs(cb - u) > 0.5 * (b - a)
-        ch = _middle(an, bn)
+        ch = __middle(an, bn)
     end
     fch::S = F(ch)
     incfn(l)
@@ -560,7 +566,7 @@ function update_state(M::A42, F, state::A42State{T,S}, options, l=NullTracks()) 
         a, b, d, ee = ah, bh, dh, db
         fa, fb, fd, fe = fah, fbh, fdh, fdb
     else
-        m::T = _middle(ah, bh)
+        m::T = __middle(ah, bh)
         fm::S = F(m)
         incfn(l)
         ee, fe = dh, fdh
@@ -613,6 +619,11 @@ function init_state(::AlefeldPotraShi, F, x₀, x₁, fx₀, fx₁; c=_middle(x�
     assert_bracket(fa, fb)
 
     a, b, d, fa, fb, fd = bracket(a, b, c, fa, fb, fc)
+
+    iszero(a) && (a = sign(b)*a)
+    iszero(b) && (b = sign(a)*b)
+    sign(a) * sign(b) >= 0 || throw(ArgumentError("_middle error"))
+
     return AlefeldPotraShiState(b, a, d, fb, fa, fd)
 end
 initial_fncalls(::AlefeldPotraShiState) = 3 # worst case assuming fx₀, fx₁,fc must be computed
@@ -667,7 +678,7 @@ function update_state(
     u::T, fu::S = choose_smallest(a, b, fa, fb)
     c = u - 2 * fu * (b - a) / (fb - fa)
     if abs(c - u) > 0.5 * (b - a)
-        c = _middle(a, b)
+        c = __middle(a, b)
     end
     fc = f(c)
     incfn(l)
@@ -690,7 +701,7 @@ function update_state(
         #a, b, d, fa, fb, fd = ahat, b, dhat, fahat, fb, fdhat # typo in paper
         a, b, d, fa, fb, fd = ahat, bhat, dhat, fahat, fbhat, fdhat
     else
-        m::T = _middle(ahat, bhat)
+        m::T = __middle(ahat, bhat)
         fm::S = f(m)
         incfn(l)
         a, b, d, fa, fb, fd = bracket(ahat, bhat, m, fahat, fbhat, fm)
