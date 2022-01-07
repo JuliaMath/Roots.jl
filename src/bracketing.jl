@@ -63,7 +63,7 @@ function show_tracks(io::IO, l::Tracks, M::AbstractBracketing)
     println(io, "")
 end
 
-## helper function
+## helper function: floating point, sorted, finite
 function adjust_bracket(x0)
     u, v = map(float, _extrema(x0))
     if u > v
@@ -75,10 +75,8 @@ function adjust_bracket(x0)
 end
 
 function init_state(M::AbstractBracketing, F::Callable_Function, x)
-    x₀′, x₁′ = map(float, _extrema(x))
-    x₀, x₁ = adjust_bracket((x₀′, x₁′))
+    x₀, x₁ = adjust_bracket(x)
     fx₀, fx₁ = F(x₀), F(x₁)
-
     state = init_state(M, F, x₀, x₁, fx₀, fx₁)
 end
 
@@ -91,15 +89,16 @@ function init_state(::AbstractBracketing, F, x₀, x₁, fx₀, fx₁; m=_middle
     (iszero(fx₀) || iszero(fx₁)) && return UnivariateZeroState(x₁, x₀, fx₁, fx₀)
     assert_bracket(fx₀, fx₁)
 
-    #    xₘ = Roots._middle(x₀, x₁) # for possibly mixed sign x1, x2
-
     if sign(fm) * fx₀ < 0
         a, b, fa, fb = x₀, m, fx₀, fm
     else
         a, b, fa, fb = m, x₁, fm, fx₁
     end
 
-    UnivariateZeroState(b, a, fb, fa)
+    sign(a) * sign(b) < 0 && throw(ArgumentError("_middle error"))
+
+    UnivariateZeroState(b,a,fb,fa)
+
 end
 
 initial_fncalls(::Roots.AbstractBracketing) = 3
@@ -156,7 +155,7 @@ __middle(x::Float64, y::Float64) = __middle(Float64, UInt64, x, y)
 __middle(x::Float32, y::Float32) = __middle(Float32, UInt32, x, y)
 __middle(x::Float16, y::Float16) = __middle(Float16, UInt16, x, y)
 ## fallback for non FloatNN number types
-__middle(x::Number, y::Number) = 0.5 * x + 0.5 * y
+__middle(x::Number, y::Number) = x/2 + y/2
 
 function __middle(T, S, x, y)
     # Use the usual float rules for combining non-finite numbers
@@ -228,7 +227,7 @@ function update_state(M::AbstractBisection, F, o, options, l=NullTracks())
     a, b = o.xn0, o.xn1
     fa, fb = o.fxn0, o.fxn1
 
-    c = _middle(a, b)
+    c = __middle(a, b)
     fc = F(c)
     incfn(l)
 
@@ -463,6 +462,8 @@ end
 
 function init_state(::A42, F, x₀, x₁, fx₀, fx₁; c=_middle(x₀, x₁), fc=F(c))
     a, b, fa, fb = x₀, x₁, fx₀, fx₁
+    isinf(a) && (a = nextfloat(a))
+    isinf(b) && (b = prevfloat(b))
 
     if a > b
         a, b, fa, fb = b, a, fb, fa
@@ -473,7 +474,11 @@ function init_state(::A42, F, x₀, x₁, fx₀, fx₁; c=_middle(x₀, x₁), f
     assert_bracket(fa, fb)
 
     a, b, d, fa, fb, fd = bracket(a, b, c, fa, fb, fc)
-    ee, fe = NaN * d, fd # use NaN for initial
+
+    T = typeof(d)
+    ee, fe = T(NaN)/oneunit(T(NaN)) * d, fd # use NaN for initial
+
+    sign(a) * sign(b) < 0 && throw(ArgumentError("_middle error"))
 
     A42State(b, a, d, ee, fb, fa, fd, fe)
 end
@@ -532,7 +537,7 @@ function update_state(M::A42, F, state::A42State{T,S}, options, l=NullTracks()) 
     cb = u - 2 * fu * (bb - ab) / (fbb - fab)
     ch::T = cb
     if abs(cb - u) > 0.5 * (b - a)
-        ch = _middle(an, bn)
+        ch = __middle(an, bn)
     end
     fch::S = F(ch)
     incfn(l)
@@ -556,7 +561,7 @@ function update_state(M::A42, F, state::A42State{T,S}, options, l=NullTracks()) 
         a, b, d, ee = ah, bh, dh, db
         fa, fb, fd, fe = fah, fbh, fdh, fdb
     else
-        m::T = _middle(ah, bh)
+        m::T = __middle(ah, bh)
         fm::S = F(m)
         incfn(l)
         ee, fe = dh, fdh
@@ -599,6 +604,8 @@ end
 
 function init_state(::AlefeldPotraShi, F, x₀, x₁, fx₀, fx₁; c=_middle(x₀, x₁), fc=F(c))
     a, b, fa, fb = x₀, x₁, fx₀, fx₁
+    isinf(a) && (a = nextfloat(a))
+    isinf(b) && (b = prevfloat(b))
 
     if a > b
         a, b, fa, fb = b, a, fb, fa
@@ -609,6 +616,8 @@ function init_state(::AlefeldPotraShi, F, x₀, x₁, fx₀, fx₁; c=_middle(x�
     assert_bracket(fa, fb)
 
     a, b, d, fa, fb, fd = bracket(a, b, c, fa, fb, fc)
+    sign(a) * sign(b) < 0 && throw(ArgumentError("_middle error"))
+
     return AlefeldPotraShiState(b, a, d, fb, fa, fd)
 end
 initial_fncalls(::AlefeldPotraShiState) = 3 # worst case assuming fx₀, fx₁,fc must be computed
@@ -663,7 +672,7 @@ function update_state(
     u::T, fu::S = choose_smallest(a, b, fa, fb)
     c = u - 2 * fu * (b - a) / (fb - fa)
     if abs(c - u) > 0.5 * (b - a)
-        c = _middle(a, b)
+        c = __middle(a, b)
     end
     fc = f(c)
     incfn(l)
@@ -686,7 +695,7 @@ function update_state(
         #a, b, d, fa, fb, fd = ahat, b, dhat, fahat, fb, fdhat # typo in paper
         a, b, d, fa, fb, fd = ahat, bhat, dhat, fahat, fbhat, fdhat
     else
-        m::T = _middle(ahat, bhat)
+        m::T = __middle(ahat, bhat)
         fm::S = f(m)
         incfn(l)
         a, b, d, fa, fb, fd = bracket(ahat, bhat, m, fahat, fbhat, fm)
@@ -882,7 +891,7 @@ function decide_convergence(
     else
         _is_f_approx_0(fb, b, options.abstol, options.reltol, true) && return b
     end
-    val == :not_converged && return NaN * a
+    val == :not_converged && return T(NaN) * a
 
     if abs(fa) < abs(fb)
         return a
