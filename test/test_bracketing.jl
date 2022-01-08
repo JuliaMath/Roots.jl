@@ -342,10 +342,15 @@ end
     end
 
     # check if fa*fb ≥ 0
-    for M ∈ (Roots.Bisection(), Roots.A42(), Roots.AlefeldPotraShi(),
-             Roots.Brent(), Roots.FalsePosition())
-        x =  find_zero(x -> sin(x), (0,1))
+    for M in (
+        Roots.Bisection(),
+        Roots.A42(),
+        Roots.AlefeldPotraShi(),
+        Roots.Brent(),
+        Roots.FalsePosition(),
+    )
+        x = find_zero(x -> sin(x), (0, 1))
         @test iszero(x)
-        @test_throws ArgumentError find_zero(x -> sin(x), (2,3)) # no bracket
+        @test_throws ArgumentError find_zero(x -> sin(x), (2, 3)) # no bracket
     end
 end

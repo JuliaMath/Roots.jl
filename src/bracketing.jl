@@ -81,25 +81,23 @@ function init_state(M::AbstractBracketing, F::Callable_Function, x)
 end
 
 function init_state(::AbstractBracketing, F, x₀, x₁, fx₀, fx₁; m=_middle(x₀, x₁), fm=F(m))
-
     if x₀ > x₁
         x₀, x₁, fx₀, fx₁ = x₁, x₀, fx₁, fx₀
     end
 
     # handle interval if fa*fb ≥ 0 (explicit, but also not needed)
-    (iszero(fx₀) || iszero(fx₁)) && return UnivariateZeroState(x₁,x₀,fx₁,fx₀)
+    (iszero(fx₀) || iszero(fx₁)) && return UnivariateZeroState(x₁, x₀, fx₁, fx₀)
     assert_bracket(fx₀, fx₁)
 
     if sign(fm) * fx₀ < 0
-        a,b,fa,fb = x₀, m, fx₀, fm
+        a, b, fa, fb = x₀, m, fx₀, fm
     else
-        a,b,fa,fb = m, x₁, fm, fx₁
+        a, b, fa, fb = m, x₁, fm, fx₁
     end
 
     sign(a) * sign(b) < 0 && throw(ArgumentError("_middle error"))
 
     UnivariateZeroState(b,a,fb,fa)
-
 
 end
 
@@ -463,7 +461,6 @@ struct A42State{T,S} <: AbstractUnivariateZeroState{T,S}
 end
 
 function init_state(::A42, F, x₀, x₁, fx₀, fx₁; c=_middle(x₀, x₁), fc=F(c))
-
     a, b, fa, fb = x₀, x₁, fx₀, fx₁
     isinf(a) && (a = nextfloat(a))
     isinf(b) && (b = prevfloat(b))
