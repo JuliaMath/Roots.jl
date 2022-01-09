@@ -97,8 +97,7 @@ function init_state(::AbstractBracketing, F, x₀, x₁, fx₀, fx₁; m=_middle
 
     sign(a) * sign(b) < 0 && throw(ArgumentError("_middle error"))
 
-    UnivariateZeroState(b,a,fb,fa)
-
+    UnivariateZeroState(b, a, fb, fa)
 end
 
 initial_fncalls(::Roots.AbstractBracketing) = 3
@@ -155,7 +154,7 @@ __middle(x::Float64, y::Float64) = __middle(Float64, UInt64, x, y)
 __middle(x::Float32, y::Float32) = __middle(Float32, UInt32, x, y)
 __middle(x::Float16, y::Float16) = __middle(Float16, UInt16, x, y)
 ## fallback for non FloatNN number types
-__middle(x::Number, y::Number) = x/2 + y/2
+__middle(x::Number, y::Number) = x / 2 + y / 2
 
 function __middle(T, S, x, y)
     # Use the usual float rules for combining non-finite numbers
@@ -476,7 +475,7 @@ function init_state(::A42, F, x₀, x₁, fx₀, fx₁; c=_middle(x₀, x₁), f
     a, b, d, fa, fb, fd = bracket(a, b, c, fa, fb, fc)
 
     T = typeof(d)
-    ee, fe = T(NaN)/oneunit(T(NaN)) * d, fd # use NaN for initial
+    ee, fe = T(NaN) / oneunit(T(NaN)) * d, fd # use NaN for initial
 
     sign(a) * sign(b) < 0 && throw(ArgumentError("_middle error"))
 
