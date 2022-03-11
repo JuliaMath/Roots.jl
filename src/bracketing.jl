@@ -826,6 +826,118 @@ function update_state(
     return state, false
 end
 
+## --------------------------------------------------
+
+"""
+    Roots.ITP(;[κ₁, κ₂, n₀])
+
+Use the [ITP](https://en.wikipedia.org/wiki/ITP_method) bracketing
+method.  This method claims it "is the first root-finding algorithm
+that achieves the superlinear convergence of the secant method[1]
+while retaining the optimal[2] worst-case performance of the bisection
+method."
+
+The values `κ1`, `κ₂`, and `n₀` are tuning parameters.
+
+The [suggested](https://docs.rs/kurbo/0.8.1/kurbo/common/fn.solve_itp.html) value of `κ₁` is `0.2/(b-a)`, but the default here is `0.2`. The default value of `κ₂` is `2`, and the default value of `n₀=1`.
+
+## Note:
+
+Suggested on [discourse](https://discourse.julialang.org/t/julia-implementation-of-the-interpolate-truncate-project-itp-root-finding-algorithm/77739) by `@TheLateKronos`, who supplied the original version of the code below.
+"""
+struct ITP{T,S} <: AbstractAlefeldPotraShi
+    κ₁::T
+    κ₂::S
+    n₀::Int
+    function ITP(κ₁::T′, κ₂::S, n₀::Int) where {T′, S}
+        0 ≤ κ₁ < Inf             ||   throw(ArgumentError("κ₁ must be between 0 and ∞"))
+        1 ≤ κ₂ < 1+ (1 + √5)/2   ||   throw(ArgumentError("κ₂ must be between 1 and the golden ratio"))
+        0 < n₀ < Inf             ||   throw(ArgumentError("n₀ must be between 0 and ∞"))
+        T = float(T′)
+        new{T,S}(float(κ₁), κ₂, n₀)
+    end
+end
+ITP(;κ₁ = 0.2, κ₂ = 2, n₀=1) = ITP(κ₁, κ₂, n₀)
+
+struct ITPState{T,S,R} <: AbstractUnivariateZeroState{T,S}
+    xn1::T
+    xn0::T
+    fxn1::S
+    fxn0::S
+    j::Int
+    ϵ2n₁₂::R
+    d::T
+end
+
+
+## if __middle is used, then this should pass in m, f(m)
+function init_state(M::ITP, F, x₀, x₁, fx₀, fx₁)
+
+    if x₀ > x₁
+        x₀, x₁, fx₀, fx₁ = x₁, x₀, fx₁, fx₀
+    end
+
+    ## we compute this once the options and initial state are known
+    ϵ2n₁₂ = zero(float(x₁)/x₁) # ϵ*2^ceil(Int, log2((b-a)/(2*ϵ)))
+
+    # handle interval if fa*fb ≥ 0 (explicit, but also not needed)
+    (iszero(fx₀) || iszero(fx₁)) && return ITPState(x₁, x₀, fx₁, fx₀, 0, ϵ2n₁₂, zero(x₁))
+    assert_bracket(fx₀, fx₁)
+
+    a,b,fa,fb = x₀,x₁,fx₀,fx₁
+
+
+    ITPState(b, a, fb, fa, 0, ϵ2n₁₂, zero(x₁))
+
+end
+initial_fncalls(::ITP) = 2 # a, b #, middle
+
+function update_state(M::ITP, F, o, options, l=NullTracks())
+
+    a, b = o.xn0, o.xn1
+    fa, fb = o.fxn0, o.fxn1
+    j, ϵ2n₁₂ = o.j, o.ϵ2n₁₂
+    κ₁, κ₂, n₀ = M.κ₁, M.κ₂, M.n₀
+
+    if iszero(ϵ2n₁₂)
+        # we need the options to set the ϵ⋅2^n₁₂ part of r.
+        ϵ = max(options.xabstol, max(abs(a), abs(b)) * options.xreltol)
+        ϵ2n₁₂ = ϵ * 2.0 ^ ceil(Int, log2((b-a)/(2ϵ))) * 2.0^n₀
+        @set! o.ϵ2n₁₂ = ϵ2n₁₂
+    end
+
+    x₁₂ = (a+b)/2 # __middle(a,b)
+    r = ϵ2n₁₂ / 2^j - (b-a)/2
+    δ = κ₁ * (b - a)^κ₂
+
+    xᵣ = (b*fa - a*fb) / (fa - fb)
+
+    σ = sign(x₁₂ - xᵣ)
+    xₜ = δ ≤ abs(x₁₂ - xᵣ) ? xᵣ + σ*δ : x₁₂
+
+    c = xᵢₜₚ = abs(xₜ - x₁₂) ≤ r ? xₜ : x₁₂ - σ * r
+    fc = F(c)
+    incfn(l)
+
+
+    if sign(fa) * sign(fc) < 0
+        b, fb = c, fc
+    else
+        a, fa = c, fc
+    end
+
+    @set! o.xn0 = a
+    @set! o.xn1 = b
+    @set! o.fxn0 = fa
+    @set! o.fxn1 = fb
+    @set! o.j = j + 1
+
+    return o, false
+end
+
+
+
+
 ## ----------------------------
 
 struct FalsePosition{R} <: AbstractBisection end

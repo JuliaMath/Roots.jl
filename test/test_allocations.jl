@@ -16,6 +16,7 @@ import BenchmarkTools
         Roots.A42(),
         Roots.AlefeldPotraShi(),
         Roots.Brent(),
+        Roots.ITP(),
         Roots.Newton(),
         Roots.Halley(),
         Roots.Schroder(),
