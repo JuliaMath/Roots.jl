@@ -908,7 +908,7 @@ function update_state(M::ITP, F, o, options, l=NullTracks())
 
     x₁₂ = (a+b)/2 # __middle(a,b)
     r = ϵ2n₁₂ / 2^j - (b-a)/2
-    δ = κ₁ * (b - a)^κ₂
+    δ = κ₁ * (b - a)^2  # ^κ₂ a numeric literal for  κ₂ is faster
 
     xᵣ = (b*fa - a*fb) / (fa - fb)
 
