@@ -829,7 +829,7 @@ end
 ## --------------------------------------------------
 
 """
-    Roots.ITP(;[κ₁, κ₂, n₀])
+    Roots.ITP(;[κ₁-0.2, κ₂=2, n₀=1])
 
 Use the [ITP](https://en.wikipedia.org/wiki/ITP_method) bracketing
 method.  This method claims it "is the first root-finding algorithm
@@ -842,7 +842,7 @@ The values `κ1`, `κ₂`, and `n₀` are tuning parameters.
 The
 [suggested](https://docs.rs/kurbo/0.8.1/kurbo/common/fn.solve_itp.html)
 value of `κ₁` is `0.2/(b-a)`, but the default here is `0.2`. The value
-of `κ₂` is hardcoded to be `2`, and the default value of `n₀=1`.
+of `κ₂` is `2`, and the default value of `n₀` is `1`.
 
 ## Note:
 
@@ -858,11 +858,11 @@ struct ITP{T,S} <: AbstractAlefeldPotraShi
     n₀::Int
     function ITP(κ₁::T′, κ₂::S, n₀::Int) where {T′, S}
         0 ≤ κ₁ < Inf             ||   throw(ArgumentError("κ₁ must be between 0 and ∞"))
-        1 ≤ κ₂ < (3+sqrt(5))/2  ||   throw(ArgumentError("κ₂ must be between 1 and 1 plus the golden ratio"))
+        1 ≤ κ₂ < (3+√5)/2        ||   throw(ArgumentError("κ₂ must be between 1 and 1 plus the golden ratio"))
         0 < n₀ < Inf             ||   throw(ArgumentError("n₀ must be between 0 and ∞"))
         T = float(T′)
 
-        κ₂ == 2 || throw(ArgumentError("κ₂ is hardcoded to be 2"))
+        ## κ₂ == 2 || throw(ArgumentError("κ₂ is hardcoded to be 2"))
 
         new{T,S}(float(κ₁), κ₂, n₀)
     end
@@ -880,7 +880,6 @@ struct ITPState{T,S,R} <: AbstractUnivariateZeroState{T,S}
 end
 
 
-## if __middle is used, then this should pass in m, f(m)
 function init_state(M::ITP, F, x₀, x₁, fx₀, fx₁)
 
     if x₀ > x₁
@@ -916,10 +915,10 @@ function update_state(M::ITP, F, o, options, l=NullTracks())
     end
 
     Δ = b-a
-    x₁₂ = a + Δ/2  # can't use _middle here
+    x₁₂ = a + Δ/2  # middle must be (a+b)/2
     r = ϵ2n₁₂ / 2^j - Δ/2
-#    δ = κ₁ * Δ^κ₂ # a numeric literal for  κ₂ is faster
-    δ = κ₁ * Δ^2
+    δ = κ₁ * Δ^κ₂ # a numeric literal for  κ₂ is faster
+    #    δ = κ₁ * Δ^2
     xᵣ = (b*fa - a*fb) / (fa - fb)
 
     σ = sign(x₁₂ - xᵣ)
