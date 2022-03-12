@@ -916,15 +916,21 @@ function update_state(M::ITP, F, o, options, l=NullTracks())
 
     Δ = b-a
     x₁₂ = a + Δ/2  # middle must be (a+b)/2
-    r = ϵ2n₁₂ / 2^j - Δ/2
+    r = ϵ2n₁₂ / (2.0)^j - Δ/2
     δ = κ₁ * Δ^κ₂ # a numeric literal for  κ₂ is faster
-    #    δ = κ₁ * Δ^2
+    # δ = κ₁ * Δ^2
     xᵣ = (b*fa - a*fb) / (fa - fb)
 
     σ = sign(x₁₂ - xᵣ)
     xₜ = δ ≤ abs(x₁₂ - xᵣ) ? xᵣ + σ*δ : x₁₂
 
     c = xᵢₜₚ = abs(xₜ - x₁₂) ≤ r ? xₜ : x₁₂ - σ * r
+
+    if !(a < c < b)
+        nextfloat(a) ≥ b && log_message(l, "Algorithm stopped narrowing bracketing interval")
+        return (o, true)
+    end
+
     fc = F(c)
     incfn(l)
 
