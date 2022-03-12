@@ -833,17 +833,24 @@ end
 
 Use the [ITP](https://en.wikipedia.org/wiki/ITP_method) bracketing
 method.  This method claims it "is the first root-finding algorithm
-that achieves the superlinear convergence of the secant method[1]
-while retaining the optimal[2] worst-case performance of the bisection
+that achieves the superlinear convergence of the secant method
+while retaining the optimal worst-case performance of the bisection
 method."
 
 The values `κ1`, `κ₂`, and `n₀` are tuning parameters.
 
-The [suggested](https://docs.rs/kurbo/0.8.1/kurbo/common/fn.solve_itp.html) value of `κ₁` is `0.2/(b-a)`, but the default here is `0.2`. The default value of `κ₂` is `2`, and the default value of `n₀=1`.
+The
+[suggested](https://docs.rs/kurbo/0.8.1/kurbo/common/fn.solve_itp.html)
+value of `κ₁` is `0.2/(b-a)`, but the default here is `0.2`. The value
+of `κ₂` is hardcoded to be `2`, and the default value of `n₀=1`.
 
 ## Note:
 
-Suggested on [discourse](https://discourse.julialang.org/t/julia-implementation-of-the-interpolate-truncate-project-itp-root-finding-algorithm/77739) by `@TheLateKronos`, who supplied the original version of the code below.
+Suggested on
+[discourse](https://discourse.julialang.org/t/julia-implementation-of-the-interpolate-truncate-project-itp-root-finding-algorithm/77739)
+by `@TheLateKronos`, who supplied the original version of the code
+below.
+
 """
 struct ITP{T,S} <: AbstractAlefeldPotraShi
     κ₁::T
@@ -851,9 +858,12 @@ struct ITP{T,S} <: AbstractAlefeldPotraShi
     n₀::Int
     function ITP(κ₁::T′, κ₂::S, n₀::Int) where {T′, S}
         0 ≤ κ₁ < Inf             ||   throw(ArgumentError("κ₁ must be between 0 and ∞"))
-        1 ≤ κ₂ < 1+ (1 + √5)/2   ||   throw(ArgumentError("κ₂ must be between 1 and the golden ratio"))
+        1 ≤ κ₂ < (3+sqrt(5))/2  ||   throw(ArgumentError("κ₂ must be between 1 and 1 plus the golden ratio"))
         0 < n₀ < Inf             ||   throw(ArgumentError("n₀ must be between 0 and ∞"))
         T = float(T′)
+
+        κ₂ == 2 || throw(ArgumentError("κ₂ is hardcoded to be 2"))
+
         new{T,S}(float(κ₁), κ₂, n₀)
     end
 end
@@ -878,16 +888,15 @@ function init_state(M::ITP, F, x₀, x₁, fx₀, fx₁)
     end
 
     ## we compute this once the options and initial state are known
-    ϵ2n₁₂ = zero(float(x₁)/x₁) # ϵ*2^ceil(Int, log2((b-a)/(2*ϵ)))
+    ϵ2n₁₂ = zero(float(x₁)/x₁) # ϵ*2^(ceil(Int, log2((b-a)/(2*ϵ))) + n₀)
 
     # handle interval if fa*fb ≥ 0 (explicit, but also not needed)
-    (iszero(fx₀) || iszero(fx₁)) && return ITPState(x₁, x₀, fx₁, fx₀, 0, ϵ2n₁₂, zero(x₁))
+    (iszero(fx₀) || iszero(fx₁)) && return ITPState(x₁, x₀, fx₁, fx₀, 0, ϵ2n₁₂, x₁)
     assert_bracket(fx₀, fx₁)
 
     a,b,fa,fb = x₀,x₁,fx₀,fx₁
 
-
-    ITPState(b, a, fb, fa, 0, ϵ2n₁₂, zero(x₁))
+    ITPState(b, a, fb, fa, 0, ϵ2n₁₂, a)
 
 end
 initial_fncalls(::ITP) = 2 # a, b #, middle
@@ -897,19 +906,20 @@ function update_state(M::ITP, F, o, options, l=NullTracks())
     a, b = o.xn0, o.xn1
     fa, fb = o.fxn0, o.fxn1
     j, ϵ2n₁₂ = o.j, o.ϵ2n₁₂
-    κ₁, κ₂, n₀ = M.κ₁, M.κ₂, M.n₀
+    κ₁, κ₂ = M.κ₁, M.κ₂
 
     if iszero(ϵ2n₁₂)
         # we need the options to set the ϵ⋅2^n₁₂ part of r.
         ϵ = max(options.xabstol, max(abs(a), abs(b)) * options.xreltol)
-        ϵ2n₁₂ = ϵ * 2.0 ^ ceil(Int, log2((b-a)/(2ϵ))) * 2.0^n₀
+        ϵ2n₁₂ = ϵ * 2.0 ^ (ceil(Int, log2((b-a)/(2ϵ))) + M.n₀)
         @set! o.ϵ2n₁₂ = ϵ2n₁₂
     end
 
-    x₁₂ = (a+b)/2 # __middle(a,b)
-    r = ϵ2n₁₂ / 2^j - (b-a)/2
-    δ = κ₁ * (b - a)^2  # ^κ₂ a numeric literal for  κ₂ is faster
-
+    Δ = b-a
+    x₁₂ = a + Δ/2  # can't use _middle here
+    r = ϵ2n₁₂ / 2^j - Δ/2
+#    δ = κ₁ * Δ^κ₂ # a numeric literal for  κ₂ is faster
+    δ = κ₁ * Δ^2
     xᵣ = (b*fa - a*fb) / (fa - fb)
 
     σ = sign(x₁₂ - xᵣ)
@@ -918,7 +928,6 @@ function update_state(M::ITP, F, o, options, l=NullTracks())
     c = xᵢₜₚ = abs(xₜ - x₁₂) ≤ r ? xₜ : x₁₂ - σ * r
     fc = F(c)
     incfn(l)
-
 
     if sign(fa) * sign(fc) < 0
         b, fb = c, fc

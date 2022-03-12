@@ -130,6 +130,7 @@ Bisection
 Roots.A42
 Roots.AlefeldPotraShi
 Roots.Brent
+Roots.ITP
 FalsePosition
 Roots.LithBoonkkampIJzermanBracket
 ```
