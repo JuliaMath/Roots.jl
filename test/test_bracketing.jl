@@ -228,6 +228,10 @@ avg(x) = sum(x) / length(x)
     @test maxresidual <= 5e-15
     @test avg(cnts) <= 4700
 
+    result = run_tests((f, b) -> find_zero(f, b, Roots.ITP()), name="ITP")
+    @test length(result.failures) == 0
+    @test result.maxresidual <= sqrt(eps()) #
+
     ## brent has some failures
     Ms = [Roots.Brent()]
     results = [run_tests((f, b) -> find_zero(f, b, M), name="$M") for M in Ms]
