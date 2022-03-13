@@ -915,7 +915,7 @@ function update_state(M::ITP, F, o, options, l=NullTracks())
 
     Δ = b-a
     x₁₂ = a + Δ/2  # middle must be (a+b)/2
-    r = ϵ2n₁₂ / exp2(j) - Δ/2
+    r = ϵ2n₁₂ * exp2(-j) - Δ/2
     δ = κ₁ * Δ^κ₂ # a numeric literal for  κ₂ is faster
     # δ = κ₁ * Δ^2
     xᵣ = (b*fa - a*fb) / (fa - fb)
