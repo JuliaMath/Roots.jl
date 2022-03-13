@@ -879,7 +879,6 @@ struct ITPState{T,S,R} <: AbstractUnivariateZeroState{T,S}
     d::T
 end
 
-
 function init_state(M::ITP, F, x₀, x₁, fx₀, fx₁)
 
     if x₀ > x₁
@@ -910,13 +909,13 @@ function update_state(M::ITP, F, o, options, l=NullTracks())
     if iszero(ϵ2n₁₂)
         # we need the options to set the ϵ⋅2^n₁₂ part of r.
         ϵ = max(options.xabstol, max(abs(a), abs(b)) * options.xreltol)
-        ϵ2n₁₂ = ϵ * 2.0 ^ (ceil(Int, log2((b-a)/(2ϵ))) + M.n₀)
+        ϵ2n₁₂ = ϵ * exp2(ceil(Int, log2((b-a)/(2ϵ))) + M.n₀)
         @set! o.ϵ2n₁₂ = ϵ2n₁₂
     end
 
     Δ = b-a
     x₁₂ = a + Δ/2  # middle must be (a+b)/2
-    r = ϵ2n₁₂ / (2.0)^j - Δ/2
+    r = ϵ2n₁₂ / exp2(j) - Δ/2
     δ = κ₁ * Δ^κ₂ # a numeric literal for  κ₂ is faster
     # δ = κ₁ * Δ^2
     xᵣ = (b*fa - a*fb) / (fa - fb)
