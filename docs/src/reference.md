@@ -294,3 +294,12 @@ The initial naming scheme used `fzero` instead  of `fzeros`, following the name 
 ```@docs
 Roots.fzero
 ```
+
+## Tracking iterations
+
+It is possible to add the keyword arguement `verbose=true` to when calling the `find_zero` function to get detailed information about the solution, and data from each iteration. If you want to save this data instead of just printing it, you can use a `Tracks` object.
+
+----
+
+```@docs
+Roots.Tracks
