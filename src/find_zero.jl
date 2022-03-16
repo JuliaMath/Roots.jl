@@ -154,7 +154,7 @@ end
 abstract type AbstractTracks end
 struct NullTracks <: AbstractTracks end
 # api
-log_step(s::NullTracks, M, x, init=false) = nothing
+log_step(s::NullTracks, M, x; init=false) = nothing
 log_steps(::NullTracks, n=1) = nothing
 incfn(::NullTracks, i=1) = nothing
 log_message(::NullTracks, msg) = nothing
@@ -186,8 +186,8 @@ julia> tracks  # show summary of algorithm
 
 """
 mutable struct Tracks{T,S} <: AbstractTracks
-    xs::Vector{T}
-    fs::Vector{S}
+    xfs::Vector{Tuple{T,S}} # (x,f(x))
+    abs::Vector{Tuple{T,T}} # (aᵢ, bᵢ)
     steps::Int
     fncalls::Int
     convergence_flag::Symbol
@@ -196,23 +196,22 @@ mutable struct Tracks{T,S} <: AbstractTracks
     method
     nmethod
 end
-Tracks(T, S) = Tracks(T[], S[], 0, 0, :not_converged, "", nothing, nothing, nothing)
+Tracks(T, S) = Tracks(Tuple{T,S}[], Tuple{T,T}[], 0, 0, :not_converged, "", nothing, nothing, nothing)
 Tracks(s::AbstractUnivariateZeroState{T,S}) where {T,S} = Tracks(T, S)
 Tracks(verbose, tracks, state) =
     (verbose && isa(tracks, NullTracks)) ? Tracks(state) : tracks
 Tracks() = Tracks(Float64, Float64) # give default
 
-function log_step(l::Tracks, M::Any, state, init=nothing)
-    if init !== nothing
+function log_step(l::Tracks, M::Any, state; init=false)
+    if init
         x₀, fx₀ = state.xn0, state.fxn0
-        push!(l.xs, x₀)
-        push!(l.fs, fx₀)
+        push!(l.xfs, (x₀, fx₀))
     end
-    x₁, fx₁ = state.xn1, state.fxn1
-    push!(l.xs, x₁)
-    push!(l.fs, fx₁)
 
-    init === nothing && log_steps(l, 1)
+    x₁, fx₁ = state.xn1, state.fxn1
+    push!(l.xfs, (x₁, fx₁))
+
+    !init  && log_steps(l, 1)
     nothing
 end
 
@@ -227,7 +226,9 @@ log_nmethod(l::Tracks, method) = (l.nmethod = method; nothing)
 Base.show(io::IO, l::Tracks) = show_trace(io, l.method, l.nmethod, l.state, l)
 
 function show_tracks(io::IO, s::Tracks, M::AbstractUnivariateZeroMethod)
-    for (i, (xi, fxi)) in enumerate(zip(s.xs, s.fs))
+
+    # show (x,f(x))
+    for (i, (xi, fxi)) in enumerate(s.xfs)
         println(
             io,
             @sprintf(
@@ -239,7 +240,21 @@ function show_tracks(io::IO, s::Tracks, M::AbstractUnivariateZeroMethod)
             )
         )
     end
+
+    # show bracketing
+    for (i, (a,b)) in enumerate(s.abs)
+        println(
+            io,
+            @sprintf(
+                "(%s, %s) = (% 18.16f, % 18.16f)",
+                "a_$(i-1)",
+                "b_$(i-1)",
+                a, b
+            )
+        )
+    end
     println(io, "")
+
 end
 
 function show_trace(io::IO, method, N, state, tracks)
@@ -963,7 +978,7 @@ function solve!(P::ZeroProblemIterator; verbose=false)
 
     val, stopped = :not_converged, false
     ctr = 1
-    log_step(l, M, state, :init)
+    log_step(l, M, state; init=true)
 
     while !stopped
         val, stopped = assess_convergence(M, state, options)

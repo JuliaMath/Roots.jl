@@ -40,27 +40,11 @@ struct Bisection <: AbstractBisection end  # either solvable or A42
 struct BisectionExact <: AbstractBisection end
 
 ## tracks for bisection, different, we show bracketing interval
-function log_step(l::Tracks, M::AbstractBracketing, state)
-    push!(l.xs, state.xn0)
-    push!(l.xs, state.xn1) # we store [ai,bi, ai+1, bi+1, ...]
+## No init here; for Bisection() [a₀, b₀] is just lost.
+function log_step(l::Tracks, M::AbstractBracketing, state; init::Bool=false)
+    a, b = state.xn0, state.xn1
+    push!(l.abs, (a,b))
     log_steps(l)
-end
-function show_tracks(io::IO, l::Tracks, M::AbstractBracketing)
-    xs = l.xs
-    n = length(xs)
-    for (i, j) in enumerate(1:2:(n - 1))
-        println(
-            io,
-            @sprintf(
-                "(%s, %s) = (% 18.16f, % 18.16f)",
-                "a_$(i-1)",
-                "b_$(i-1)",
-                xs[j],
-                xs[j + 1]
-            )
-        )
-    end
-    println(io, "")
 end
 
 ## helper function: floating point, sorted, finite
@@ -440,11 +424,10 @@ function default_tolerances(::AbstractAlefeldPotraShi, ::Type{T}, ::Type{S}) whe
 end
 
 ## initial step, needs to log a,b,d
-function log_step(l::Tracks, M::AbstractAlefeldPotraShi, state, ::Any)
+function log_step(l::Tracks, M::AbstractAlefeldPotraShi, state; init::Bool=false)
     a, b, c = state.xn0, state.xn1, state.d
-    append!(l.xs, extrema((a, b, c)))
-    push!(l.xs, a)
-    push!(l.xs, b) # we store [ai,bi, ai+1, bi+1, ...] for brackecting methods
+    init && push!(l.abs, extrema((a, b, c)))
+    push!(l.abs, (a,b))
     log_steps(l, 1)
 end
 
@@ -733,11 +716,10 @@ struct BrentState{T,S} <: AbstractUnivariateZeroState{T,S}
     mflag::Bool
 end
 
-function log_step(l::Tracks, M::Brent, state)
+function log_step(l::Tracks, M::Brent, state; init::Bool=false)
     a, b = state.xn0, state.xn1
     u, v = a < b ? (a, b) : (b, a)
-    push!(l.xs, a)
-    push!(l.xs, b) # we store [ai,bi, ai+1, bi+1, ...]
+    push!(l.abs, (a,b))
     log_steps(l)
 end
 
@@ -868,6 +850,12 @@ struct ITP{T,S} <: AbstractAlefeldPotraShi
     end
 end
 ITP(;κ₁ = 0.2, κ₂ = 2, n₀=1) = ITP(κ₁, κ₂, n₀)
+
+function log_step(l::Tracks, M::ITP, state; init::Bool=false)
+    a, b = state.xn0, state.xn1
+    push!(l.abs, (a,b))
+    log_steps(l, 1)
+end
 
 struct ITPState{T,S,R} <: AbstractUnivariateZeroState{T,S}
     xn1::T
