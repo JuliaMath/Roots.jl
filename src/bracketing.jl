@@ -7,6 +7,7 @@ Consider a different bracket or try fzero(f, c) with an initial guess c.
 """
 
 abstract type AbstractBisection <: AbstractBracketing end
+abstract type AbstractAcceleratedBisection <: AbstractBisection end
 fn_argout(::AbstractBracketing) = 1
 
 """
@@ -827,6 +828,63 @@ function update_state(
 end
 
 ## --------------------------------------------------
+
+"""
+    Roots.Ridder
+
+"""
+struct Ridder <: AbstractAcceleratedBisection end
+# use xatol, xrtol only, but give some breathing room to the strict ones
+function default_tolerances(::AbstractAcceleratedBisection, ::Type{T}, ::Type{S}) where {T,S}
+    xatol = 2eps(real(T)) * oneunit(real(T))
+    xrtol = eps(real(T))  # unitless
+    atol = zero(S) * oneunit(real(S))
+    rtol = zero(S)
+    maxevals = 60
+    maxfnevals = typemax(Int)
+    strict = false
+    (xatol, xrtol, atol, rtol, maxevals, maxfnevals, strict)
+end
+
+function update_state(M::Ridder, F, o, options, l=NullTracks())
+
+    a, b = o.xn0, o.xn1
+    fa, fb = o.fxn0, o.fxn1
+
+    x₁ = a + (b-a)/2
+    fx₁ = F(x₁)
+    incfn(l)
+
+
+    c = x₁ + (x₁-a)*sign(fa-fb)*fx₁/sqrt(fx₁^2 - fa*fb)
+    fc = F(c)
+    incfn(l)
+
+    if !(a < c < b)
+        nextfloat(a) ≥ b && log_message(l, "Algorithm stopped narrowing bracketing interval")
+        return (o, true)
+    end
+
+
+    if sign(fx₁) * sign(fc) < 0
+        if x₁ < c
+            a,b,fa,fb = x₁,c,fx₁,fc
+        else
+            a,b,fa,fb = c, x₁, fc,fx₁
+        end
+    elseif sign(fa) * sign(fc) < 0
+        b, fb = c, fc
+    else
+        a, fa = c, fc
+    end
+
+    @set! o.xn0 = a
+    @set! o.xn1 = b
+    @set! o.fxn0 = fa
+    @set! o.fxn1 = fb
+
+    return o, false
+end
 
 """
     Roots.ITP(;[κ₁-0.2, κ₂=2, n₀=1])

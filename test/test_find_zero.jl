@@ -105,6 +105,8 @@ struct Order3_Test <: Roots.AbstractSecant end
         Roots.Brent(),
         Roots.FalsePosition(),
         Roots.FalsePosition(2),
+        Roots.ITP(),
+        Roots.Ridder()
     )
 
     # test flexbility in interval specification
