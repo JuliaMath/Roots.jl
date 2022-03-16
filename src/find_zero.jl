@@ -591,7 +591,7 @@ tuple of functions is used. For the classical algorithms, a function returning `
 * `rtol`  - relative tolerance for `f(x)` values.
 * `maxevals`   - limit on maximum number of iterations.
 * `strict` - if `false` (the default), when the algorithm stops, possible zeros are checked with a relaxed tolerance.
-* `verbose` - if `true` a trace of the algorithm will be shown on successful completion. See the internal `Tracks` object to save this trace.
+* `verbose` - if `true` a trace of the algorithm will be shown on successful completion. See the internal [`Tracks`](@ref) object to save this trace.
 
 See the help string for `Roots.assess_convergence` for details on
 convergence. See the help page for `Roots.default_tolerances(method)`
