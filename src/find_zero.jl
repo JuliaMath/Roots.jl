@@ -167,6 +167,7 @@ log_nmethod(::NullTracks, method) = nothing
 """
     Tracks(T, S)
 
+
 Construct a `Tracks` object used to record the progress of the algorithm.
 
 By default, a null tracks object used, but if `verbose=true` is specified of a `Tracks` object passed to the keyword `tracks` then the steps of the algorithm are recorded in the `Tracks` object. If `verbose=true`, the `Tracks` object will be shown.
