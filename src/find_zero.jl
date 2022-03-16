@@ -166,22 +166,85 @@ log_nmethod(::NullTracks, method) = nothing
 # a tracks object to record tracks
 """
     Tracks(T, S)
+    Tracks()
 
 Construct a `Tracks` object used to record the progress of the algorithm.
+`T` is the type of function inputs, and `S` is the type of function outputs. They 
+both default to `Float64`. Note that because this type is not exported, you have to 
+write `Roots.Tracks()` to construct a `Tracks` object.
 
-By default, a null tracks object used, but if `verbose=true` is specified of a `Tracks` object passed to the keyword `tracks` then the steps of the algorithm are recorded in the `Tracks` object. If `verbose=true`, the `Tracks` object will be shown.
+By default, no tracking is done while finding a root (with `find_zero`, `solve`, or `fzero`). 
+To change this, construct a `Tracks` object, and pass it to the keyword argument `tracks`. 
+This will modify the `Tracks` object, storing the input and function values at each iteration, 
+along with additional information about the root-finding process.
 
-Alternatively, a `Tracks` object can be constructed and then shown; `find_zero` modifies a `Tracks` object.
+`Tracker` objects are printed in a nice, easy-to-read format. You can also 
+access individual fields if you need the values. A `Tracks` object has the following fields:
+:xs, :fs, :steps, :fncalls, :convergence_flag, :message, :state, :method, :nmethod
+
+If you only want to print the information, but you don't need it later, this can conveniently by 
+done by passing `verbose=true` to the root-finding function. This will not 
+effect the return value, which will still be the root of the function.
 
 ## Example
 
-(This example uses a default type for `Tracks` which may not be suitable for some uses.)
+(This example uses the default types for `Tracks`, which may not be suitable for some uses.)
 
 ```
-julia> tracks = Roots.Tracks()  # default type is Float64 for both x, fx values
-julia> find_zero(sin, 3, Secant(); tracks=tracks)
-julia> tracks.steps # 4
-julia> tracks  # show summary of algorithm
+julia> using Roots
+
+julia> f(x) = x^2-2
+f (generic function with 1 method)
+
+julia> tracker = Roots.Tracks()
+Algorithm has not been run
+
+julia> find_zero(f, (0, 2), Roots.Secant(), tracks=tracker)
+1.4142135623730947
+
+julia> tracker.xs
+9-element Vector{Float64}:
+ 0.0
+ 2.0
+ 1.0
+ 1.3333333333333333
+ 1.4285714285714286
+ 1.4137931034482758
+ 1.41421143847487
+ 1.4142135626888697
+ 1.4142135623730947
+
+julia> tracker.fs
+9-element Vector{Float64}:
+ -2.0
+  2.0
+ -1.0
+ -0.22222222222222232
+  0.04081632653061229
+ -0.0011890606420930094
+ -6.007286838860537e-6
+  8.931455575122982e-10
+ -8.881784197001252e-16
+
+julia> tracker
+Results of univariate zero finding:
+
+* Converged to: 1.4142135623730947
+* Algorithm: Secant()
+* iterations: 7
+* function evaluations ≈ 9
+* stopped as |f(x_n)| ≤ max(δ, |x|⋅ϵ) using δ = atol, ϵ = rtol
+
+Trace:
+x_0 =  0.0000000000000000,       fx_0 = -2.0000000000000000
+x_1 =  2.0000000000000000,       fx_1 =  2.0000000000000000
+x_2 =  1.0000000000000000,       fx_2 = -1.0000000000000000
+x_3 =  1.3333333333333333,       fx_3 = -0.2222222222222223
+x_4 =  1.4285714285714286,       fx_4 =  0.0408163265306123
+x_5 =  1.4137931034482758,       fx_5 = -0.0011890606420930
+x_6 =  1.4142114384748701,       fx_6 = -0.0000060072868389
+x_7 =  1.4142135626888697,       fx_7 =  0.0000000008931456
+x_8 =  1.4142135623730947,       fx_8 = -0.0000000000000009
 ```
 
 """
