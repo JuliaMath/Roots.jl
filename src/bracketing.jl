@@ -830,10 +830,21 @@ end
 ## --------------------------------------------------
 
 """
-    Roots.Ridder
+    Roots.Ridders()
 
+Implements [Ridders'](https://en.wikipedia.org/wiki/Ridders%27_method) method.
+This bracketing method finds the midpoint, `x₁`; then interpolates an exponential; then uses false position with the interpolated value to find `c`. If `c` and `x₁` form a bracket is used, otherwise the subinterval `[a,c]` or `[c,b]` is used.
+
+Example:
+
+```
+julia> find_zero(x -> exp(x) - x^4, (5, 15), Roots.Ridders())
+8.6131694564414
+```
+
+Ridders uses two function evaluations per step; its order of convergence is `√2`.
 """
-struct Ridder <: AbstractAcceleratedBisection end
+struct Ridders <: AbstractAcceleratedBisection end
 # use xatol, xrtol only, but give some breathing room to the strict ones
 function default_tolerances(::AbstractAcceleratedBisection, ::Type{T}, ::Type{S}) where {T,S}
     xatol = 2eps(real(T)) * oneunit(real(T))
@@ -846,7 +857,7 @@ function default_tolerances(::AbstractAcceleratedBisection, ::Type{T}, ::Type{S}
     (xatol, xrtol, atol, rtol, maxevals, maxfnevals, strict)
 end
 
-function update_state(M::Ridder, F, o, options, l=NullTracks())
+function update_state(M::Ridders, F, o, options, l=NullTracks())
 
     a, b = o.xn0, o.xn1
     fa, fb = o.fxn0, o.fxn1
