@@ -44,7 +44,8 @@ struct BisectionExact <: AbstractBisection end
 function log_step(l::Tracks, M::AbstractBracketing, state; init::Bool=false)
     a, b = state.xn0, state.xn1
     push!(l.abs, (a,b))
-    log_steps(l)
+    init && log_steps(l, 1) # c is computed
+    !init && log_steps(l, 1)
 end
 
 ## helper function: floating point, sorted, finite
@@ -427,8 +428,9 @@ end
 function log_step(l::Tracks, M::AbstractAlefeldPotraShi, state; init::Bool=false)
     a, b, c = state.xn0, state.xn1, state.d
     init && push!(l.abs, extrema((a, b, c)))
+    init && log_steps(l, 1) # take an initial step
     push!(l.abs, (a,b))
-    log_steps(l, 1)
+    !init && log_steps(l, 1)
 end
 
 struct A42State{T,S} <: AbstractUnivariateZeroState{T,S}
@@ -720,7 +722,7 @@ function log_step(l::Tracks, M::Brent, state; init::Bool=false)
     a, b = state.xn0, state.xn1
     u, v = a < b ? (a, b) : (b, a)
     push!(l.abs, (a,b))
-    log_steps(l)
+    !init && log_steps(l)
 end
 
 # # we store mflag as -1, or +1 in state.mflag
@@ -854,7 +856,7 @@ ITP(;κ₁ = 0.2, κ₂ = 2, n₀=1) = ITP(κ₁, κ₂, n₀)
 function log_step(l::Tracks, M::ITP, state; init::Bool=false)
     a, b = state.xn0, state.xn1
     push!(l.abs, (a,b))
-    log_steps(l, 1)
+    !init  && log_steps(l, 1)
 end
 
 struct ITPState{T,S,R} <: AbstractUnivariateZeroState{T,S}

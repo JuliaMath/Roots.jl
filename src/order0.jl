@@ -90,9 +90,10 @@ function solve!(𝐙::ZeroProblemIterator{𝐌,𝐍}; verbose=false) where {𝐌
             state = state0
             break
         elseif sign(state0.fxn0) * sign(state0.fxn1) < 0
+            log_step(l, M, state0)
             !isa(l, NullTracks) && log_message(
                 l,
-                "Used bracketing method $N on  [$(state0.xn0),$(state0.xn1)]",
+                "Used bracketing method $N on  [$(min(state0.xn0,state0.xn1)),$(max(state0.xn0,state0.xn1))]",
             )
 
             Fₙ = Callable_Function(N, F)
@@ -122,6 +123,7 @@ function solve!(𝐙::ZeroProblemIterator{𝐌,𝐍}; verbose=false) where {𝐌
 
         # a sign change after shortening?
         if sign(state.fxn1) * sign(state0.fxn1) < 0
+            log_step(l, M, state)
             a, b = state.xn1, state0.xn1
             fa, fb = state.fxn1, state0.fxn1
             !isa(l, NullTracks) && log_message(

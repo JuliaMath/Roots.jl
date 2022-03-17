@@ -160,6 +160,7 @@ incfn(::NullTracks, i=1) = nothing
 log_message(::NullTracks, msg) = nothing
 log_convergence(::NullTracks, msg) = nothing
 log_state(::NullTracks, state) = nothing
+log_last(::NullTracks, state) = nothing
 log_method(::NullTracks, method) = nothing
 log_nmethod(::NullTracks, method) = nothing
 
@@ -194,10 +195,11 @@ mutable struct Tracks{T,S} <: AbstractTracks
     convergence_flag::Symbol
     message::String
     state
+    alpha::T
     method
     nmethod
 end
-Tracks(T, S) = Tracks(Tuple{T,S}[], Tuple{T,T}[], 0, 0, :not_converged, "", nothing, nothing, nothing)
+Tracks(T, S) = Tracks(Tuple{T,S}[], Tuple{T,T}[], 0, 0, :not_converged, "",nothing,  zero(T), nothing, nothing)
 Tracks(s::AbstractUnivariateZeroState{T,S}) where {T,S} = Tracks(T, S)
 Tracks(verbose, tracks, state) =
     (verbose && isa(tracks, NullTracks)) ? Tracks(state) : tracks
@@ -208,7 +210,6 @@ function log_step(l::Tracks, M::Any, state; init=false)
         x₀, fx₀ = state.xn0, state.fxn0
         push!(l.xfs, (x₀, fx₀))
     end
-
     x₁, fx₁ = state.xn1, state.fxn1
     push!(l.xfs, (x₁, fx₁))
 
@@ -221,6 +222,7 @@ log_steps(l::Tracks, n=1) = (l.steps += n; nothing)
 log_message(l::Tracks, msg) = (l.message *= msg; nothing)
 log_convergence(l::Tracks, msg) = (l.convergence_flag = msg; nothing)
 log_state(l::Tracks, state) = (l.state = state; nothing)
+log_last(l::Tracks, α) = (l.alpha = α; nothing)
 log_method(l::Tracks, method) = (l.method = method; nothing)
 log_nmethod(l::Tracks, method) = (l.nmethod = method; nothing)
 
@@ -243,13 +245,15 @@ function show_tracks(io::IO, s::Tracks, M::AbstractUnivariateZeroMethod)
     end
 
     # show bracketing
+    i₀ = length(s.xfs)
     for (i, (a,b)) in enumerate(s.abs)
+        j = i₀ + i
         println(
             io,
             @sprintf(
-                "(%s, %s) = (% 18.16f, % 18.16f)",
-                "a_$(i-1)",
-                "b_$(i-1)",
+                "(%s, %s) = (% 18.16f, % 18.16f )",
+                "a_$(j-1)",
+                "b_$(j-1)",
                 a, b
             )
         )
@@ -267,11 +271,11 @@ function show_trace(io::IO, method, N, state, tracks)
     converged = !isnan(state.xn1)
     println(io, "Results of univariate zero finding:\n")
     if converged
-        println(io, "* Converged to: $(state.xn1)")
-        if N === nothing || method isa AbstractBracketing
+        println(io, "* Converged to: $(tracks.alpha)")
+        if N === nothing || length(tracks.abs) == 0
             println(io, "* Algorithm: $(method)")
         else
-            println(io, "* Algorithm: $(method), with possible bracketing with $N")
+            println(io, "* Algorithm: $(method); finished with bracketing method $N")
         end
         println(io, "* iterations: $(tracks.steps)")
         println(io, "* function evaluations ≈ $(tracks.fncalls)")
@@ -992,15 +996,19 @@ function solve!(P::ZeroProblemIterator; verbose=false)
         ctr += 1
     end
 
+    val, stopped = assess_convergence(M, state, options) # udpate val flag
+    α = decide_convergence(M, F, state, options, val)
+
     if !(l isa NullTracks)
         log_convergence(l, val)
         log_state(l, state)
         log_method(l, M)
+        log_last(l, α)
         verbose && display(l)
     end
 
-    val, stopped = assess_convergence(M, state, options) # udpate val flag
-    decide_convergence(M, F, state, options, val)
+    α
+
 end
 
 # thread verbose through
