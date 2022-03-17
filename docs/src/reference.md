@@ -205,7 +205,7 @@ good example.
 | Bracketing      | AlefeldPotraShi              |                        | ``3,4`` | ``1.618\dots``                        |
 | Bracketing      | Brent                        | ``\leq 1.89\dots``     | ``1``   | ``\leq 1.89\dots``                    |
 | Bracketing      | ITP                          | ``\leq \varphi         | ``1``   | ``\leq \varphi``                      |
-| Bracketing      | Ridders                      | ``2``                  | ``2``   | ``\sqrt{2}``                          |
+| Bracketing      | Ridders                      | ``1.83\dots``          | ``2``   | ``1.225\dots``                          |
 | Bracketing      | FalsePosition                | ``1.442\dots``         | ``1``   | ``1.442\dots``                        |
 | Bracketing      | LithBoonkkampIJzermanBracket | ``2.91``               | ``3``   | ``1.427\dots``                        |
 | Robust          | King                         | ``\varphi=1.618\dots`` | ``2``   | ``1.272\dots``                        |
