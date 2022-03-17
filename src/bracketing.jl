@@ -862,7 +862,7 @@ end
 function init_state(M::AbstractAcceleratedBisection, F, x₀, x₁, fx₀, fx₁)
     (iszero(fx₀) || iszero(fx₁)) && return UnivariateZeroState(x₁, x₀, fx₁, fx₀)
     assert_bracket(fx₀, fx₁)
-    a, b,f a, fb = (x₀ < x₁) ? (x₀, x₁, fx₀, fx₁) : (x₁, x₀, fx₁, fx₀)
+    a, b, fa, fb = (x₀ < x₁) ? (x₀, x₁, fx₀, fx₁) : (x₁, x₀, fx₁, fx₀)
     UnivariateZeroState(b, a, fb, fa)
 end
 
