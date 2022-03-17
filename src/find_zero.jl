@@ -188,8 +188,8 @@ julia> tracks  # show summary of algorithm
 
 """
 mutable struct Tracks{T,S} <: AbstractTracks
-    xfs::Vector{Tuple{T,S}} # (x,f(x))
-    abs::Vector{Tuple{T,T}} # (aᵢ, bᵢ)
+    xfₛ::Vector{Tuple{T,S}} # (x,f(x))
+    abₛ::Vector{Tuple{T,T}} # (aᵢ, bᵢ)
     steps::Int
     fncalls::Int
     convergence_flag::Symbol
@@ -208,10 +208,10 @@ Tracks() = Tracks(Float64, Float64) # give default
 function log_step(l::Tracks, M::Any, state; init=false)
     if init
         x₀, fx₀ = state.xn0, state.fxn0
-        push!(l.xfs, (x₀, fx₀))
+        push!(l.xfₛ, (x₀, fx₀))
     end
     x₁, fx₁ = state.xn1, state.fxn1
-    push!(l.xfs, (x₁, fx₁))
+    push!(l.xfₛ, (x₁, fx₁))
 
     !init  && log_steps(l, 1)
     nothing
@@ -231,7 +231,7 @@ Base.show(io::IO, l::Tracks) = show_trace(io, l.method, l.nmethod, l.state, l)
 function show_tracks(io::IO, s::Tracks, M::AbstractUnivariateZeroMethod)
 
     # show (x,f(x))
-    for (i, (xi, fxi)) in enumerate(s.xfs)
+    for (i, (xi, fxi)) in enumerate(s.xfₛ)
         println(
             io,
             @sprintf(
@@ -245,8 +245,8 @@ function show_tracks(io::IO, s::Tracks, M::AbstractUnivariateZeroMethod)
     end
 
     # show bracketing
-    i₀ = length(s.xfs)
-    for (i, (a,b)) in enumerate(s.abs)
+    i₀ = length(s.xfₛ)
+    for (i, (a,b)) in enumerate(s.abₛ)
         j = i₀ + i
         println(
             io,
@@ -272,7 +272,7 @@ function show_trace(io::IO, method, N, state, tracks)
     println(io, "Results of univariate zero finding:\n")
     if converged
         println(io, "* Converged to: $(tracks.alpha)")
-        if N === nothing || length(tracks.abs) == 0
+        if N === nothing || length(tracks.abₛ) == 0
             println(io, "* Algorithm: $(method)")
         else
             println(io, "* Algorithm: $(method); finished with bracketing method $N")
