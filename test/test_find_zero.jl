@@ -103,10 +103,11 @@ struct Order3_Test <: Roots.AbstractSecant end
         Roots.A42(),
         Roots.AlefeldPotraShi(),
         Roots.Brent(),
+        Roots.Ridders(),
+        Roots.ITP(),
+        Roots.Ridders(),
         Roots.FalsePosition(),
         Roots.FalsePosition(2),
-        Roots.ITP(),
-        Roots.Ridder()
     )
 
     # test flexbility in interval specification
@@ -559,6 +560,8 @@ end
         Roots.Order2B(),
         Roots.BisectionExact(),
         Roots.Brent(),
+        Roots.Ridders(),
+        Roots.ITP(),
         Roots.A42(),
         Roots.AlefeldPotraShi(),
     )

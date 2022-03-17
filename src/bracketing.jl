@@ -842,13 +842,13 @@ julia> find_zero(x -> exp(x) - x^4, (5, 15), Roots.Ridders())
 8.6131694564414
 ```
 
-Ridders uses two function evaluations per step; its order of convergence is `√2`.
+Ridders converges quadratically; it uses two function evaluations per step; its order of convergence is `2^(1/2) = √2`.
 """
 struct Ridders <: AbstractAcceleratedBisection end
-# use xatol, xrtol only, but give some breathing room to the strict ones
+# use xatol, xrtol only, but give some breathing room over the strict ones
 function default_tolerances(::AbstractAcceleratedBisection, ::Type{T}, ::Type{S}) where {T,S}
-    xatol = 2eps(real(T)) * oneunit(real(T))
-    xrtol = eps(real(T))  # unitless
+    xatol = eps(real(T))^3 * oneunit(real(T))
+    xrtol = 2eps(real(T))  # unitless
     atol = zero(S) * oneunit(real(S))
     rtol = zero(S)
     maxevals = 60
@@ -867,7 +867,7 @@ function update_state(M::Ridders, F, o, options, l=NullTracks())
     incfn(l)
 
 
-    c = x₁ + (x₁-a)*sign(fa-fb)*fx₁/sqrt(fx₁^2 - fa*fb)
+    c = x₁ + (x₁-a) * sign(fa) * fx₁ / sqrt(fx₁^2 - fa*fb)
     fc = F(c)
     incfn(l)
 
@@ -876,13 +876,9 @@ function update_state(M::Ridders, F, o, options, l=NullTracks())
         return (o, true)
     end
 
-
+    # choose bracketing interval from [x₁, c], [c, x₁], [a,c], [c,b]
     if sign(fx₁) * sign(fc) < 0
-        if x₁ < c
-            a,b,fa,fb = x₁,c,fx₁,fc
-        else
-            a,b,fa,fb = c, x₁, fc,fx₁
-        end
+        a, b, fa, fc =  x₁ < c ? (x₁, c, fx₁, fc) : (c, x₁, fc, fx₁)
     elseif sign(fa) * sign(fc) < 0
         b, fb = c, fc
     else
@@ -921,7 +917,7 @@ by `@TheLateKronos`, who supplied the original version of the code
 below.
 
 """
-struct ITP{T,S} <: AbstractAlefeldPotraShi
+struct ITP{T,S} <: AbstractAcceleratedBisection
     κ₁::T
     κ₂::S
     n₀::Int
