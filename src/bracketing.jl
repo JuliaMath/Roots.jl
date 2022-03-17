@@ -1057,37 +1057,9 @@ function default_tolerances(::FalsePosition, ::Type{T}, ::Type{S}) where {T,S}
     default_tolerances(Secant(), T, S)
 end
 
-# use fallback for derivative free
-function assess_convergence(::FalsePosition, state::UnivariateZeroState, options)
-    assess_convergence(Any, state, options)
-end
-
-function decide_convergence(
-    ::FalsePosition,
-    F,
-    state::AbstractUnivariateZeroState{T,S},
-    options,
-    val,
-) where {T,S}
-    a, b = state.xn0, state.xn1
-    fa, fb = state.fxn0, state.fxn1
-
-    isnan(fa) && return b
-    isnan(fb) && return a
-
-    if abs(fa) < abs(fb)
-        _is_f_approx_0(fa, a, options.abstol, options.reltol, true) && return a
-    else
-        _is_f_approx_0(fb, b, options.abstol, options.reltol, true) && return b
-    end
-    val == :not_converged && return T(NaN) * a
-
-    if abs(fa) < abs(fb)
-        return a
-    else
-        return b
-    end
-end
+# False position uses Secant for convergance
+assess_convergence(::FalsePosition, state::AbstractUnivariateZeroState, options) = assess_convergence(Any, state, options)
+decide_convergence(::FalsePosition, F, state::AbstractUnivariateZeroState, options, val) =  decide_convergence(Secant(), F, state, options, val)
 
 function update_state(
     method::FalsePosition,
