@@ -842,9 +842,9 @@ julia> find_zero(x -> exp(x) - x^4, (5, 15), Roots.Ridders())
 8.6131694564414
 ```
 
-[Ridders](https://cs.fit.edu/~dmitra/SciComp/Resources/RidderMethod.pdf) showed the error satisfies `eₙ₊₁ α 1/2 eₙeₙ₋₁eₙ₋₂ ⋅ (g^2-2fh)/f` for
-`f=F', g=F''/2, h=F'''/6`, suggesting converence at rate `~ 1.839...`. It uses two function evaluations per step, so
- its order of convergence is `~ 1.225...`.
+[Ridders](https://cs.fit.edu/~dmitra/SciComp/Resources/RidderMethod.pdf) showed the error satisfies `eₙ₊₁ ≈ 1/2 eₙeₙ₋₁eₙ₋₂ ⋅ (g^2-2fh)/f` for
+`f=F', g=F''/2, h=F'''/6`, suggesting converence at rate `≈ 1.839...`. It uses two function evaluations per step, so
+ its order of convergence is `≈ 1.225...`.
 """
 struct Ridders <: AbstractAcceleratedBisection end
 # use xatol, xrtol only, but give some breathing room over the strict ones
@@ -859,7 +859,7 @@ function default_tolerances(::AbstractAcceleratedBisection, ::Type{T}, ::Type{S}
     (xatol, xrtol, atol, rtol, maxevals, maxfnevals, strict)
 end
 
-function init_state(M::Ridders, F, x₀, x₁, fx₀, fx₁)
+function init_state(M::AbstractAcceleratedBisection, F, x₀, x₁, fx₀, fx₁)
     (iszero(fx₀) || iszero(fx₁)) && return UnivariateZeroState(x₁, x₀, fx₁, fx₀)
     assert_bracket(fx₀, fx₁)
     a, b,f a, fb = (x₀ < x₁) ? (x₀, x₁, fx₀, fx₁) : (x₁, x₀, fx₁, fx₀)
