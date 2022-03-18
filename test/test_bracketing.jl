@@ -219,29 +219,15 @@ avg(x) = sum(x) / length(x)
     ## test for evaluation counts, ideally not so low for these problems
 
     ## exact_bracket
-    Ms = [Roots.A42(), Roots.AlefeldPotraShi(), Roots.Bisection()]
+    Ms = [Roots.Brent(), Roots.A42(), Roots.AlefeldPotraShi(), Roots.ITP(), Roots.Ridders(), Roots.Bisection()]
     results = [run_tests((f, b) -> find_zero(f, b, M), name="$M") for M in Ms]
     maxfailures = maximum([length(result.failures) for result in results])
     maxresidual = maximum([result.maxresidual for result in results])
     cnts = [result.evalcount for result in results]
     @test maxfailures == 0
-    @test maxresidual <= 5e-15
+    @test maxresidual <= 5e-13
     @test avg(cnts) <= 4700
 
-    result = run_tests((f, b) -> find_zero(f, b, Roots.ITP()), name="ITP")
-    @test length(result.failures) == 0
-    @test result.maxresidual <= sqrt(eps()) #
-
-    ## brent has some failures
-    Ms = [Roots.Brent()]
-    results = [run_tests((f, b) -> find_zero(f, b, M), name="$M") for M in Ms]
-
-    maxfailures = maximum([length(result.failures) for result in results])
-    maxresidual = maximum([result.maxresidual for result in results])
-    cnts = [result.evalcount for result in results]
-    @test maxfailures <= 4
-    @test maxresidual <= 1e-13
-    @test avg(cnts) <= 2600
 
     ## False position has failures, and larger residuals
     Ms = [Roots.FalsePosition(i) for i in 1:12]
@@ -351,6 +337,8 @@ end
         Roots.A42(),
         Roots.AlefeldPotraShi(),
         Roots.Brent(),
+        Roots.Ridders(),
+        Roots.ITP(),
         Roots.FalsePosition(),
     )
         x = find_zero(x -> sin(x), (0, 1))
