@@ -183,9 +183,9 @@ along with additional information about the root-finding process.
 `Tracker` objects are printed in a nice, easy-to-read
 format. Internally either a tuple of `(x,f(x))` pairs or `(aₙ, bₙ)`
 pairs are stored, the latter for bracketing methods, as illustrated
-in the examples below. (Internal fieldnames may change without notice.)
+in the examples below. (These implementation details may change without notice.)
 
-If you only want to print the information, but you don't need it later, this can conveniently by
+If you only want to print the information, but you don't need it later, this can conveniently be
 done by passing `verbose=true` to the root-finding function. This will not
 effect the return value, which will still be the root of the function.
 
