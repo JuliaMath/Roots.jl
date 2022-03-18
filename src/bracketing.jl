@@ -8,6 +8,7 @@ Consider a different bracket or try fzero(f, c) with an initial guess c.
 
 abstract type AbstractBisection <: AbstractBracketing end
 abstract type AbstractAcceleratedBisection <: AbstractBisection end
+
 fn_argout(::AbstractBracketing) = 1
 
 """
@@ -318,11 +319,36 @@ function check_zero(::AbstractBracketing, state, c, fc)
     return false
 end
 
+## --------------------------------------------------
+## AbstractAcceleratedBisection
+
+# use xatol, xrtol only, but give some breathing room over the strict ones and cap number of steps
+function default_tolerances(::AbstractAcceleratedBisection, ::Type{T}, ::Type{S}) where {T,S}
+    xatol = eps(real(T))^3 * oneunit(real(T))
+    xrtol = 2eps(real(T))  # unitless
+    atol = zero(S) * oneunit(real(S))
+    rtol = zero(S)
+    maxevals = 60
+    maxfnevals = typemax(Int)
+    strict = false
+    (xatol, xrtol, atol, rtol, maxevals, maxfnevals, strict)
+end
+
+function init_state(M::AbstractAcceleratedBisection, F, x₀, x₁, fx₀, fx₁)
+    (iszero(fx₀) || iszero(fx₁)) && return UnivariateZeroState(x₁, x₀, fx₁, fx₀)
+    assert_bracket(fx₀, fx₁)
+    a, b, fa, fb = (x₀ < x₁) ? (x₀, x₁, fx₀, fx₁) : (x₁, x₀, fx₁, fx₀)
+    UnivariateZeroState(b, a, fb, fa)
+end
+
+initial_fncalls(::AbstractAcceleratedBisection) = 2
+
 ###################################################
 #
 ## Alefeld, Potra, Shi have two algorithms belosw, one is most efficient, but
 ## slightly slower than other.
-abstract type AbstractAlefeldPotraShi <: AbstractBracketing end
+abstract type AbstractAlefeldPotraShi <: AbstractAcceleratedBisection end
+initial_fncalls(::AbstractAlefeldPotraShi) = 3 # worst case assuming fx₀, fx₁,fc must be computed
 
 """
     Roots.A42()
@@ -337,6 +363,7 @@ Originally by John Travers.
 
 """
 struct A42 <: AbstractAlefeldPotraShi end
+
 
 ## put in utils?
 @inline isbracket(fa, fb) = sign(fa) * sign(fb) < 0
@@ -482,7 +509,8 @@ function init_state(::A42, F, x₀, x₁, fx₀, fx₁; c=_middle(x₀, x₁), f
 
     A42State(b, a, d, ee, fb, fa, fd, fe)
 end
-initial_fncalls(::A42) = 3
+
+
 
 # helper: set state xn1, fxn1
 function _set_state(state, x₁, fx₁)
@@ -620,7 +648,7 @@ function init_state(::AlefeldPotraShi, F, x₀, x₁, fx₀, fx₁; c=_middle(x�
 
     return AlefeldPotraShiState(b, a, d, fb, fa, fd)
 end
-initial_fncalls(::AlefeldPotraShiState) = 3 # worst case assuming fx₀, fx₁,fc must be computed
+
 
 # ## 3, maybe 4, functions calls per step
 function update_state(
@@ -721,7 +749,7 @@ This method uses a choice of inverse quadratic interpolation or a secant
 step, falling back on bisection if necessary.
 
 """
-struct Brent <: AbstractBracketing end
+struct Brent <: AbstractAcceleratedBisection end
 
 struct BrentState{T,S} <: AbstractUnivariateZeroState{T,S}
     xn1::T
@@ -732,14 +760,6 @@ struct BrentState{T,S} <: AbstractUnivariateZeroState{T,S}
     fxn0::S
     fc::S
     mflag::Bool
-end
-
-function log_step(l::Tracks, M::Brent, state)
-    a, b = state.xn0, state.xn1
-    u, v = a < b ? (a, b) : (b, a)
-    push!(l.xs, a)
-    push!(l.xs, b) # we store [ai,bi, ai+1, bi+1, ...]
-    log_steps(l)
 end
 
 # # we store mflag as -1, or +1 in state.mflag
@@ -756,6 +776,8 @@ function init_state(::Brent, F, x₀, x₁, fx₀, fx₁)
 
     BrentState(u, v, v, v, fu, fv, fv, true)
 end
+
+default_tolerances(::Brent, ::Type{T}, ::Type{S}) where {T,S} = default_tolerances(Secant(), T, S) # need relaxing
 
 function update_state(
     ::Brent,
@@ -827,6 +849,16 @@ function update_state(
     return state, false
 end
 
+
+function log_step(l::Tracks, M::Brent, state)
+    a, b = state.xn0, state.xn1
+    u, v = a < b ? (a, b) : (b, a)
+    push!(l.xs, a)
+    push!(l.xs, b) # we store [ai,bi, ai+1, bi+1, ...]
+    log_steps(l)
+end
+
+
 ## --------------------------------------------------
 
 """
@@ -855,24 +887,6 @@ julia> find_zero(x -> tan(x)^tan(x) - 1e3, (0, 1.5), Roots.Ridders())
  its order of convergence is `≈ 1.225...`.
 """
 struct Ridders <: AbstractAcceleratedBisection end
-# use xatol, xrtol only, but give some breathing room over the strict ones
-function default_tolerances(::AbstractAcceleratedBisection, ::Type{T}, ::Type{S}) where {T,S}
-    xatol = eps(real(T))^3 * oneunit(real(T))
-    xrtol = 2eps(real(T))  # unitless
-    atol = zero(S) * oneunit(real(S))
-    rtol = zero(S)
-    maxevals = 60
-    maxfnevals = typemax(Int)
-    strict = false
-    (xatol, xrtol, atol, rtol, maxevals, maxfnevals, strict)
-end
-
-function init_state(M::AbstractAcceleratedBisection, F, x₀, x₁, fx₀, fx₁)
-    (iszero(fx₀) || iszero(fx₁)) && return UnivariateZeroState(x₁, x₀, fx₁, fx₀)
-    assert_bracket(fx₀, fx₁)
-    a, b, fa, fb = (x₀ < x₁) ? (x₀, x₁, fx₀, fx₁) : (x₁, x₀, fx₁, fx₀)
-    UnivariateZeroState(b, a, fb, fa)
-end
 
 function update_state(M::Ridders, F, o, options, l=NullTracks())
 
@@ -979,7 +993,6 @@ function init_state(M::ITP, F, x₀, x₁, fx₀, fx₁)
     ITPState(b, a, fb, fa, 0, ϵ2n₁₂, a)
 
 end
-initial_fncalls(::ITP) = 2 # a, b #, middle
 
 function update_state(M::ITP, F, o, options, l=NullTracks())
 
@@ -1031,14 +1044,12 @@ function update_state(M::ITP, F, o, options, l=NullTracks())
 end
 
 
-
-
 ## ----------------------------
 
-struct FalsePosition{R} <: AbstractBisection end
+struct FalsePosition{R} <: AbstractSecant end
 """
 
-    FalsePosition()
+    FalsePosition([galadino_factor])
 
 Use the [false
 position](https://en.wikipedia.org/wiki/False_position_method) method
@@ -1070,13 +1081,7 @@ find_zero(x -> x^5 - x - 1, (-2, 2), FalsePosition())
 FalsePosition
 FalsePosition(x=:anderson_bjork) = FalsePosition{x}()
 
-function default_tolerances(::FalsePosition, ::Type{T}, ::Type{S}) where {T,S}
-    default_tolerances(Secant(), T, S)
-end
-
-# False position uses Secant for convergance
-assess_convergence(::FalsePosition, state::AbstractUnivariateZeroState, options) = assess_convergence(Any, state, options)
-decide_convergence(::FalsePosition, F, state::AbstractUnivariateZeroState, options, val) =  decide_convergence(Secant(), F, state, options, val)
+init_state(M::FalsePosition, F, x₀, x₁, fx₀, fx₁) = init_state(BisectionExact(), F, x₀, x₁, fx₀, fx₁)
 
 function update_state(
     method::FalsePosition,
@@ -1150,6 +1155,7 @@ end
     end
 end
 
+## --------------------------------------------------
 # deprecate this
 """
     find_bracket(f, x0, method=A42(); kwargs...)
