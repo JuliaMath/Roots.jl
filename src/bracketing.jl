@@ -45,9 +45,9 @@ struct BisectionExact <: AbstractBisection end
 ## No init here; for Bisection() [a₀, b₀] is just lost.
 function log_step(l::Tracks, M::AbstractBracketing, state; init::Bool=false)
     a, b = state.xn0, state.xn1
-    push!(l.abₛ, (a,b))
-    init && log_steps(l, 1) # c is computed
+    push!(l.abₛ, a < b ? (a,b) : (b,a))
     !init && log_steps(l, 1)
+    nothing
 end
 
 ## helper function: floating point, sorted, finite
@@ -113,6 +113,14 @@ function default_tolerances(::AbstractBisection, ::Type{T}, ::Type{S}) where {T,
     maxfnevals = typemax(Int)
     strict = true
     (xatol, xrtol, atol, rtol, maxevals, maxfnevals, strict)
+end
+
+function log_step(l::Tracks, M::Bisection, state; init::Bool=false)
+    a, b = state.xn0, state.xn1
+    push!(l.abₛ, (a,b))
+    init && log_steps(l, 1) # c is computed
+    !init && log_steps(l, 1)
+    nothing
 end
 
 # find middle of (a,b) with convention that
@@ -459,6 +467,7 @@ function log_step(l::Tracks, M::AbstractAlefeldPotraShi, state; init::Bool=false
     init && log_steps(l, 1) # take an initial step
     push!(l.abₛ, (a,b))
     !init && log_steps(l, 1)
+    nothing
 end
 
 struct A42State{T,S} <: AbstractUnivariateZeroState{T,S}
@@ -747,12 +756,6 @@ struct BrentState{T,S} <: AbstractUnivariateZeroState{T,S}
     mflag::Bool
 end
 
-function log_step(l::Tracks, M::Brent, state; init::Bool=false)
-    a, b = state.xn0, state.xn1
-    u, v = a < b ? (a, b) : (b, a)
-    push!(l.abₛ, (a,b))
-    !init && log_steps(l)
-end
 
 # # we store mflag as -1, or +1 in state.mflag
 function init_state(::Brent, F, x₀, x₁, fx₀, fx₁)
@@ -841,14 +844,6 @@ function update_state(
     return state, false
 end
 
-
-function log_step(l::Tracks, M::Brent, state)
-    a, b = state.xn0, state.xn1
-    u, v = a < b ? (a, b) : (b, a)
-    push!(l.xs, a)
-    push!(l.xs, b) # we store [ai,bi, ai+1, bi+1, ...]
-    log_steps(l)
-end
 
 
 ## --------------------------------------------------
@@ -957,11 +952,6 @@ struct ITP{T,S} <: AbstractAcceleratedBisection
 end
 ITP(;κ₁ = 0.2, κ₂ = 2, n₀=1) = ITP(κ₁, κ₂, n₀)
 
-function log_step(l::Tracks, M::ITP, state; init::Bool=false)
-    a, b = state.xn0, state.xn1
-    push!(l.abₛ, (a,b))
-    !init  && log_steps(l, 1)
-end
 
 struct ITPState{T,S,R} <: AbstractUnivariateZeroState{T,S}
     xn1::T

@@ -206,13 +206,8 @@ Tracks(verbose, tracks, state) =
 Tracks() = Tracks(Float64, Float64) # give default
 
 function log_step(l::Tracks, M::Any, state; init=false)
-    if init
-        x₀, fx₀ = state.xn0, state.fxn0
-        push!(l.xfₛ, (x₀, fx₀))
-    end
-    x₁, fx₁ = state.xn1, state.fxn1
-    push!(l.xfₛ, (x₁, fx₁))
-
+    init && push!(l.xfₛ, (state.x₀, state.fx₀))
+    push!(l.xfₛ, (state.x₁, state.fx₁))
     !init  && log_steps(l, 1)
     nothing
 end
