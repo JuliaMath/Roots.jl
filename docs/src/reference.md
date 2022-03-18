@@ -306,3 +306,4 @@ It is possible to add the keyword arguement `verbose=true` to when calling the `
 
 ```@docs
 Roots.Tracks
+```
