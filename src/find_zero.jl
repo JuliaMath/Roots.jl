@@ -201,6 +201,7 @@ f (generic function with 1 method)
 
 julia> tracker = Roots.Tracks()
 Algorithm has not been run
+Algorithm has not been run
 
 julia> find_zero(f, (0, 2), Roots.Secant(), tracks=tracker)
 1.4142135623730947
@@ -211,7 +212,7 @@ Results of univariate zero finding:
 * Converged to: 1.4142135623730947
 * Algorithm: Secant()
 * iterations: 7
-* function evaluations ≈ 13
+* function evaluations ≈ 9
 * stopped as |f(x_n)| ≤ max(δ, |x|⋅ϵ) using δ = atol, ϵ = rtol
 
 Trace:

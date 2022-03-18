@@ -860,7 +860,7 @@ Example:
 julia> using Roots
 
 julia> find_zero(x -> exp(x) - x^4, (5, 15), Roots.Ridders())
-8.6131694564414
+8.613169456441398
 
 julia> find_zero(x -> x*exp(x) - 10, (-100, 100), Roots.Ridders())
 1.7455280027406994

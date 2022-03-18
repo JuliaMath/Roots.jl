@@ -262,7 +262,7 @@ The algorithm is derived from one in a
 
 For example, this function (due to `@truculentmath`) is particularly tricky, as it is positive at every floating point number, but has two zeros (the vertical asymptote at `15//11` is only negative within adjacent floating point values):
 
-```jldoctest interval_root_finding
+```
 julia> using IntervalArithmetic, IntervalRootFinding, Roots
 
 julia> g(x) = x^2 + 1 +log(abs( 11*x-15 ))/99
@@ -278,7 +278,7 @@ julia> IntervalRootFinding.roots(g, -3..3, IntervalRootFinding.Bisection)
 
 A less extreme usage might be the following, where `unique` indicates Bisection could be useful and indeed `find_zeros` will identify these values:
 
-```jldoctest interval_root_finding
+```
 julia> g(x) = exp(x) - x^5
 g (generic function with 1 method)
 
