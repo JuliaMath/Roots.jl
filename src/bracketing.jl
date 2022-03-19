@@ -859,14 +859,14 @@ Example:
 ```jldoctest
 julia> using Roots
 
-julia> find_zero(x -> exp(x) - x^4, (5, 15), Roots.Ridders())
-8.613169456441398
+julia> find_zero(x -> exp(x) - x^4, (5, 15), Roots.Ridders()) ≈ 8.61316945644
+true
 
-julia> find_zero(x -> x*exp(x) - 10, (-100, 100), Roots.Ridders())
-1.7455280027406994
+julia> find_zero(x -> x*exp(x) - 10, (-100, 100), Roots.Ridders()) ≈ 1.74552800274
+true
 
-julia> find_zero(x -> tan(x)^tan(x) - 1e3, (0, 1.5), Roots.Ridders())
-1.3547104419635592
+julia> find_zero(x -> tan(x)^tan(x) - 1e3, (0, 1.5), Roots.Ridders()) ≈ 1.3547104419
+true
 ```
 
 [Ridders](https://cs.fit.edu/~dmitra/SciComp/Resources/RidderMethod.pdf) showed the error satisfies `eₙ₊₁ ≈ 1/2 eₙeₙ₋₁eₙ₋₂ ⋅ (g^2-2fh)/f` for

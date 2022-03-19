@@ -202,8 +202,8 @@ f (generic function with 1 method)
 julia> tracker = Roots.Tracks()
 Algorithm has not been run
 
-julia> find_zero(f, (0, 2), Roots.Secant(), tracks=tracker)
-1.4142135623730947
+julia> find_zero(f, (0, 2), Roots.Secant(), tracks=tracker) ≈ √2
+true
 
 julia> tracker
 Results of univariate zero finding:
@@ -239,8 +239,8 @@ julia> tracker.xfₛ  # stored as (x, f(x)) pairs
 
 julia> tracker = Roots.Tracks()
 
-julia> find_zero(sin, (3, 4), Roots. A42(), tracks=tracker)
-3.141592653589793
+julia> find_zero(sin, (3, 4), Roots. A42(), tracks=tracker) ≈ π
+true
 
 julia> tracker.abₛ # stored as (aₙ, bₙ) pairs
 4-element Vector{Tuple{Float64, Float64}}:
