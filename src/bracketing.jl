@@ -1072,13 +1072,13 @@ end
 function init_state(::Chandrapatla, F, x₀, x₁, fx₀, fx₁)
     a, b, fa, fb = x₁, x₀, fx₁, fx₀
     c, fc = a, fa
-    ChandrapatlaState(b, a, c, fb, fa, fc)
+    ChandrapatlaState(a, b, c, fa, fb, fc)
 end
 
 function update_state(::Chandrapatla, F, o, options, l=NullTracks())
 
-    b, a, c = o.xn1, o.xn0, o.c
-    fb, fa, fc = o.fxn1, o.fxn0, o.fc
+    a, b, c = o.xn1, o.xn0, o.c
+    fa, fb, fc = o.fxn1, o.fxn0, o.fc
 
     # encoding: a = xₙ, b=xₙ₋₁, c= xₙ₋₂
 
@@ -1100,11 +1100,11 @@ function update_state(::Chandrapatla, F, o, options, l=NullTracks())
         fa, fc = fₜ, fa
     end
 
-    @set! o.xn0 = a
-    @set! o.xn1 = b
+    @set! o.xn1 = a
+    @set! o.xn0 = b
     @set! o.c = c
-    @set! o.fxn0 = fa
-    @set! o.fxn1 = fb
+    @set! o.fxn1 = fa
+    @set! o.fxn0 = fb
     @set! o.fc = fc
 
     return (o, false)
