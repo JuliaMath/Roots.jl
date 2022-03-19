@@ -1043,6 +1043,63 @@ function update_state(M::ITP, F, o, options, l=NullTracks())
     return o, false
 end
 
+## --------------------------------------------------
+
+"""
+    Roots.Chandrapatla()
+
+Use [Chandrapatla's algorithm](https://doi.org/10.1016/S0965-9978(96)00051-8) to solve ``f(x) = 0``.
+
+Chandrapatla's algorithm chooses between an inverse quadratic step or a bisection step based on a computed inequality.
+
+"""
+struct Chandrapatla <: AbstractAcceleratedBisection end
+
+struct ChandrapatlaState{T,S} <: AbstractUnivariateZeroState{T,S}
+    xn1::T
+    xn0::T
+    c::T  # keep xₙ₋₂ around for quadratic step
+    fxn1::S
+    fxn0::S
+    fc::S
+end
+
+function init_state(::Chandrapatla, F, x₀, x₁, fx₀, fx₁)
+    b, a, fb, fa = x₀ < x₁ ? (x₁, x₀, fx₁, fx₀) : (x₀, x₁, fx₀, fx₁)
+    ChandrapatlaState(b, a, b, fb, fa, fb) # c = b at start to get ξ = Inf
+end
+
+function update_state(::Chandrapatla, F, o, options, l=NullTracks())
+
+    b, a, c = o.xn1, o.xn0, o.c
+    fb, fa, fc = o.fxn1, o.fxn0, o.fc
+
+    # a,b,c old states
+    ξ = (b - a) / abs(c-b)
+    ϕ = (fa-fb) / (fc - fb)
+    ϕ² = ϕ^2
+    Δ = (ϕ² < ξ) && (1 - 2ϕ + ϕ² < 1 - ξ) # Chandrapatla's inequality to determine next step
+
+    xₜ = Δ ?  inverse_quadratic_step(a, b, c, fa, fb, fc) : _middle(a,b)
+    fₜ = F(xₜ)
+    incfn(l)
+
+    if sign(fa) * sign(fₜ) < 0
+        b, c, fb, fc = xₜ, b, fₜ, fb  # keep c as xₙ₋₂
+    else
+        a, c, fa, fc = xₜ, a, fₜ, fa
+    end
+
+    @set! o.xn0 = a
+    @set! o.xn1 = b
+    @set! o.c = c
+    @set! o.fxn0 = fa
+    @set! o.fxn1 = fb
+    @set! o.fc = fc
+
+    return (o, false)
+end
+
 
 ## ----------------------------
 

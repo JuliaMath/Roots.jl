@@ -130,6 +130,7 @@ Bisection
 Roots.A42
 Roots.AlefeldPotraShi
 Roots.Brent
+Roots.Chandrapatla
 Roots.Ridders
 Roots.ITP
 FalsePosition

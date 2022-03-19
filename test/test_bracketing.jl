@@ -219,7 +219,7 @@ avg(x) = sum(x) / length(x)
     ## test for evaluation counts, ideally not so low for these problems
 
     ## exact_bracket
-    Ms = [Roots.Brent(), Roots.A42(), Roots.AlefeldPotraShi(), Roots.ITP(), Roots.Ridders(), Roots.Bisection()]
+    Ms = [Roots.Brent(), Roots.A42(), Roots.AlefeldPotraShi(), Roots.Chandrapatla(), Roots.ITP(), Roots.Ridders(), Roots.Bisection()]
     results = [run_tests((f, b) -> find_zero(f, b, M), name="$M") for M in Ms]
     maxfailures = maximum([length(result.failures) for result in results])
     maxresidual = maximum([result.maxresidual for result in results])
@@ -338,6 +338,7 @@ end
         Roots.AlefeldPotraShi(),
         Roots.Brent(),
         Roots.Ridders(),
+        Roots.Chandrapatla(),
         Roots.ITP(),
         Roots.FalsePosition(),
     )
