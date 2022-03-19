@@ -67,9 +67,7 @@ function solve!(𝐙::ZeroProblemIterator{𝐌,𝐍}; verbose=false) where {𝐌
     M, N, F, state, options, l = 𝐙.M, 𝐙.N, 𝐙.F, 𝐙.state, 𝐙.options, 𝐙.logger
 
     incfn(l, 2)
-    log_step(l, M, state, :init)
-    log_method(l, M)
-    log_nmethod(l, N)
+    log_step(l, M, state; init=true)
 
     quad_ctr = 0
     flag = :not_converged
@@ -90,15 +88,16 @@ function solve!(𝐙::ZeroProblemIterator{𝐌,𝐍}; verbose=false) where {𝐌
             state = state0
             break
         elseif sign(state0.fxn0) * sign(state0.fxn1) < 0
+            log_step(l, M, state0)
             !isa(l, NullTracks) && log_message(
                 l,
-                "Used bracketing method $N on  [$(state0.xn0),$(state0.xn1)], those steps not recorded",
+                "Used bracketing method $N on  [$(min(state0.xn0,state0.xn1)),$(max(state0.xn0,state0.xn1))]",
             )
 
             Fₙ = Callable_Function(N, F)
             stateₙ = init_state(N, state0, Fₙ) # save function calls by using state0 values
             optionsₙ = init_options(N, stateₙ)
-            α = solve!(init(N, Fₙ, stateₙ, optionsₙ))
+            α = solve!(init(N, Fₙ, stateₙ, optionsₙ, l))
             break
         end
 
@@ -122,18 +121,18 @@ function solve!(𝐙::ZeroProblemIterator{𝐌,𝐍}; verbose=false) where {𝐌
 
         # a sign change after shortening?
         if sign(state.fxn1) * sign(state0.fxn1) < 0
+            log_step(l, M, state)
             a, b = state.xn1, state0.xn1
             fa, fb = state.fxn1, state0.fxn1
-
             !isa(l, NullTracks) && log_message(
                 l,
-                "Used bracketing method $N on  [$a,$b], those steps not recorded",
+                "Used bracketing method $N on  [$a,$b]",
             )
 
             Fₙ = Callable_Function(N, F)
             stateₙ = init_state(N, Fₙ, a, b, fa, fb)
             optionsₙ = init_options(N, stateₙ)
-            α = solve!(init(N, Fₙ, stateₙ, optionsₙ))
+            α = solve!(init(N, Fₙ, stateₙ, optionsₙ, l))
             break
         end
 
@@ -180,10 +179,14 @@ function solve!(𝐙::ZeroProblemIterator{𝐌,𝐍}; verbose=false) where {𝐌
         log_step(l, M, state)
     end
 
-    log_state(l, state)
+
+    val, stopped = assess_convergence(M, state, options)
+    log_convergence(l, val)
+    log_method(l, M)
+    log_nmethod(l, N)
+    log_last(l, α)
     verbose && display(l)
 
-    flag, converged = assess_convergence(M, state, options)
     isnan(α) ? decide_convergence(M, F, state, options, flag) : α
 end
 

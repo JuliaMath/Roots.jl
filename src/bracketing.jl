@@ -42,27 +42,12 @@ struct Bisection <: AbstractBisection end  # either solvable or A42
 struct BisectionExact <: AbstractBisection end
 
 ## tracks for bisection, different, we show bracketing interval
-function log_step(l::Tracks, M::AbstractBracketing, state)
-    push!(l.xs, state.xn0)
-    push!(l.xs, state.xn1) # we store [ai,bi, ai+1, bi+1, ...]
-    log_steps(l)
-end
-function show_tracks(io::IO, l::Tracks, M::AbstractBracketing)
-    xs = l.xs
-    n = length(xs)
-    for (i, j) in enumerate(1:2:(n - 1))
-        println(
-            io,
-            @sprintf(
-                "(%s, %s) = (% 18.16f, % 18.16f)",
-                "a_$(i-1)",
-                "b_$(i-1)",
-                xs[j],
-                xs[j + 1]
-            )
-        )
-    end
-    println(io, "")
+## No init here; for Bisection() [a₀, b₀] is just lost.
+function log_step(l::Tracks, M::AbstractBracketing, state; init::Bool=false)
+    a, b = state.xn0, state.xn1
+    push!(l.abₛ, a < b ? (a,b) : (b,a))
+    !init && log_iteration(l, 1)
+    nothing
 end
 
 ## helper function: floating point, sorted, finite
@@ -128,6 +113,14 @@ function default_tolerances(::AbstractBisection, ::Type{T}, ::Type{S}) where {T,
     maxfnevals = typemax(Int)
     strict = true
     (xatol, xrtol, atol, rtol, maxevals, maxfnevals, strict)
+end
+
+function log_step(l::Tracks, M::Bisection, state; init::Bool=false)
+    a, b = state.xn0, state.xn1
+    push!(l.abₛ, (a,b))
+    init && log_iteration(l, 1) # c is computed
+    !init && log_iteration(l, 1)
+    nothing
 end
 
 # find middle of (a,b) with convention that
@@ -468,12 +461,13 @@ function default_tolerances(::AbstractAlefeldPotraShi, ::Type{T}, ::Type{S}) whe
 end
 
 ## initial step, needs to log a,b,d
-function log_step(l::Tracks, M::AbstractAlefeldPotraShi, state, ::Any)
+function log_step(l::Tracks, M::AbstractAlefeldPotraShi, state; init::Bool=false)
     a, b, c = state.xn0, state.xn1, state.d
-    append!(l.xs, extrema((a, b, c)))
-    push!(l.xs, a)
-    push!(l.xs, b) # we store [ai,bi, ai+1, bi+1, ...] for brackecting methods
-    log_steps(l, 1)
+    init && push!(l.abₛ, extrema((a, b, c)))
+    init && log_iteration(l, 1) # take an initial step
+    push!(l.abₛ, (a,b))
+    !init && log_iteration(l, 1)
+    nothing
 end
 
 struct A42State{T,S} <: AbstractUnivariateZeroState{T,S}
@@ -762,6 +756,7 @@ struct BrentState{T,S} <: AbstractUnivariateZeroState{T,S}
     mflag::Bool
 end
 
+
 # # we store mflag as -1, or +1 in state.mflag
 function init_state(::Brent, F, x₀, x₁, fx₀, fx₁)
     u, v, fu, fv = x₀, x₁, fx₀, fx₁
@@ -850,14 +845,6 @@ function update_state(
 end
 
 
-function log_step(l::Tracks, M::Brent, state)
-    a, b = state.xn0, state.xn1
-    u, v = a < b ? (a, b) : (b, a)
-    push!(l.xs, a)
-    push!(l.xs, b) # we store [ai,bi, ai+1, bi+1, ...]
-    log_steps(l)
-end
-
 
 ## --------------------------------------------------
 
@@ -872,14 +859,14 @@ Example:
 ```jldoctest
 julia> using Roots
 
-julia> find_zero(x -> exp(x) - x^4, (5, 15), Roots.Ridders())
-8.6131694564414
+julia> find_zero(x -> exp(x) - x^4, (5, 15), Roots.Ridders()) ≈ 8.61316945644
+true
 
-julia> find_zero(x -> x*exp(x) - 10, (-100, 100), Roots.Ridders())
-1.7455280027406994
+julia> find_zero(x -> x*exp(x) - 10, (-100, 100), Roots.Ridders()) ≈ 1.74552800274
+true
 
-julia> find_zero(x -> tan(x)^tan(x) - 1e3, (0, 1.5), Roots.Ridders())
-1.3547104419635592
+julia> find_zero(x -> tan(x)^tan(x) - 1e3, (0, 1.5), Roots.Ridders()) ≈ 1.3547104419
+true
 ```
 
 [Ridders](https://cs.fit.edu/~dmitra/SciComp/Resources/RidderMethod.pdf) showed the error satisfies `eₙ₊₁ ≈ 1/2 eₙeₙ₋₁eₙ₋₂ ⋅ (g^2-2fh)/f` for
@@ -964,6 +951,7 @@ struct ITP{T,S} <: AbstractAcceleratedBisection
     end
 end
 ITP(;κ₁ = 0.2, κ₂ = 2, n₀=1) = ITP(κ₁, κ₂, n₀)
+
 
 struct ITPState{T,S,R} <: AbstractUnivariateZeroState{T,S}
     xn1::T
