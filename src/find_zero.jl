@@ -150,6 +150,7 @@ end
 @deprecate init_options!(options, M) init_options(M)
 
 ### --------------------------------------------------
+
 ## Tracks (for logging actual steps)
 ## when no logging this should get optimized out
 ## when logging, this allocates
@@ -190,9 +191,7 @@ If you only want to print the information, but you don't need it later, this can
 done by passing `verbose=true` to the root-finding function. This will not
 effect the return value, which will still be the root of the function.
 
-## Example
-
-(This example uses the default types for `Tracks`, which may not be suitable for some uses.)
+## Examples
 
 ```jldoctest Tracks
 julia> using Roots
@@ -201,7 +200,6 @@ julia> f(x) = x^2-2
 f (generic function with 1 method)
 
 julia> tracker = Roots.Tracks()
-Algorithm has not been run
 Algorithm has not been run
 
 julia> find_zero(f, (0, 2), Roots.Secant(), tracks=tracker)
@@ -285,9 +283,41 @@ log_last(l::Tracks, α) = (l.alpha = α; nothing)
 log_method(l::Tracks, method) = (l.method = method; nothing)
 log_nmethod(l::Tracks, method) = (l.nmethod = method; nothing)
 
-
-
 Base.show(io::IO, l::Tracks) = show_trace(io, l.method, l.nmethod, l)
+
+
+function show_trace(io::IO, method, N, tracks)
+
+    if length(tracks.xfₛ) == 0 && length(tracks.abₛ) == 0
+        print(io, "Algorithm has not been run")
+        return nothing
+    end
+
+    converged = !isnan(tracks.alpha)
+    println(io, "Results of univariate zero finding:\n")
+    if converged
+        println(io, "* Converged to: $(tracks.alpha)")
+        if N === nothing || length(tracks.abₛ) == 0
+            println(io, "* Algorithm: $(method)")
+        else
+            println(io, "* Algorithm: $(method); finished with bracketing method $N")
+        end
+        println(io, "* iterations: $(tracks.steps)")
+        println(io, "* function evaluations ≈ $(tracks.fncalls)")
+        tracks.convergence_flag == :x_converged &&
+            println(io, "* stopped as x_n ≈ x_{n-1} using atol=xatol, rtol=xrtol")
+        tracks.convergence_flag == :f_converged &&
+            tracks.message == "" &&
+            println(io, "* stopped as |f(x_n)| ≤ max(δ, |x|⋅ϵ) using δ = atol, ϵ = rtol")
+        tracks.message != "" && println(io, "* Note: $(tracks.message)")
+    else
+        println(io, "* Convergence failed: $(tracks.message)")
+        println(io, "* Algorithm $(method)")
+    end
+    println(io, "")
+    println(io, "Trace:")
+    show_tracks(io, tracks, method)
+end
 
 function show_tracks(io::IO, s::Tracks, M::AbstractUnivariateZeroMethod)
 
@@ -323,38 +353,7 @@ function show_tracks(io::IO, s::Tracks, M::AbstractUnivariateZeroMethod)
 
 end
 
-function show_trace(io::IO, method, N, tracks)
-
-    if length(tracks.xfₛ) == 0 && length(tracks.abₛ) == 0
-        print(io, "Algorithm has not been run")
-        return nothing
-    end
-
-    converged = !isnan(tracks.alpha)
-    println(io, "Results of univariate zero finding:\n")
-    if converged
-        println(io, "* Converged to: $(tracks.alpha)")
-        if N === nothing || length(tracks.abₛ) == 0
-            println(io, "* Algorithm: $(method)")
-        else
-            println(io, "* Algorithm: $(method); finished with bracketing method $N")
-        end
-        println(io, "* iterations: $(tracks.steps)")
-        println(io, "* function evaluations ≈ $(tracks.fncalls)")
-        tracks.convergence_flag == :x_converged &&
-            println(io, "* stopped as x_n ≈ x_{n-1} using atol=xatol, rtol=xrtol")
-        tracks.convergence_flag == :f_converged &&
-            tracks.message == "" &&
-            println(io, "* stopped as |f(x_n)| ≤ max(δ, |x|⋅ϵ) using δ = atol, ϵ = rtol")
-        tracks.message != "" && println(io, "* Note: $(tracks.message)")
-    else
-        println(io, "* Convergence failed: $(tracks.message)")
-        println(io, "* Algorithm $(method)")
-    end
-    println(io, "")
-    println(io, "Trace:")
-    show_tracks(io, tracks, method)
-end
+## --------------------------------------------------
 
 ### Functions
 # A hacky means to call a function so that parameters can be passed as desired
