@@ -1064,9 +1064,11 @@ struct ChandrapatlaState{T,S} <: AbstractUnivariateZeroState{T,S}
     fc::S
 end
 
+# a = most recent, b prior
 function init_state(::Chandrapatla, F, x₀, x₁, fx₀, fx₁)
-    b, a, fb, fa = x₀ < x₁ ? (x₁, x₀, fx₁, fx₀) : (x₀, x₁, fx₀, fx₁)
-    ChandrapatlaState(b, a, b, fb, fa, fb) # c = b at start to get ξ = Inf
+    a, b, fa, fb = x₁, x₀, fx₁, fx₀
+    c, fc = a, fa
+    ChandrapatlaState(b, a, c, fb, fa, fc)
 end
 
 function update_state(::Chandrapatla, F, o, options, l=NullTracks())
@@ -1074,20 +1076,24 @@ function update_state(::Chandrapatla, F, o, options, l=NullTracks())
     b, a, c = o.xn1, o.xn0, o.c
     fb, fa, fc = o.fxn1, o.fxn0, o.fc
 
-    # a,b,c old states
-    ξ = (b - a) / abs(c-b)
-    ϕ = (fa-fb) / (fc - fb)
+    # encoding: a = xₙ, b=xₙ₋₁, c= xₙ₋₂
+
+    ξ = (a - b) / (c - b)
+    ϕ = (fa - fb) / (fc - fb)
     ϕ² = ϕ^2
     Δ = (ϕ² < ξ) && (1 - 2ϕ + ϕ² < 1 - ξ) # Chandrapatla's inequality to determine next step
 
-    xₜ = Δ ?  inverse_quadratic_step(a, b, c, fa, fb, fc) : _middle(a,b)
+    xₜ = Δ ? inverse_quadratic_step(a, b, c, fa, fb, fc) : _middle(a,b)
+
     fₜ = F(xₜ)
     incfn(l)
 
-    if sign(fa) * sign(fₜ) < 0
-        b, c, fb, fc = xₜ, b, fₜ, fb  # keep c as xₙ₋₂
+    if sign(fₜ) * sign(fa) < 0
+        a, b, c = xₜ, a, b
+        fa, fb, fc = fₜ, fa, fb
     else
-        a, c, fa, fc = xₜ, a, fₜ, fa
+        a, c = xₜ, a
+        fa, fc = fₜ, fa
     end
 
     @set! o.xn0 = a

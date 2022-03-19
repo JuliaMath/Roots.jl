@@ -987,12 +987,13 @@ end
 
 ```
 
-An `init_state` method can be used by some methods to add more detail to the basic state object, here it ensures `a` and `b` are sorted and starts the old value, `c` off as `b` as a means to ensure an initial bisection step.
+An `init_state` method can be used by some methods to add more detail to the basic state object. Here it starts the old value, `c` off as `a` as a means to ensure an initial bisection step.
 
 ```julia
 julia> function init_state(::Chandrapatla, F, x₀, x₁, fx₀, fx₁)
-    b, a, fb, fa = x₀ < x₁ ? (x₁, x₀, fx₁, fx₀) : (x₀, x₁, fx₀, fx₁)
-    ChandrapatlaState(b, a, b, fb, fa, fb) # c = b at start to get ξ = Inf
+    a, b, fa, fb = x₁, x₀, fx₁, fx₀
+    c, fc = a, fa
+    ChandrapatlaState(b, a, c, fb, fa, fc)
 end
 ```
 
@@ -1006,33 +1007,31 @@ julia> function Roots.update_state(::Chandrapatla, F, o, options, l=NullTracks()
     b, a, c = o.xn1, o.xn0, o.c
     fb, fa, fc = o.fxn1, o.fxn0, o.fc
 
-    # a,b,c old states
-    ξ = (b - a) / abs(c-b)
-    ϕ = (fa-fb) / (fc - fb)
+    # encoding: a = xₙ, b=xₙ₋₁, c= xₙ₋₂
+    ξ = (a - b) / (c - b)
+    ϕ = (fa - fb) / (fc - fb)
     ϕ² = ϕ^2
+    Δ = (ϕ² < ξ) && (1 - 2ϕ + ϕ² < 1 - ξ) # Chandrapatla's inequality to determine next step
 
-    if (ϕ² < ξ) && (1 - 2ϕ + ϕ² < 1 - ξ)
-        xₜ = inverse_quadratic_step(a, b, c, fa, fb, fc)
-    else
-        xₜ = _middle(a,b)
-    end
+    xₜ = Δ ? Roots.inverse_quadratic_step(a, b, c, fa, fb, fc) : a + (b-a)/2
 
     fₜ = F(xₜ)
-    incfn(l) # log the function call
+    incfn(l)
 
-    if sign(fa) * sign(fₜ) < 0
-        b, c, fb, fc = xₜ, b, fₜ, fb  # keep c as xₙ₋₂
+    if sign(fₜ) * sign(fa) < 0
+        a, b, c = xₜ, a, b
+        fa, fb, fc = fₜ, fa, fb
     else
-        a, c, fa, fc = xₜ, a, fₜ, fa
+        a, c = xₜ, a
+        fa, fc = fₜ, fa
     end
 
     @set! o.xn0 = a
     @set! o.xn1 = b
+    @set! o.c = c
     @set! o.fxn0 = fa
     @set! o.fxn1 = fb
-    @set! o.c = c
     @set! o.fc = fc
-
 
     return (o, false)
 end
