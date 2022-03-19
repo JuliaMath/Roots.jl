@@ -987,7 +987,7 @@ end
 
 ```
 
-An `init_state` method can be used by some methods to add more detail to the basic state object, here it ensures `a` and `b` are sorted and starts the old value, `c` off as `b` as means to ensure an initial bisection step.
+An `init_state` method can be used by some methods to add more detail to the basic state object, here it ensures `a` and `b` are sorted and starts the old value, `c` off as `b` as a means to ensure an initial bisection step.
 
 ```julia
 julia> function init_state(::Chandrapatla, F, x₀, x₁, fx₀, fx₁)
