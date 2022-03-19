@@ -971,7 +971,7 @@ To add a solver the minimum needed is a type to declare the solver and an `updat
 
 The [Wikipedia](https://en.wikipedia.org/wiki/Brent%27s_method) page for Brent's method suggest a modern improvement, Chandrapatla's method, described [here](https://www.google.com/books/edition/Computational_Physics/cC-8BAAAQBAJ?hl=en&gbpv=1&pg=PA95&printsec=frontcover). The algorithm there is mostly followed below. This is from the implementation of `Roots.Chandrapatla`.
 
-To implement Chandrapatla's algorithm we first define a type to indicate the method and a state object which records the values ``x_n``, ``x_{n-1}``, and ``x_{n-3}``, needed for the inverse quadratic step.
+To implement Chandrapatla's algorithm we first define a type to indicate the method and a state object which records the values ``x_n``, ``x_{n-1}``, and ``x_{n-2}``, needed for the inverse quadratic step.
 
 ```julia
 julia> struct Chandrapatla <: Roots.AbstractAcceleratedBisection end
