@@ -46,7 +46,7 @@ struct BisectionExact <: AbstractBisection end
 function log_step(l::Tracks, M::AbstractBracketing, state; init::Bool=false)
     a, b = state.xn0, state.xn1
     push!(l.abₛ, a < b ? (a,b) : (b,a))
-    !init && log_steps(l, 1)
+    !init && log_iteration(l, 1)
     nothing
 end
 
@@ -118,8 +118,8 @@ end
 function log_step(l::Tracks, M::Bisection, state; init::Bool=false)
     a, b = state.xn0, state.xn1
     push!(l.abₛ, (a,b))
-    init && log_steps(l, 1) # c is computed
-    !init && log_steps(l, 1)
+    init && log_iteration(l, 1) # c is computed
+    !init && log_iteration(l, 1)
     nothing
 end
 
@@ -464,9 +464,9 @@ end
 function log_step(l::Tracks, M::AbstractAlefeldPotraShi, state; init::Bool=false)
     a, b, c = state.xn0, state.xn1, state.d
     init && push!(l.abₛ, extrema((a, b, c)))
-    init && log_steps(l, 1) # take an initial step
+    init && log_iteration(l, 1) # take an initial step
     push!(l.abₛ, (a,b))
-    !init && log_steps(l, 1)
+    !init && log_iteration(l, 1)
     nothing
 end
 
