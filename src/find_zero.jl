@@ -238,6 +238,7 @@ julia> tracker.xfₛ  # stored as (x, f(x)) pairs
  (1.4142135623730947, -8.881784197001252e-16)
 
 julia> tracker = Roots.Tracks()
+Algorithm has not been run
 
 julia> find_zero(sin, (3, 4), Roots. A42(), tracks=tracker) ≈ π
 true
