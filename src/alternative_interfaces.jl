@@ -1,3 +1,94 @@
+## Some **legacy** alternative interfaces.
+
+## several named interfaces to methods
+## newton, halley, quadratic_inverse, superhalley, chebyshevlike
+"""
+    Roots.newton(f, fp, x0; kwargs...)
+
+Implementation of Newton's method: `xᵢ₊₁ =  xᵢ - f(xᵢ)/f'(xᵢ)`.
+
+Arguments:
+
+* `f::Function` -- function to find zero of
+
+* `fp::Function` -- the derivative of `f`.
+
+* `x0::Number` -- initial guess. For Newton's method this may be complex.
+
+With the `FowardDiff` package derivatives may be computed automatically. For example,  defining
+`D(f) = x -> ForwardDiff.derivative(f, float(x))` allows `D(f)` to be used for the first derivative.
+
+Keyword arguments are passed to `find_zero` using the `Roots.Newton()` method.
+
+See also `Roots.newton((f,fp), x0)` and `Roots.newton(fΔf, x0)` for simpler implementations.
+
+"""
+newton(f, fp, x0; kwargs...) = find_zero((f, fp), x0, Newton(); kwargs...)
+
+## --------------------------------------------------
+
+"""
+    Roots.halley(f, fp, fpp, x0; kwargs...)
+
+Implementation of Halley's method (cf `?Roots.Halley()`).
+
+Arguments:
+
+* `f::Function` -- function to find zero of
+
+* `fp::Function` -- derivative of `f`.
+
+* `fpp:Function` -- second derivative of `f`.
+
+* `x0::Number` -- initial guess
+
+With the `FowardDiff` package derivatives may be computed automatically. For example,  defining
+`D(f) = x -> ForwardDiff.derivative(f, float(x))` allows `D(f)` and `D(D(f))` to be used for the first and second
+derivatives, respectively.
+
+Keyword arguments are passed to `find_zero` using the `Roots.Halley()` method.
+
+
+"""
+halley(f, fp, fpp, x0; kwargs...) = find_zero((f, fp, fpp), x0, Halley(); kwargs...)
+
+
+"""
+    Roots.quadratic_inverse(f, fp, fpp, x0; kwargs...)
+
+Implementation of the quadratic inverse method (cf `?Roots.QuadraticInverse()`).
+
+Arguments:
+
+* `f::Function` -- function to find zero of
+
+* `fp::Function` -- derivative of `f`.
+
+* `fpp:Function` -- second derivative of `f`.
+
+* `x0::Number` -- initial guess
+
+With the `FowardDiff` package derivatives may be computed automatically. For example,  defining
+`D(f) = x -> ForwardDiff.derivative(f, float(x))` allows `D(f)` and `D(D(f))` to be used for the first and second
+derivatives, respectively.
+
+Keyword arguments are passed to `find_zero` using the `Roots.QuadraticInverse()` method.
+
+
+"""
+quadratic_inverse(f, fp, fpp, x0; kwargs...) =
+    find_zero((f, fp, fpp), x0, QuadraticInverse(); kwargs...)
+
+superhalley(f, fp, fpp, x0; kwargs...) =
+    find_zero((f, fp, fpp), x0, SuperHalley(); kwargs...)
+
+
+chebyshev_like(f, fp, fpp, x0; kwargs...) =
+    find_zero((f, fp, fpp), x0, ChebyshevLike(); kwargs...)
+
+
+## --------------------------------------------------
+
 ## MATLAB interfcae to find_zero
 ## Main functions are
 ## * fzero(f, ...) to find _a_ zero of f, a univariate function
