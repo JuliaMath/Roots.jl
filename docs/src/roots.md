@@ -969,12 +969,12 @@ julia> [find_zero(f, (interval(u).lo, interval(u).hi)) for u ∈ rts if u.status
 
 To add a solver the minimum needed is a type to declare the solver and an `update_state` method. In this example, we also define a state object, as the algorithm, as employed, uses more values stored than the default.
 
-The [Wikipedia](https://en.wikipedia.org/wiki/Brent%27s_method) page for Brent's method suggest a modern improvement, Chandrapatla's method, described [here](https://www.google.com/books/edition/Computational_Physics/cC-8BAAAQBAJ?hl=en&gbpv=1&pg=PA95&printsec=frontcover). The algorithm there is mostly followed below, though rather than store `t`, the related values `c`, `fc` are kept.
+The [Wikipedia](https://en.wikipedia.org/wiki/Brent%27s_method) page for Brent's method suggest a modern improvement, Chandrapatla's method, described [here](https://www.google.com/books/edition/Computational_Physics/cC-8BAAAQBAJ?hl=en&gbpv=1&pg=PA95&printsec=frontcover). The algorithm there is mostly followed below. This is from the implementation of `Roots.Chandrapatla`.
 
-To implement Chandrapatla's algorithm we first define a type to indicate the method and a state object:
+To implement Chandrapatla's algorithm we first define a type to indicate the method and a state object which records the values ``x_n``, ``x_{n-1}``, and ``x_{n-2}``, needed for the inverse quadratic step.
 
 ```julia
-julia> struct Chandrapatla <: Roots.AbstractBracketing end
+julia> struct Chandrapatla <: Roots.AbstractAcceleratedBisection end
 
 julia> struct ChandrapatlaState{T,S} <: Roots.AbstractUnivariateZeroState{T,S}
     xn1::T
@@ -987,16 +987,14 @@ end
 
 ```
 
-An `init_state` method is used by some methods to add more detail to the basic state object, as is used here, where an intermediate value is stored:
+An `init_state` method can be used by some methods to add more detail to the basic state object. Here it starts the old value, `c` off as `a` as a means to ensure an initial bisection step.
 
 ```julia
-julia> function Roots.init_state(::Chandrapatla, F, x₀, x₁, fx₀, fx₁)
-    b, a, fb, fa = x₁, x₀, fx₁, fx₀
-    c = Roots._middle(a,b)
-    fc = F(c)
+julia> function init_state(::Chandrapatla, F, x₀, x₁, fx₀, fx₁)
+    a, b, fa, fb = x₁, x₀, fx₁, fx₀
+    c, fc = a, fa
     ChandrapatlaState(b, a, c, fb, fa, fc)
 end
-
 ```
 
 The main algorithm is implemented in the `update_state` method. The `@set!` macro from `Setfield.jl` is used to modify a state object, which otherwise is immutable.
@@ -1006,41 +1004,33 @@ julia> import Roots.Setfield: @set!;
 
 julia> function Roots.update_state(::Chandrapatla, F, o, options, l=NullTracks())
 
-    b,a,c = o.xn1, o.xn0, o.c
-    fb,fa,fc = o.fxn1, o.fxn0, o.fc
+    b, a, c = o.xn1, o.xn0, o.c
+    fb, fa, fc = o.fxn1, o.fxn0, o.fc
 
-    if sign(fc) * sign(fa) >= 0
-        a, fa, c, fc = c, fc, a, fa
+    # encoding: a = xₙ, b=xₙ₋₁, c= xₙ₋₂
+    ξ = (a - b) / (c - b)
+    ϕ = (fa - fb) / (fc - fb)
+    ϕ² = ϕ^2
+    Δ = (ϕ² < ξ) && (1 - 2ϕ + ϕ² < 1 - ξ) # Chandrapatla's inequality to determine next step
+
+    xₜ = Δ ? Roots.inverse_quadratic_step(a, b, c, fa, fb, fc) : a + (b-a)/2
+
+    fₜ = F(xₜ)
+    incfn(l)
+
+    if sign(fₜ) * sign(fa) < 0
+        a, b, c = xₜ, a, b
+        fa, fb, fc = fₜ, fa, fb
     else
-        c, b, a = b, a, c
-        fc, fb, fa = fb, fa, fc
+        a, c = xₜ, a
+        fa, fc = fₜ, fa
     end
-
-    m, fm = abs(fb) < abs(fa) ? (b, fb) : (a, fa)
-    tol = 2*abs(m)*options.xreltol + options.xabstol
 
     @set! o.xn0 = a
     @set! o.xn1 = b
+    @set! o.c = c
     @set! o.fxn0 = fa
     @set! o.fxn1 = fb
-
-    if (tol / abs(b-c) > 0.5) || iszero(fm)
-        return (o, true)
-    end
-
-    ξ = (a - b) / (c - b)
-    Φ = (fa - fb) / (fc - fb)
-
-    if 1 - sqrt(1 - ξ)  < Φ < sqrt(ξ)
-        c = Roots.inverse_quadratic_step(a, b, c, fa, fb, fc)
-    else
-        c = Roots._middle(a, b)
-    end
-
-    fc = F(c)
-    Roots.incfn(l)
-
-    @set! o.c = c
     @set! o.fc = fc
 
     return (o, false)
@@ -1048,18 +1038,18 @@ end
 
 ```
 
-This algorithm chooses between an inverse quadratic step or a bisection step depending on the relationship between the computed `ξ` and `Φ`. The tolerances are from the default for `AbstractBracketing`, which are `eps(T)` for the absolute and relative ``x``-tolerances, these are similar for `Roots.Brent()`, whereas some other bracketing algorithms have tighter tolerances.
+This algorithm chooses between an inverse quadratic step or a bisection step depending on the relationship between the computed `ξ` and `Φ`. The tolerances are from the default for `AbstractAcceleratedBisection`, which choose  `eps(T)^2` for the absolute ``x``-tolerance and `eps(t)` for the relative ``x``-tolerance.
 
 
 To see that the algorithm works, we have:
 
 ```julia
 julia> find_zero(sin, (3,4), Chandrapatla())
-3.141592653589793
+3.1415926535897927
 
 julia> find_zero(x -> exp(x) - x^4, (8,9), Chandrapatla())
 8.613169456441398
 
 julia> find_zero(x -> x^5 - x - 1, (1,2), Chandrapatla())
-1.1673039782614187
+1.1673039782614185
 ```

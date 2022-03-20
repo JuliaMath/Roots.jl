@@ -130,6 +130,8 @@ Bisection
 Roots.A42
 Roots.AlefeldPotraShi
 Roots.Brent
+Roots.Chandrapatla
+Roots.Ridders
 Roots.ITP
 FalsePosition
 Roots.LithBoonkkampIJzermanBracket
@@ -203,6 +205,8 @@ good example.
 | Bracketing      | A42                          | ``(2 + 7^{1/2})``      | ``3,4`` |``(2 + 7^{1/2})^{1/3} = 1.6686\dots``  |
 | Bracketing      | AlefeldPotraShi              |                        | ``3,4`` | ``1.618\dots``                        |
 | Bracketing      | Brent                        | ``\leq 1.89\dots``     | ``1``   | ``\leq 1.89\dots``                    |
+| Bracketing      | ITP                          | ``\leq \varphi         | ``1``   | ``\leq \varphi``                      |
+| Bracketing      | Ridders                      | ``1.83\dots``          | ``2``   | ``1.225\dots``                          |
 | Bracketing      | FalsePosition                | ``1.442\dots``         | ``1``   | ``1.442\dots``                        |
 | Bracketing      | LithBoonkkampIJzermanBracket | ``2.91``               | ``3``   | ``1.427\dots``                        |
 | Robust          | King                         | ``\varphi=1.618\dots`` | ``2``   | ``1.272\dots``                        |
@@ -293,4 +297,14 @@ The initial naming scheme used `fzero` instead  of `fzeros`, following the name 
 
 ```@docs
 Roots.fzero
+```
+
+## Tracking iterations
+
+It is possible to add the keyword arguement `verbose=true` to when calling the `find_zero` function to get detailed information about the solution, and data from each iteration. If you want to save this data instead of just printing it, you can use a `Tracks` object.
+
+----
+
+```@docs
+Roots.Tracks
 ```

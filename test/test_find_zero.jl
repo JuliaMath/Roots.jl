@@ -68,7 +68,7 @@ struct Order3_Test <: Roots.AbstractSecant end
     M = Roots.Bisection()
     tracks = Roots.Tracks(Float64, Float64)
     @inferred(find_zero(fn, (a, b), M, tracks=tracks, xatol=h, xrtol=0.0))
-    u, v = tracks.xs[(end - 1):end]
+    u, v = tracks.abₛ[end]
     @test h >= abs(u - v) >= h / 2
 
     ## test of strict
@@ -103,6 +103,9 @@ struct Order3_Test <: Roots.AbstractSecant end
         Roots.A42(),
         Roots.AlefeldPotraShi(),
         Roots.Brent(),
+        Roots.Ridders(),
+        Roots.ITP(),
+        Roots.Ridders(),
         Roots.FalsePosition(),
         Roots.FalsePosition(2),
     )
@@ -557,6 +560,8 @@ end
         Roots.Order2B(),
         Roots.BisectionExact(),
         Roots.Brent(),
+        Roots.Ridders(),
+        Roots.ITP(),
         Roots.A42(),
         Roots.AlefeldPotraShi(),
     )
