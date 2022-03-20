@@ -21,7 +21,7 @@ length is less than or equal to the tolerance
 
 
 When a zero tolerance is given and the values are not `Float64`
-values, this will call the [`A42`](@ref) method.
+values, this will call the [`A42`](@ref) method. (To be deprecated.)
 
 
 """
@@ -42,7 +42,7 @@ algorithm is guaranteed to converge to an exact zero, or a point where
 the function changes sign at one of the answer's adjacent floating
 point values.
 
-For other types,  the [`Roots.A42`](@ref) method (with its tolerances) is used.
+For other types,  the [`Roots.A42`](@ref) method (with its tolerances) is used. (To be deprecated.)
 
 """
 function default_tolerances(::AbstractBisection, ::Type{T}, ::Type{S}) where {T,S}
@@ -172,6 +172,9 @@ function find_zero(
     verbose=false,
     kwargs...,
 )
+
+    Base.depwarn("The special case of bisection over BigFloat with zero tolerance using `A42` is deprecated. Now the tolerances are set to be non-zero", :find_zero)
+
     _options = init_options(Bisection(), Float64, Float64; kwargs...)
     iszero_tol =
         iszero(_options.xabstol) &&

@@ -1,5 +1,4 @@
 ## --------------------------------------------------
-# deprecate this
 """
     find_bracket(f, x0, method=A42(); kwargs...)
 
@@ -14,6 +13,9 @@ function find_bracket(
     method::M=A42();
     kwargs...,
 ) where {M<:Union{AbstractAlefeldPotraShi,BisectionExact}}
+
+    Base.depwarn("This interface is deprecated", :find_bracket)
+
     x = adjust_bracket(x0)
     F = Callable_Function(method, fs) #callable_function(fs)
     state = init_state(method, F, x)
