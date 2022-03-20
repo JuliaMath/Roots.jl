@@ -10,7 +10,7 @@ Chandrapatla's algorithm chooses between an inverse quadratic step or a bisectio
 
 
 """
-struct Chandrapatla <: AbstractAcceleratedBisection end
+struct Chandrapatla <: AbstractBracketing end
 
 struct ChandrapatlaState{T,S} <: AbstractUnivariateZeroState{T,S}
     xn1::T

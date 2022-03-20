@@ -82,7 +82,7 @@ end
 ## Alefeld, Potra, Shi have two algorithms belosw, one is most efficient, but
 ## slightly slower than other.
 
-abstract type AbstractAlefeldPotraShi <: AbstractAcceleratedBisection end
+abstract type AbstractAlefeldPotraShi <: AbstractBracketing end
 initial_fncalls(::AbstractAlefeldPotraShi) = 3 # worst case assuming fx₀, fx₁,fc must be computed
 
 
@@ -108,21 +108,11 @@ struct A42 <: AbstractAlefeldPotraShi end
     default_tolerances(::AbstractAlefeldPotraShi, T, S)
 
 The default tolerances for Alefeld, Potra, and Shi methods are
-`xatol=zero(T)`, `xrtol=eps(T)/2`, `atol= zero(S), and rtol=zero(S)`, with
-appropriate units; `maxevals=45`, `maxfnevals = Inf`; and `strict=true`.
+`xatol=eps(T)^3`, `xrtol=eps(T)/2`, `atol= zero(S), and rtol=zero(S)`, with
+appropriate units; `maxevals=60`, `maxfnevals = Inf`; and `strict=true`.
 
 """
 default_tolerances(M::AbstractAlefeldPotraShi) = default_tolerances(M, Float64, Float64)
-function default_tolerances(::AbstractAlefeldPotraShi, ::Type{T}, ::Type{S}) where {T,S}
-    xatol = zero(T)
-    xrtol = eps(one(T)) / 2
-    atol = zero(float(one(S))) * oneunit(S)
-    rtol = zero(float(one(S))) * one(S)
-    maxevals = 45
-    maxfnevals = typemax(Int)
-    strict = true
-    (xatol, xrtol, atol, rtol, maxevals, maxfnevals, strict)
-end
 
 ## initial step, needs to log a,b,d
 function log_step(l::Tracks, M::AbstractAlefeldPotraShi, state; init::Bool=false)

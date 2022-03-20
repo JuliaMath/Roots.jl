@@ -3,7 +3,6 @@ abstract type AbstractUnivariateZeroMethod end
 
 abstract type AbstractBracketing <: AbstractUnivariateZeroMethod end
 abstract type AbstractBisection <: AbstractBracketing end
-abstract type AbstractAcceleratedBisection <: AbstractBisection end
 
 abstract type AbstractNonBracketing <: AbstractUnivariateZeroMethod end
 abstract type AbstractSecant <: AbstractNonBracketing end

@@ -22,7 +22,7 @@ by `@TheLateKronos`, who supplied the original version of the code
 below.
 
 """
-struct ITP{T,S} <: AbstractAcceleratedBisection
+struct ITP{T,S} <: AbstractBracketing
     κ₁::T
     κ₂::S
     n₀::Int
@@ -86,12 +86,13 @@ function update_state(M::ITP, F, o, options, l=NullTracks())
     Δ = b-a
     x₁₂ = a + Δ/2  # middle must be (a+b)/2
     r = ϵ2n₁₂ * exp2(-j) - Δ/2
-    δ = κ₁ * Δ^κ₂ # a numeric literal for  κ₂ is faster
+    δ′ = κ₁ * Δ^κ₂ # a numeric literal for  κ₂ is faster
+    δ = δ′/oneunit(δ′)
     # δ = κ₁ * Δ^2
     xᵣ = (b*fa - a*fb) / (fa - fb)
 
     σ = sign(x₁₂ - xᵣ)
-    xₜ = δ ≤ abs(x₁₂ - xᵣ) ? xᵣ + σ*δ : x₁₂
+    xₜ = δ ≤ abs(x₁₂ - xᵣ)/oneunit(xᵣ) ? xᵣ + σ*δ*oneunit(xᵣ) : x₁₂
 
     c = xᵢₜₚ = abs(xₜ - x₁₂) ≤ r ? xₜ : x₁₂ - σ * r
 

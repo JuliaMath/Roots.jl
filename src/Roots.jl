@@ -40,7 +40,7 @@ include("find_zero.jl")
 
 include("Bracketing/bracketing.jl")
 include("Bracketing/bisection.jl")
-include("Bracketing/accelerated_bisection.jl")
+#include("Bracketing/accelerated_bisection.jl")
 include("Bracketing/alefeld_potra_shi.jl")
 include("Bracketing/brent.jl")
 include("Bracketing/ridders.jl")
