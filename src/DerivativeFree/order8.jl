@@ -1,4 +1,3 @@
-## cf also: https://doi.org/10.1515/tmj-2017-0049
 """
     Order8()
     Thukral8()
@@ -18,6 +17,7 @@ The error, `eᵢ = xᵢ - α`, is expressed as `eᵢ₊₁ = K ⋅ eᵢ⁸` in
 struct Order8 <: AbstractSecant end
 struct Thukral8 <: AbstractSecant end
 
+## cf also: https://doi.org/10.1515/tmj-2017-0049
 function update_state(
     method::Order8,
     fs,

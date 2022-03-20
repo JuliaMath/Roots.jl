@@ -1,3 +1,22 @@
+## Derivative free methods inherit from abstract secant
+
+# init_state(M,F,x) --> call init_state(M,F,x₀,x₁,fx₀, fx₁)
+function init_state(M::AbstractSecant, F::Callable_Function, x)
+    x₀, x₁ = x₀x₁(x)
+    fx₀, fx₁ = first(F(x₀)), first(F(x₁))
+    state = init_state(M, F, x₀, x₁, fx₀, fx₁)
+end
+
+# initialize from xs, fxs
+function init_state(::AbstractSecant, F, x₀, x₁, fx₀, fx₁)
+    UnivariateZeroState(x₁, x₀, fx₁, fx₀)
+end
+
+initial_fncalls(::AbstractSecant) = 2
+
+
+
+
 # Many derivative free methods of different orders
 #
 # TODO: rework Order5 #https://pdfs.semanticscholar.org/ce50/3210d96f653a14b28da96600d5990d2abe97.pdf

@@ -59,16 +59,15 @@ include("DerivativeFree/king.jl")
 include("DerivativeFree/esser.jl")
 
 include("Derivative/newton.jl")
-include("Derivative/halley.jl")
-include("Derivative/quadratic.jl")
+include("Derivative/halley_like.jl")
 include("Derivative/schroder.jl")
 include("Derivative/thukralb.jl")
 include("Derivative/lith.jl")
 
 include("order0.jl")
 include("find_zeros.jl")
-include("fzero.jl")
 include("simple.jl")
+include("alternative_interfaces.jl")
 
 
 # cf. https://github.com/JuliaDocs/Documenter.jl/pull/1664/files

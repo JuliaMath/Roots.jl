@@ -28,6 +28,8 @@ values, this will call the [`A42`](@ref) method.
 struct Bisection <: AbstractBisection end  # either solvable or A42
 struct BisectionExact <: AbstractBisection end
 
+initial_fncalls(::Roots.AbstractBisection) = 3
+
 # for Bisection, the defaults are zero tolerances and strict=true
 """
     default_tolerances(M::AbstractBisection, [T], [S])
@@ -77,7 +79,6 @@ function _middle(x, y)
         __middle(a, b)
     end
 end
-initial_fncalls(::Roots.AbstractBisection) = 3
 
 const FloatNN = Union{Float64,Float32,Float16}
 

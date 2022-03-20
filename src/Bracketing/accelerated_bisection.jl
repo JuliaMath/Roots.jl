@@ -5,8 +5,8 @@
 function default_tolerances(::AbstractAcceleratedBisection, ::Type{T}, ::Type{S}) where {T,S}
     xatol = eps(real(T))^3 * oneunit(real(T))
     xrtol = 2eps(real(T))  # unitless
-    atol = zero(S) * oneunit(real(S))
-    rtol = zero(S)
+    atol = zero(real(S)) * oneunit(real(S))
+    rtol = zero(real(S))
     maxevals = 60
     maxfnevals = typemax(Int)
     strict = false

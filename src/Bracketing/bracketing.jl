@@ -39,6 +39,7 @@ function init_state(M::AbstractBracketing, F::Callable_Function, x)
 end
 
 function init_state(::AbstractBracketing, F, x₀, x₁, fx₀, fx₁; m=_middle(x₀, x₁), fm=F(m))
+
     if x₀ > x₁
         x₀, x₁, fx₀, fx₁ = x₁, x₀, fx₁, fx₀
     end

@@ -19,19 +19,6 @@ struct Secant <: AbstractSecant end
 const Order1 = Secant
 const Orderφ = Secant
 
-initial_fncalls(::AbstractSecant) = 2
-
-# init_state(M,F,x) --> call init_state(M,F,x₀,x₁,fx₀, fx₁)
-function init_state(M::AbstractSecant, F::Callable_Function, x)
-    x₀, x₁ = x₀x₁(x)
-    fx₀, fx₁ = first(F(x₀)), first(F(x₁))
-    state = init_state(M, F, x₀, x₁, fx₀, fx₁)
-end
-
-# initialize from xs, fxs
-function init_state(::AbstractSecant, F, x₀, x₁, fx₀, fx₁)
-    UnivariateZeroState(x₁, x₀, fx₁, fx₀)
-end
 
 function update_state(
     ::Order1,

@@ -341,6 +341,10 @@ function newton(f, x0; xatol=nothing, xrtol=nothing, maxevals=100)
     throw(ConvergenceFailed("No convergence"))
 end
 
+
+
+## --------------------------------------------------
+
 ## This is basically Order0(), but with different, default, tolerances employed
 ## It takes more function calls, but works harder to find exact zeros
 ## where exact means either iszero(fx), adjacent floats have sign change, or
