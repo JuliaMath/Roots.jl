@@ -3,18 +3,27 @@
 ## Tracks (for logging actual steps)
 ## when no logging this should get optimized out
 ## when logging, this allocates
+
 abstract type AbstractTracks end
 struct NullTracks <: AbstractTracks end
-# loggin api
+
+
+# logging api
+
+# how many function evaluations in init_state
+# this is a worst case estimate leading to the function call count being an upper bound only
+initial_fncalls(M::AbstractUnivariateZeroState) = @warn "initial_fncalls fix $M"
+
 log_step(s::NullTracks, M, x; init=false) = nothing  # log a step (x,f(x)) or (a,b)
 log_iteration(::NullTracks, n=1) = nothing           # log an iteration
-incfn(::NullTracks, i=1) = nothing                   # add a function call (should rename log_fncall); only one called in update_step
+log_fncall(::NullTracks, n=1) = nothing              # add a function call (aliased to incfn); only one called in update_step
 log_message(::NullTracks, msg) = nothing             # append to a message
 log_convergence(::NullTracks, msg) = nothing         # flag for convergence
 log_last(::NullTracks, state) = nothing              # log α
 log_method(::NullTracks, method) = nothing           # record M
 log_nmethod(::NullTracks, method) = nothing          # record N (if hybrid)
 
+incfn(T::AbstractTracks, i=1) = log_fncall(T,i)      # legacy alias
 # a tracks object to record tracks
 """
     Tracks(T, S)
@@ -125,7 +134,7 @@ function log_step(l::Tracks, M::AbstractNonBracketing, state; init=false)
     nothing
 end
 
-incfn(l::Tracks, i=1) = (l.fncalls += i; nothing)
+log_fncall(l::Tracks, i=1) = (l.fncalls += i; nothing)
 log_iteration(l::Tracks, n=1) = (l.steps += n; nothing)
 log_message(l::Tracks, msg) = (l.message *= msg; nothing)
 log_convergence(l::Tracks, msg) = (l.convergence_flag = msg; nothing)

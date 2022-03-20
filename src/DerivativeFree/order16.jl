@@ -1,6 +1,3 @@
-
-##################################################
-
 """
     Order16()
     Thukral16()
@@ -130,4 +127,18 @@ function update_state(
     @set! o.fxn1 = fxn1
 
     return o, false
+end
+
+
+##################################################
+## some means of guarding against large fx when taking a secant step
+## for Orders 5, 8, and 16
+## TODO: rework this
+## Must be included after Order5, Order8, and Order16 are defined
+function steff_step(M::Union{Order5,Order8,Order16}, x::S, fx::T) where {S,T}
+    xbar, fxbar = real(x / oneunit(x)), fx / oneunit(fx)
+    thresh = max(1, abs(xbar)) * sqrt(eps(one(xbar))) #^(1/2) # max(1, sqrt(abs(x/fx))) * 1e-6
+
+    out = abs(fxbar) <= thresh ? fxbar : sign(fx) * thresh
+    x + out * oneunit(x)
 end

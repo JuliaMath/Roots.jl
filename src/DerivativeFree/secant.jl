@@ -1,10 +1,3 @@
-##################################################
-initial_fncalls(::AbstractSecant) = 2
-
-##################################################
-
-## Secant
-## https://en.wikipedia.org/wiki/Secant_method
 """
     Secant()
     Order1()
@@ -25,6 +18,8 @@ The error, `eᵢ = xᵢ - α`, satisfies
 struct Secant <: AbstractSecant end
 const Order1 = Secant
 const Orderφ = Secant
+
+initial_fncalls(::AbstractSecant) = 2
 
 # init_state(M,F,x) --> call init_state(M,F,x₀,x₁,fx₀, fx₁)
 function init_state(M::AbstractSecant, F::Callable_Function, x)

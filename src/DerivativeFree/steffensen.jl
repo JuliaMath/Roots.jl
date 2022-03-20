@@ -1,7 +1,3 @@
-
-### Steffensen
-## https://en.wikipedia.org/wiki/Steffensen's_method#Simple_description
-
 """
     Steffensen()
     Order2()

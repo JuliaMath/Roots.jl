@@ -1,3 +1,47 @@
+### Options
+struct UnivariateZeroOptions{Q,R,S,T}
+    xabstol::Q
+    xreltol::R
+    abstol::S
+    reltol::T
+    maxevals::Int
+    maxfnevals::Int
+    strict::Bool
+end
+
+
+init_options(
+    M::AbstractUnivariateZeroMethod,
+    state::AbstractUnivariateZeroState{T,S};
+    kwargs...,
+) where {T,S} = init_options(M, T, S; kwargs...)
+
+function init_options(M, T=Float64, S=Float64; kwargs...)
+    d = kwargs
+
+    defs = default_tolerances(M, T, S)
+    options = UnivariateZeroOptions(
+        get(d, :xatol, get(d, :xabstol, defs[1])),
+        get(d, :xrtol, get(d, :xreltol, defs[2])),
+        get(d, :atol, get(d, :abstol, defs[3])),
+        get(d, :rtol, get(d, :reltol, defs[4])),
+        get(d, :maxevals, get(d, :maxsteps, defs[5])),
+        get(d, :maxfnevals, defs[6]),
+        get(d, :strict, defs[7]),
+    )
+    if haskey(d, :maxfnevals)
+        @warn(
+            "maxfnevals is ignored. See the test for an example to implement this featrue"
+        )
+    end
+    options
+end
+
+# # reset options to default values
+@deprecate init_options!(options, M) init_options(M)
+
+## --------------------------------------------------
+
 """
     default_tolerances(M::AbstractUnivariateZeroMethod, [T], [S])
 
@@ -26,6 +70,7 @@ function default_tolerances(
     (xatol, xrtol, atol, rtol, maxevals, maxfnevals, strict)
 end
 
+## --------------------------------------------------
 
 ## Assess convergence
 @inline function _is_f_approx_0(fa, a, atol, rtol, relaxed::Any)

@@ -30,12 +30,14 @@ export find_zero,
 
 export Bisection, A42, AlefeldPotraShi, FalsePosition
 
-## load in files
 include("utils.jl")
 include("abstract_types.jl")
+include("state.jl")
 include("convergence.jl")
+include("functions.jl")
 include("trace.jl")
 include("find_zero.jl")
+
 include("Bracketing/bracketing.jl")
 include("Bracketing/bisection.jl")
 include("Bracketing/accelerated_bisection.jl")
@@ -55,7 +57,6 @@ include("DerivativeFree/order8.jl")
 include("DerivativeFree/order16.jl")
 include("DerivativeFree/king.jl")
 include("DerivativeFree/esser.jl")
-include("DerivativeFree/derivative_free_refactor.jl")
 
 include("Derivative/newton.jl")
 include("Derivative/halley.jl")

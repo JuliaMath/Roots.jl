@@ -32,6 +32,7 @@
 ## (f(x+fx) - fx)/fx  ≈ f'(x), we take a Steffensen step if |fx|
 ## is small enough. For this we use |fx| <= x/1000; which
 ## seems to work reasonably well over several different test cases.
+
 @inline function do_guarded_step(
     M::AbstractSecant,
     o::AbstractUnivariateZeroState{T,S},

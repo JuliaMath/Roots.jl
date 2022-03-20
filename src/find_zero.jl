@@ -1,245 +1,3 @@
-## Framework for setting up an iterative problem for finding a zero
-## TODO
-## * a graphic of trace when verbose=true?
-
-#
-# In McNamee & Pan (DOI:10.1016/j.camwa.2011.11.015 there are a number of
-# results on efficiencies of a solution, (1/d) log_10(q)
-# Those implemented here are:
-# quadratic cut (Muller) .265 (in a42)
-# Newton() newton = .1505   or 1/2log(2)
-# Order1() secant method .20 (1/1 * log(1.6)
-# FalsePostion(12) Anderson-Bjork [.226, .233]
-# FalsePostion(3) (King?) .264
-# A42() 0.191 but convergence guaranteed
-# Order8() 8th order 4 steps: .225 (log10(8)/4
-# Order16() 16th order 5 steps .240
-# Order5(): 5th order, 4 steps. 0.1747
-
-# A zero is found by specifying:
-# the method to use <: AbstractUnivariateZeroMethod
-# the function(s)
-# the initial state through a value for x either x, [a,b], or (a,b) <: AbstractUnivariateZeroState
-# the options (e.g., tolerances) <: UnivariateZeroOptions
-
-# The minimal amount needed to add a method, is to define a Method and an update_state method.
-
-
-### States
-
-struct UnivariateZeroState{T,S} <: AbstractUnivariateZeroState{T,S}
-    xn1::T
-    xn0::T
-    fxn1::S
-    fxn0::S
-end
-
-# init_state(M, F, state) -- convert
-# basic idea to convert from N to M:
-# Fₘ = copy(M, fₙ)
-# stateₘ = init_state(M, stateₙ, Fₘ)
-function init_state(M::AbstractUnivariateZeroMethod, state::AbstractUnivariateZeroState, F)
-    init_state(M, F, state.xn0, state.xn1, state.fxn0, state.fxn1)
-end
-
-# init_state(M,F,x) --> call init_state(M,F,x₀,x₁,fx₀, fx₁)
-function init_state(M::AbstractUnivariateZeroMethod, F, x)
-    error("no default method")
-end
-
-# initialize from xs, fxs
-function init_state(::AbstractUnivariateZeroMethod, F, x₀, x₁, fx₀, fx₁)
-    error("no default method")
-end
-
-# init_state(M, F, x; kwargs...)
-# init_state(M, F x₀,x₁,fx₀,fx₁; kwargs...)
-# init_state(M, state, F)
-#
-# A state holds at a minimum:
-#
-# * the values xₙ₋₁, xₙ and f(xₙ₋₁), f(xₙ) along with
-# * some method-specific values
-#
-# A state is initialized with `init_state(M, F, x)` which sets up xₙ₋₁, xₙ, f(xₙ₋₁), f(xₙ)
-# which then calls `init_state(M, F, xₙ₋₁, xₙ, f(xₙ₋₁), f(xₙ))` to finish the initialization
-# to change to a new state use `init_state(M, state, F)`
-#
-
-
-## --------------------------------------------------
-
-### Options
-struct UnivariateZeroOptions{Q,R,S,T}
-    xabstol::Q
-    xreltol::R
-    abstol::S
-    reltol::T
-    maxevals::Int
-    maxfnevals::Int
-    strict::Bool
-end
-
-
-init_options(
-    M::AbstractUnivariateZeroMethod,
-    state::AbstractUnivariateZeroState{T,S};
-    kwargs...,
-) where {T,S} = init_options(M, T, S; kwargs...)
-
-function init_options(M, T=Float64, S=Float64; kwargs...)
-    d = kwargs
-
-    defs = default_tolerances(M, T, S)
-    options = UnivariateZeroOptions(
-        get(d, :xatol, get(d, :xabstol, defs[1])),
-        get(d, :xrtol, get(d, :xreltol, defs[2])),
-        get(d, :atol, get(d, :abstol, defs[3])),
-        get(d, :rtol, get(d, :reltol, defs[4])),
-        get(d, :maxevals, get(d, :maxsteps, defs[5])),
-        get(d, :maxfnevals, defs[6]),
-        get(d, :strict, defs[7]),
-    )
-    if haskey(d, :maxfnevals)
-        @warn(
-            "maxfnevals is ignored. See the test for an example to implement this featrue"
-        )
-    end
-    options
-end
-
-# # reset options to default values
-@deprecate init_options!(options, M) init_options(M)
-
-
-## --------------------------------------------------
-### Functions
-
-# how many function evaluations in init_state
-# this is a worst case estimate leading to the function call count being an upper bound only
-initial_fncalls(M::AbstractUnivariateZeroState) = @warn "initial_fncalls fix $M"
-
-# indicate if we expect f() to return one or multiple values (e.g. Newton)
-fn_argout(::AbstractUnivariateZeroMethod) = 1
-
-# A hacky means to call a function so that parameters can be passed as desired
-# and the correct number of outputs are computed
-struct Callable_Function{Single,Tup,F,P}
-    f::F
-    p::P
-    function Callable_Function(M, f, p=nothing)
-        Single = Val{fn_argout(M)}
-        Tup = Val{isa(f, Tuple)}
-        F = typeof(f)
-        P = typeof(p)
-        new{Single,Tup,F,P}(f, p)
-    end
-end
-
-function Callable_Function(M, F::Callable_Function, p=F.p)
-    Callable_Function(M, F.f, p)
-end
-
-# return f(x); (f(x), f(x)/f'(x)); *or* f(x), (f(x)/f'(x), f'(x)/f''(x), ...) # so N=1, 2 are special cased
-# Callable_Function(output_arity, input_arity, F, p)
-# First handle: x -> (f,f/f', f'/f'', ...)
-(F::Callable_Function{Val{1},Val{false},𝑭,Nothing})(x) where {𝑭} = first(F.f(x))
-(F::Callable_Function{Val{1},Val{false},𝑭,P})(x) where {𝑭,P} = first(F.f(x, F.p))
-
-(F::Callable_Function{Val{2},Val{false},𝑭,Nothing})(x) where {𝑭} = F.f(x)[1:2]
-(F::Callable_Function{Val{2},Val{false},𝑭,P})(x) where {𝑭,P} = F.f(x, F.p)[1:2]
-
-# N ≥ 3 returns (f, (...))
-function (F::Callable_Function{Val{N},Val{false},𝑭,Nothing})(x) where {N,𝑭}
-    fs = F.f(x)
-    fs[1], ntuple(i -> fs[i + 1], Val(N - 1))
-end
-function (F::Callable_Function{Val{N},Val{false},𝑭,P})(x) where {N,𝑭,P}
-    fs = F.f(x, F.p)
-    fs[1], ntuple(i -> fs[i + 1], Val(N - 1))
-end
-
-## f is specified as a tuple (f,f',f'', ...)
-## N =1  return f(x)
-(F::Callable_Function{Val{1},Val{true},𝑭,Nothing})(x) where {𝑭} = first(F.f)(x)
-(F::Callable_Function{Val{1},Val{true},𝑭,P})(x) where {𝑭,P} = first(F.f)(x, F.p)
-## N=2 return (f(x), f(x)/f'(x))
-function (F::Callable_Function{Val{2},Val{true},𝑭,Nothing})(x) where {𝑭}
-    f, f′ = (F.f[1])(x), (F.f[2])(x)
-    f, f / f′
-end
-function (F::Callable_Function{Val{2},Val{true},𝑭,P})(x) where {𝑭,P}
-    f, f′ = (F.f[1])(x, F.p), (F.f[2])(x, F.p)
-    f, f / f′
-end
-
-## For N ≥ 3 we return (f, (f/f', f'/f'', ...);
-## Pay no attention to this code; we hand write a bunch, as the
-## general formula later runs more slowly.
-function (F::Callable_Function{Val{3},Val{true},𝑭,Nothing})(x) where {𝑭}
-    f, f′, f′′ = (F.f[1])(x), (F.f[2])(x), (F.f[3])(x)
-    f, (f / f′, f′ / f′′)
-end
-function (F::Callable_Function{Val{3},Val{true},𝑭,P})(x) where {𝑭,P}
-    f, f′, f′′ = (F.f[1])(x, F.p), (F.f[2])(x, F.p), (F.f[3])(x, F.p)
-    f, (f / f′, f′ / f′′)
-end
-
-function (F::Callable_Function{Val{4},Val{true},𝑭,Nothing})(x) where {𝑭}
-    f, f′, f′′, f′′′ = (F.f[1])(x), (F.f[2])(x), (F.f[3])(x), (F.f[4])(x)
-    f, (f / f′, f′ / f′′, f′′ / f′′′)
-end
-function (F::Callable_Function{Val{4},Val{true},𝑭,P})(x) where {𝑭,P}
-    f, f′, f′′, f′′′ =
-        (F.f[1])(x, F.p), (F.f[2])(x, F.p), (F.f[3])(x, F.p), (F.f[4])(x, F.p)
-    𝐓 = eltype(f / f′)
-    f, NTuple{3,𝐓}((f / f′, f′ / f′′, f′′ / f′′′))
-end
-
-function (F::Callable_Function{Val{5},Val{true},𝑭,Nothing})(x) where {𝑭}
-    f, f′, f′′, f′′′, f′′′′ =
-        (F.f[1])(x), (F.f[2])(x), (F.f[3])(x), (F.f[4])(x), (F.f[5])(x)
-    f, (f / f′, f′ / f′′, f′′ / f′′′, f′′′ / f′′′′)
-end
-function (F::Callable_Function{Val{5},Val{true},𝑭,P})(x) where {𝑭,P}
-    f, f′, f′′, f′′′, f′′′′ = (F.f[1])(x, F.p),
-    (F.f[2])(x, F.p),
-    (F.f[3])(x, F.p),
-    (F.f[4])(x, F.p),
-    (F.f[5])(x, F.p)
-    f, (f / f′, f′ / f′′, f′′ / f′′′, f′′′ / f′′′′)
-end
-
-function (F::Callable_Function{Val{6},Val{true},𝑭,Nothing})(x) where {𝑭}
-    f, f′, f′′, f′′′, f′′′′, f′′′′′ =
-        (F.f[1])(x), (F.f[2])(x), (F.f[3])(x), (F.f[4])(x), (F.f[5])(x), (F.f[6])(x)
-    f, (f / f′, f′ / f′′, f′′ / f′′′, f′′′ / f′′′′, f′′′′ / f′′′′′)
-end
-function (F::Callable_Function{Val{6},Val{true},𝑭,P})(x) where {𝑭,P}
-    f, f′, f′′, f′′′, f′′′′, f′′′′′ = (F.f[1])(x, F.p),
-    (F.f[2])(x, F.p),
-    (F.f[3])(x, F.p),
-    (F.f[4])(x, F.p),
-    (F.f[5])(x, F.p),
-    (F.f[6])(x, F.p)
-    f, (f / f′, f′ / f′′, f′′ / f′′′, f′′′ / f′′′′, f′′′′ / f′′′′′)
-end
-
-# faster with the above written out, should generate them...
-function (F::Callable_Function{Val{𝐍},Val{true},𝑭,Nothing})(x) where {𝐍,𝑭}
-    fs = ntuple(i -> F.f[i](x), Val(𝐍))
-    first(fs), ntuple(i -> fs[i] / fs[i + 1], Val(𝐍 - 1))
-end
-
-function (F::Callable_Function{Val{𝐍},Val{true},𝑭,P})(x) where {𝐍,𝑭,P}
-    fs = ntuple(i -> F.f[i](x, F.p), Val(𝐍))
-    first(fs), ntuple(i -> fs[i] / fs[i + 1], Val(𝐍 - 1))
-end
-
-
-## --------------------------------------------------
-
-
 """
 
     find_zero(f, x0, M, [N::AbstractBracketing]; kwargs...)
@@ -701,3 +459,27 @@ Disptaches to `solve!(init(𝐙, args...; kwargs...))`. See [`solve!`](@ref) for
 """
 CommonSolve.solve(F::ZeroProblem, args...; verbose=false, kwargs...) =
     solve!(init(F, args...; verbose=verbose, kwargs...); verbose=verbose)
+
+## --------------------------------------------------
+## Framework for setting up an iterative problem for finding a zero
+#
+# In McNamee & Pan (DOI:10.1016/j.camwa.2011.11.015 there are a number of
+# results on efficiencies of a solution, (1/d) log_10(q)
+# Those implemented here are:
+# quadratic cut (Muller) .265 (in a42)
+# Newton() newton = .1505   or 1/2log(2)
+# Order1() secant method .20 (1/1 * log(1.6)
+# FalsePostion(12) Anderson-Bjork [.226, .233]
+# FalsePostion(3) (King?) .264
+# A42() 0.191 but convergence guaranteed
+# Order8() 8th order 4 steps: .225 (log10(8)/4
+# Order16() 16th order 5 steps .240
+# Order5(): 5th order, 4 steps. 0.1747
+
+# A zero is found by specifying:
+# the method to use <: AbstractUnivariateZeroMethod
+# the function(s)
+# the initial state through a value for x either x, [a,b], or (a,b) <: AbstractUnivariateZeroState
+# the options (e.g., tolerances) <: UnivariateZeroOptions
+
+# The minimal amount needed to add a method, is to define a Method and an update_state method.

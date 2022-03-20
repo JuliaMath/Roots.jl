@@ -1,8 +1,4 @@
 ## --------------------------------------------------
-## utils
-@inline isbracket(fa, fb) = sign(fa) * sign(fb) < 0
-assert_bracket(fx0, fx1) = isbracket(fx0, fx1) || throw(ArgumentError(bracketing_error))
-
 # f[a, b]
 @inline f_ab(a, b, fa, fb) = (fb - fa) / (b - a)
 
@@ -24,16 +20,7 @@ end
     end
 end
 
-# Cubic if possible, if not, quadratic(3)
-function take_a42_step(a, b, d, ee, fa, fb, fd, fe, k, delta=zero(a))
-    # if r is NaN or Inf we move on by condition. Faster than checking ahead of time for
-    # distinctness
-    r = ipzero(a, b, d, ee, fa, fb, fd, fe, delta) # let error and see difference in allcoation?
-    (a + 2delta < r < b - 2delta) && return r
-    r = newton_quadratic(a, b, d, fa, fb, fd, 3, delta)
-end
-
-# cubic interporation
+# inverse cubic interporation
 function ipzero(a, b, c, d, fa, fb, fc, fd, delta=zero(a))
     Q11 = (c - d) * fc / (fd - fc)
     Q21 = (b - c) * fb / (fc - fb)
@@ -79,6 +66,16 @@ function newton_quadratic(a, b, d, fa, fb, fd, k::Int, delta=zero(a))
 
     return _middle(a, b)
 end
+
+# Cubic if possible, if not, quadratic(3)
+function take_a42_step(a, b, d, ee, fa, fb, fd, fe, k, delta=zero(a))
+    # if r is NaN or Inf we move on by condition. Faster than checking ahead of time for
+    # distinctness
+    r = ipzero(a, b, d, ee, fa, fb, fd, fe, delta) # let error and see difference in allcoation?
+    (a + 2delta < r < b - 2delta) && return r
+    r = newton_quadratic(a, b, d, fa, fb, fd, 3, delta)
+end
+
 
 ## --------------------------------------------------
 ##

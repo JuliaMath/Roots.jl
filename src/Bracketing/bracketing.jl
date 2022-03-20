@@ -6,7 +6,10 @@ Consider a different bracket or try fzero(f, c) with an initial guess c.
 
 """
 
-fn_argout(::AbstractBracketing) = 1
+## utils
+@inline isbracket(fa, fb) = sign(fa) * sign(fb) < 0
+assert_bracket(fx0, fx1) = isbracket(fx0, fx1) || throw(ArgumentError(bracketing_error))
+
 
 ## tracks for bisection, different, we show bracketing interval
 ## No init here; for Bisection() [a₀, b₀] is just lost.
@@ -57,6 +60,8 @@ end
 
 
 initial_fncalls(::Roots.AbstractBracketing) = 2
+fn_argout(::AbstractBracketing) = 1
+
 
 
 function assess_convergence(
