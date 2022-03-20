@@ -60,7 +60,6 @@ include("DerivativeFree/esser.jl")
 
 include("Derivative/newton.jl")
 include("Derivative/halley_like.jl")
-include("Derivative/schroder.jl")
 include("Derivative/thukralb.jl")
 include("Derivative/lith.jl")
 
