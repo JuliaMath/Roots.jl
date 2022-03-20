@@ -13,7 +13,7 @@ function init_state(M::AbstractHalleyLikeMethod, F::Callable_Function, x)
     T = eltype(x₀)
     fx₀, (Δ, ΔΔ) = F(x₀)
     Δx = calculateΔ(M, Δ, ΔΔ)
-    x₁::T = x₀ - Δ
+    x₁::T = x₀ - Δx
     state = init_state(M, F, x₀, x₁, fx₀, fx₀)
 end
 
@@ -137,8 +137,52 @@ An acceleration of Newton's method: Super-Halley method (J.M. Gutierrez, M.A. He
 """
 struct SuperHalley <: AbstractΔMethod end
 
+"""
+    Roots.Schroder()
+
+
+Schröder's method, like Halley's method, utilizes `f`, `f'`, and
+`f''`. Unlike Halley it is quadratically converging, but this is
+independent of the multiplicity of the zero (cf. Schröder, E. "Über
+unendlich viele Algorithmen zur Auflösung der Gleichungen."
+Math. Ann. 2, 317-365, 1870;
+[mathworld](http://mathworld.wolfram.com/SchroedersMethod.html)). Schröder's
+method applies Newton's method to `f/f'`, a function with all
+simple zeros.
+
+
+Example
+```
+m = 2
+f(x) = (cos(x)-x)^m
+fp(x) = (-x + cos(x))*(-2*sin(x) - 2)
+fpp(x) = 2*((x - cos(x))*cos(x) + (sin(x) + 1)^2)
+find_zero((f, fp, fpp), pi/4, Roots.Halley())    # 14 steps
+find_zero((f, fp, fpp), 1.0, Roots.Schroder())    # 3 steps
+```
+
+(Whereas, when `m=1`, Halley is 2 steps to Schröder's 3.)
+
+If function evaluations are expensive one can pass in a function which
+returns `(f, f/f',f'/f'')` as follows
+
+```
+find_zero(x -> (sin(x), sin(x)/cos(x), -cos(x)/sin(x)), 3.0, Roots.Schroder())
+```
+
+This can be advantageous if the derivatives are easily computed from
+the value of `f`, but otherwise would be expensive to compute.
+
+The error, `eᵢ = xᵢ - α`, is the same as `Newton` with `f` replaced by `f/f'`.
+
+"""
+struct Schroder <: AbstractΔMethod  end
+const Schroeder = Schroder # either spelling
+const Schröder = Schroder
+
 ## r1, r2 are o.Δ, o.ΔΔ
 calculateΔ(method::Halley, r1, r2) = 2r2 / (2r2 - r1) * r1
 calculateΔ(method::QuadraticInverse, r1, r2) = (1 + r1 / (2r2)) * r1
 calculateΔ(method::ChebyshevLike, r1, r2) = (1 + r1 / (2r2) * (1 + r1 / r2)) * r1
 calculateΔ(method::SuperHalley, r1, r2) = (1 + r1 / (2r2 - 2r1)) * r1
+calculateΔ(method::Schroder, r1, r2) = r2 / (r2 - r1) * r1
