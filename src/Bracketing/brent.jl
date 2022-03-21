@@ -35,6 +35,7 @@ function init_state(::Brent, F, x₀, x₁, fx₀, fx₁)
     BrentState(u, v, v, v, fu, fv, fv, true)
 end
 
+
 function update_state(
     ::Brent,
     f,
@@ -71,6 +72,7 @@ function update_state(
 
     fs = f(s)
     incfn(l)
+
 
     iszero(fs)  && return (_set(state, (s, fs)), true)
     (isnan(fs) || isinf(fs)) && return (state, true)

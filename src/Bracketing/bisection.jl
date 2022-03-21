@@ -55,7 +55,6 @@ const FloatNN = Union{Float64,Float32,Float16}
 """
     default_tolerances(M::AbstractBisection, [T], [S])
 
-
 For `Bisection` when the `x` values are of type `Float64`, `Float32`,
 or `Float16`, the default tolerances are zero and there is no limit on
 the number of iterations. In this case, the
@@ -131,11 +130,10 @@ end
 
 ## the method converges,
 ## as we bound between x0, nextfloat(x0) is not measured by eps(), but eps(x0)
-function assess_convergence(::Bisection, state::AbstractUnivariateZeroState, options)
+function assess_convergence(::Bisection, state::AbstractUnivariateZeroState, option
 
     a, b = state.xn0, state.xn1
     fa, fb = state.fxn0, state.fxn1
-
 
     m = min(abs(a), abs(b))
     δₓ = max(options.xabstol, m * options.xreltol)

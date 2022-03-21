@@ -27,7 +27,6 @@ function _set(state, xf1, xf0)
     state
 end
 
-
 # init_state(M, F, state) -- convert
 # basic idea to convert from N to M:
 # Fₘ = copy(M, fₙ)

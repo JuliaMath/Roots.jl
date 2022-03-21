@@ -25,7 +25,6 @@ function log_step(l::Tracks, M::AbstractBracketing, state; init::Bool=false)
     nothing
 end
 
-
 # use xatol, xrtol only, but give some breathing room over the strict ones and cap number of steps
 function default_tolerances(::AbstractBracketing, ::Type{T}, ::Type{S}) where {T,S}
     xatol = eps(real(T))^3 * oneunit(real(T))
@@ -37,6 +36,7 @@ function default_tolerances(::AbstractBracketing, ::Type{T}, ::Type{S}) where {T
     strict = true
     (xatol, xrtol, atol, rtol, maxevals, maxfnevals, strict)
 end
+
 
 
 function assess_convergence(
@@ -61,7 +61,7 @@ function assess_convergence(
 
     # check f (typically not used!)
     δ = max(options.abstol, (u / oneunit(u)) * (options.reltol * oneunit(fu)))
-
+  
     if abs(fu) <= δ
         iszero(fu) && return (:exact_zero, true)
         return (:f_converged, true)
@@ -84,6 +84,7 @@ function decide_convergence(
 
     isnan(fa) && return a
     isnan(fb) && return b
+
 
     abs(fa) < abs(fb) ? a : b
 end

@@ -46,18 +46,6 @@ function default_tolerances(::FalsePosition{12}, ::Type{T}, ::Type{S}) where {T,
     (xatol, xrtol, atol, rtol, maxevals, maxfnevals, strict)
 end
 
-# function default_tolerances(::FalsePosition, ::Type{T}, ::Type{S}) where {T,S}
-#     xatol = eps(real(T))^3 * oneunit(real(T))
-#     xrtol = eps(real(T))  # unitless
-#     atol = 0 * oneunit(real(S))
-#     rtol = 0 * one(real(S))
-#     maxevals = 120
-#     maxfnevals = typemax(Int)
-#     strict = true
-#     (xatol, xrtol, atol, rtol, maxevals, maxfnevals, strict)
-# end
-
-
 
 init_state(M::FalsePosition, F, x₀, x₁, fx₀, fx₁) = init_state(Bisection(), F, x₀, x₁, fx₀, fx₁)
 
@@ -72,9 +60,9 @@ function update_state(
     fa, fb = o.fxn0, o.fxn1
 
     lambda = fb / (fb - fa)
+
     ϵ = √eps() # some engineering to avoid short moves; still fails on some
     ϵ ≤ lambda ≤ 1-ϵ || (lambda = 1/2)
-
     x::T = b - lambda * (b - a)
     fx = fs(x)
     incfn(l)

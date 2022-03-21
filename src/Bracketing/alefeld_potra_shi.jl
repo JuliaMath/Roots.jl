@@ -1,8 +1,10 @@
 ## --------------------------------------------------
 
+
 ## Two algorithms of Alefeld, Potra, and Shi
 
 ## --------------------------------------------------
+
 # assume fc != 0
 ## return a1,b1,d with a < a1 <  < b1 < b, d not there
 @inline function bracket(a, b, c, fa, fb, fc)
@@ -22,6 +24,7 @@ function newton_quadratic(a, b, d, fa, fb, fd, k::Int, delta=zero(a))
 
     A = f_abd(a, b, d, fa, fb, fd)
 
+
     r = isbracket(A, fa) ? b : a
 
     # use quadratic step; if that fails, use secant step; if that fails, bisection
@@ -33,6 +36,7 @@ function newton_quadratic(a, b, d, fa, fb, fd, k::Int, delta=zero(a))
             Prp = (B + A * (2r - a - b))
             r -= Pr / Prp
         end
+
         if a′ < r < b′
             return r
         end
@@ -55,7 +59,6 @@ end
     fab, fbd = f_ab(a, b, fa, fb), f_ab(b, d, fb, fd)
     (fbd - fab) / (d - a)
 end
-
 
 
 ## --------------------------------------------------
@@ -210,6 +213,7 @@ end
 
 
 
+
 """
     Roots.A42()
 
@@ -219,6 +223,7 @@ on algorithm 4.2 described in: G. E. Alefeld, F. A. Potra, and
 Y. Shi, "Algorithm 748: enclosing zeros of continuous functions," ACM
 Trans. Math. Softw. 21, 327–344 (1995), DOI: [10.1145/210089.210111](https://doi.org/10.1145/210089.210111).
 The asymptotic efficiency index, ``q^{1/k}``, is ``(2 + 7^{1/2})^{1/3} = 1.6686...``.
+
 
 Originally by John Travers.
 
@@ -269,7 +274,6 @@ function init_state(::A42, F, x₀, x₁, fx₀, fx₁; c=_middle(x₀, x₁), f
     A42State(b, a, d, ee, fb, fa, fd, fe)
 end
 
-
 # Main algorithm for A42 method
 function update_state(M::A42, F, state::A42State{T,S}, options, l=NullTracks()) where {T,S}
     a::T, b::T, d::T, ee::T = state.xn0, state.xn1, state.d, state.ee
@@ -291,6 +295,7 @@ function update_state(M::A42, F, state::A42State{T,S}, options, l=NullTracks()) 
 
 
     (iszero(fc) || isnan(fc)) && return (_set(state, (c,fc)), true)
+
     (isnan(c) || isinf(c)) && return (state, true)
 
     ab::T, bb::T, db::T, fab::S, fbb::S, fdb::S = bracket(a, b, c, fa, fb, fc)
@@ -351,3 +356,4 @@ function update_state(M::A42, F, state::A42State{T,S}, options, l=NullTracks()) 
 
     return state, false
 end
+
