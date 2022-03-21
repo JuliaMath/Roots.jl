@@ -61,7 +61,7 @@ function update_state(
 
     lambda = fb / (fb - fa)
 
-    ϵ = √eps() # some engineering to avoid short moves; still fails on some
+    ϵ = √eps(T)/100 # some engineering to avoid short moves; still fails on some
     ϵ ≤ lambda ≤ 1-ϵ || (lambda = 1/2)
     x::T = b - lambda * (b - a)
     fx = fs(x)
