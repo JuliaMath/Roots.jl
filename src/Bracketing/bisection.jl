@@ -130,7 +130,7 @@ end
 
 ## the method converges,
 ## as we bound between x0, nextfloat(x0) is not measured by eps(), but eps(x0)
-function assess_convergence(::Bisection, state::AbstractUnivariateZeroState, option
+function assess_convergence(::Bisection, state::AbstractUnivariateZeroState, options)
 
     a, b = state.xn0, state.xn1
     fa, fb = state.fxn0, state.fxn1

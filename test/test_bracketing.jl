@@ -237,7 +237,7 @@ avg(x) = sum(x) / length(x)
     cnts = [result.evalcount for result in results]
     @test maxfailures <= 0
     @test maxresidual <= 1e-5
-    @test avg(cnts) <= 2500
+    @test avg(cnts) <= 3000
 end
 
 mutable struct Cnt
