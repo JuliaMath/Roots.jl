@@ -23,7 +23,7 @@ true
 `f=F', g=F''/2, h=F'''/6`, suggesting converence at rate `≈ 1.839...`. It uses two function evaluations per step, so
  its order of convergence is `≈ 1.225...`.
 """
-struct Ridders <: AbstractAcceleratedBisection end
+struct Ridders <: AbstractBracketing end
 
 function update_state(M::Ridders, F, o, options, l=NullTracks())
 
@@ -53,10 +53,7 @@ function update_state(M::Ridders, F, o, options, l=NullTracks())
         a, fa = c, fc
     end
 
-    @set! o.xn0 = a
-    @set! o.xn1 = b
-    @set! o.fxn0 = fa
-    @set! o.fxn1 = fb
+    o = _set(o, (b, fb), (a, fa))
 
     return o, false
 end

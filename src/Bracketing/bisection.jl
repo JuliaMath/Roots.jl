@@ -1,7 +1,6 @@
 """
 
     Bisection()
-    Roots.BisectionExact()
 
 If possible, will use the bisection method over `Float64` values. The
 bisection method starts with a bracketing interval `[a,b]` and splits
@@ -16,53 +15,81 @@ tolerances are set to zero (the default) guarantees a "best" solution
 `[a, nextfloat(a)]`).
 
 When tolerances are given, this algorithm terminates when the interval
-length is less than or equal to the tolerance
-`max(xtol, max(abs(a), abs(b)) * .xrtol)`.
-
-
-When a zero tolerance is given and the values are not `Float64`
-values, this will call the [`A42`](@ref) method.
-
+length is less than or equal to the tolerance `max(xtol, min(abs(a),
+abs(b)) * xrtol)` or the function value is less than `max(tol,
+min(abs(a), abs(b)) * rtol)`. The latter is used only if the default
+tolerances are adjusted.
 
 """
-struct Bisection <: AbstractBisection end  # either solvable or A42
-struct BisectionExact <: AbstractBisection end
+struct Bisection <: AbstractBisection end
 
-initial_fncalls(::Roots.AbstractBisection) = 3
+initial_fncalls(::AbstractBisection) = 3 # middle
+
+# Bisection using __middle should have a,b on same side of 0.0 (though
+# possibly, may be -0.0, 1.0 so not guaranteed to be of same sign)
+function init_state(::AbstractBisection, F, x₀, x₁, fx₀, fx₁; m=_middle(x₀, x₁), fm=F(m))
+
+    if x₀ > x₁
+        x₀, x₁, fx₀, fx₁ = x₁, x₀, fx₁, fx₀
+    end
+
+    # handle interval if fa*fb ≥ 0 (explicit, but also not needed)
+    (iszero(fx₀) || iszero(fx₁)) && return UnivariateZeroState(x₁, x₀, fx₁, fx₀)
+    assert_bracket(fx₀, fx₁)
+
+    if sign(fm) * fx₀ < 0 * oneunit(fx₀)
+        a, b, fa, fb = x₀, m, fx₀, fm
+    else
+        a, b, fa, fb = m, x₁, fm, fx₁
+    end
+
+    # handles case where a=-0.0, b=1.0 without error
+    sign(a) * sign(b) < 0 && throw(ArgumentError("_middle error"))
+
+    UnivariateZeroState(b, a, fb, fa)
+end
+
+const FloatNN = Union{Float64,Float32,Float16}
 
 # for Bisection, the defaults are zero tolerances and strict=true
 """
     default_tolerances(M::AbstractBisection, [T], [S])
 
-
-For `Bisection` (or `BisectionExact`), when the `x` values are of type `Float64`, `Float32`,
+For `Bisection` when the `x` values are of type `Float64`, `Float32`,
 or `Float16`, the default tolerances are zero and there is no limit on
 the number of iterations. In this case, the
 algorithm is guaranteed to converge to an exact zero, or a point where
 the function changes sign at one of the answer's adjacent floating
 point values.
 
-For other types,  the [`Roots.A42`](@ref) method (with its tolerances) is used.
+For other types, default non-zero tolerances for `xatol` and `xrtol` are given.
 
 """
-function default_tolerances(::AbstractBisection, ::Type{T}, ::Type{S}) where {T,S}
-    xatol = zero(T)
-    xrtol = zero(one(T))
-    atol = zero(float(one(S))) * oneunit(S)
-    rtol = zero(float(one(S))) * one(S)
+function default_tolerances(::AbstractBisection, ::Type{T}, ::Type{S′}) where {T<:FloatNN,S′}
+    S = real(float(S′))
+    xatol = 0 * oneunit(S)
+    xrtol = 0 * one(T)
+    atol = 0 * oneunit(S)
+    rtol = 0 * one(S)
     maxevals = typemax(Int)
     maxfnevals = typemax(Int)
     strict = true
     (xatol, xrtol, atol, rtol, maxevals, maxfnevals, strict)
 end
 
-function log_step(l::Tracks, M::Bisection, state; init::Bool=false)
-    a, b = state.xn0, state.xn1
-    push!(l.abₛ, (a,b))
-    init && log_iteration(l, 1) # c is computed
-    !init && log_iteration(l, 1)
-    nothing
+# not float uses some non-zero tolerances for `x`
+function default_tolerances(::AbstractBisection, ::Type{T′}, ::Type{S′}) where {T′,S′}
+    T,S = real(float(T′)), real(float(S′))
+    xatol = eps(T)^3 * oneunit(T)
+    xrtol = eps(T) * one(T) # unitless
+    atol = 0 * oneunit(S)
+    rtol = 0 * one(S)
+    maxevals = typemax(Int)
+    maxfnevals = typemax(Int)
+    strict = true
+    (xatol, xrtol, atol, rtol, maxevals, maxfnevals, strict)
 end
+
 
 # find middle of (a,b) with convention that
 # * if a, b finite, they are made non-finite
@@ -79,8 +106,6 @@ function _middle(x, y)
         __middle(a, b)
     end
 end
-
-const FloatNN = Union{Float64,Float32,Float16}
 
 ## find middle assuming a,b same sign, finite
 ## Alternative "mean" definition that operates on the binary representation
@@ -105,37 +130,33 @@ end
 
 ## the method converges,
 ## as we bound between x0, nextfloat(x0) is not measured by eps(), but eps(x0)
-function assess_convergence(::Bisection, state::AbstractUnivariateZeroState, options)
-    flag, converged = assess_convergence(BisectionExact(), state, options)
-    converged && return (flag, converged)
+function assess_convergence(::Bisection, state::AbstractUnivariateZeroState, option
 
     a, b = state.xn0, state.xn1
     fa, fb = state.fxn0, state.fxn1
 
-    if isapprox(a, b, atol=options.xabstol, rtol=options.xreltol)
-        return (:x_converged, true)
+    m = min(abs(a), abs(b))
+    δₓ = max(options.xabstol, m * options.xreltol)
+    if δₓ/oneunit(δₓ) == 0
+        (iszero(fa) || isnan(fa) || iszero(fb) || isnan(fb)) && return (:f_converged, true)
+        nextfloat(a) == b && return (:x_converged, true)
+    else
+        abs(b-a) ≤ δₓ && return (:x_converged, true)
     end
 
-    ftol = max(options.abstol, max(abs(a), abs(b)) * options.reltol)
-    if min(abs(fa), abs(fb)) ≤ ftol
-        return (:f_converged, true)
+    δ  = max(options.abstol, (m / oneunit(m)) * (options.reltol * oneunit(fa)))
+
+    if δ/oneunit(δ) != 0
+        min(abs(fa), abs(fb)) ≤ δ && return (:f_converged, true)
     end
+
 
     return :not_converged, false
 end
 
-# for exact convergence, we can skip some steps
-function assess_convergence(::BisectionExact, state::UnivariateZeroState, options)
-    a, b = state.xn0, state.xn1
-    fa, fb = state.fxn0, state.fxn1
 
-    (iszero(fa) || isnan(fa) || iszero(fb) || isnan(fb)) && return (:f_converged, true)
+## --------------------------------------------------
 
-    nextfloat(a) == b && return (:x_converged, true)
-
-    return (:not_converged, false)
-end
-##################################################
 function update_state(M::AbstractBisection, F, o, options, l=NullTracks())
     a, b = o.xn0, o.xn1
     fa, fb = o.fxn0, o.fxn1
@@ -156,34 +177,4 @@ function update_state(M::AbstractBisection, F, o, options, l=NullTracks())
     @set! o.fxn1 = fb
 
     return o, false
-end
-
-##################################################
-
-## Bisection has special cases
-## for zero tolerance, we have either BisectionExact or A42 methods
-## for non-zero tolerances, we have use thegeneral Bisection method
-function find_zero(
-    fs,
-    x0,
-    method::Bisection;
-    p=nothing,
-    tracks=NullTracks(),
-    verbose=false,
-    kwargs...,
-)
-    _options = init_options(Bisection(), Float64, Float64; kwargs...)
-    iszero_tol =
-        iszero(_options.xabstol) &&
-        iszero(_options.xreltol) &&
-        iszero(_options.abstol) &&
-        iszero(_options.reltol)
-
-    _method = if iszero_tol
-        float(first(_extrema(x0))) isa FloatNN ? BisectionExact() : A42()
-    else
-        method
-    end
-
-    return solve(ZeroProblem(fs, x0), _method, p; verbose=verbose, tracks=tracks, kwargs...)
 end
