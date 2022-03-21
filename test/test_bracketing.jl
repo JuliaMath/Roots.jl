@@ -229,13 +229,13 @@ avg(x) = sum(x) / length(x)
     @test avg(cnts) <= 4700
 
 
-    ## False position has failures, and larger residuals
+    ## False position has larger residuals (and failures until maxsteps is increased)
     Ms = [Roots.FalsePosition(i) for i in 1:12]
     results = [run_tests((f, b) -> find_zero(f, b, M), name="$M") for M in Ms]
     maxfailures = maximum([length(result.failures) for result in results])
     maxresidual = maximum([result.maxresidual for result in results])
     cnts = [result.evalcount for result in results]
-    @test maxfailures <= 10
+    @test maxfailures <= 0
     @test maxresidual <= 1e-5
     @test avg(cnts) <= 2500
 end

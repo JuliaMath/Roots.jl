@@ -6,6 +6,28 @@ struct UnivariateZeroState{T,S} <: AbstractUnivariateZeroState{T,S}
     fxn0::S
 end
 
+# simple helper to set main properties of a state object
+function _state!(state, xf1)
+    x, fx = xf1
+    @set! state.xn1 = x
+    @set! state.fxn1 = fx
+
+    state
+end
+
+function _state!(state, xf1, xf0)
+    x, fx = xf1
+    @set! state.xn1 = x
+    @set! state.fxn1 = fx
+
+    x, fx = xf0
+    @set! state.xn0 = x
+    @set! state.fxn0 = fx
+
+    state
+end
+
+
 # init_state(M, F, state) -- convert
 # basic idea to convert from N to M:
 # Fₘ = copy(M, fₙ)

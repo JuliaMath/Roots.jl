@@ -34,6 +34,20 @@ find_zero(x -> x^5 - x - 1, (-2, 2), FalsePosition())
 FalsePosition
 FalsePosition(x=:anderson_bjork) = FalsePosition{x}()
 
+# 12 is tough; needs more evaluations
+function default_tolerances(::FalsePosition{12}, ::Type{T}, ::Type{S}) where {T,S}
+    xatol = eps(real(T)) * oneunit(real(T))
+    xrtol = eps(real(T))  # unitless
+    atol = 4 * eps(real(float(S))) * oneunit(real(S))
+    rtol = 4 * eps(real(float(S))) * one(real(S))
+    maxevals = 250
+    maxfnevals = typemax(Int)
+    strict = false
+    (xatol, xrtol, atol, rtol, maxevals, maxfnevals, strict)
+end
+
+
+
 init_state(M::FalsePosition, F, x₀, x₁, fx₀, fx₁) = init_state(Bisection(), F, x₀, x₁, fx₀, fx₁)
 
 function update_state(
@@ -47,10 +61,15 @@ function update_state(
     fa, fb = o.fxn0, o.fxn1
 
     lambda = fb / (fb - fa)
+
+    #ϵ = sqrt(eps(T))
+    #ϵ ≤ lambda ≤ 1-ϵ || (λ = 1/2)
+
     tau = 1e-10                   # some engineering to avoid short moves; still fails on some
     if !(tau < abs(lambda) < 1 - tau)
         lambda = 1 / 2
     end
+
 
     x::T = b - lambda * (b - a)
     fx = fs(x)
