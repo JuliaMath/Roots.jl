@@ -7,7 +7,7 @@ struct UnivariateZeroState{T,S} <: AbstractUnivariateZeroState{T,S}
 end
 
 # simple helper to set main properties of a state object
-function _state!(state, xf1)
+function _set(state, xf1)
     x, fx = xf1
     @set! state.xn1 = x
     @set! state.fxn1 = fx
@@ -15,7 +15,7 @@ function _state!(state, xf1)
     state
 end
 
-function _state!(state, xf1, xf0)
+function _set(state, xf1, xf0)
     x, fx = xf1
     @set! state.xn1 = x
     @set! state.fxn1 = fx

@@ -3,15 +3,6 @@
 ## Two algorithms of Alefeld, Potra, and Shi
 
 ## --------------------------------------------------
-# f[a, b]
-@inline f_ab(a, b, fa, fb) = (fb - fa) / (b - a)
-
-# f[a,b,d]
-@inline function f_abd(a, b, d, fa, fb, fd)
-    fab, fbd = f_ab(a, b, fa, fb), f_ab(b, d, fb, fd)
-    (fbd - fab) / (d - a)
-end
-
 # assume fc != 0
 ## return a1,b1,d with a < a1 <  < b1 < b, d not there
 @inline function bracket(a, b, c, fa, fb, fc)
@@ -56,13 +47,15 @@ function newton_quadratic(a, b, d, fa, fb, fd, k::Int, delta=zero(a))
     return _middle(a, b)
 end
 
-# helper: set state xn1, fxn1
-function _set_state(state, x₁, fx₁)
-    state = _state!(state, (x₁, fx₁))
-    #@set! state.xn1 = x₁
-    #@set! state.fxn1 = fx₁
-    return (state, true)
+# f[a, b] divided differences
+@inline f_ab(a, b, fa, fb) = (fb - fa) / (b - a)
+
+# f[a,b,d]
+@inline function f_abd(a, b, d, fa, fb, fd)
+    fab, fbd = f_ab(a, b, fa, fb), f_ab(b, d, fb, fd)
+    (fbd - fab) / (d - a)
 end
+
 
 
 ## --------------------------------------------------
@@ -126,20 +119,15 @@ function update_state(M::AlefeldPotraShi, f, state::AlefeldPotraShiState{T,S},
     fa::S, fb::S, fd::S = state.fxn0, state.fxn1, state.fd
     μ, λ = 0.5, 0.7
 
-    tole = max(options.xabstol, max(abs(a), abs(b)) * options.xreltol) # paper uses 2|u|*rtol + atol
+    tole = max(options.xabstol, min(abs(a), abs(b)) * options.xreltol) # paper uses 2|u|*rtol + atol
     delta = λ * tole
 
     c::T = newton_quadratic(a, b, d, fa, fb, fd, 2, delta)
     fc::S = f(c)
     incfn(l)
 
-    if iszero(fc) || isnan(fc)
-        @set! state.xn1 = c
-        @set! state.fxn1 = fc
-        return (state, true)
-    elseif isnan(c) || isinf(c)
-        return (state, true)
-    end
+    (iszero(fc) || isnan(fc)) && return (_set(state, (c,fc)), true)
+    (isnan(c) || isinf(c)) && return (state, true)
 
     a, b, d, fa, fb, fd = bracket(a, b, c, fa, fb, fc)
 
@@ -147,14 +135,11 @@ function update_state(M::AlefeldPotraShi, f, state::AlefeldPotraShiState{T,S},
     fc = f(c)
     incfn(l)
 
-    (iszero(fc) || isnan(fc)) && return (_state!(state, (c,fc)), true)
+    (iszero(fc) || isnan(fc)) && return (_set(state, (c,fc)), true)
     if isnan(c) || isinf(c)
         # tighten up bracket
-        @set! state.xn0 = a
-        @set! state.xn1 = b
+        state = _set(state, (b, fb), (a, fa))
         @set! state.d = d
-        @set! state.fxn0 = fa
-        @set! state.fxn1 = fb
         @set! state.fd = fd
 
         return (state, false)
@@ -170,14 +155,11 @@ function update_state(M::AlefeldPotraShi, f, state::AlefeldPotraShiState{T,S},
     fc = f(c)
     incfn(l)
 
-    (iszero(fc) || isnan(fc)) && return (_state!(state, (c,fc)), true) #_set_state(state, c, fc)
+    (iszero(fc) || isnan(fc)) && return (_set(state, (c,fc)), true)
     if isnan(c) || isinf(c)
         # tighten up bracket
-        @set! state.xn0 = a
-        @set! state.xn1 = b
+        state = _set(state, (b, fb), (a, fa))
         @set! state.d = d
-        @set! state.fxn0 = fa
-        @set! state.fxn1 = fb
         @set! state.fd = fd
 
         return (state, false)
@@ -194,11 +176,8 @@ function update_state(M::AlefeldPotraShi, f, state::AlefeldPotraShiState{T,S},
         a, b, d, fa, fb, fd = bracket(ahat, bhat, m, fahat, fbhat, fm)
     end
 
-    @set! state.xn0 = a
-    @set! state.xn1 = b
+    state = _set(state, (b, fb), (a, fa))
     @set! state.d = d
-    @set! state.fxn0 = fa
-    @set! state.fxn1 = fb
     @set! state.fd = fd
 
     return (state, false)
@@ -299,7 +278,7 @@ function update_state(M::A42, F, state::A42State{T,S}, options, l=NullTracks()) 
     an, bn = a, b
     μ, λ = 0.5, 0.7
 
-    tole = max(options.xabstol, min(abs(a), abs(b)) * options.xreltol) # paper uses 2|u|*rtol + atol
+    tole = max(options.xabstol, min(abs(a), abs(b)) * options.xreltol) # paper uses 2|u|*rtol + atol, not max
     delta = λ * tole
 
     if isnan(ee)
@@ -310,7 +289,8 @@ function update_state(M::A42, F, state::A42State{T,S}, options, l=NullTracks()) 
     fc::S = F(c)
     incfn(l)
 
-    (iszero(fc) || isnan(fc)) && return (_state!(state, (c,fc)), true)  #_set_state(state, c, fc)
+
+    (iszero(fc) || isnan(fc)) && return (_set(state, (c,fc)), true)
     (isnan(c) || isinf(c)) && return (state, true)
 
     ab::T, bb::T, db::T, fab::S, fbb::S, fdb::S = bracket(a, b, c, fa, fb, fc)
@@ -320,15 +300,11 @@ function update_state(M::A42, F, state::A42State{T,S}, options, l=NullTracks()) 
     fcb::S = F(cb)
     incfn(l)
 
-    (iszero(fc) || isnan(fc)) && return (_state!(state, (c,fc)), true) #_set_state(state, c, fc)
+    (iszero(fc) || isnan(fc)) && return (_set(state, (c,fc)), true)
     if isnan(c) || isinf(c)
         # tighten up bracket
-        state = _state!(state, xn0=ab, xn1=bb, fxn0=fab, fxn1=fbb)
-        #@set! state.xn0 = ab
-        #@set! state.xn1 = bb
+        state = _set(state, (bb, fbb), (ab, fab))
         @set! state.d = db
-        #@set! state.fxn0 = fab
-        #@set! state.fxn1 = fbb
         @set! state.fd = fdb
         return state, false
     end
@@ -344,15 +320,11 @@ function update_state(M::A42, F, state::A42State{T,S}, options, l=NullTracks()) 
     fch::S = F(ch)
     incfn(l)
 
-    (iszero(fch) || isnan(fch)) && return (_state!(state, (c,fc)), true)  #_set_state(state, ch, fch)
+    (iszero(fch) || isnan(fch)) && return (_set(state, (ch,fch)), true)
     if isnan(ch) || isinf(ch)
         # tighten up bracket
-        state = _state!(state, (bb, fbb), (ab, fab))
-        #@set! state.xn0 = ab
-        #@set! state.xn1 = bb
+        state = _set(state, (bb, fbb), (ab, fab))
         @set! state.d = db
-        #@set! state.fxn0 = fab
-        #@set! state.fxn1 = fbb
         @set! state.fd = fdb
         return state, false
     end
@@ -371,14 +343,9 @@ function update_state(M::A42, F, state::A42State{T,S}, options, l=NullTracks()) 
         a, b, d, fa, fb, fd = bracket(ah, bh, m, fah, fbh, fm)
     end
 
-    state = _state!(state, (b, fb), (a, fa))
-    #state = _state!(state; xn0=a, xn1=b, fxn0=fa, fxn1=fb)
-#    @set! state.xn0 = a
-#    @set! state.xn1 = b
+    state = _set(state, (b, fb), (a, fa))
     @set! state.d = d
     @set! state.ee = ee
-#    @set! state.fxn0 = fa
-#    @set! state.fxn1 = fb
     @set! state.fd = fd
     @set! state.fee = fe
 
