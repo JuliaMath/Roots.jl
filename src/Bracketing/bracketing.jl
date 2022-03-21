@@ -13,11 +13,10 @@ function init_state(M::AbstractBracketing, F, x₀, x₁, fx₀, fx₁)
     UnivariateZeroState(b, a, fb, fa)
 end
 
-#initial_fncalls(::Roots.AbstractBracketing) = 2
 fn_argout(::AbstractBracketing) = 1
 initial_fncalls(::AbstractBracketing) = 2
 
-## tracks for bisection, different, we show bracketing interval
+## tracks for bisection, different from secant, we show bracketing interval
 ## No init here; for Bisection() [a₀, b₀] is just lost.
 function log_step(l::Tracks, M::AbstractBracketing, state; init::Bool=false)
     a, b = state.xn0, state.xn1
@@ -30,7 +29,7 @@ end
 # use xatol, xrtol only, but give some breathing room over the strict ones and cap number of steps
 function default_tolerances(::AbstractBracketing, ::Type{T}, ::Type{S}) where {T,S}
     xatol = eps(real(T))^3 * oneunit(real(T))
-    xrtol = eps(real(T))/2  # unitless
+    xrtol = eps(real(T))  # unitless
     atol = 0 * oneunit(real(S))
     rtol = 0 * one(real(S))
     maxevals = 60
@@ -55,14 +54,13 @@ function assess_convergence(
         return (:nan, true)
     end
 
-    # check |b-a|
-    m = min(abs(a), abs(b))
-    δₓ = max(options.xabstol, 2 * m * options.xreltol) # needs non-zero xabstol to stop near 0
-    abs(b-a) <= δₓ && return (:x_converged, true)
+    # check |b-a| ≤ 2 |u| ϵ + ϵₐ where u ∈ {a,b} is chosen the smaller of |f(a)|, |f(b)|
+    u, fu = choose_smallest(a, b, fa, fb)
+    δₓ = max(options.xabstol, 2 * abs(u) * options.xreltol) # needs non-zero xabstol to stop near 0
+    abs(b-a) ≤ δₓ && return (:x_converged, true)
 
     # check f (typically not used!)
-    u, fu = choose_smallest(a, b, fa, fb)
-    δ = max(options.abstol, (m / oneunit(m)) * (options.reltol * oneunit(fu)))
+    δ = max(options.abstol, (u / oneunit(u)) * (options.reltol * oneunit(fu)))
 
     if abs(fu) <= δ
         iszero(fu) && return (:exact_zero, true)

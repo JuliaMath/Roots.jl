@@ -20,7 +20,6 @@ struct BrentState{T,S} <: AbstractUnivariateZeroState{T,S}
     mflag::Bool
 end
 
-
 # # we store mflag as -1, or +1 in state.mflag
 function init_state(::Brent, F, x₀, x₁, fx₀, fx₁)
     u, v, fu, fv = x₀, x₁, fx₀, fx₁
@@ -35,8 +34,6 @@ function init_state(::Brent, F, x₀, x₁, fx₀, fx₁)
 
     BrentState(u, v, v, v, fu, fv, fv, true)
 end
-
-default_tolerances(::Brent, ::Type{T}, ::Type{S}) where {T,S} = default_tolerances(Secant(), T, S) # need relaxing
 
 function update_state(
     ::Brent,
@@ -75,13 +72,8 @@ function update_state(
     fs = f(s)
     incfn(l)
 
-    if iszero(fs)
-        @set! state.xn1 = s
-        @set! state.fxn1 = fs
-        return (state, true)
-    elseif isnan(fs) || isinf(fs)
-        return (state, true)
-    end
+    iszero(fs)  && return (_set(state, (s, fs)), true)
+    (isnan(fs) || isinf(fs)) && return (state, true)
 
     d = c
     c, fc = b, fb
@@ -96,12 +88,9 @@ function update_state(
         a, b, fa, fb = b, a, fb, fa
     end
 
-    @set! state.xn0 = a
-    @set! state.xn1 = b
+    state = _set(state, (b,fb), (a, fa))
     @set! state.c = c
     @set! state.d = d
-    @set! state.fxn0 = fa
-    @set! state.fxn1 = fb
     @set! state.fc = fc
     @set! state.mflag = mflag
 

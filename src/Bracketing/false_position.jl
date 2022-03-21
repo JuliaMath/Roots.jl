@@ -46,6 +46,17 @@ function default_tolerances(::FalsePosition{12}, ::Type{T}, ::Type{S}) where {T,
     (xatol, xrtol, atol, rtol, maxevals, maxfnevals, strict)
 end
 
+# function default_tolerances(::FalsePosition, ::Type{T}, ::Type{S}) where {T,S}
+#     xatol = eps(real(T))^3 * oneunit(real(T))
+#     xrtol = eps(real(T))  # unitless
+#     atol = 0 * oneunit(real(S))
+#     rtol = 0 * one(real(S))
+#     maxevals = 120
+#     maxfnevals = typemax(Int)
+#     strict = true
+#     (xatol, xrtol, atol, rtol, maxevals, maxfnevals, strict)
+# end
+
 
 
 init_state(M::FalsePosition, F, x₀, x₁, fx₀, fx₁) = init_state(Bisection(), F, x₀, x₁, fx₀, fx₁)
@@ -61,25 +72,14 @@ function update_state(
     fa, fb = o.fxn0, o.fxn1
 
     lambda = fb / (fb - fa)
-
-    #ϵ = sqrt(eps(T))
-    #ϵ ≤ lambda ≤ 1-ϵ || (λ = 1/2)
-
-    tau = 1e-10                   # some engineering to avoid short moves; still fails on some
-    if !(tau < abs(lambda) < 1 - tau)
-        lambda = 1 / 2
-    end
-
+    ϵ = √eps() # some engineering to avoid short moves; still fails on some
+    ϵ ≤ lambda ≤ 1-ϵ || (lambda = 1/2)
 
     x::T = b - lambda * (b - a)
     fx = fs(x)
     incfn(l)
 
-    if iszero(fx)
-        @set! o.xn1 = x
-        @set! o.fxn1 = fx
-        return (o, true)
-    end
+    iszero(fx) && return (_set(o, (x, fx)), true)
 
     if sign(fx) * sign(fb) < 0
         a, fa = b, fb
@@ -88,10 +88,7 @@ function update_state(
     end
     b, fb = x, fx
 
-    @set! o.xn0 = a
-    @set! o.xn1 = b
-    @set! o.fxn0 = fa
-    @set! o.fxn1 = fb
+    o = _set(o, (b, fb), (a, fa))
 
     return (o, false)
 end

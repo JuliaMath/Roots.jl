@@ -110,10 +110,7 @@ function update_state(M::ITP, F, o, options, l=NullTracks())
         a, fa = c, fc
     end
 
-    @set! o.xn0 = a
-    @set! o.xn1 = b
-    @set! o.fxn0 = fa
-    @set! o.fxn1 = fb
+    o = _set(o, (b,fb), (a,fa))
     @set! o.j = j + 1
 
     return o, false
