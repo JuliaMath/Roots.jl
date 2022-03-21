@@ -1,7 +1,6 @@
 """
 
     Bisection()
-    Roots.BisectionExact()
 
 If possible, will use the bisection method over `Float64` values. The
 bisection method starts with a bracketing interval `[a,b]` and splits
@@ -23,7 +22,6 @@ tolerances are adjusted.
 
 """
 struct Bisection <: AbstractBisection end
-#struct BisectionExact <: AbstractBisection end
 
 initial_fncalls(::AbstractBisection) = 3 # middle
 
@@ -49,15 +47,6 @@ function init_state(::AbstractBisection, F, x₀, x₁, fx₀, fx₁; m=_middle(
     sign(a) * sign(b) < 0 && throw(ArgumentError("_middle error"))
 
     UnivariateZeroState(b, a, fb, fa)
-end
-
-
-function log_step(l::Tracks, M::Bisection, state; init::Bool=false)
-    a, b = state.xn0, state.xn1
-    push!(l.abₛ, (a,b))
-    init && log_iteration(l, 1) # c is computed
-    !init && log_iteration(l, 1)
-    nothing
 end
 
 const FloatNN = Union{Float64,Float32,Float16}
@@ -89,6 +78,7 @@ function default_tolerances(::AbstractBisection, ::Type{T}, ::Type{S′}) where 
     (xatol, xrtol, atol, rtol, maxevals, maxfnevals, strict)
 end
 
+# not float uses some non-zero tolerances for `x`
 function default_tolerances(::AbstractBisection, ::Type{T′}, ::Type{S′}) where {T′,S′}
     T,S = real(float(T′)), real(float(S′))
     xatol = eps(T)^3 * oneunit(T)
@@ -142,8 +132,6 @@ end
 ## the method converges,
 ## as we bound between x0, nextfloat(x0) is not measured by eps(), but eps(x0)
 function assess_convergence(::Bisection, state::AbstractUnivariateZeroState, options)
-    flag, converged = assess_convergence(BisectionExact(), state, options)
-    converged && return (flag, converged)
 
     a, b = state.xn0, state.xn1
     fa, fb = state.fxn0, state.fxn1
@@ -164,30 +152,9 @@ function assess_convergence(::Bisection, state::AbstractUnivariateZeroState, opt
         min(abs(fa), abs(fb)) ≤ δ && return (:f_converged, true)
     end
 
-    # if isapprox(a, b, atol=options.xabstol, rtol=options.xreltol)
-    #     return (:x_converged, true)
-    # end
-
-
-    # ftol = max(options.abstol, max(abs(a), abs(b)) * options.reltol)
-    # if min(abs(fa), abs(fb)) ≤ ftol
-    #     return (:f_converged, true)
-    # end
 
     return :not_converged, false
 end
-
-# for exact convergence, we can skip some steps
-# function assess_convergence(::BisectionExact, state::UnivariateZeroState, options)
-#     a, b = state.xn0, state.xn1
-#     fa, fb = state.fxn0, state.fxn1
-
-#     (iszero(fa) || isnan(fa) || iszero(fb) || isnan(fb)) && return (:f_converged, true)
-
-#     nextfloat(a) == b && return (:x_converged, true)
-
-#     return (:not_converged, false)
-# end
 
 
 ## --------------------------------------------------
@@ -212,39 +179,4 @@ function update_state(M::AbstractBisection, F, o, options, l=NullTracks())
     @set! o.fxn1 = fb
 
     return o, false
-end
-
-##################################################
-
-## Bisection has special cases
-## for zero tolerance, we have either BisectionExact or A42 methods
-## for non-zero tolerances, we have use thegeneral Bisection method
-function find_zero(
-    fs,
-    x0,
-    method::Bisection;
-    p=nothing,
-    tracks=NullTracks(),
-    verbose=false,
-    kwargs...,
-)
-
-    Base.depwarn("The special case of bisection over BigFloat with zero tolerance using `A42` is deprecated. Now the tolerances are set to be non-zero", :find_zero)
-
-    return solve(ZeroProblem(fs, x0), method, p; verbose=verbose, tracks=tracks, kwargs...)
-
-    # _options = init_options(Bisection(), Float64, Float64; kwargs...)
-    # iszero_tol =
-    #     iszero(_options.xabstol) &&
-    #     iszero(_options.xreltol) &&
-    #     iszero(_options.abstol) &&
-    #     iszero(_options.reltol)
-
-    # _method = if iszero_tol
-    #     float(first(_extrema(x0))) isa FloatNN ? BisectionExact() : A42()
-    # else
-    #     method
-    # end
-
-    #return solve(ZeroProblem(fs, x0), _method, p; verbose=verbose, tracks=tracks, kwargs...)
 end

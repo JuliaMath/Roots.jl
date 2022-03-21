@@ -23,7 +23,7 @@ default). The default choice has generally better performance than the
 others, though there are exceptions.
 
 For some problems, the number of function calls can be greater than
-for the `BisectionExact` method, but generally this algorithm will make
+for the `Bisection` method, but generally this algorithm will make
 fewer function calls.
 
 Examples
@@ -34,7 +34,7 @@ find_zero(x -> x^5 - x - 1, (-2, 2), FalsePosition())
 FalsePosition
 FalsePosition(x=:anderson_bjork) = FalsePosition{x}()
 
-init_state(M::FalsePosition, F, x₀, x₁, fx₀, fx₁) = init_state(BisectionExact(), F, x₀, x₁, fx₀, fx₁)
+init_state(M::FalsePosition, F, x₀, x₁, fx₀, fx₁) = init_state(Bisection(), F, x₀, x₁, fx₀, fx₁)
 
 function update_state(
     method::FalsePosition,
