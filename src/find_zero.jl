@@ -205,6 +205,8 @@ function find_zero(
     options::UnivariateZeroOptions=init_options(M, state),
     l::AbstractTracks=NullTracks(),
 )
+    Base.depwarn("findzero(M, F, state, ...) interface is deprecated, use `solve(ZeroProblem(f,x0), M, ...)", :find_zero)
+
     solve!(init(M, F, state, options, l))
 end
 

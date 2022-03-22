@@ -173,7 +173,7 @@ function find_zero(
     kwargs...,
 )
 
-    Base.depwarn("The special case of bisection over BigFloat with zero tolerance using `A42` is deprecated. Now the tolerances are set to be non-zero", :find_zero)
+    Base.depwarn("The special case of bisection over BigFloat with zero tolerance using `A42` is deprecated. Now bisection is used with non-zero tolerances.", :find_zero)
 
     _options = init_options(Bisection(), Float64, Float64; kwargs...)
     iszero_tol =
