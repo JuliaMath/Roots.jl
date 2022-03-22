@@ -13,6 +13,9 @@ function init_state(M::AbstractBracketing, F, x₀, x₁, fx₀, fx₁)
     UnivariateZeroState(b, a, fb, fa)
 end
 
+Base.last(state::AbstractUnivariateZeroState, M::AbstractBracketing) =
+    state.xn0 < state.xn1 ? (state.xn0, state.xn1) : (state.xn1, state.xn0)
+
 fn_argout(::AbstractBracketing) = 1
 initial_fncalls(::AbstractBracketing) = 2
 

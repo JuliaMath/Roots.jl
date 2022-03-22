@@ -45,6 +45,8 @@ function init_state(::AbstractUnivariateZeroMethod, F, x₀, x₁, fx₀, fx₁)
     error("no default method")
 end
 
+Base.last(state::AbstractUnivariateZeroState, M::AbstractUnivariateZeroMethod) = state.xn1
+
 # init_state(M, F, x; kwargs...)
 # init_state(M, F x₀,x₁,fx₀,fx₁; kwargs...)
 # init_state(M, state, F)

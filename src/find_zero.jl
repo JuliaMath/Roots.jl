@@ -275,40 +275,42 @@ function init(
 end
 
 # Optional iteration interface to handle looping
-# errors on non-convergence, unlike solve!(init(...)) which returns NaN
-# allocates...
-# This should be deprecated
+# * returns xₙ or (aₙ, bₙ) depending
+# * throws error on non-convergence
 function Base.iterate(P::ZeroProblemIterator, st=nothing)
-    ## st = (val, (state, ctr, val))
+    ## st = (val, (state, ctr, flag, stopped))
+
+    M, F, options, l = P.M, P.F, P.options, P.logger
+
     if st === nothing
         state = P.state
-        ctr = 1
+        ctr, flag, stopped = 1, :not_converged, false
+        log_method(l, M)
+        log_step(l, M, state; init=true)
     else
-        (state, ctr, val) = st
+        state, ctr, flag, stopped = st
         ctr += 1
     end
-    M, options, l = P.M, P.options, P.logger
-    val, stopped = :no_convergence, false
-    while true
-        val, stopped = assess_convergence(M, state, options)
-        stopped && break
-        if ctr > options.maxevals
-            stopped = true
-            break
-        end
-        state, stopped = update_state(M, P.F, state, options, l)
-        log_step(l, M, state)
-        break
-    end
+
+    stopped && return nothing
+    ctr > options.maxevals && return nothing
+
+    state, stopped = update_state(M, F, state, options, l)
+    log_step(l, M, state)
+
+    flag, stopped = assess_convergence(M, state, options)
 
     if stopped
-        xstar = decide_convergence(P.M, P.F, state, P.options, val)
-        isnan(xstar) && throw(ConvergenceFailed("Stopped at $(state.xn1)"))
-        nothing
-    else
-        return (state.xn1, (state, ctr, val))
+        α = decide_convergence(M, F, state, options, flag)
+        log_last(l, α)
+        isnan(α) && throw(ConvergenceFailed("Algorithm did not converge."))
     end
+
+    return (last(state,M), (state, ctr, flag, stopped))
+
 end
+
+
 
 """
     solve(fx::ZeroProblem, [p=nothing]; kwargs...)
@@ -441,12 +443,11 @@ function solve!(P::ZeroProblemIterator; verbose=false)
     val, stopped = assess_convergence(M, state, options) # udpate val flag
     α = decide_convergence(M, F, state, options, val)
 
-    if !(l isa NullTracks)
-        log_convergence(l, val)
-        log_method(l, M)
-        log_last(l, α)
-        verbose && display(l)
-    end
+    log_convergence(l, val)
+    log_method(l, M)
+    log_last(l, α)
+    verbose && display(l)
+
     α
 
 end
