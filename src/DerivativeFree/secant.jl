@@ -40,10 +40,7 @@ function update_state(
     fx0, fx1 = fxn1, F(x1)
     incfn(l)
 
-    @set! o.xn0 = x0
-    @set! o.xn1 = x1
-    @set! o.fxn0 = fx0
-    @set! o.fxn1 = fx1
+    o = _set(o, (x1, fx1), (x0, fx0))
 
     return o, false
 end
