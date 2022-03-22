@@ -8,7 +8,7 @@ abstract type AbstractNonBracketing <: AbstractUnivariateZeroMethod end
 abstract type AbstractSecant <: AbstractNonBracketing end
 
 abstract type AbstractNewtonLikeMethod <: AbstractNonBracketing  end
-abstract type AbstractHalleyLikeMethod <: AbstractNonBracketing  end
+abstract type AbstractHalleyLikeMethod <: AbstractNewtonLikeMethod  end
 abstract type AbstractΔMethod <: AbstractHalleyLikeMethod end
 
 

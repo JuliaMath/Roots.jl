@@ -15,7 +15,7 @@ struct NullTracks <: AbstractTracks end
 initial_fncalls(M::AbstractUnivariateZeroState) = @warn "initial_fncalls fix $M"
 
 log_step(s::NullTracks, M, x; init=false) = nothing  # log a step (x,f(x)) or (a,b)
-log_iteration(::NullTracks, n=1) = nothing           # log an iteration
+log_iteration(::NullTracks, n=1) = nothing           # log an iteration (call to update state)
 log_fncall(::NullTracks, n=1) = nothing              # add a function call (aliased to incfn); only one called in update_step
 log_message(::NullTracks, msg) = nothing             # append to a message
 log_convergence(::NullTracks, msg) = nothing         # flag for convergence

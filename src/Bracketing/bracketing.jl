@@ -61,7 +61,7 @@ function assess_convergence(
 
     # check f (typically not used!)
     δ = max(options.abstol, (u / oneunit(u)) * (options.reltol * oneunit(fu)))
-  
+
     if abs(fu) <= δ
         iszero(fu) && return (:exact_zero, true)
         return (:f_converged, true)
