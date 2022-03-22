@@ -6,20 +6,20 @@ Abstract type for `ThukralXB` methods for `X` being `2`,`3`,`4`, or `5`.
 
 These are a family of methods which are
 * efficient (order `X`) for non-simple roots (e.g. `Thukral2B` is the `Schroder` method)
-* taking `X+1` function calls per step
+* take `X+1` function calls per step
 * require `X` derivatives. These can be passed as a tuple of functions, `(f, f', f'', …)`, *or* as
 a function returning the ratios: `x -> (f(x), f(x)/f'(x), f'(x)/f''(x), …)`.
 
-## Example
+## Examples
 
 ```julia
 using ForwardDiff
 Base.adjoint(f::Function)  = x  -> ForwardDiff.derivative(f, float(x))
 f(x) = (exp(x) + x - 2)^6
 x0 = 1/4
-find_zero((f, f', f''), x0, Roots.Halley())               # 14 iterations; 45 function evaluations
-find_zero((f, f', f''), big(x0), Roots.Thukral2B())       #  4 iterations; 15 function evaluations
-find_zero((f, f', f'', f'''), big(x0), Roots.Thukral3B()) #  3 iterations; 16 function evaluations
+find_zero((f, f', f''), x0, Roots.Halley())               # 14 iterations; ≈ 48 function evaluations
+find_zero((f, f', f''), big(x0), Roots.Thukral2B())       #  3 iterations; ≈ 9 function evaluations
+find_zero((f, f', f'', f'''), big(x0), Roots.Thukral3B()) #  2 iterations; ≈ 8 function evaluations
 ```
 
 

@@ -1,22 +1,3 @@
-##################################################
-## Classical derivative-based, iterative, root-finding algorithms
-##
-## If ri = f^(i-1)/f^(i), then these have an update step `xn - delta` where:
-##
-## * Newton: delta = r1  # order 2 if simple root (multiplicity 1)
-## * Halley: delta = 2*r2/(2r2 - r1) * r1 # order 3 if simple root
-## * Schroder: delta = r2  / (r2 - r1) * r1  # order 2
-## * Thukral(3): delta =  (-2*r3)*(r2 - r1)/(r1^2 - 3*r1*r3 + 2*r2*r3) * r1 # order 3
-## * Thukral(4): delta =  3*r1*r2*r4*(r1^2 - 3*r1*r3 + 2*r2*r3)/(-r1^3*r2 + 4*r1^2*r2*r4 + 3*r1^2*r3*r4 - 12*r1*r2*r3*r4 + 6*r2^2*r3*r4) # order 4
-##
-## The latter two come from
-## [Thukral](http://article.sapub.org/10.5923.j.ajcam.20170702.05.html). They are not implemented.
-
-## Newton
-
-fn_argout(::AbstractNewtonLikeMethod) = 2
-
-struct Newton <: AbstractNewtonLikeMethod end
 """
 
     Roots.Newton()
@@ -47,7 +28,18 @@ value of f, but otherwise would be expensive to compute.
 The error, `eᵢ = xᵢ - α`, can be expressed as `eᵢ₊₁ = f[xᵢ,xᵢ,α]/(2f[xᵢ,xᵢ])eᵢ²` (Sidi, Unified treatment of regula falsi, Newton-Raphson, secant, and Steffensen methods for nonlinear equations).
 
 """
-Newton
+struct Newton <: AbstractNewtonLikeMethod end
+
+fn_argout(::AbstractNewtonLikeMethod) = 2
+
+function log_step(l::Tracks, M::AbstractNewtonLikeMethod, state; init=false)
+    init && push!(l.xfₛ, (state.xn0, state.fxn0))
+    push!(l.xfₛ, (state.xn1, state.fxn1))
+    init && log_iteration(l, 1)
+    !init  && log_iteration(l, 1)
+    nothing
+end
+
 
 # we store x0,x1,fx0,fx1 **and** Δ = fx1/f'(x1)
 struct NewtonState{T,S} <: AbstractUnivariateZeroState{T,S}
@@ -74,13 +66,8 @@ end
 
 initial_fncalls(M::Newton) = 2
 
-function update_state(
-    method::Newton,
-    F,
-    o::NewtonState{T,S},
-    options,
-    l=NullTracks(),
-) where {T,S}
+function update_state(method::Newton, F, o::NewtonState{T,S}, options, l=NullTracks()) where {T,S}
+
     xn0, xn1 = o.xn0, o.xn1
     fxn0, fxn1 = o.fxn0, o.fxn1
     Δ::T = o.Δ

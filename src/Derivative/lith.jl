@@ -1,24 +1,10 @@
-# [Lith, Boonkkamp, and IJzerman](https://doi.org/10.1016/j.amc.2017.09.003)
-# A family of different methods that includes the secant method and Newton's method
-
-# return f^(i-1)(x); not the same as default eval call
-function evalf(F::Callable_Function{S,T,𝑭,P}, x, i) where {N,S<:Val{N},T<:Val{true},𝑭,P}
-    F.f[i](x)
-end
-function evalf(F::Callable_Function{S,T,𝑭,P}, x, i) where {S<:Val{1},T<:Val{false},𝑭,P}
-    F.f(x)
-end
-evalf(::Callable_Function, x, i) = throw(
-    ArgumentError(
-        "LithBoonkkampIJzerman expects functions to be defined singly or as tuples",
-    ),
-)
-
 """
     LithBoonkkampIJzerman{S,D} <: AbstractNewtonLikeMethod
     LithBoonkkampIJzerman(S,D)
 
-Specify a linear multistep solver with `S` steps and `D` derivatives following [Lith, Boonkkamp, and
+A family of different methods that includes the secant method and Newton's method.
+
+Specifies a linear multistep solver with `S` steps and `D` derivatives following [Lith, Boonkkamp, and
 IJzerman](https://doi.org/10.1016/j.amc.2017.09.003).
 
 ## Examples
@@ -140,6 +126,22 @@ struct LithBoonkkampIJzermanState{S′,D⁺,T,S} <: AbstractUnivariateZeroState{
     fm::NTuple{D⁺,NTuple{S′,S}}
 end
 
+log_step(l::Tracks, M::LithBoonkkampIJzerman, state; init=false) = log_step(l, Secant(), state; init=init)
+
+
+# return f^(i-1)(x); not the same as default eval call
+function evalf(F::Callable_Function{S,T,𝑭,P}, x, i) where {N,S<:Val{N},T<:Val{true},𝑭,P}
+    F.f[i](x)
+end
+function evalf(F::Callable_Function{S,T,𝑭,P}, x, i) where {S<:Val{1},T<:Val{false},𝑭,P}
+    F.f(x)
+end
+evalf(::Callable_Function, x, i) = throw(
+    ArgumentError(
+        "LithBoonkkampIJzerman expects functions to be defined singly or as tuples",
+    ),
+)
+
 function init_state(L::LithBoonkkampIJzerman{S,0}, F, x) where {S}
     x₀, x₁ = x₀x₁(x)
     fx₀, fx₁ = evalf(F, x₀, 1), evalf(F, x₁, 1)
@@ -183,7 +185,6 @@ function update_state(
     l=NullTracks(),
 ) where {S,D,S⁺,D′,R,T}
     xs, ys = o.m, o.fm
-
     xᵢ::R = lmm(L, xs, ys...)
     isissue(o.xn1 - xᵢ) && return (o, true)
 
