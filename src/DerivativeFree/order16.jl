@@ -50,10 +50,8 @@ function update_state(
 
     if issue
         log_message(l, "issue with f[xn,wn]")
-        @set! o.xn0 = o.xn1
-        @set! o.xn1 = wn
-        @set! o.fxn0 = o.fxn1
-        @set! o.fxn1 = fwn
+        o = _set(o, (wn, fwn), (xn, fxn))
+
         return o, true
     end
 
@@ -64,10 +62,7 @@ function update_state(
     fp, issue = _fbracket_ratio(yn, xn, wn, fyn, fxn, fwn)
     if issue
         log_message(l, "issue with f[xn,yn]*f[yn,wn]/f[xn,wn]")
-        @set! o.xn0 = o.xn1
-        @set! o.xn1 = yn
-        @set! o.fxn0 = o.fxn1
-        @set! o.fxn1 = fyn
+        o = _set(o, (yn, fyn), (xn, fxn))
 
         return o, true
     end
@@ -82,10 +77,7 @@ function update_state(
     eta = 1 / (1 + 2 * u3 * u4^2) / (1 - u2)
     if issue
         log_message(l, "Approximate derivative failed")
-        @set! o.xn0 = o.xn1
-        @set! o.xn1 = zn
-        @set! o.fxn0 = o.fxn1
-        @set! o.fxn1 = fzn
+        o = _set(o, (zn, fzn), (xn, fxn))
 
         return o, true
     end
@@ -97,10 +89,7 @@ function update_state(
     fp, issue = _fbracket_ratio(an, yn, zn, fan, fyn, fzn)
     if issue
         log_message(l, "Approximate derivative failed")
-        @set! o.xn0 = o.xn1
-        @set! o.xn1 = an
-        @set! o.fxn0 = o.fxn1
-        @set! o.fxn1 = fan
+        o = _set(o, (an, fan), (xn, fxn))
 
         return o, true
     end
@@ -121,20 +110,18 @@ function update_state(
     fxn1::S = F(xn1)
     incfn(l)
 
-    @set! o.xn0 = xn
-    @set! o.xn1 = xn1
-    @set! o.fxn0 = fxn
-    @set! o.fxn1 = fxn1
+    o = _set(o, (xn1, fxn1), (xn, fxn))
 
     return o, false
 end
 
 
 ##################################################
-## some means of guarding against large fx when taking a secant step
-## for Orders 5, 8, and 16
-## TODO: rework this
-## Must be included after Order5, Order8, and Order16 are defined
+## some means of guarding against large fx when taking a steffensen step
+## for Orders 5, 8, and 16 we restrict the size of the steffensen step
+## to make the underlying methods more robust. As we need the types defined
+## below, this must be included after Order5, Order8, and Order16 are defined
+##
 function steff_step(M::Union{Order5,Order8,Order16}, x::S, fx::T) where {S,T}
     xbar, fxbar = real(x / oneunit(x)), fx / oneunit(fx)
     thresh = max(1, abs(xbar)) * sqrt(eps(one(xbar))) #^(1/2) # max(1, sqrt(abs(x/fx))) * 1e-6

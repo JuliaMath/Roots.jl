@@ -38,11 +38,7 @@ function update_state(
     fp, issue = _fbracket(o.xn1, wn, o.fxn1, fwn)
     if issue
         log_message(l, "Issue with divided difference f[xn, wn]. ")
-        @set! o.xn0 = o.xn1
-        @set! o.xn1 = wn
-        @set! o.fxn0 = o.fxn1
-        @set! o.fxn1 = fwn
-
+        o = _set(o, (wn, fwn), (xn, fxn))
         return o, true
     end
 
@@ -56,21 +52,18 @@ function update_state(
 
     fp, issue = _fbracket_ratio(yn, o.xn1, wn, fyn, o.fxn1, fwn)
     if issue
-        log_message(l, "Issue with f[xn,yn]*f[yn,wn] / f[xn, wn]")
-        @set! o.xn0 = o.xn1
-        @set! o.xn1 = yn
-        @set! o.fxn0 = o.fxn1
-        @set! o.fxn1 = fyn
+        log_message(l, "Issue with f[xn,yn] * f[yn,wn] / f[xn, wn].")
+        o = _set(o, (yn, fyn), (xn, fxn))
 
         return o, true
     end
 
-    @set! o.xn0 = o.xn1
-    @set! o.fxn0 = o.fxn1
     x₁::T = zn - fzn / fp
-    @set! o.xn1 = x₁
-    @set! o.fxn1 = F(o.xn1)
+    f₁ = F(x₁)
     incfn(l)
+
+    o = _set(o, (x₁, f₁), (xn, fxn))
+
 
     return o, false
 
@@ -102,10 +95,7 @@ function update_state(
 
     if isissue(fpyn)
         log_message(l, "Issue computing `fpyn`")
-        @set! o.xn0 = o.xn1
-        @set! o.xn1 = yn
-        @set! o.fxn0 = o.fxn1
-        @set! o.fxn1 = fyn
+        o = _set(o, (yn, fyn), (o.xn1, o.fxn1))
 
         return o, true
     end
@@ -118,10 +108,7 @@ function update_state(
     fxn1, _ = f(xn1)
     incfn(l, 2)
 
-    @set! o.xn0 = xn
-    @set! o.xn1 = xn1
-    @set! o.fxn0 = fxn
-    @set! o.fxn1 = fxn1
+    o = _set(o, (xn1, fxn1), (xn, fxn))
 
     return o
 end

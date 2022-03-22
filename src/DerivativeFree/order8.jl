@@ -44,10 +44,7 @@ function update_state(
 
     if isissue(fwn)
         log_message(l, "issue with Steffensen step fwn")
-        @set! o.xn0 = xn
-        @set! o.xn1 = wn
-        @set! o.fxn0 = fxn
-        @set! o.fxn1 = fwn
+        o = _set(o, (wn, fwn), (xn, fxn))
 
         return o, true
     end
@@ -66,10 +63,7 @@ function update_state(
     fp, issue = _fbracket(yn, xn, fyn, fxn)
     if issue #fp
         log_message(l, "issue with divided difference f[xn, yn]. ")
-        @set! o.xn0 = xn
-        @set! o.xn1 = yn
-        @set! o.fxn0 = fxn
-        @set! o.fxn1 = fyn
+        o = _set(o, (yn, fyn), (xn, fxn))
 
         return o, true
     end
@@ -82,10 +76,7 @@ function update_state(
     fp, issue = _fbracket_diff(xn, yn, zn, fxn, fyn, fzn)
     if issue
         log_message(l, "issue with divided difference  f[y,z] - f[x,y] + f[x,z]. ")
-        @set! o.xn0 = xn
-        @set! o.xn1 = zn
-        @set! o.fxn0 = fxn
-        @set! o.fxn1 = fzn
+        o = _set(o, (zn, fzn), (xn, fxn))
 
         return o, true
     end
@@ -98,10 +89,7 @@ function update_state(
     fxn1::S = F(xn1)
     incfn(l)
 
-    @set! o.xn0 = xn
-    @set! o.xn1 = xn1
-    @set! o.fxn0 = fxn
-    @set! o.fxn1 = fxn1
+    o = _set(o, (xn1, fxn1), (xn, fxn))
 
     return o, false
 end
