@@ -201,16 +201,3 @@ function find_zero(
     𝐏 = ZeroProblem(fs, x0)
     solve!(init(𝐏, M, N; verbose=verbose, kwargs...), verbose=verbose)
 end
-
-# Switch to bracketing method
-# deprecate soon, not used
-function run_bisection(N::AbstractBracketingMethod, f, ab, state)
-    steps, fnevals = state.steps, state.fnevals
-    f = Callable_Function(N, f)
-    init_state!(state, N, f; clear=true)
-    find_zero(N, f, state, init_options(N, state))
-    a, b = _extrema(ab)
-    u, v = a > b ? (b, a) : (a, b)
-    state.message *= "Bracketing used over ($u, $v), those steps not shown. "
-    return nothing
-end
