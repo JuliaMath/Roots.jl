@@ -223,6 +223,11 @@ struct ZeroProblem{F,X}
 end
 Base.broadcastable(p::ZeroProblem) = Ref(p)
 
+# possible unicode operator to lighten `solve(ZeroProblem(f,x), M)` at `solve(f ≀ x, M)`
+f ≀ x = ZeroProblem(f, x)  # \wr[tab]
+
+## --------------------------------------------------
+
 ## The actual iterating object
 struct ZeroProblemIterator{M,N,F,S,O,L}
     M::M
@@ -259,8 +264,8 @@ function init(
 end
 
 function init(𝑭𝑿::ZeroProblem, p′=nothing; kwargs...)
-    M = length(𝑭𝑿.x₀) == 1 ? Secant() : Bisection()
-    init(𝑭𝑿, M, p′; kwargs...)
+    M =  length(𝑭𝑿.x₀) == 1 ? (Secant(), AlefeldPotraShi()) : (AlefeldPotraShi(),)
+    init(𝑭𝑿, M...; p = p′, kwargs...)
 end
 
 function init(
@@ -275,14 +280,16 @@ end
 
 
 """
-    solve(fx::ZeroProblem, [M];kwargs...)
-    init(fx::ZeroProblem, [M];
+    solve(fx::ZeroProblem, [M], [N]; p=nothing, kwargs...)
+    init(fx::ZeroProblem, [M], [N];
          p=nothing,
          verbose=false, tracks=NullTracks(), kwargs...)
     solve!(P::ZeroProblemIterator)
 
-Solve for the zero of a function specified through a `ZeroProblem` or
-`ZeroProblemIterator`
+Solve for the zero of a scalar-valued univariate function specified through `ZeroProblem` or
+`ZeroProblemIterator` using the `CommonSolve` interface.
+
+The defaults for `M` and `N` depend on the `ZeroProblem`: if `x0` is a number, then `M=Secant()` and `N=AlefeldPotraShi()` is used; if `x0` has `2` (or more values) then it is assumed to be a bracketing interval and `M=AlefeldPotraShi()` is used.
 
 The methods involved with this interface are:
 
@@ -296,8 +303,10 @@ The latter calls the following, which can be useful independently:
   the steps or not.
 * `solve!` to iterate to convergence.
 
-Returns `NaN`, not an error, when the problem can not be
-solved. Tested for zero allocations.
+Returns `NaN`, not an error like `find_zero`, when the problem can not
+be solved. Tested for zero allocations.
+
+
 
 ## Examples:
 
@@ -316,17 +325,11 @@ Or, if the iterable is required
 ```jldoctest find_zero
 julia> problem = init(fx);
 
-
 julia> solve!(problem)
 3.141592653589793
 ```
 
-The default method is `Order1()`, when  `x0` is a number, or `Bisection()` when `x0` is an iterable with 2 or more values.
-
-
-A second positional argument for `solve` or `init` is used to specify
-a different method; keyword arguments can be used to adjust the
-default tolerances.
+keyword arguments can be used to adjust the default tolerances.
 
 
 ```jldoctest find_zero
@@ -339,14 +342,13 @@ The above is equivalent to:
 ```jldoctest find_zero
 julia> problem = init(fx, Order5(), atol=1/100);
 
-
 julia> solve!(problem)
 3.1425464815525403
 ```
 
 The keyword argument `p` may be used if the function(s) to be solved
 depend on a parameter in their second positional argument (e.g.,
-`f(x,p)`). For example
+`f(x, p)`). For example
 
 ```jldoctest find_zero
 julia> f(x,p) = exp(-x) - p # to solve p = exp(-x)
@@ -364,9 +366,8 @@ This would be recommended, as there is no recompilation due to the function chan
 The argument `verbose=true` for `init` instructs that steps to be logged;
 
 The iterator interface allows for the creation of hybrid solutions,
-for example, this is essentially how `Order0` is constructed (`Order0`
-follows secant steps until a bracket is identified, after which it
-switches to a bracketing algorithm.)
+such as is used when two methods are passed to `solve`.
+For example, this is essentially how the hybrid default is constructed:
 
 ```jldoctest find_zero
 julia> function order0(f, x)

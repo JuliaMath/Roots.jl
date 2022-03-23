@@ -401,10 +401,10 @@ julia> g(x, p=1) = cos(x) - x/p;
 julia> Z = ZeroProblem(g, (0.0, pi/2))
 ZeroProblem{typeof(g), Tuple{Float64, Float64}}(g, (0.0, 1.5707963267948966))
 
-julia> solve(Z, Secant(), 2) # uses p=2
+julia> solve(Z, Secant(); p=2) # uses p=2
 1.0298665293222589
 
-julia> solve(Z, Bisection(), 3, xatol=1/16) # p=3; uses keywords for tolerances
+julia> solve(Z, Bisection(); p=3, xatol=1/16) # p=3; uses keywords for tolerances
 1.1959535058744393
 ```
 
