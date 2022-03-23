@@ -300,7 +300,9 @@ end
     end
 
     ## test broadcasting semantics with ZeroProblem
-    Z = ZeroProblem((x, p) -> cos(x) - p, pi / 4)
+    ## This assume parameters can be passed in a positional manner, a
+    ## style which is discouraged, as it is confusing
+    Z = ZeroProblem((x, p) -> cos(x) - x/p, pi / 4)
     @test all(solve.(Z, (1, 2)) .≈ (solve(Z, 1), solve(Z, 2)))
 end
 

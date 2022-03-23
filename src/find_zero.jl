@@ -246,6 +246,7 @@ Base.show(io::IO, Z::ZeroProblemIterator) =
 ## init(Z,M,p)
 ## init(M,F,state, [options], [logger])
 ## want p to be a keyword, not positional. Leaving for now.
+## but the positional use is not documented (though annoyingly is being tested)
 function init(
     𝑭𝑿::ZeroProblem,
     M::AbstractUnivariateZeroMethod,
@@ -264,8 +265,8 @@ function init(
 end
 
 function init(𝑭𝑿::ZeroProblem, p′=nothing; kwargs...)
-    M =  length(𝑭𝑿.x₀) == 1 ? (Secant(), AlefeldPotraShi()) : (AlefeldPotraShi(),)
-    init(𝑭𝑿, M...; p = p′, kwargs...)
+    M =  length(𝑭𝑿.x₀) == 1 ? Order0() : AlefeldPotraShi()
+    init(𝑭𝑿, M; p = p′, kwargs...)
 end
 
 function init(
