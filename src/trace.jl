@@ -127,7 +127,7 @@ Tracks(verbose, tracks, state::AbstractUnivariateZeroState{T,S}) where {T,S} =
     (verbose && isa(tracks, NullTracks)) ? Tracks(T,S) : tracks
 Tracks() = Tracks(Float64, Float64) # give default
 
-function log_step(l::Tracks, M::AbstractNonBracketing, state; init=false)
+function log_step(l::Tracks, M::AbstractNonBracketingMethod, state; init=false)
     init && push!(l.xfₛ, (state.xn0, state.fxn0))
     push!(l.xfₛ, (state.xn1, state.fxn1))
     !init  && log_iteration(l, 1)

@@ -308,7 +308,7 @@ the next step.
 
 
 """
-struct LithBoonkkampIJzermanBracket <: AbstractBracketing end
+struct LithBoonkkampIJzermanBracket <: AbstractBracketingMethod end
 struct LithBoonkkampIJzermanBracketState{T,S,R} <: AbstractUnivariateZeroState{T,S}
     xn1::T
     xn0::T

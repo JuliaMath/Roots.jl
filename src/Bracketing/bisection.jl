@@ -21,13 +21,13 @@ min(abs(a), abs(b)) * rtol)`. The latter is used only if the default
 tolerances are adjusted.
 
 """
-struct Bisection <: AbstractBisection end
+struct Bisection <: AbstractBisectionMethod end
 
-initial_fncalls(::AbstractBisection) = 3 # middle
+initial_fncalls(::AbstractBisectionMethod) = 3 # middle
 
 # Bisection using __middle should have a,b on same side of 0.0 (though
 # possibly, may be -0.0, 1.0 so not guaranteed to be of same sign)
-function init_state(::AbstractBisection, F, x₀, x₁, fx₀, fx₁; m=_middle(x₀, x₁), fm=F(m))
+function init_state(::AbstractBisectionMethod, F, x₀, x₁, fx₀, fx₁; m=_middle(x₀, x₁), fm=F(m))
 
     if x₀ > x₁
         x₀, x₁, fx₀, fx₁ = x₁, x₀, fx₁, fx₀
@@ -53,7 +53,7 @@ const FloatNN = Union{Float64,Float32,Float16}
 
 # for Bisection, the defaults are zero tolerances and strict=true
 """
-    default_tolerances(M::AbstractBisection, [T], [S])
+    default_tolerances(M::AbstractBisectionMethod, [T], [S])
 
 For `Bisection` when the `x` values are of type `Float64`, `Float32`,
 or `Float16`, the default tolerances are zero and there is no limit on
@@ -65,7 +65,7 @@ point values.
 For other types, default non-zero tolerances for `xatol` and `xrtol` are given.
 
 """
-function default_tolerances(::AbstractBisection, ::Type{T}, ::Type{S′}) where {T<:FloatNN,S′}
+function default_tolerances(::AbstractBisectionMethod, ::Type{T}, ::Type{S′}) where {T<:FloatNN,S′}
     S = real(float(S′))
     xatol = 0 * oneunit(S)
     xrtol = 0 * one(T)
@@ -78,7 +78,7 @@ function default_tolerances(::AbstractBisection, ::Type{T}, ::Type{S′}) where 
 end
 
 # not float uses some non-zero tolerances for `x`
-function default_tolerances(::AbstractBisection, ::Type{T′}, ::Type{S′}) where {T′,S′}
+function default_tolerances(::AbstractBisectionMethod, ::Type{T′}, ::Type{S′}) where {T′,S′}
     T,S = real(float(T′)), real(float(S′))
     xatol = eps(T)^3 * oneunit(T)
     xrtol = eps(T) * one(T) # unitless
@@ -157,7 +157,7 @@ end
 
 ## --------------------------------------------------
 
-function update_state(M::AbstractBisection, F, o, options, l=NullTracks())
+function update_state(M::AbstractBisectionMethod, F, o, options, l=NullTracks())
     a, b = o.xn0, o.xn1
     fa, fb = o.fxn0, o.fxn1
 

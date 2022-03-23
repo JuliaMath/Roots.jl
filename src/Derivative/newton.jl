@@ -1,3 +1,13 @@
+# 1 step taken in set up
+function log_step(l::Tracks, M::AbstractDerivativeMethod, state; init=false)
+    init && push!(l.xfₛ, (state.xn0, state.fxn0))
+    push!(l.xfₛ, (state.xn1, state.fxn1))
+    init && log_iteration(l, 1)
+    !init  && log_iteration(l, 1)
+    nothing
+end
+
+
 """
 
     Roots.Newton()
@@ -32,14 +42,6 @@ struct Newton <: AbstractNewtonLikeMethod end
 
 fn_argout(::AbstractNewtonLikeMethod) = 2
 
-function log_step(l::Tracks, M::AbstractNewtonLikeMethod, state; init=false)
-    init && push!(l.xfₛ, (state.xn0, state.fxn0))
-    push!(l.xfₛ, (state.xn1, state.fxn1))
-    init && log_iteration(l, 1)
-    !init  && log_iteration(l, 1)
-    nothing
-end
-
 
 # we store x0,x1,fx0,fx1 **and** Δ = fx1/f'(x1)
 struct NewtonState{T,S} <: AbstractUnivariateZeroState{T,S}
@@ -66,7 +68,7 @@ end
 
 initial_fncalls(M::Newton) = 2
 
-function update_state(method::Newton, F, o::NewtonState{T,S}, options, l=NullTracks()) where {T,S}
+function update_state(M::Newton, F, o::NewtonState{T,S}, options, l=NullTracks()) where {T,S}
 
     xn0, xn1 = o.xn0, o.xn1
     fxn0, fxn1 = o.fxn0, o.fxn1

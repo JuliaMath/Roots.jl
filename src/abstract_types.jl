@@ -1,14 +1,15 @@
 ### Method types
 abstract type AbstractUnivariateZeroMethod end
 
-abstract type AbstractBracketing <: AbstractUnivariateZeroMethod end
-abstract type AbstractBisection <: AbstractBracketing end
+abstract type AbstractBracketingMethod <: AbstractUnivariateZeroMethod end
+abstract type AbstractBisectionMethod <: AbstractBracketingMethod end
 
-abstract type AbstractNonBracketing <: AbstractUnivariateZeroMethod end
-abstract type AbstractSecant <: AbstractNonBracketing end
+abstract type AbstractNonBracketingMethod <: AbstractUnivariateZeroMethod end
+abstract type AbstractSecantMethod <: AbstractNonBracketingMethod end
 
-abstract type AbstractNewtonLikeMethod <: AbstractNonBracketing  end
-abstract type AbstractHalleyLikeMethod <: AbstractNewtonLikeMethod  end
+abstract type AbstractDerivativeMethod <:AbstractNonBracketingMethod  end
+abstract type AbstractNewtonLikeMethod <: AbstractDerivativeMethod end
+abstract type AbstractHalleyLikeMethod <: AbstractDerivativeMethod  end
 abstract type AbstractΔMethod <: AbstractHalleyLikeMethod end
 
 

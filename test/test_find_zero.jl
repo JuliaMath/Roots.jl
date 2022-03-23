@@ -7,7 +7,7 @@ Base.adjoint(f) = x -> ForwardDiff.derivative(f, float(x));
 # for a user-defined method
 import Roots.Setfield
 import Roots.Setfield: @set!
-struct Order3_Test <: Roots.AbstractSecant end
+struct Order3_Test <: Roots.AbstractSecantMethod end
 
 ## Test the interface
 @testset "find_zero interface tests" begin
@@ -201,7 +201,7 @@ end
     fxs = f.(xs)
     M = Bisection()
     state = @inferred(Roots.init_state(M, f, xs..., fxs..., m=3.5, fm=f(3.5)))
-    @test @inferred(find_zero(M, f, state)) ≈ π
+    @test @inferred(solve!(init(M, f, state))) ≈ π
 
     #     ## hybrid
     g1 = x -> exp(x) - x^4
@@ -310,9 +310,7 @@ end
     Ms = [
         Order0(),
         Order1(),
-        Roots.Order1B(),
         Order2(),
-        Roots.Order2B(),
         Order5(),
         Order8(),
         Order16(),
@@ -335,7 +333,7 @@ end
         xn = find_zero(fn, x0, M)
         @test abs(fn(xn)) <= 1e-10
     end
-    for M in [Order2(), Order5(), Order8(), Order16()]
+    for M in [Roots.Order1B(), Order2(), Roots.Order2B(), Order5(), Order8(), Order16()]
         @test_throws Roots.ConvergenceFailed find_zero(fn, x0, M, strict=true)
     end
 
@@ -400,8 +398,7 @@ end
         state = Roots.init_state(M, F, x0)
         options = Roots.init_options(M, state)
         l = Roots.Tracks(state)
-        find_zero(M, F, state, options, l)
-
+        solve(ZeroProblem(lhs, x0), M; tracks=l)
         @test l.steps <= 45 # 15
     end
     test_94()

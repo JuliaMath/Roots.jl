@@ -19,17 +19,17 @@ The error, `eᵢ = xᵢ - α`, is expressed as `eᵢ₊₁ = K⋅eᵢ¹⁶` for 
 in equation (50) of the paper.
 
 """
-struct Order16 <: AbstractSecant end
-struct Thukral16 <: AbstractSecant end
+struct Order16 <: AbstractSecantMethod end
+struct Thukral16 <: AbstractSecantMethod end
 
 function update_state(
-    method::Order16,
+    M::Order16,
     fs,
     o::UnivariateZeroState{T,S},
     options,
     l=NullTracks(),
 ) where {T,S}
-    update_state_guarded(method, Secant(), Thukral16(), fs, o, options, l)
+    update_state_guarded(M, Secant(), Thukral16(), fs, o, options, l)
 end
 
 function update_state(

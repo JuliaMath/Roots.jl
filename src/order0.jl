@@ -21,7 +21,7 @@ so for reasonable starting points and functions, this algorithm should be
 superlinear, and relatively robust to non-reasonable starting points.
 
 """
-struct Order0 <: AbstractSecant end
+struct Order0 <: AbstractSecantMethod end
 
 # special case Order0 to be hybrid
 function init(
@@ -41,8 +41,8 @@ end
 ## the keyword p
 function init(
     𝑭𝑿::ZeroProblem,
-    M::AbstractUnivariateZeroMethod,
-    N::AbstractBracketing;
+    M::AbstractNonBracketingMethod,
+    N::AbstractBracketingMethod;
     p=nothing,
     verbose::Bool=false,
     tracks=NullTracks(),
@@ -63,7 +63,7 @@ end
 # * limit steps so as not too far or too near the previous one
 # * if not decreasing, use a quad step upto 4 times to bounce out of trap, if possible
 # First uses M, then N if bracket is identified
-function solve!(𝐙::ZeroProblemIterator{𝐌,𝐍}; verbose=false) where {𝐌,𝐍<:AbstractBracketing}
+function solve!(𝐙::ZeroProblemIterator{𝐌,𝐍}; verbose=false) where {𝐌,𝐍<:AbstractBracketingMethod}
     M, N, F, state, options, l = 𝐙.M, 𝐙.N, 𝐙.F, 𝐙.state, 𝐙.options, 𝐙.logger
 
     incfn(l, 2)
@@ -194,7 +194,7 @@ function find_zero(
     fs,
     x0,
     M::AbstractUnivariateZeroMethod,
-    N::AbstractBracketing;
+    N::AbstractBracketingMethod;
     verbose=false,
     kwargs...,
 )
@@ -204,7 +204,7 @@ end
 
 # Switch to bracketing method
 # deprecate soon, not used
-function run_bisection(N::AbstractBracketing, f, ab, state)
+function run_bisection(N::AbstractBracketingMethod, f, ab, state)
     steps, fnevals = state.steps, state.fnevals
     f = Callable_Function(N, f)
     init_state!(state, N, f; clear=true)

@@ -13,11 +13,11 @@ The error, `eᵢ = xᵢ - α`, satisfies
 `eᵢ₊₁ = K₁ ⋅ K₅ ⋅ M ⋅ eᵢ⁵ + O(eᵢ⁶)`
 
 """
-struct Order5 <: AbstractSecant end
-struct KumarSinghAkanksha <: AbstractSecant end
+struct Order5 <: AbstractSecantMethod end
+struct KumarSinghAkanksha <: AbstractSecantMethod end
 
-function update_state(method::Order5, fs, o::UnivariateZeroState, options, l=NullTracks())
-    update_state_guarded(method, Secant(), KumarSinghAkanksha(), fs, o, options, l)
+function update_state(M::Order5, fs, o::UnivariateZeroState, options, l=NullTracks())
+    update_state_guarded(M, Secant(), KumarSinghAkanksha(), fs, o, options, l)
 end
 
 function update_state(
@@ -70,10 +70,10 @@ function update_state(
     #    nothing
 end
 
-struct Order5Derivative <: AbstractSecant end
+struct Order5Derivative <: AbstractSecantMethod end
 fn_argout(::Order5Derivative) = 2
 function update_state(
-    method::Order5Derivative,
+    m::Order5Derivative,
     f,
     o::AbstractUnivariateZeroState{T,S},
     options,

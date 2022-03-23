@@ -1,4 +1,4 @@
-struct FalsePosition{R} <: AbstractSecant end
+struct FalsePosition{R} <: AbstractSecantMethod end
 
 """
 

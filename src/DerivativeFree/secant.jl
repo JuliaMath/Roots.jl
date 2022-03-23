@@ -15,7 +15,7 @@ The error, `eᵢ = xᵢ - α`, satisfies
 `eᵢ₊₂ = f[xᵢ₊₁,xᵢ,α] / f[xᵢ₊₁,xᵢ] * (xᵢ₊₁-α) * (xᵢ - α)`.
 
 """
-struct Secant <: AbstractSecant end
+struct Secant <: AbstractSecantMethod end
 const Order1 = Secant
 const Orderφ = Secant
 

@@ -22,7 +22,7 @@ by `@TheLateKronos`, who supplied the original version of the code
 below.
 
 """
-struct ITP{T,S} <: AbstractBracketing
+struct ITP{T,S} <: AbstractBracketingMethod
     κ₁::T
     κ₂::S
     n₀::Int

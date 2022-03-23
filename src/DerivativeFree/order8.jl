@@ -14,18 +14,18 @@ The error, `eᵢ = xᵢ - α`, is expressed as `eᵢ₊₁ = K ⋅ eᵢ⁸` in
 (2.25) of the paper for an explicit `K`.
 
 """
-struct Order8 <: AbstractSecant end
-struct Thukral8 <: AbstractSecant end
+struct Order8 <: AbstractSecantMethod end
+struct Thukral8 <: AbstractSecantMethod end
 
 ## cf also: https://doi.org/10.1515/tmj-2017-0049
 function update_state(
-    method::Order8,
+    M::Order8,
     fs,
     o::UnivariateZeroState{T,S},
     options,
     l=NullTracks(),
 ) where {T,S}
-    update_state_guarded(method, Secant(), Thukral8(), fs, o, options, l)
+    update_state_guarded(M, Secant(), Thukral8(), fs, o, options, l)
 end
 
 function update_state(
