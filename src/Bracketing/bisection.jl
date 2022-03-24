@@ -1,6 +1,7 @@
 """
 
     Bisection()
+    BisectionExact()
 
 If possible, will use the bisection method over `Float64` values. The
 bisection method starts with a bracketing interval `[a,b]` and splits
@@ -20,8 +21,12 @@ abs(b)) * xrtol)` or the function value is less than `max(tol,
 min(abs(a), abs(b)) * rtol)`. The latter is used only if the default
 tolerances are adjusted.
 
+The `BisectionExact` method bypasses these checks,
+and is consequently a bit more performant than `Bisection`.
+
 """
 struct Bisection <: AbstractBisectionMethod end
+struct BisectionExact <: AbstractBisectionMethod end
 
 initial_fncalls(::AbstractBisectionMethod) = 3 # middle
 
@@ -152,7 +157,14 @@ function assess_convergence(::Bisection, state::AbstractUnivariateZeroState, opt
     return :not_converged, false
 end
 
-
+# for exact bisection, convergence is up to the last bit, so fewer checks are needed
+function assess_convergence(::BisectionExact, state::AbstractUnivariateZeroState{T,S}, options) where {T<:FloatNN,S}
+    a,b = state.xn0, state.xn1
+    fa, fb = state.fxn0, state.fxn1
+    (iszero(fa) || isnan(fa) || iszero(fb) || isnan(fb)) && return (:f_converged, true)
+    nextfloat(a) == b && return  (:x_converged, true)
+    return (:not_converged, false)
+end
 ## --------------------------------------------------
 
 function update_state(M::AbstractBisectionMethod, F, o, options, l=NullTracks())
