@@ -66,7 +66,7 @@ end
 ## Alefeld, Potra, Shi have two algorithms belosw, one is most efficient, but
 ## slightly slower than other.
 
-abstract type AbstractAlefeldPotraShi <: AbstractBracketing end
+abstract type AbstractAlefeldPotraShi <: AbstractBracketingMethod end
 initial_fncalls(::AbstractAlefeldPotraShi) = 3 # worst case assuming fx₀, fx₁,fc must be computed
 
 ## ----
@@ -356,4 +356,3 @@ function update_state(M::A42, F, state::A42State{T,S}, options, l=NullTracks()) 
 
     return state, false
 end
-

@@ -308,7 +308,7 @@ the next step.
 
 
 """
-struct LithBoonkkampIJzermanBracket <: AbstractBracketing end
+struct LithBoonkkampIJzermanBracket <: AbstractBracketingMethod end
 struct LithBoonkkampIJzermanBracketState{T,S,R} <: AbstractUnivariateZeroState{T,S}
     xn1::T
     xn0::T
@@ -457,9 +457,8 @@ function default_tolerances(
     atol = zero(float(one(S))) * oneunit(S)
     rtol = 2eps(float(one(S))) * one(S)
     maxevals = typemax(Int)
-    maxfnevals = typemax(Int)
     strict = true
-    (xatol, xrtol, atol, rtol, maxevals, maxfnevals, strict)
+    (xatol, xrtol, atol, rtol, maxevals, strict)
 end
 
 ### ------

@@ -14,8 +14,8 @@ The *asymptotic* error, `eᵢ = xᵢ - α`, is given by
 `eᵢ₊₂ = 1/2⋅G''/G'⋅ eᵢ⋅eᵢ₊₁ + (1/6⋅G'''/G' - (1/2⋅G''/G'))^2⋅eᵢ⋅eᵢ₊₁⋅(eᵢ+eᵢ₊₁)`.
 
 """
-struct King <: AbstractSecant end
-struct Order1B <: AbstractSecant end
+struct King <: AbstractSecantMethod end
+struct Order1B <: AbstractSecantMethod end
 
 struct KingState{T,S} <: AbstractUnivariateZeroState{T,S}
     xn1::T

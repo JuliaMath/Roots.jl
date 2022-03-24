@@ -167,9 +167,9 @@ function identify_starting_point(a, b, sfxs)
     p1
 end
 
-## ----
-
+## not used
 function unicode_subscript(io, j)
+    error("")
     a = ("⁻", "", "", "₀", "₁", "₂", "₃", "₄", "₅", "₆", "₇", "₈", "₉")
     for i in string(j)
         print(io, a[Int(i) - 44])

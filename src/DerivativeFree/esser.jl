@@ -27,21 +27,21 @@ find_zero(g, x0, Order2(), verbose=true)        #  22 / 45
 find_zero(g, x0, Roots.Order2B(), verbose=true) #  4 / 10
 ```
 """
-struct Esser <: AbstractSecant end
-struct Order2B <: AbstractSecant end
+struct Esser <: AbstractSecantMethod end
+struct Order2B <: AbstractSecantMethod end
 
 function update_state(
-    method::Order2B,
+    M::Order2B,
     fs,
     o::AbstractUnivariateZeroState,
     options,
     l=NullTracks(),
 )
-    update_state_guarded(method, Secant(), Esser(), fs, o, options, l)
+    update_state_guarded(M, Secant(), Esser(), fs, o, options, l)
 end
 
 function update_state(
-    method::Esser,
+    ::Esser,
     F,
     o::AbstractUnivariateZeroState{T,S},
     options,

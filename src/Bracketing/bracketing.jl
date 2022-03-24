@@ -1,24 +1,27 @@
 ### Bracketing method defaults
 
-function init_state(M::AbstractBracketing, F::Callable_Function, x)
+function init_state(M::AbstractBracketingMethod, F::Callable_Function, x)
     x₀, x₁ = adjust_bracket(x)
     fx₀, fx₁ = F(x₀), F(x₁)
     state = init_state(M, F, x₀, x₁, fx₀, fx₁)
 end
 
-function init_state(M::AbstractBracketing, F, x₀, x₁, fx₀, fx₁)
+function init_state(M::AbstractBracketingMethod, F, x₀, x₁, fx₀, fx₁)
     (iszero(fx₀) || iszero(fx₁)) && return UnivariateZeroState(x₁, x₀, fx₁, fx₀)
     assert_bracket(fx₀, fx₁)
     a, b, fa, fb = (x₀ < x₁) ? (x₀, x₁, fx₀, fx₁) : (x₁, x₀, fx₁, fx₀)
     UnivariateZeroState(b, a, fb, fa)
 end
 
-fn_argout(::AbstractBracketing) = 1
-initial_fncalls(::AbstractBracketing) = 2
+Base.last(state::AbstractUnivariateZeroState, M::AbstractBracketingMethod) =
+    state.xn0 < state.xn1 ? (state.xn0, state.xn1) : (state.xn1, state.xn0)
+
+fn_argout(::AbstractBracketingMethod) = 1
+initial_fncalls(::AbstractBracketingMethod) = 2
 
 ## tracks for bisection, different from secant, we show bracketing interval
 ## No init here; for Bisection() [a₀, b₀] is just lost.
-function log_step(l::Tracks, M::AbstractBracketing, state; init::Bool=false)
+function log_step(l::Tracks, M::AbstractBracketingMethod, state; init::Bool=false)
     a, b = state.xn0, state.xn1
     push!(l.abₛ, a < b ? (a,b) : (b,a))
     !init && log_iteration(l, 1)
@@ -26,21 +29,20 @@ function log_step(l::Tracks, M::AbstractBracketing, state; init::Bool=false)
 end
 
 # use xatol, xrtol only, but give some breathing room over the strict ones and cap number of steps
-function default_tolerances(::AbstractBracketing, ::Type{T}, ::Type{S}) where {T,S}
+function default_tolerances(::AbstractBracketingMethod, ::Type{T}, ::Type{S}) where {T,S}
     xatol = eps(real(T))^3 * oneunit(real(T))
     xrtol = eps(real(T))  # unitless
     atol = 0 * oneunit(real(S))
     rtol = 0 * one(real(S))
     maxevals = 60
-    maxfnevals = typemax(Int)
     strict = true
-    (xatol, xrtol, atol, rtol, maxevals, maxfnevals, strict)
+    (xatol, xrtol, atol, rtol, maxevals, strict)
 end
 
 
 
 function assess_convergence(
-    method::AbstractBracketing,
+    M::AbstractBracketingMethod,
     state::AbstractUnivariateZeroState,
     options,
 )
@@ -73,7 +75,7 @@ end
 
 # assumes stopped = :x_converged
 function decide_convergence(
-    ::AbstractBracketing,
+    ::AbstractBracketingMethod,
     F,
     state::AbstractUnivariateZeroState,
     options,

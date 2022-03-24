@@ -26,12 +26,12 @@ initial_fncalls(M::AbstractHalleyLikeMethod) = 2 * 3
 fn_argout(::AbstractHalleyLikeMethod) = 3
 
 
-function update_state(method::AbstractΔMethod, F, o::HalleyState{T,S}, options, l=NullTracks()) where {T,S}
+function update_state(M::AbstractΔMethod, F, o::HalleyState{T,S}, options, l=NullTracks()) where {T,S}
     xn = o.xn1
     fxn = o.fxn1
     r1::T, r2::T = o.Δ, o.ΔΔ
 
-    Δ::T = calculateΔ(method, r1, r2)
+    Δ::T = calculateΔ(M, r1, r2)
     if isissue(Δ)
         log_message(l, "Issue with computing `Δ`")
         return (o, true)
@@ -180,8 +180,8 @@ const Schroeder = Schroder # either spelling
 const Schröder = Schroder
 
 ## r1, r2 are o.Δ, o.ΔΔ
-calculateΔ(method::Halley, r1, r2) = 2r2 / (2r2 - r1) * r1
-calculateΔ(method::QuadraticInverse, r1, r2) = (1 + r1 / (2r2)) * r1
-calculateΔ(method::ChebyshevLike, r1, r2) = (1 + r1 / (2r2) * (1 + r1 / r2)) * r1
-calculateΔ(method::SuperHalley, r1, r2) = (1 + r1 / (2r2 - 2r1)) * r1
-calculateΔ(method::Schroder, r1, r2) = r2 / (r2 - r1) * r1
+calculateΔ(::Halley, r1, r2) = 2r2 / (2r2 - r1) * r1
+calculateΔ(::QuadraticInverse, r1, r2) = (1 + r1 / (2r2)) * r1
+calculateΔ(::ChebyshevLike, r1, r2) = (1 + r1 / (2r2) * (1 + r1 / r2)) * r1
+calculateΔ(::SuperHalley, r1, r2) = (1 + r1 / (2r2 - 2r1)) * r1
+calculateΔ(::Schroder, r1, r2) = r2 / (r2 - r1) * r1

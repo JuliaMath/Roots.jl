@@ -16,21 +16,21 @@ step when `f(x)` is large.
 The error, `eᵢ - α`, satisfies
 `eᵢ₊₁ = f[xᵢ, xᵢ+fᵢ, α] / f[xᵢ,xᵢ+fᵢ] ⋅ (1 - f[xᵢ,α] ⋅ eᵢ²`
 """
-struct Steffensen <: AbstractSecant end
-struct Order2 <: AbstractSecant end
+struct Steffensen <: AbstractSecantMethod end
+struct Order2 <: AbstractSecantMethod end
 
 function update_state(
-    method::Order2,
+    M::Order2,
     fs,
     o::UnivariateZeroState{T,S},
     options,
     l=NullTracks(),
 ) where {T,S}
-    update_state_guarded(method, Secant(), Steffensen(), fs, o, options, l)
+    update_state_guarded(M, Secant(), Steffensen(), fs, o, options, l)
 end
 
 function update_state(
-    method::Steffensen,
+    ::Steffensen,
     F,
     o::AbstractUnivariateZeroState{T,S},
     options,

@@ -7,7 +7,7 @@ Base.adjoint(f) = x -> ForwardDiff.derivative(f, float(x));
 # for a user-defined method
 import Roots.Setfield
 import Roots.Setfield: @set!
-struct Order3_Test <: Roots.AbstractSecant end
+struct Order3_Test <: Roots.AbstractSecantMethod end
 
 ## Test the interface
 @testset "find_zero interface tests" begin
@@ -44,15 +44,13 @@ struct Order3_Test <: Roots.AbstractSecant end
     @test @inferred(find_zero(sin, [3, 4])) ≈ π   # Bisection()
 
     ## test tolerance arguments
-    ## xatol, xrtol, atol, rtol, maxevals, maxfneval, strict
+    ## xatol, xrtol, atol, rtol, maxevals, strict
     fn, xstar = x -> sin(x) - x + 1, 1.9345632107520243
     x0, M = 20.0, Order2()
     @test find_zero(fn, x0, M) ≈ xstar   # needs 16 iterations, 33 fn evaluations, difference is exact
 
     # test of maxevals
     @test_throws Roots.ConvergenceFailed find_zero(fn, x0, M, maxevals=2)
-    # test of maxfneval REMOVED
-    # @test_throws Roots.ConvergenceFailed find_zero(fn, x0, M, maxfnevals=2)
 
     # tolerance on f, atol, rtol: f(x) ~ 0
     M = Order2()
@@ -201,7 +199,7 @@ end
     fxs = f.(xs)
     M = Bisection()
     state = @inferred(Roots.init_state(M, f, xs..., fxs..., m=3.5, fm=f(3.5)))
-    @test @inferred(find_zero(M, f, state)) ≈ π
+    @test @inferred(solve!(init(M, f, state))) ≈ π
 
     #     ## hybrid
     g1 = x -> exp(x) - x^4
@@ -300,7 +298,9 @@ end
     end
 
     ## test broadcasting semantics with ZeroProblem
-    Z = ZeroProblem((x, p) -> cos(x) - p, pi / 4)
+    ## This assume parameters can be passed in a positional manner, a
+    ## style which is discouraged, as it is confusing
+    Z = ZeroProblem((x, p) -> cos(x) - x/p, pi / 4)
     @test all(solve.(Z, (1, 2)) .≈ (solve(Z, 1), solve(Z, 2)))
 end
 
@@ -310,9 +310,7 @@ end
     Ms = [
         Order0(),
         Order1(),
-        Roots.Order1B(),
         Order2(),
-        Roots.Order2B(),
         Order5(),
         Order8(),
         Order16(),
@@ -335,7 +333,7 @@ end
         xn = find_zero(fn, x0, M)
         @test abs(fn(xn)) <= 1e-10
     end
-    for M in [Order2(), Order5(), Order8(), Order16()]
+    for M in [Roots.Order1B(), Order2(), Roots.Order2B(), Order5(), Order8(), Order16()]
         @test_throws Roots.ConvergenceFailed find_zero(fn, x0, M, strict=true)
     end
 
@@ -400,8 +398,7 @@ end
         state = Roots.init_state(M, F, x0)
         options = Roots.init_options(M, state)
         l = Roots.Tracks(state)
-        find_zero(M, F, state, options, l)
-
+        solve(ZeroProblem(lhs, x0), M; tracks=l)
         @test l.steps <= 45 # 15
     end
     test_94()

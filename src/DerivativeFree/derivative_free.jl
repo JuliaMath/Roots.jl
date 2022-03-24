@@ -1,18 +1,18 @@
 ## Derivative free methods inherit from abstract secant
 
 # init_state(M,F,x) --> call init_state(M,F,x₀,x₁,fx₀, fx₁)
-function init_state(M::AbstractSecant, F::Callable_Function, x)
+function init_state(M::AbstractSecantMethod, F::Callable_Function, x)
     x₀, x₁ = x₀x₁(x)
     fx₀, fx₁ = first(F(x₀)), first(F(x₁))
     state = init_state(M, F, x₀, x₁, fx₀, fx₁)
 end
 
 # initialize from xs, fxs
-function init_state(::AbstractSecant, F, x₀, x₁, fx₀, fx₁)
+function init_state(::AbstractSecantMethod, F, x₀, x₁, fx₀, fx₁)
     UnivariateZeroState(x₁, x₀, fx₁, fx₀)
 end
 
-initial_fncalls(::AbstractSecant) = 2
+initial_fncalls(::AbstractSecantMethod) = 2
 
 
 
@@ -48,7 +48,7 @@ initial_fncalls(::AbstractSecant) = 2
 ## seems to work reasonably well over several different test cases.
 
 @inline function do_guarded_step(
-    M::AbstractSecant,
+    M::AbstractSecantMethod,
     o::AbstractUnivariateZeroState{T,S},
 ) where {T,S}
     x, fx = o.xn1, o.fxn1
@@ -57,7 +57,7 @@ end
 
 # check if we should guard against step for method M; call N if yes, P if not
 function update_state_guarded(
-    M::AbstractSecant,
+    M::AbstractSecantMethod,
     N::AbstractUnivariateZeroMethod,
     P::AbstractUnivariateZeroMethod,
     fs,
