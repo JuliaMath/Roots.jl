@@ -41,9 +41,8 @@ function default_tolerances(::FalsePosition{12}, ::Type{T}, ::Type{S}) where {T,
     atol = 4 * eps(real(float(S))) * oneunit(real(S))
     rtol = 4 * eps(real(float(S))) * one(real(S))
     maxevals = 250
-    maxfnevals = typemax(Int)
     strict = false
-    (xatol, xrtol, atol, rtol, maxevals, maxfnevals, strict)
+    (xatol, xrtol, atol, rtol, maxevals, strict)
 end
 
 

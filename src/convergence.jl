@@ -5,7 +5,6 @@ struct UnivariateZeroOptions{Q,R,S,T}
     abstol::S
     reltol::T
     maxevals::Int
-    maxfnevals::Int
     strict::Bool
 end
 
@@ -26,14 +25,8 @@ function init_options(M, T=Float64, S=Float64; kwargs...)
         get(d, :atol, get(d, :abstol, defs[3])),
         get(d, :rtol, get(d, :reltol, defs[4])),
         get(d, :maxevals, get(d, :maxsteps, defs[5])),
-        get(d, :maxfnevals, defs[6]),
-        get(d, :strict, defs[7]),
+        get(d, :strict, defs[6]),
     )
-    if haskey(d, :maxfnevals)
-        @warn(
-            "maxfnevals is ignored. See the test for an example to implement this featrue"
-        )
-    end
     options
 end
 
@@ -62,9 +55,8 @@ function default_tolerances(
     atol = 4 * eps(real(float(S))) * oneunit(real(S))
     rtol = 4 * eps(real(float(S))) * one(real(S))
     maxevals = 40
-    maxfnevals = typemax(Int)
     strict = false
-    (xatol, xrtol, atol, rtol, maxevals, maxfnevals, strict)
+    (xatol, xrtol, atol, rtol, maxevals, strict)
 end
 
 ## --------------------------------------------------

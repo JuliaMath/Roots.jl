@@ -72,9 +72,8 @@ function default_tolerances(::AbstractBisectionMethod, ::Type{T}, ::Type{S′}) 
     atol = 0 * oneunit(S)
     rtol = 0 * one(S)
     maxevals = typemax(Int)
-    maxfnevals = typemax(Int)
     strict = true
-    (xatol, xrtol, atol, rtol, maxevals, maxfnevals, strict)
+    (xatol, xrtol, atol, rtol, maxevals, strict)
 end
 
 # not float uses some non-zero tolerances for `x`
@@ -85,9 +84,8 @@ function default_tolerances(::AbstractBisectionMethod, ::Type{T′}, ::Type{S′
     atol = 0 * oneunit(S)
     rtol = 0 * one(S)
     maxevals = typemax(Int)
-    maxfnevals = typemax(Int)
     strict = true
-    (xatol, xrtol, atol, rtol, maxevals, maxfnevals, strict)
+    (xatol, xrtol, atol, rtol, maxevals, strict)
 end
 
 

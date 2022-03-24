@@ -457,9 +457,8 @@ function default_tolerances(
     atol = zero(float(one(S))) * oneunit(S)
     rtol = 2eps(float(one(S))) * one(S)
     maxevals = typemax(Int)
-    maxfnevals = typemax(Int)
     strict = true
-    (xatol, xrtol, atol, rtol, maxevals, maxfnevals, strict)
+    (xatol, xrtol, atol, rtol, maxevals, strict)
 end
 
 ### ------

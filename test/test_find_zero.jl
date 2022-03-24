@@ -44,15 +44,13 @@ struct Order3_Test <: Roots.AbstractSecantMethod end
     @test @inferred(find_zero(sin, [3, 4])) ≈ π   # Bisection()
 
     ## test tolerance arguments
-    ## xatol, xrtol, atol, rtol, maxevals, maxfneval, strict
+    ## xatol, xrtol, atol, rtol, maxevals, strict
     fn, xstar = x -> sin(x) - x + 1, 1.9345632107520243
     x0, M = 20.0, Order2()
     @test find_zero(fn, x0, M) ≈ xstar   # needs 16 iterations, 33 fn evaluations, difference is exact
 
     # test of maxevals
     @test_throws Roots.ConvergenceFailed find_zero(fn, x0, M, maxevals=2)
-    # test of maxfneval REMOVED
-    # @test_throws Roots.ConvergenceFailed find_zero(fn, x0, M, maxfnevals=2)
 
     # tolerance on f, atol, rtol: f(x) ~ 0
     M = Order2()

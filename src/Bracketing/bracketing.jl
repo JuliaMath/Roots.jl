@@ -35,9 +35,8 @@ function default_tolerances(::AbstractBracketingMethod, ::Type{T}, ::Type{S}) wh
     atol = 0 * oneunit(real(S))
     rtol = 0 * one(real(S))
     maxevals = 60
-    maxfnevals = typemax(Int)
     strict = true
-    (xatol, xrtol, atol, rtol, maxevals, maxfnevals, strict)
+    (xatol, xrtol, atol, rtol, maxevals, strict)
 end
 
 
