@@ -365,7 +365,7 @@ The inital values can be specified as a pair of two values, as in
 is computed, possibly from `fb`.  The basic idea is to follow the
 secant method to convergence unless:
 
-* a bracket is found, in which case bisection is used;
+* a bracket is found, in which case `AlefeldPotraShi` is used;
 
 * the secant method is not converging, in which case a few steps of a
   quadratic method are used to see if that improves matters.
@@ -411,7 +411,7 @@ function dfree(f, xs)
         cnt += 1
 
         if sign(fa) * sign(fb) < 0
-            return bisection(f, a, b)
+            return solve(ZeroProblem(f, (a,b))) # faster than bisection(f, a, b)
         end
 
         # take a secant step
@@ -426,7 +426,7 @@ function dfree(f, xs)
 
         # change sign
         if sign(fgamma) * sign(fb) < 0
-            return bisection(f, gamma, b)
+            return solve(ZeroProblem(f, (gamma, b))) # faster than bisection(f, gamma, b)
         end
 
         # decreasing

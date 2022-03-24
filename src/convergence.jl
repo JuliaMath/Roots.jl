@@ -37,9 +37,6 @@ function init_options(M, T=Float64, S=Float64; kwargs...)
     options
 end
 
-# # reset options to default values
-@deprecate init_options!(options, M) init_options(M)
-
 ## --------------------------------------------------
 
 """
