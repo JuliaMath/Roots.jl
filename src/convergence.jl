@@ -249,7 +249,7 @@ function decide_convergence(
     options,
     val,
 )
-    @show val
+
     a, b = state.xn0, state.xn1
     fa, fb = state.fxn0, state.fxn1
 
