@@ -39,8 +39,8 @@ end
 function update_state(
     ::Brent,
     f,
-    state::BrentState,
-    options::UnivariateZeroOptions{T,S},
+    state::BrentState{T,S},
+    options,
     l=NullTracks(),
 ) where {T,S}
     mflag = state.mflag

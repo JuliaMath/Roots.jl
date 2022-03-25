@@ -65,7 +65,7 @@ function update_state(
     M::AbstractThukralBMethod,
     F,
     o::AbstractUnivariateZeroState{T,S},
-    options::UnivariateZeroOptions,
+    options,
     l=NullTracks(),
 ) where {T,S}
     x₀ = o.xn1
