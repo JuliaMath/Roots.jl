@@ -88,26 +88,16 @@ end
 ## --------------------------------------------------
 
 # ## Assess convergence
-# is f hitting NaN or Inf
-function is_nan_or_inf_f(::AbstractBracketingMethod, state::AbstractUnivariateZeroState)
-    isnan(state.fxn1) || isnan(state.fxn0) || isinf(state.fxn1) || isinf(state.fxn0)
-end
-
-function is_nan_or_inf_f(::AbstractNonBracketingMethod, state::AbstractUnivariateZeroState)
-    isnan(state.fxn1) || isinf(state.fxn1)
-end
-
-## --------------------------------------------------
 
 ## test f ≈ 0
 function iszero_f(::AbstractNonBracketingMethod, state::AbstractUnivariateZeroState, options::O) where {O <: Union{ExactOptions, FExactOptions}}
     fb = state.fxn1
-    isnan(fb) || iszero(fb)
+    iszero(fb)
 end
 
 function iszero_f(::AbstractBracketingMethod, state::AbstractUnivariateZeroState, options::O) where {O <: Union{ExactOptions, FExactOptions}}
     fa, fb = state.fxn0, state.fxn1
-    isnan(fb) || isnan(fa) || iszero(fa) || iszero(fb)
+    iszero(fa) || iszero(fb)
 end
 
 function iszero_f(::AbstractUnivariateZeroMethod, state::AbstractUnivariateZeroState, options::O) where {O <: AbstractUnivariateZeroOptions}
@@ -128,6 +118,7 @@ end
 
 ## --------------------------------------------------
 
+# test xₙ₊₁ - xₙ ≈ 0
 function iszero_Δx(::AbstractUnivariateZeroMethod, state::AbstractUnivariateZeroState, options::O) where {O <: Union{ExactOptions, XExactOptions}}
     a, b = state.xn0, state.xn1
     if b < a
@@ -151,6 +142,12 @@ function iszero_Δx(::AbstractNonBracketingMethod, state::AbstractUnivariateZero
     isapprox(a, b, atol=δₐ, rtol=δᵣ)
 end
 
+isnan_f(M::AbstractBracketingMethod, state) = isnan(state.fxn1) || isnan(state.fxn0)
+isnan_f(M::AbstractNonBracketingMethod, state) = isnan(state.fxn1)
+
+isinf_f(M::AbstractBracketingMethod, state) = isinf(state.fxn1) || isinf(state.fxn0)
+isinf_f(M::AbstractNonBracketingMethod, state) = isinf(state.fxn1)
+
 ## --------------------------------------------------
 
 
@@ -161,15 +158,15 @@ Assess if algorithm has converged.
 
 Return a convergence flag and a Boolean indicating if algorithm has terminated (converged or not converged)
 
-If algrithm hasn't converged returns `(:not_converged, false)`.
+If algrithm hasn't converged this returns `(:not_converged, false)`.
 
 If algorithm has stopped or converged, return flag and `true`. Flags are:
 
-* `:x_converged` if `abs(xn1 - xn0) < max(xatol, max(abs(xn1), abs(xn0)) * xrtol)`
+* `:x_converged` if `xn1 ≈ xn`, typically with non-zero tolerances specified.
 
 * `:f_converged` if  `|f(xn1)| < max(atol, |xn1|*rtol)`
 
-* `:nan`, `:inf` if xn1 or fxn1 is `NaN` or an infinity
+* `:nan` or `:inf` if fxn1 is `NaN` or an infinity.
 
 * `:not_converged` if algorithm should continue
 
@@ -181,23 +178,20 @@ In `decide_convergence`, stopped values (and `:x_converged` when `strict=false`)
 """
 function assess_convergence(M::Any, state::AbstractUnivariateZeroState, options)
     # return convergence_flag, boolean
-    xn0, xn1 = state.xn0, state.xn1
-    fxn1 = state.fxn1
-    is_nan_or_inf_f(M, state) && return (:f_converged, true)
-    if iszero_f(M, state, options)
-        iszero(state.fxn1) && return (:exact_zero, true)
-        return (:f_converged, true)
-    end
+    isnan_f(M, state) && return (:nan, true)
+    isinf_f(M, state) && return (:inf, true)
+    iszero_f(M, state, options) && return (:f_converged, true)
     iszero_Δx(M, state, options) && return (:x_converged, true)
     return (:not_converged, false)
 end
 
 
-# speeds up exact bisection
+# speeds up exact bisection by about 10% over the above
 function assess_convergence(M::Any, state::AbstractUnivariateZeroState, options::ExactOptions)
-    iszero_Δx(M, state, options) && return (:x_converged, true)
-    fa, fb = state.fxn0, state.fxn1
-    (iszero(fa) || iszero(fb) || isnan(fa) || isnan(fb)) && return (:f_converged, true)
+    (isnan(state.fxn1) || isnan(state.fxn0)) && return (:nan, true)
+    (iszero(state.fxn1) || iszero(state.fxn0)) && return (:exact_zero, true)
+    a, b = state.xn0, state.xn1
+    (a < b ? nextfloat(a) >= b : nextfloat(b) >=a ) && return (:x_converged, true)
     return (:not_converged, false)
 end
 
@@ -218,6 +212,10 @@ function decide_convergence(
     xn0, xn1 = state.xn0, state.xn1
     fxn1 = state.fxn1
     val ∈ (:f_converged, :exact_zero, :converged) && return xn1
+
+    ## XXX this could be problematic
+    val == :nan && return xn1
+    val == :inf_nan && return xn1
 
     ## stopping is a heuristic, x_converged can mask issues
     ## if strict=true or the tolerance for f is 0 this will return xn1 if x_converged
