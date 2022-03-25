@@ -273,7 +273,7 @@ function init(
     M::AbstractUnivariateZeroMethod,
     F,
     state::AbstractUnivariateZeroState,
-    options::UnivariateZeroOptions=init_options(M, state),
+    options::AbstractUnivariateZeroOptions=init_options(M, state),
     l::AbstractTracks=NullTracks(),
 )
     ZeroProblemIterator(M, Nothing, Callable_Function(M, F), state, options, l)

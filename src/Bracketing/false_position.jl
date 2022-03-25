@@ -52,7 +52,7 @@ function update_state(
     method::FalsePosition,
     fs,
     o::AbstractUnivariateZeroState{T,S},
-    options::UnivariateZeroOptions,
+    options,
     l=NullTracks(),
 ) where {T,S}
     a, b = o.xn0, o.xn1

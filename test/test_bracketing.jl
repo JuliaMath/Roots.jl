@@ -220,7 +220,7 @@ avg(x) = sum(x) / length(x)
 
     ## exact_bracket
     Ms = [Roots.Brent(), Roots.A42(), Roots.AlefeldPotraShi(), Roots.Chandrapatla(), Roots.ITP(), Roots.Ridders(),
-          Roots.Bisection(), Roots.BisectionExact()]
+          Roots.Bisection()]
     results = [run_tests((f, b) -> find_zero(f, b, M), name="$M") for M in Ms]
     maxfailures = maximum([length(result.failures) for result in results])
     maxresidual = maximum([result.maxresidual for result in results])
@@ -287,7 +287,7 @@ end
 end
 
 @testset "Bracketing edge cases" begin
-    Ms = (Roots.Bisection(), Roots.A42(), Roots.AlefeldPotraShi())
+    Ms = (Bisection(), Roots.A42(), Roots.AlefeldPotraShi())
 
     # Endpoints can be infinite
     for M in Ms
@@ -312,7 +312,7 @@ end
 
    α = nextfloat(nextfloat(0.0))
    f = x -> x - α
-   for M in (Bisection(), Roots.BisectionExact()) #Ms XXX NOT A42, AlefeldPotraShi with xatol !==0
+   for M in (Bisection(),) #Ms XXX NOT A42, AlefeldPotraShi with xatol !==0
        @test find_zero(f, (-1, 1), M) == α
    end
 

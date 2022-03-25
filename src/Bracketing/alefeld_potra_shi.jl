@@ -116,7 +116,7 @@ end
 
 # ## 3, maybe 4, functions calls per step
 function update_state(M::AlefeldPotraShi, f, state::AlefeldPotraShiState{T,S},
-                      options::UnivariateZeroOptions, l=NullTracks()) where {T,S}
+                      options, l=NullTracks()) where {T,S}
     a::T, b::T, d::T = state.xn0, state.xn1, state.d
 
     fa::S, fb::S, fd::S = state.fxn0, state.fxn1, state.fd

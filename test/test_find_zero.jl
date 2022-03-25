@@ -148,7 +148,7 @@ end
     M = Roots.A42()
     G1 = Roots.Callable_Function(M, g1)
     state = @inferred(Roots.init_state(M, G1, x0_))
-    options = @inferred(Roots.init_options(M, state))
+    options = Roots.init_options(M, state)
     for M in (Roots.A42(), Roots.Bisection(), Roots.FalsePosition())
         Gₘ = Roots.Callable_Function(M, G1)
         stateₘ = @inferred(Roots.init_state(M, state, Gₘ))
@@ -207,7 +207,7 @@ end
     M = Roots.Bisection()
     G1 = Roots.Callable_Function(M, g1)
     state = @inferred(Roots.init_state(M, G1, x0_))
-    options = @inferred(Roots.init_options(M, state, xatol=1 / 2))
+    options = Roots.init_options(M, state, xatol=1 / 2)
     ZPI = @inferred(init(M, G1, state, options))
     ϕ = iterate(ZPI)
     while ϕ !== nothing

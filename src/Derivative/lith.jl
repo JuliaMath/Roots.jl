@@ -352,7 +352,7 @@ function update_state(
     M::LithBoonkkampIJzermanBracket,
     F,
     state::LithBoonkkampIJzermanBracketState{T,S,R},
-    options::UnivariateZeroOptions,
+    options,
     l=NullTracks(),
 ) where {T,S,R}
     b::T, c::T, a::T = state.xn1, state.c, state.xn0
