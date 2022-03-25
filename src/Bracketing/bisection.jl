@@ -1,7 +1,7 @@
 """
 
     Bisection()
-    Roots.BisectionExact()
+    Roots.BisectionExact() (deprecated)
 
 If possible, will use the bisection method over `Float64` values. The
 bisection method starts with a bracketing interval `[a,b]` and splits
@@ -26,7 +26,12 @@ values, this will call the [`A42`](@ref) method. (To be deprecated.)
 
 """
 struct Bisection <: AbstractBisection end  # either solvable or A42
-struct BisectionExact <: AbstractBisection end
+struct BisectionExact <: AbstractBisection
+    function BisectionExact()
+        Base.depwarn("BisectionExact is deprecated; use Bisection", :BisectionExact)
+        new()
+    end
+end
 
 initial_fncalls(::Roots.AbstractBisection) = 3
 
