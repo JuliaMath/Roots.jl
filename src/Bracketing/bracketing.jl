@@ -41,55 +41,6 @@ end
 
 
 
-# function assess_convergence(
-#     M::AbstractBracketingMethod,
-#     state::AbstractUnivariateZeroState,
-#     options,
-# )
-#     a, b, fa, fb = state.xn0, state.xn1, state.fxn0, state.fxn1
-
-#     if isnan(a) || isnan(b)
-#         return (:nan, true)
-#     end
-
-#     if isnan(fa) || isnan(fb)
-#         return (:nan, true)
-#     end
-
-#     # check |b-a| ≤ 2 |u| ϵ + ϵₐ where u ∈ {a,b} is chosen the smaller of |f(a)|, |f(b)|
-#     u, fu = choose_smallest(a, b, fa, fb)
-#     δₓ = max(options.xabstol, 2 * abs(u) * options.xreltol) # needs non-zero xabstol to stop near 0
-#     abs(b-a) ≤ δₓ && return (:x_converged, true)
-
-#     # check f (typically not used!)
-#     δ = max(options.abstol, (u / oneunit(u)) * (options.reltol * oneunit(fu)))
-
-#     if abs(fu) <= δ
-#         iszero(fu) && return (:exact_zero, true)
-#         return (:f_converged, true)
-#     end
-
-#     return (:not_converged, false)
-# end
-
-
-# assumes stopped = :x_converged
-function decide_convergence(
-    ::AbstractBracketingMethod,
-    F,
-    state::AbstractUnivariateZeroState,
-    options,
-    val,
-)
-    a, b = state.xn0, state.xn1
-    fa, fb = state.fxn0, state.fxn1
-
-    isnan(fa) && return a
-    isnan(fb) && return b
-
-
-    abs(fa) < abs(fb) ? a : b
-end
 
 ## --------------------------------------------------
 

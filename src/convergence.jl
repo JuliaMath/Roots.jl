@@ -184,7 +184,10 @@ function assess_convergence(M::Any, state::AbstractUnivariateZeroState, options)
     xn0, xn1 = state.xn0, state.xn1
     fxn1 = state.fxn1
     is_nan_or_inf_f(M, state) && return (:f_converged, true)
-    iszero_f(M, state, options) && return (:f_converged, true)
+    if iszero_f(M, state, options)
+        iszero(state.fxn1) && return (:exact_zero, true)
+        return (:f_converged, true)
+    end
     iszero_Δx(M, state, options) && return (:x_converged, true)
     return (:not_converged, false)
 end
@@ -206,7 +209,7 @@ end
 When the algorithm terminates, this function decides the stopped value or returns NaN
 """
 function decide_convergence(
-    M::AbstractUnivariateZeroMethod,
+    M::AbstractNonBracketingMethod,
     F,
     state::AbstractUnivariateZeroState,
     options,
@@ -236,4 +239,23 @@ function decide_convergence(
     end
 
     NaN * xn1
+end
+
+# assumes stopped = :x_converged
+function decide_convergence(
+    ::AbstractBracketingMethod,
+    F,
+    state::AbstractUnivariateZeroState,
+    options,
+    val,
+)
+    @show val
+    a, b = state.xn0, state.xn1
+    fa, fb = state.fxn0, state.fxn1
+
+    isnan(fa) && return a
+    isnan(fb) && return b
+
+
+    abs(fa) < abs(fb) ? a : b
 end

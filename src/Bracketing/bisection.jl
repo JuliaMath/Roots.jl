@@ -128,31 +128,6 @@ function __middle(T, S, x, y)
     sign(x + y) * reinterpret(T, mid)
 end
 
-## the method converges,
-## as we bound between x0, nextfloat(x0) is not measured by eps(), but eps(x0)
-# function assess_convergence(::Bisection, state::AbstractUnivariateZeroState, options)
-
-#     a, b = state.xn0, state.xn1
-#     fa, fb = state.fxn0, state.fxn1
-
-#     m = min(abs(a), abs(b))
-#     δₓ = max(options.xabstol, m * options.xreltol)
-#     if δₓ/oneunit(δₓ) == 0
-#         (iszero(fa) || isnan(fa) || iszero(fb) || isnan(fb)) && return (:f_converged, true)
-#         nextfloat(a) == b && return (:x_converged, true)
-#     else
-#         abs(b-a) ≤ δₓ && return (:x_converged, true)
-#     end
-
-#     δ  = max(options.abstol, (m / oneunit(m)) * (options.reltol * oneunit(fa)))
-
-#     if δ/oneunit(δ) != 0
-#         min(abs(fa), abs(fb)) ≤ δ && return (:f_converged, true)
-#     end
-
-
-#     return :not_converged, false
-# end
 
 ## --------------------------------------------------
 
