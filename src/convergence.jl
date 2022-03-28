@@ -180,6 +180,7 @@ function assess_convergence(M::Any, state::AbstractUnivariateZeroState, options)
     # return convergence_flag, boolean
     isnan_f(M, state) && return (:nan, true)
     isinf_f(M, state) && return (:inf, true)
+    (iszero(state.fxn1) || iszero(state.fxn0)) && return (:exact_zero, true)
     iszero_f(M, state, options) && return (:f_converged, true)
     iszero_Δx(M, state, options) && return (:x_converged, true)
     return (:not_converged, false)
