@@ -37,6 +37,8 @@ include("convergence.jl")
 include("functions.jl")
 include("trace.jl")
 include("find_zero.jl")
+include("hybrid.jl")
+
 
 include("Bracketing/bracketing.jl")
 include("Bracketing/bisection.jl")
@@ -55,13 +57,13 @@ include("DerivativeFree/order8.jl")
 include("DerivativeFree/order16.jl")
 include("DerivativeFree/king.jl")
 include("DerivativeFree/esser.jl")
+include("DerivativeFree/order0.jl")
 
 include("Derivative/newton.jl")
 include("Derivative/halley_like.jl")
 include("Derivative/thukralb.jl")
 include("Derivative/lith.jl")
 
-include("order0.jl")
 include("find_zeros.jl")
 include("simple.jl")
 include("alternative_interfaces.jl")
