@@ -168,6 +168,8 @@ function show_trace(io::IO, method, N, tracks)
         tracks.convergence_flag == :f_converged &&
             tracks.message == "" &&
             println(io, "* stopped as |f(x_n)| ≤ max(δ, |x|⋅ϵ) using δ = atol, ϵ = rtol")
+        tracks.convergence_flag == :exact_zero &&
+            println(io, "* stopped as f(x_n) = 0")
         tracks.message != "" && println(io, "* Note: $(tracks.message)")
     else
         println(io, "* Convergence failed: $(tracks.message)")

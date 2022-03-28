@@ -89,31 +89,37 @@ end
 
 # ## Assess convergence
 
-## test f ≈ 0
-function iszero_f(::AbstractNonBracketingMethod, state::AbstractUnivariateZeroState, options::O) where {O <: Union{ExactOptions, FExactOptions}}
+## test f == 0 not f ≈ 0
+function is_exact_zero_f(::AbstractNonBracketingMethod, state::AbstractUnivariateZeroState, options)
     fb = state.fxn1
     iszero(fb)
 end
 
-function iszero_f(::AbstractBracketingMethod, state::AbstractUnivariateZeroState, options::O) where {O <: Union{ExactOptions, FExactOptions}}
+function is_exact_zero_f(::AbstractBracketingMethod, state::AbstractUnivariateZeroState, options)
     fa, fb = state.fxn0, state.fxn1
     iszero(fa) || iszero(fb)
 end
 
-function iszero_f(::AbstractUnivariateZeroMethod, state::AbstractUnivariateZeroState, options::O) where {O <: AbstractUnivariateZeroOptions}
+
+## test f ≈ 0 not f == 0
+function is_approx_zero_f(::AbstractUnivariateZeroMethod, state::AbstractUnivariateZeroState, options::O) where {O <: AbstractUnivariateZeroOptions}
     ab, afb = abs(state.xn1), abs(state.fxn1)
     ϵₐ, ϵᵣ = options.abstol, options.reltol
     Δ = max(_unitless(ϵₐ), _unitless(ab) * ϵᵣ)
     afb ≤ Δ * oneunit(afb)
 end
 
-function iszero_f(::AbstractUnivariateZeroMethod, state::AbstractUnivariateZeroState, options::O, relaxed::Any) where {O <: AbstractUnivariateZeroOptions}
+function is_approx_zero_f(::AbstractUnivariateZeroMethod, state::AbstractUnivariateZeroState, options::O, relaxed::Any) where {O <: AbstractUnivariateZeroOptions}
     ab, afb = abs(state.xn1), abs(state.fxn1)
     ϵₐ, ϵᵣ = options.abstol, options.reltol
     Δ = max(_unitless(ϵₐ), _unitless(ab) * ϵᵣ)
     Δ = cbrt(abs(_unitless(Δ))) * oneunit(afb) # relax test
     afb <= Δ
 
+end
+
+function is_approx_zero_f(::AbstractUnivariateZeroMethod, state::AbstractUnivariateZeroState, options::O) where {O <: Union{ExactOptions, FExactOptions}}
+    false
 end
 
 ## --------------------------------------------------
@@ -180,8 +186,29 @@ function assess_convergence(M::Any, state::AbstractUnivariateZeroState, options)
     # return convergence_flag, boolean
     isnan_f(M, state) && return (:nan, true)
     isinf_f(M, state) && return (:inf, true)
-    iszero_f(M, state, options) && return (:f_converged, true)
+    is_exact_zero_f(M, state, options) &&  return (:exact_zero, true)
+    is_approx_zero_f(M, state, options) && return (:f_converged, true)
     iszero_Δx(M, state, options) && return (:x_converged, true)
+    return (:not_converged, false)
+end
+
+# speeds up exact f values by just a bit (2% or so) over the above, so guess this is worth it.
+function assess_convergence(M::Any, state::AbstractUnivariateZeroState, options::FExactOptions)
+
+#    isnan_f(M, state) && return (:nan, true)
+#    is_exact_zero_f(M, state, options) &&  return (:exact_zero, true)
+#    iszero_Δx(M, state, options) && return (:x_converged, true)
+
+    (isnan(state.fxn1) || isnan(state.fxn0)) && return (:nan, true)
+    (iszero(state.fxn1) || iszero(state.fxn0)) && return (:exact_zero, true)
+
+    a, b, fa, fb = state.xn0, state.xn1, state.fxn0, state.fxn1
+    u, fu = choose_smallest(a, b, fa, fb)
+    δₐ, δᵣ = options.xabstol, options.xreltol
+    δₓ = max(δₐ, 2 * abs(u) * δᵣ) # needs non-zero δₐ to stop near 0
+    abs(b-a) ≤ δₓ && return(:x_converged, true)
+
+
     return (:not_converged, false)
 end
 
@@ -223,16 +250,16 @@ function decide_convergence(
     ## tolerance
     if options.strict || isa(options, ExactOptions) || isa(options, FExactOptions) #|| (iszero(options.abstol) && iszero(options.reltol))
         val == :x_converged && return xn1
-        iszero_f(M, state, options) && return xn1
+        is_approx_zero_f(M, state, options) && return xn1
         #_is_f_approx_0(fxn1, xn1, options.abstol, options.reltol) && return xn1
     else
 
         if val == :x_converged
-            iszero_f(M, state, options, true) && return xn1
+            is_approx_zero_f(M, state, options, true) && return xn1
         elseif val == :not_converged
             # this is the case where runaway can happen
             ## XXX Need a good heuristic to catch that
-            iszero_f(M, state, options, :relaxed) && return xn1
+            is_approx_zero_f(M, state, options, :relaxed) && return xn1
         end
     end
 
