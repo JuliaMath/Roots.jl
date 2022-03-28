@@ -187,7 +187,7 @@ function show_tracks(io::IO, s::Tracks, M::AbstractUnivariateZeroMethod)
         println(
             io,
             @sprintf(
-                "%s = % 18.16f,\t %s = % 18.16f",
+                "%s = %.17g,\t %s = %.17g",
                 "x_$(i-1)",
                 float(xi),
                 "fx_$(i-1)",
@@ -203,7 +203,7 @@ function show_tracks(io::IO, s::Tracks, M::AbstractUnivariateZeroMethod)
         println(
             io,
             @sprintf(
-                "(%s, %s) = (% 18.16f, % 18.16f )",
+                "(%s, %s) = (%.17g, %.17g )",
                 "a_$(j-1)",
                 "b_$(j-1)",
                 a, b
