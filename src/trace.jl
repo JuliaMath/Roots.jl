@@ -187,10 +187,10 @@ function show_tracks(io::IO, s::Tracks, M::AbstractUnivariateZeroMethod)
         println(
             io,
             @sprintf(
-                "%s = %.17g,\t %s = %.17g",
-                "x_$(i-1)",
+                "%s%s = %.17g,\t %s%s = %.17g",
+                "x", sprint(io -> unicode_subscript(io, i)),
                 float(xi),
-                "fx_$(i-1)",
+                "fx", sprint(io -> unicode_subscript(io, i)),
                 float(fxi)
             )
         )
@@ -203,9 +203,9 @@ function show_tracks(io::IO, s::Tracks, M::AbstractUnivariateZeroMethod)
         println(
             io,
             @sprintf(
-                "(%s, %s) = (%.17g, %.17g )",
-                "a_$(j-1)",
-                "b_$(j-1)",
+                "(%s%s, %s%s) = (%.17g, %.17g )",
+                "a", sprint(io -> unicode_subscript(io, j-1)),
+                "b", sprint(io -> unicode_subscript(io, j-1)),
                 a, b
             )
         )
