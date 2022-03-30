@@ -35,19 +35,22 @@ Construct a `Tracks` object used to record the progress of the algorithm.
 both default to `Float64`. Note that because this type is not exported, you have to
 write `Roots.Tracks()` to construct a `Tracks` object.
 
-By default, no tracking is done while finding a root (with `find_zero`, `solve`, or `fzero`).
+By default, no tracking is done while finding a root.
 To change this, construct a `Tracks` object, and pass it to the keyword argument `tracks`.
 This will modify the `Tracks` object, storing the input and function values at each iteration,
 along with additional information about the root-finding process.
 
-`Tracker` objects are printed in a nice, easy-to-read
+`Tracks` objects are shown in a nice, easy-to-read
 format. Internally either a tuple of `(x,f(x))` pairs or `(aₙ, bₙ)`
-pairs are stored, the latter for bracketing methods, as illustrated
-in the examples below. (These implementation details may change without notice.)
+pairs are stored, the latter for bracketing methods. (These
+implementation details may change without notice.) The methods
+`empty!`, to reset the `Tracks` object; `get`, to get the tracks;
+`last`, to get the value convered to may be of interest.
 
 If you only want to print the information, but you don't need it later, this can conveniently be
 done by passing `verbose=true` to the root-finding function. This will not
 effect the return value, which will still be the root of the function.
+
 
 ## Examples
 
@@ -73,41 +76,36 @@ Results of univariate zero finding:
 * stopped as |f(x_n)| ≤ max(δ, |x|⋅ϵ) using δ = atol, ϵ = rtol
 
 Trace:
-x_0 =  0.0000000000000000,	 fx_0 = -2.0000000000000000
-x_1 =  2.0000000000000000,	 fx_1 =  2.0000000000000000
-x_2 =  1.0000000000000000,	 fx_2 = -1.0000000000000000
-x_3 =  1.3333333333333333,	 fx_3 = -0.2222222222222223
-x_4 =  1.4285714285714286,	 fx_4 =  0.0408163265306123
-x_5 =  1.4137931034482758,	 fx_5 = -0.0011890606420930
-x_6 =  1.4142114384748701,	 fx_6 = -0.0000060072868389
-x_7 =  1.4142135626888697,	 fx_7 =  0.0000000008931456
-x_8 =  1.4142135623730947,	 fx_8 = -0.0000000000000009
+x₁ = 0,	 fx₁ = -2
+x₂ = 2,	 fx₂ = 2
+x₃ = 1,	 fx₃ = -1
+x₄ = 1.3333333333333333,	 fx₄ = -0.22222222222222232
+x₅ = 1.4285714285714286,	 fx₅ = 0.04081632653061229
+x₆ = 1.4137931034482758,	 fx₆ = -0.0011890606420930094
+x₇ = 1.4142114384748701,	 fx₇ = -6.0072868388605372e-06
+x₈ = 1.4142135626888697,	 fx₈ = 8.9314555751229818e-10
+x₉ = 1.4142135623730947,	 fx₉ = -8.8817841970012523e-16
 
-julia> tracker.xfₛ  # stored as (x, f(x)) pairs
-9-element Vector{Tuple{Float64, Float64}}:
- (0.0, -2.0)
- (2.0, 2.0)
- (1.0, -1.0)
- (1.3333333333333333, -0.22222222222222232)
- (1.4285714285714286, 0.04081632653061229)
- (1.4137931034482758, -0.0011890606420930094)
- (1.41421143847487, -6.007286838860537e-6)
- (1.4142135626888697, 8.931455575122982e-10)
- (1.4142135623730947, -8.881784197001252e-16)
+julia> empty!(tracker)  # resets
 
-julia> tracker = Roots.Tracks()
-Algorithm has not been run
-
-julia> find_zero(sin, (3, 4), Roots. A42(), tracks=tracker) ≈ π
+julia> find_zero(sin, (3, 4), Roots.A42(), tracks=tracker) ≈ π
 true
 
-julia> tracker.abₛ # stored as (aₙ, bₙ) pairs
-4-element Vector{Tuple{Float64, Float64}}:
- (3.0, 4.0)
- (3.0, 3.5)
- (3.14156188905231, 3.1416247553172956)
- (3.141592653589793, 3.1415926535897936)
+julia> get(tracker)
+4-element Vector{NamedTuple{names, Tuple{Float64, Float64}} where names}:
+ (a = 3.0, b = 4.0)
+ (a = 3.0, b = 3.5)
+ (a = 3.14156188905231, b = 3.1416247553172956)
+ (a = 3.141592653589793, b = 3.1415926535897936)
+
+julia> last(tracker)
+3.141592653589793
 ```
+
+Note: As designed, the `Tracks` object may not record actions taken
+while the state object is initialized. An example is the default
+bisection algorithm where an initial midpoint is found to ensure the
+bracket does not straddle ``0``.
 
 """
 mutable struct Tracks{T,S} <: AbstractTracks
@@ -121,7 +119,7 @@ mutable struct Tracks{T,S} <: AbstractTracks
     method
     nmethod
 end
-Tracks(T, S) = Tracks(Tuple{T,S}[], Tuple{T,T}[], 0, 0, :not_converged, "",  NaN*zero(T), nothing, nothing)
+Tracks(T, S) = Tracks(Tuple{T,S}[], Tuple{T,T}[], 0, 0, :algorithm_not_run, "",  nan(T), nothing, nothing)
 Tracks(s::AbstractUnivariateZeroState{T,S}) where {T,S} = Tracks(T, S)
 Tracks(verbose, tracks, state::AbstractUnivariateZeroState{T,S}) where {T,S} =
     (verbose && isa(tracks, NullTracks)) ? Tracks(T,S) : tracks
@@ -142,12 +140,52 @@ log_last(l::Tracks, α) = (l.alpha = α; nothing)
 log_method(l::Tracks, method) = (l.method = method; nothing)
 log_nmethod(l::Tracks, method) = (l.nmethod = method; nothing)
 
-Base.show(io::IO, l::Tracks) = show_trace(io, l.method, l.nmethod, l)
+# copy some API from ValueHistories
+Base.first(l::AbstractTracks) = (@warn "No tracking information was kept"; nothing)
+function Base.first(l::Tracks)
+    l.convergence_flag == :algorithm_not_run && error("Algorithm not run")
+    !isempty(l.xfₛ) && return (x₁= l.xfₛ[1][1], f₁= l.xfₛ[1][2])
+    return (a₁= l.abₛ[1][1], b₁= l.abₛ[1][2])
+end
+# return last value of algorithm
+Base.last(l::AbstractTracks) = (@warn "No tracking information was kept"; nothing)
+function Base.last(l::Tracks)
+    convergence_flag = l.convergence_flag
+    α = l.alpha
+    if convergence_flag == :algorithm_not_run
+        @warn "The algorithm has not run"
+    end
+    α
+end
 
+# Returns all available observations.
+Base.get(l::NullTracks) = (@warn "No tracking information was kept"; nothing)
+function Base.get(l::Tracks)
+    xf = [(xn=xᵢ, fn = fᵢ) for (xᵢ, fᵢ) ∈ l.xfₛ]
+    ab = [(a=min(u,v), b=max(u,v)) for (u,v) ∈ l.abₛ]
+    vcat(xf, ab)
+end
+
+# reset tracker
+Base.empty!(l::NullTracks) = nothing
+function Base.empty!(l::Tracks{T,S}) where {T,S}
+    empty!(l.xfₛ)
+    empty!(l.abₛ)
+    l.steps = 0
+    l.fncalls = 0
+    l.convergence_flag = :algorithm_not_run
+    l.message = ""
+    l.alpha = nan(T)
+    l.method = l.nmethod = nothing
+    nothing
+end
+
+Base.show(io::IO, l::Tracks) = show_trace(io, l.method, l.nmethod, l)
 
 function show_trace(io::IO, method, N, tracks)
 
-    if length(tracks.xfₛ) == 0 && length(tracks.abₛ) == 0
+    flag = tracks.convergence_flag
+    if flag == :algorithm_not_run
         print(io, "Algorithm has not been run")
         return nothing
     end
@@ -187,10 +225,10 @@ function show_tracks(io::IO, s::Tracks, M::AbstractUnivariateZeroMethod)
         println(
             io,
             @sprintf(
-                "%s = %.17g,\t %s = %.17g",
-                "x_$(i-1)",
+                "%s%s = %.17g,\t %s%s = %.17g",
+                "x", sprint(io -> unicode_subscript(io, i)),
                 float(xi),
-                "fx_$(i-1)",
+                "fx", sprint(io -> unicode_subscript(io, i)),
                 float(fxi)
             )
         )
@@ -203,9 +241,9 @@ function show_tracks(io::IO, s::Tracks, M::AbstractUnivariateZeroMethod)
         println(
             io,
             @sprintf(
-                "(%s, %s) = (%.17g, %.17g )",
-                "a_$(j-1)",
-                "b_$(j-1)",
+                "(%s%s, %s%s) = ( %.17g, %.17g )",
+                "a", sprint(io -> unicode_subscript(io, j-1)),
+                "b", sprint(io -> unicode_subscript(io, j-1)),
                 a, b
             )
         )

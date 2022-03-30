@@ -168,10 +168,11 @@ function identify_starting_point(a, b, sfxs)
 end
 
 ## not used
-function unicode_subscript(io, j)
-    error("")
+function _unicode_subscript(io, j)
     a = ("⁻", "", "", "₀", "₁", "₂", "₃", "₄", "₅", "₆", "₇", "₈", "₉")
     for i in string(j)
         print(io, a[Int(i) - 44])
     end
 end
+
+unicode_subscript(io, j) = _unicode_subscript.(Ref(io), reverse(digits(j)))
