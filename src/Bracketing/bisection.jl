@@ -15,10 +15,11 @@ tolerances are set to zero (the default) guarantees a "best" solution
 `[a, nextfloat(a)]`).
 
 When tolerances are given, this algorithm terminates when the interval
-length is less than or equal to the tolerance `max(xtol, min(abs(a),
-abs(b)) * xrtol)` or the function value is less than `max(tol,
-min(abs(a), abs(b)) * rtol)`. The latter is used only if the default
-tolerances are adjusted.
+length is less than or equal to the tolerance `max(δₐ, 2abs(u)δᵣ)` with `u` in
+`{a,b}` chosen by the smaller of `|f(a)|` and `|f(b)|`, or
+ or the function value is less than
+`max(tol, min(abs(a), abs(b)) * rtol)`. The latter is used only if the default
+tolerances (`atol` or `rtol`) are adjusted.
 
 
 """

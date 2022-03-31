@@ -16,7 +16,8 @@ Esser, H. Computing (1975) 14: 367. DOI: [10.1007/BF02253547](https://doi.org/10
 Eine stets quadratisch konvergente Modifikation des Steffensen-Verfahrens
 
 
-Example
+## Examples
+
 ```
 f(x) = cos(x) - x
 g(x) = f(x)^2

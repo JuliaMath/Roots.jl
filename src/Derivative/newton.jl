@@ -16,7 +16,7 @@ Implements Newton's [method](http://tinyurl.com/b4d7vls):
 `xᵢ₊₁ =  xᵢ - f(xᵢ)/f'(xᵢ)`.  This is a quadratically convergent method requiring
 one derivative. Two function calls per step.
 
-Example
+## Examples
 
 ```jldoctest with_derivative
 julia> using Roots
@@ -35,7 +35,12 @@ true
 This can be advantageous if the derivative is easily computed from the
 value of f, but otherwise would be expensive to compute.
 
-The error, `eᵢ = xᵢ - α`, can be expressed as `eᵢ₊₁ = f[xᵢ,xᵢ,α]/(2f[xᵢ,xᵢ])eᵢ²` (Sidi, Unified treatment of regula falsi, Newton-Raphson, secant, and Steffensen methods for nonlinear equations).
+----
+
+The error, `eᵢ = xᵢ - α`, can be expressed as `eᵢ₊₁ =
+f[xᵢ,xᵢ,α]/(2f[xᵢ,xᵢ])eᵢ²` (Sidi, Unified treatment of regula falsi,
+Newton-Raphson, secant, and Steffensen methods for nonlinear
+equations).
 
 """
 struct Newton <: AbstractNewtonLikeMethod end

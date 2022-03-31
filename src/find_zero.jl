@@ -13,7 +13,7 @@ methods for `float`, `real`, and `oneunit` defined.
 
 For bracketing intervals, `x0` is specified using a tuple, a vector,
 or any iterable with `extrema` defined. A bracketing interval,
-``[a,b]``, is one where f(a) and f(b) have different signs.
+``[a,b]``, is one where ``f(a)`` and ``f(b)`` have different signs.
 
 # Return value
 
@@ -85,7 +85,7 @@ for details on the default tolerances.
 In general, with floating point numbers, convergence must be
 understood as not an absolute statement. Even if mathematically `α` is
 an answer and `xstar` the floating point realization, it may be that
-`f(xstar) - f(α)  ≈ xstar ⋅  f'(α) ⋅ eps(α)`, so tolerances must be
+`f(xstar) - f(α)  ≈ xstar ⋅  f'(α) ⋅ eps(α)`, so the role of tolerances must be
 appreciated, and at times specified.
 
 For the `Bisection` methods, convergence is guaranteed over `Float64`
@@ -178,7 +178,7 @@ ERROR: Roots.ConvergenceFailed("Algorithm failed to converge")
 
 Passing `verbose=true` will show details on the steps of the algorithm.
 The `tracks` argument allows
-the passing of storage to record the values of `x` and `f(x)` used in
+the passing of a [`Tracks`](ref) object to record the values of `x` and `f(x)` used in
 the algorithm.
 
 !!! note
@@ -290,7 +290,10 @@ end
 Solve for the zero of a scalar-valued univariate function specified through `ZeroProblem` or
 `ZeroProblemIterator` using the `CommonSolve` interface.
 
-The defaults for `M` and `N` depend on the `ZeroProblem`: if `x0` is a number, then `M=Secant()` and `N=AlefeldPotraShi()` is used; if `x0` has `2` (or more values) then it is assumed to be a bracketing interval and `M=AlefeldPotraShi()` is used.
+The defaults for `M` and `N` depend on the `ZeroProblem`: if `x0` is a
+number, then `M=Secant()` and `N=AlefeldPotraShi()` is used (`Order0`); if `x0`
+has `2` (or more values) then it is assumed to be a bracketing
+interval and `M=AlefeldPotraShi()` is used.
 
 The methods involved with this interface are:
 

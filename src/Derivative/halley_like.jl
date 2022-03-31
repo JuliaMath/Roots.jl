@@ -58,11 +58,10 @@ Implements Halley's [method](http://tinyurl.com/yd83eytb),
 `xᵢ₊₁ = xᵢ - (f/f')(xᵢ) * (1 - (f/f')(xᵢ) * (f''/f')(xᵢ) * 1/2)^(-1)`
 This method is cubically converging, it requires ``3`` function calls per step.
 
-
 The function, its derivative and second derivative can be passed either as a tuple of ``3`` functions *or*
 as a function returning values for ``(f, f/f', f'/f'')``, which could be useful when function evaluations are expensive.
 
-Example
+## Examples
 
 ```jldoctest with_derivative
 julia> using Roots
@@ -81,6 +80,8 @@ true
 
 This can be advantageous if the derivatives are easily computed from
 the computation for f, but otherwise would be expensive to compute separately.
+
+----
 
 The error, `eᵢ = xᵢ - α`, satisfies
 `eᵢ₊₁ ≈ -(2f'⋅f''' -3⋅(f'')²)/(12⋅(f'')²) ⋅ eᵢ³` (all evaluated at `α`).
