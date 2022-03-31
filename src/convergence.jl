@@ -109,6 +109,16 @@ function is_approx_zero_f(::AbstractUnivariateZeroMethod, state::AbstractUnivari
     afb ≤ Δ * oneunit(afb)
 end
 
+## test f ≈ 0 not f == 0
+function is_approx_zero_f(::AbstractBracketingMethod, state::AbstractUnivariateZeroState, options::O) where {O <: AbstractUnivariateZeroOptions}
+    ab₁, afb₁ = abs(state.xn1), abs(state.fxn1)
+    ab₀, afb₀ = abs(state.xn0), abs(state.fxn0)
+    ϵₐ, ϵᵣ = options.abstol, options.reltol
+    u, fu = afb₀ < afb₁ ? (ab₀, afb₀) : (ab₁, afb₁)
+    Δ = max(_unitless(ϵₐ), _unitless(u) * ϵᵣ)
+    fu ≤ Δ * oneunit(afb)
+end
+
 function is_approx_zero_f(::AbstractUnivariateZeroMethod, state::AbstractUnivariateZeroState, options::O, relaxed::Any) where {O <: AbstractUnivariateZeroOptions}
     ab, afb = abs(state.xn1), abs(state.fxn1)
     ϵₐ, ϵᵣ = options.abstol, options.reltol

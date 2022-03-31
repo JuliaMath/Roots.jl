@@ -40,12 +40,12 @@ To change this, construct a `Tracks` object, and pass it to the keyword argument
 This will modify the `Tracks` object, storing the input and function values at each iteration,
 along with additional information about the root-finding process.
 
-`Tracks` objects are shown in a nice, easy-to-read
+`Tracks` objects are shown in an easy-to-read
 format. Internally either a tuple of `(x,f(x))` pairs or `(aₙ, bₙ)`
 pairs are stored, the latter for bracketing methods. (These
 implementation details may change without notice.) The methods
 `empty!`, to reset the `Tracks` object; `get`, to get the tracks;
-`last`, to get the value convered to may be of interest.
+`last`, to get the value convered to, may be of interest.
 
 If you only want to print the information, but you don't need it later, this can conveniently be
 done by passing `verbose=true` to the root-finding function. This will not
@@ -102,10 +102,11 @@ julia> last(tracker)
 3.141592653589793
 ```
 
-Note: As designed, the `Tracks` object may not record actions taken
-while the state object is initialized. An example is the default
-bisection algorithm where an initial midpoint is found to ensure the
-bracket does not straddle ``0``.
+!!! note
+    As designed, the `Tracks` object may not record actions taken
+    while the state object is initialized. An example is the default
+    bisection algorithm where an initial midpoint is found to ensure
+    the bracket does not straddle ``0``.
 
 """
 mutable struct Tracks{T,S} <: AbstractTracks
