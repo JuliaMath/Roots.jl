@@ -116,7 +116,7 @@ function is_approx_zero_f(::AbstractBracketingMethod, state::AbstractUnivariateZ
     ϵₐ, ϵᵣ = options.abstol, options.reltol
     u, fu = afb₀ < afb₁ ? (ab₀, afb₀) : (ab₁, afb₁)
     Δ = max(_unitless(ϵₐ), _unitless(u) * ϵᵣ)
-    fu ≤ Δ * oneunit(afb)
+    fu ≤ Δ * oneunit(fu)
 end
 
 function is_approx_zero_f(::AbstractUnivariateZeroMethod, state::AbstractUnivariateZeroState, options::O, relaxed::Any) where {O <: AbstractUnivariateZeroOptions}
@@ -128,7 +128,7 @@ function is_approx_zero_f(::AbstractUnivariateZeroMethod, state::AbstractUnivari
 
 end
 
-function is_approx_zero_f(::AbstractUnivariateZeroMethod, state::AbstractUnivariateZeroState, options::O) where {O <: Union{ExactOptions, FExactOptions}}
+function is_approx_zero_f(::AbstractBracketingMethod, state::AbstractUnivariateZeroState, options::O) where {O <: Union{ExactOptions, FExactOptions}}
     false
 end
 
@@ -203,7 +203,7 @@ function assess_convergence(M::Any, state::AbstractUnivariateZeroState, options)
 end
 
 # speeds up exact f values by just a bit (2% or so) over the above, so guess this is worth it.
-function assess_convergence(M::Any, state::AbstractUnivariateZeroState, options::FExactOptions)
+function assess_convergence(M::Any, state::AbstractUnivariateZeroState, options::Union{ExactOptions,FExactOptions})
 
 #    isnan_f(M, state) && return (:nan, true)
 #    is_exact_zero_f(M, state, options) &&  return (:exact_zero, true)
@@ -219,16 +219,6 @@ function assess_convergence(M::Any, state::AbstractUnivariateZeroState, options:
     abs(b-a) ≤ δₓ && return(:x_converged, true)
 
 
-    return (:not_converged, false)
-end
-
-
-# speeds up exact bisection by about 10% over the above
-function assess_convergence(M::Any, state::AbstractUnivariateZeroState, options::ExactOptions)
-    (isnan(state.fxn1) || isnan(state.fxn0)) && return (:nan, true)
-    (iszero(state.fxn1) || iszero(state.fxn0)) && return (:exact_zero, true)
-    a, b = state.xn0, state.xn1
-    (a < b ? nextfloat(a) >= b : nextfloat(b) >=a ) && return (:x_converged, true)
     return (:not_converged, false)
 end
 
