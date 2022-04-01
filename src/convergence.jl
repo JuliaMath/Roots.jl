@@ -203,7 +203,7 @@ function assess_convergence(M::Any, state::AbstractUnivariateZeroState, options)
 end
 
 # speeds up exact f values by just a bit (2% or so) over the above, so guess this is worth it.
-function assess_convergence(M::Any, state::AbstractUnivariateZeroState, options::Union{ExactOptions,FExactOptions})
+function assess_convergence(M::AbstractBracketingMethod, state::AbstractUnivariateZeroState, options::Union{ExactOptions,FExactOptions})
 
 #    isnan_f(M, state) && return (:nan, true)
 #    is_exact_zero_f(M, state, options) &&  return (:exact_zero, true)
