@@ -128,7 +128,7 @@ function is_approx_zero_f(::AbstractUnivariateZeroMethod, state::AbstractUnivari
 
 end
 
-function is_approx_zero_f(::AbstractBracketingMethod, state::AbstractUnivariateZeroState, options::O) where {O <: Union{ExactOptions, FExactOptions}}
+function is_approx_zero_f(::AbstractUnivariateZeroMethod, state::AbstractUnivariateZeroState, options::O) where {O <: Union{ExactOptions, FExactOptions}}
     false
 end
 
