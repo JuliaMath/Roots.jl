@@ -410,7 +410,7 @@ end
 
     ## Use tolerance on f, not x with bisectoin
     atol = 0.01
-    if VERSION >= v1.6.0
+    if VERSION >= v"1.6.0"
         u = @inferred(find_zero(sin, (3, 4), atol=atol))
         @test atol >= abs(sin(u)) >= atol^2
 
@@ -532,7 +532,7 @@ end
 end
 
 @testset "_extrema" begin
-    if VERSION >= v1.6.0
+    if VERSION >= v"1.6.0"
         @test @inferred(Roots._extrema((π, 0))) === (0.0, Float64(π))
         @test @inferred(Roots._extrema([π, 0])) === (0.0, Float64(π))
     end
