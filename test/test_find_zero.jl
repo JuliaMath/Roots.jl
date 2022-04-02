@@ -410,11 +410,13 @@ end
 
     ## Use tolerance on f, not x with bisectoin
     atol = 0.01
-    u = @inferred(find_zero(sin, (3, 4), atol=atol))
-    @test atol >= abs(sin(u)) >= atol^2
+    if VERSION >= v1.6.0
+        u = @inferred(find_zero(sin, (3, 4), atol=atol))
+        @test atol >= abs(sin(u)) >= atol^2
 
-    ## issue #159 bracket with zeros should be found
-    @test @inferred(find_zero(x -> x + 1, (-1, 1))) == -1
+        ## issue #159 bracket with zeros should be found
+        @test @inferred(find_zero(x -> x + 1, (-1, 1))) == -1
+    end
 
     ## issue #178 passinig through method
     @test fzero(sin, 3, 4, Roots.Brent()) ≈ π
@@ -425,7 +427,7 @@ end
     end
     r = 0.05
     xs = (r + 1e-12, 1.0)
-    @test @inferred(find_zero(x -> f(r) - f(x), xs, Roots.A42())) ≈ 0.4715797678171889
+    @test find_zero(x -> f(r) - f(x), xs, Roots.A42()) ≈ 0.4715797678171889
 end
 
 struct _SampleCallableObject end
@@ -530,8 +532,10 @@ end
 end
 
 @testset "_extrema" begin
-    @test @inferred(Roots._extrema((π, 0))) === (0.0, Float64(π))
-    @test @inferred(Roots._extrema([π, 0])) === (0.0, Float64(π))
+    if VERSION >= v1.6.0
+        @test @inferred(Roots._extrema((π, 0))) === (0.0, Float64(π))
+        @test @inferred(Roots._extrema([π, 0])) === (0.0, Float64(π))
+    end
     @test_throws ArgumentError Roots._extrema(π)
     @test_throws ArgumentError Roots._extrema((π, π))
     @test_throws ArgumentError Roots._extrema([π, π])
