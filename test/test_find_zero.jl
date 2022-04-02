@@ -65,9 +65,11 @@ struct Order3_Test <: Roots.AbstractSecantMethod end
     h = 1e-6
     M = Roots.Bisection()
     tracks = Roots.Tracks(Float64, Float64)
-    VERSION >= v"1.6.0" && @inferred(find_zero(fn, (a, b), M, tracks=tracks, xatol=h, xrtol=0.0))
-    u, v = tracks.abₛ[end]
-    @test h >= abs(u - v) >= h / 2
+    if VERSION >= v"1.6.0"
+        @inferred(find_zero(fn, (a, b), M, tracks=tracks, xatol=h, xrtol=0.0))
+        u, v = tracks.abₛ[end]
+        @test h >= abs(u - v) >= h / 2
+    end
 
     ## test of strict
     fn, x0 = x -> cos(x) - 1, pi / 4
