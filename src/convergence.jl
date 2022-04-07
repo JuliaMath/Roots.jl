@@ -7,7 +7,7 @@ struct UnivariateZeroOptions{Q,R,S,T} <: AbstractUnivariateZeroOptions
     xreltol::R
     abstol::S
     reltol::T
-    maxevals::Int
+    maxiters::Int
     strict::Bool
 end
 
@@ -15,19 +15,19 @@ end
 struct XExactOptions{S,T} <: AbstractUnivariateZeroOptions
     abstol::S
     reltol::T
-    maxevals::Int
+    maxiters::Int
     strict::Bool
 end
 
 struct FExactOptions{S,T} <: AbstractUnivariateZeroOptions
     xabstol::S
     xreltol::T
-    maxevals::Int
+    maxiters::Int
     strict::Bool
 end
 
 struct ExactOptions <: AbstractUnivariateZeroOptions
-    maxevals::Int
+    maxiters::Int
     strict::Bool
 end
 
@@ -45,7 +45,7 @@ function init_options(M, T=Float64, S=Float64; kwargs...)
     δᵣ = get(d, :xrtol, get(d, :xreltol, defs[2]))
     ϵₐ = get(d, :atol, get(d, :abstol, defs[3]))
     ϵᵣ = get(d, :rtol, get(d, :reltol, defs[4]))
-    M = get(d, :maxevals, get(d, :maxsteps, defs[5]))
+    M = get(d, :maxiters, get(d, :maxevals, get(d, :maxsteps, defs[5])))
     strict = get(d, :strict, defs[6])
 
     iszero(δₐ) && iszero(δᵣ) && iszero(ϵₐ) && iszero(ϵᵣ) && return ExactOptions(M, strict)
@@ -66,7 +66,7 @@ The default tolerances for most methods are `xatol=eps(T)`,
 units (absolute tolerances have the units of `x` and `f(x)`; relative
 tolerances are unitless). For `Complex{T}` values, `T` is used.
 
-The number of iterations is limited by `maxevals=40`.
+The number of iterations is limited by `maxiters=40`.
 
 """
 default_tolerances(M::AbstractUnivariateZeroMethod) =
@@ -80,9 +80,9 @@ function default_tolerances(
     xrtol = eps(real(T))  # unitless
     atol = 4 * eps(real(float(S))) * oneunit(real(S))
     rtol = 4 * eps(real(float(S))) * one(real(S))
-    maxevals = 40
+    maxiters = 40
     strict = false
-    (xatol, xrtol, atol, rtol, maxevals, strict)
+    (xatol, xrtol, atol, rtol, maxiters, strict)
 end
 
 ## --------------------------------------------------

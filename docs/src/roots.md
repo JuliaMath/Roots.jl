@@ -62,7 +62,7 @@ julia> x0, M = (0, pi/2), Bisection()
 julia> find_zero(g, x0, M) # as before, solve cos(x) - x = 0 using default p=1
 0.7390851332151607
 
-julia> find_zero(g, x0, M, p=2) # solves cos(x) - x/2 = 0
+julia> find_zero(g, x0, M; p=2) # solves cos(x) - x/2 = 0
 1.0298665293222589
 ```
 
@@ -121,24 +121,24 @@ julia> find_zero(x -> Inf*sign(x), (-Inf, Inf))  # Float64 only
 
 The basic algorithm used for bracketing when the values are simple
 floating point values is a modification of the bisection method, where
-the midpoint is taken over the bit representation of `a` and `b`. For
-big float values, an algorithm due to Alefeld, Potra, and Shi is used.
+the midpoint is taken over the bit representation of `a` and `b`.
 
-```jldoctest roots
-julia> find_zero(sin, (big(3), big(4)))    # uses a different algorithm than for (3,4)
-3.141592653589793238462643383279502884197169399375105820974944592307816406286198
-```
+For big float values, bisection is the default (with non-zero
+tolerances), but its use is definitely not suggested.  (Simple
+bisection over `BigFloat` values can take *many* whereas may take many
+fewer. For the problem of finding a zero of `sin` in the interval
+`(big(3), big(4))`, the default bisection takes ``252`` iterations,
+whereas the `A42` method takes ``4``.
 
-(Simple bisection over `BigFloat` values can take *many* steps.)
-
-The algorithms of Alefeld, Potra, and Shi and the well known algorithm of Brent, also start with a bracketing algorithm. For many problems these will take far fewer steps than the bisection algorithm to reach convergence. These may be called directly. For example,
+The algorithms of Alefeld, Potra, and Shi and the well known algorithm
+of Brent, also start with a bracketing algorithm. For many problems
+these will take far fewer steps than the bisection algorithm to reach
+convergence. These may be called directly. For example,
 
 ```jldoctest roots
 julia> find_zero(sin, (3,4), A42())
 3.141592653589793
 ```
-
-The above call takes ``9`` function evaluations, the default method takes ``53``.
 
 
 By default, bisection will converge to machine tolerance. This may
@@ -274,14 +274,14 @@ To investigate an algorithm and its convergence, the argument
 For some functions, adjusting the default tolerances may be necessary
 to achieve convergence. The tolerances include `atol` and `rtol`, which are
 used to check if $f(x_n) \approx 0$;
-`xatol` and `xrtol`, to check if $x_n \approx x_{n-1}$; and `maxevals`  to limit the
-number of steps in the algorithm.
+`xatol` and `xrtol`, to check if $x_n \approx x_{n-1}$; and `maxiters`  to limit the
+number of iterations in the algorithm.
 
 
 
 ## Classical methods
 
-The package provides some classical methods for root finding:
+The package provides some classical methods for root finding, such as
 `Roots.Newton`, `Roots.Halley`, and `Roots.Schroder`. (Currently
 these are not exported, so must be prefixed with the package name to
 be used.) We can see how each works on a problem studied by Newton.
@@ -1007,7 +1007,7 @@ julia> function Roots.update_state(::Chandrapatla, F, o, options, l=NullTracks()
     b, a, c = o.xn1, o.xn0, o.c
     fb, fa, fc = o.fxn1, o.fxn0, o.fc
 
-    # encoding: a = xₙ, b=xₙ₋₁, c= xₙ₋₂
+    # encoding: a = xₙ, b = xₙ₋₁, c = xₙ₋₂
     ξ = (a - b) / (c - b)
     ϕ = (fa - fb) / (fc - fb)
     ϕ² = ϕ^2
@@ -1038,7 +1038,7 @@ end
 
 ```
 
-This algorithm chooses between an inverse quadratic step or a bisection step depending on the relationship between the computed `ξ` and `Φ`. The tolerances are from the default for `AbstractAcceleratedBisection`, which choose  `eps(T)^2` for the absolute ``x``-tolerance and `eps(t)` for the relative ``x``-tolerance.
+This algorithm chooses between an inverse quadratic step or a bisection step depending on the relationship between the computed `ξ` and `Φ`. The tolerances are from the default for `AbstractBracketingMethod`.
 
 
 To see that the algorithm works, we have:

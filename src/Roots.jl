@@ -12,7 +12,6 @@ using Setfield
 export fzero, fzeros, secant_method
 
 export find_zero,
-    find_zero!,
     find_zeros,
     ZeroProblem,
     solve,

@@ -12,7 +12,11 @@ abstract type AbstractNewtonLikeMethod <: AbstractDerivativeMethod end
 abstract type AbstractHalleyLikeMethod <: AbstractDerivativeMethod  end
 abstract type AbstractΔMethod <: AbstractHalleyLikeMethod end
 
-
+# deprecated but not clear way to do so, hence these defintions not to be used
+const AbstractBracketing = AbstractBracketingMethod
+const AbstractBisection = AbstractBisectionMethod
+const AbstractNonBracketing = AbstractNonBracketingMethod
+const AbstractSecant = AbstractSecantMethod
 
 ### State
 abstract type AbstractUnivariateZeroState{T,S} end
