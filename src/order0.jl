@@ -205,6 +205,9 @@ end
 # Switch to bracketing method
 # deprecate soon, not used
 function run_bisection(N::AbstractBracketing, f, ab, state)
+
+    Base.depwarn("This method is deprecated, as it is not longer used internally", :run_bisection)
+
     steps, fnevals = state.steps, state.fnevals
     f = Callable_Function(N, f)
     init_state!(state, N, f; clear=true)
