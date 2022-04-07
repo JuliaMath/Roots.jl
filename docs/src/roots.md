@@ -124,9 +124,9 @@ floating point values is a modification of the bisection method, where
 the midpoint is taken over the bit representation of `a` and `b`.
 
 For big float values, bisection is the default (with non-zero
-tolerances), but its use is definitely not suggested.  (Simple
-bisection over `BigFloat` values can take *many* whereas may take many
-fewer. For the problem of finding a zero of `sin` in the interval
+tolerances), but its use is definitely not suggested. Simple
+bisection over `BigFloat` values can take *many* more
+iterations. For the problem of finding a zero of `sin` in the interval
 `(big(3), big(4))`, the default bisection takes ``252`` iterations,
 whereas the `A42` method takes ``4``.
 
