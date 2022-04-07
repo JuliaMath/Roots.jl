@@ -39,7 +39,6 @@ function init_state(::AbstractBisectionMethod, F, x₀, x₁, fx₀, fx₁; m=_m
     # handle interval if fa*fb ≥ 0 (explicit, but also not needed)
     (iszero(fx₀) || iszero(fx₁)) && return UnivariateZeroState(x₁, x₀, fx₁, fx₀)
     assert_bracket(fx₀, fx₁)
-
     if sign(fm) * fx₀ < 0 * oneunit(fx₀)
         a, b, fa, fb = x₀, m, fx₀, fm
     else
