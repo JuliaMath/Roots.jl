@@ -207,7 +207,6 @@ end
 find_zero(f, x0::Number; kwargs...) = find_zero(f, x0, Order0(); kwargs...)
 find_zero(f, x0; kwargs...) = find_zero(f, x0, Bisection(); kwargs...)
 
-
 ## ---------------
 
 ## Create an Iterator interface
