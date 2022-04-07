@@ -40,9 +40,9 @@ function default_tolerances(::FalsePosition{12}, ::Type{T}, ::Type{S}) where {T,
     xrtol = eps(real(T))  # unitless
     atol = 4 * eps(real(float(S))) * oneunit(real(S))
     rtol = 4 * eps(real(float(S))) * one(real(S))
-    maxevals = 250
+    maxiters = 250
     strict = false
-    (xatol, xrtol, atol, rtol, maxevals, strict)
+    (xatol, xrtol, atol, rtol, maxiters, strict)
 end
 
 

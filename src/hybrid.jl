@@ -44,7 +44,7 @@ function solve!(𝐙::ZeroProblemIterator{𝐌,𝐍}; verbose=false) where {𝐌
         flag, converged = assess_convergence(M, state, options)
 
         converged && break
-        ctr >= options.maxevals && break
+        ctr >= options.maxiters && break
 
         state0 = state
         state0, stopped = update_state(M, F, state0, options) # state0 is proposed step

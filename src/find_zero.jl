@@ -1,6 +1,6 @@
 """
 
-    find_zero(f, x0, M, [N::AbstractBracketing]; kwargs...)
+    find_zero(f, x0, M, [N::AbstractBracketingMethod]; kwargs...)
 
 Interface to one of several methods for finding zeros of a univariate function, e.g. solving ``f(x)=0``.
 
@@ -56,8 +56,9 @@ If no method is specified, the default method depends on `x0`:
 * If `x0` is a scalar, the default is the more robust `Order0` method.
 
 * If `x0` is a tuple, vector, or iterable with `extrema` defined
-  indicating a *bracketing* interval, then `Bisection` method is used.
+  indicating a *bracketing* interval, then the `Bisection` method is used.
 
+The default methods are chosen to be robust; they may not be as efficient as some others.
 
 # Specifying the function
 
@@ -74,7 +75,7 @@ functions is used. For the classical algorithms, a function returning
 * `xrtol` - relative tolerance for `x` values.
 * `atol`  - absolute tolerance for `f(x)` values.
 * `rtol`  - relative tolerance for `f(x)` values.
-* `maxevals`   - limit on maximum number of iterations.
+* `maxiters`   - limit on maximum number of iterations.
 * `strict` - if `false` (the default), when the algorithm stops, possible zeros are checked with a relaxed tolerance.
 * `verbose` - if `true` a trace of the algorithm will be shown on successful completion. See the internal [`Tracks`](@ref) object to save this trace.
 
@@ -169,7 +170,7 @@ julia> x0, xstar = 1.0,  1.112243913023029;
 julia> find_zero(fn, x0, Order2()) ≈ xstar
 true
 
-julia> find_zero(fn, x0, Order2(), maxevals=3)    # need more steps to converge
+julia> find_zero(fn, x0, Order2(), maxiters=3)    # need more steps to converge
 ERROR: Roots.ConvergenceFailed("Algorithm failed to converge")
 [...]
 ```
@@ -410,7 +411,7 @@ function solve!(P::ZeroProblemIterator; verbose=false)
     while !stopped
         val, stopped = assess_convergence(M, state, options)
         stopped && break
-        ctr > options.maxevals && break
+        ctr > options.maxiters && break
 
         state, stopped = update_state(M, F, state, options, l)
 
@@ -459,7 +460,7 @@ function Base.iterate(P::ZeroProblemIterator, st=nothing)
     end
 
     stopped && return nothing
-    ctr > options.maxevals && return nothing
+    ctr > options.maxiters && return nothing
 
     state, stopped = update_state(M, F, state, options, l)
     log_step(l, M, state)

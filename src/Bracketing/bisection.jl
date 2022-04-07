@@ -74,9 +74,9 @@ function default_tolerances(::AbstractBisectionMethod, ::Type{T}, ::Type{S′}) 
     xrtol = 0 * one(T)
     atol = 0 * oneunit(S)
     rtol = 0 * one(S)
-    maxevals = typemax(Int)
+    maxiters = typemax(Int)
     strict = true
-    (xatol, xrtol, atol, rtol, maxevals, strict)
+    (xatol, xrtol, atol, rtol, maxiters, strict)
 end
 
 # not float uses some non-zero tolerances for `x`
@@ -86,9 +86,9 @@ function default_tolerances(::AbstractBisectionMethod, ::Type{T′}, ::Type{S′
     xrtol = eps(T) * one(T) # unitless
     atol = 0 * oneunit(S)
     rtol = 0 * one(S)
-    maxevals = typemax(Int)
+    maxiters = typemax(Int)
     strict = true
-    (xatol, xrtol, atol, rtol, maxevals, strict)
+    (xatol, xrtol, atol, rtol, maxiters, strict)
 end
 
 
@@ -185,7 +185,7 @@ function solve!(P::ZeroProblemIterator{𝑴, 𝑵, 𝑭, 𝑺, 𝑶, 𝑳}; verb
             val = :exact_zero
             break
         end
-        ctr > options.maxevals && break
+        ctr > options.maxiters && break
 
         # ----
         ## update step
