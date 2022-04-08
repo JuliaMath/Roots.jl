@@ -13,11 +13,11 @@ The error, `eᵢ = xᵢ - α`, satisfies
 `eᵢ₊₁ = K₁ ⋅ K₅ ⋅ M ⋅ eᵢ⁵ + O(eᵢ⁶)`
 
 """
-struct Order5 <: AbstractSecant end
-struct KumarSinghAkanksha <: AbstractSecant end
+struct Order5 <: AbstractSecantMethod end
+struct KumarSinghAkanksha <: AbstractSecantMethod end
 
-function update_state(method::Order5, fs, o::UnivariateZeroState, options, l=NullTracks())
-    update_state_guarded(method, Secant(), KumarSinghAkanksha(), fs, o, options, l)
+function update_state(M::Order5, fs, o::UnivariateZeroState, options, l=NullTracks())
+    update_state_guarded(M, Secant(), KumarSinghAkanksha(), fs, o, options, l)
 end
 
 function update_state(
@@ -38,11 +38,7 @@ function update_state(
     fp, issue = _fbracket(o.xn1, wn, o.fxn1, fwn)
     if issue
         log_message(l, "Issue with divided difference f[xn, wn]. ")
-        @set! o.xn0 = o.xn1
-        @set! o.xn1 = wn
-        @set! o.fxn0 = o.fxn1
-        @set! o.fxn1 = fwn
-
+        o = _set(o, (wn, fwn), (xn, fxn))
         return o, true
     end
 
@@ -56,31 +52,28 @@ function update_state(
 
     fp, issue = _fbracket_ratio(yn, o.xn1, wn, fyn, o.fxn1, fwn)
     if issue
-        log_message(l, "Issue with f[xn,yn]*f[yn,wn] / f[xn, wn]")
-        @set! o.xn0 = o.xn1
-        @set! o.xn1 = yn
-        @set! o.fxn0 = o.fxn1
-        @set! o.fxn1 = fyn
+        log_message(l, "Issue with f[xn,yn] * f[yn,wn] / f[xn, wn].")
+        o = _set(o, (yn, fyn), (xn, fxn))
 
         return o, true
     end
 
-    @set! o.xn0 = o.xn1
-    @set! o.fxn0 = o.fxn1
     x₁::T = zn - fzn / fp
-    @set! o.xn1 = x₁
-    @set! o.fxn1 = F(o.xn1)
+    f₁ = F(x₁)
     incfn(l)
+
+    o = _set(o, (x₁, f₁), (xn, fxn))
+
 
     return o, false
 
     #    nothing
 end
 
-struct Order5Derivative <: AbstractSecant end
+struct Order5Derivative <: AbstractSecantMethod end
 fn_argout(::Order5Derivative) = 2
 function update_state(
-    method::Order5Derivative,
+    m::Order5Derivative,
     f,
     o::AbstractUnivariateZeroState{T,S},
     options,
@@ -102,10 +95,7 @@ function update_state(
 
     if isissue(fpyn)
         log_message(l, "Issue computing `fpyn`")
-        @set! o.xn0 = o.xn1
-        @set! o.xn1 = yn
-        @set! o.fxn0 = o.fxn1
-        @set! o.fxn1 = fyn
+        o = _set(o, (yn, fyn), (o.xn1, o.fxn1))
 
         return o, true
     end
@@ -118,10 +108,7 @@ function update_state(
     fxn1, _ = f(xn1)
     incfn(l, 2)
 
-    @set! o.xn0 = xn
-    @set! o.xn1 = xn1
-    @set! o.fxn0 = fxn
-    @set! o.fxn1 = fxn1
+    o = _set(o, (xn1, fxn1), (xn, fxn))
 
     return o
 end

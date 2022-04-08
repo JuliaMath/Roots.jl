@@ -1,6 +1,6 @@
 """
 
-    find_zero(f, x0, M, [N::AbstractBracketing]; kwargs...)
+    find_zero(f, x0, M, [N::AbstractBracketingMethod]; kwargs...)
 
 Interface to one of several methods for finding zeros of a univariate function, e.g. solving ``f(x)=0``.
 
@@ -11,47 +11,71 @@ in the iterative procedure. (Secant methods can have a tuple specify
 their initial values.) Values must be a subtype of `Number` and have
 methods for `float`, `real`, and `oneunit` defined.
 
-For bracketing intervals, `x0` is specified using a tuple, a vector, or any iterable with `extrema` defined. A bracketing interval, ``[a,b]``, is one where f(a) and f(b) have different signs.
+For bracketing intervals, `x0` is specified using a tuple, a vector,
+or any iterable with `extrema` defined. A bracketing interval,
+``[a,b]``, is one where ``f(a)`` and ``f(b)`` have different signs.
 
 # Return value
 
-If the algorithm suceeds, the approximate root identified is returned. A `ConvergenceFailed` error is thrown if the algorithm fails. The alternate form `solve(ZeroProblem(f,x0), M)` returns `NaN` in case of failure.
+If the algorithm suceeds, the approximate root identified is
+returned. A `ConvergenceFailed` error is thrown if the algorithm
+fails. The alternate form `solve(ZeroProblem(f,x0), M)` returns `NaN`
+in case of failure.
 
 # Specifying a method
 
 A method is specified to indicate which algorithm to employ:
 
-* There are methods for bisection where a bracket is specified: [`Bisection`](@ref), [`Roots.A42`](@ref), [`Roots.AlefeldPotraShi`](@ref), [`Roots.Brent`](@ref), and [`FalsePosition`](@ref)
+* There are methods where a bracket is specified: [`Bisection`](@ref),
+  [`A42`](@ref), [`AlefeldPotraShi`](@ref),
+  [`Roots.Brent`](@ref), among others. Bisection is the default, but
+  `A42` generally requires far fewer iterations.
 
-* There are several derivative-free methods: cf. [`Order0`](@ref), [`Order1`](@ref) (also [`Roots.Secant`](@ref)), [`Order2`](@ref) (also [`Roots.Steffensen`](@ref)), [`Order5`](@ref), [`Order8`](@ref), and [`Order16`](@ref), where the number indicates the order of the convergence. Methods [`Roots.Order1B`](@ref) and [`Roots.Order2B`](@ref) are useful when the desired zero has a multiplicity.
+* There are several derivative-free methods: cf. [`Order0`](@ref),
+  [`Order1`](@ref) (also [`Roots.Secant`](@ref)), [`Order2`](@ref)
+  (also [`Steffensen`](@ref)), [`Order5`](@ref),
+  [`Order8`](@ref), and [`Order16`](@ref), where the number indicates
+  the order of the convergence. Methods [`Roots.Order1B`](@ref) and
+  [`Roots.Order2B`](@ref) are useful when the desired zero has a
+  multiplicity.
 
-* There are some classical methods where derivatives are required: [`Roots.Newton`](@ref), [`Roots.Halley`](@ref), [`Roots.Schroder`](@ref).
+* There are some classical methods where derivatives are required:
+  [`Roots.Newton`](@ref), [`Roots.Halley`](@ref),
+  [`Roots.Schroder`](@ref), among others.
 
-* The family [`Roots.LithBoonkkampIJzerman{S,D}`](@ref) for different `S` and `D` uses a linear multistep method root finder. The `(2,0)` method is the secant method, `(1,1)` is Newton's method.
+* The family [`Roots.LithBoonkkampIJzerman{S,D}`](@ref) ,for different
+  `S` and `D`, uses a linear multistep method root finder. The `(2,0)`
+  method is the secant method, `(1,1)` is Newton's method.
 
-For more detail, see the help page for each method (e.g., `?Order1`). Non-exported methods must be qualified with module name, as in `?Roots.Schroder`.
+For more detail, see the help page for each method (e.g.,
+`?Order1`). Non-exported methods must be qualified with module name,
+as in `?Roots.Schroder`.
 
 If no method is specified, the default method depends on `x0`:
 
-* If `x0` is a scalar, the default is the slower, but more robust `Order0` method.
+* If `x0` is a scalar, the default is the more robust `Order0` method.
 
-* If `x0` is a tuple, vector, or iterable with `extrema` defined indicating a *bracketing* interval, the `Bisection` method is used. (The exact algorithm depends on the number type and the tolerances.)
+* If `x0` is a tuple, vector, or iterable with `extrema` defined
+  indicating a *bracketing* interval, then the `Bisection` method is used.
+
+The default methods are chosen to be robust; they may not be as efficient as some others.
 
 # Specifying the function
 
 The function(s) are passed as the first argument.
 
-For the few methods that use one or more derivatives (`Newton`, `Halley`,
-`Schroder`, `LithBoonkkampIJzerman(S,D)`, and  `Order5Derivative`) a
-tuple of functions is used. For the classical algorithms, a function returning `(f(x), f(x)/f'(x), [f'(x)/f''(x)])` may be used.
+For the few methods that use one or more derivatives (`Newton`,
+`Halley`, `Schroder`, `LithBoonkkampIJzerman(S,D)`, etc.) a tuple of
+functions is used. For the classical algorithms, a function returning
+`(f(x), f(x)/f'(x), [f'(x)/f''(x)])` may be used.
 
 # Optional arguments (tolerances, limit evaluations, tracing)
 
-* `xatol` - absolute tolerance for `x` values. Passed to `isapprox(x_n, x_{n-1})`.
-* `xrtol` - relative tolerance for `x` values. Passed to `isapprox(x_n, x_{n-1})`.
+* `xatol` - absolute tolerance for `x` values.
+* `xrtol` - relative tolerance for `x` values.
 * `atol`  - absolute tolerance for `f(x)` values.
 * `rtol`  - relative tolerance for `f(x)` values.
-* `maxevals`   - limit on maximum number of iterations.
+* `maxiters`   - limit on maximum number of iterations.
 * `strict` - if `false` (the default), when the algorithm stops, possible zeros are checked with a relaxed tolerance.
 * `verbose` - if `true` a trace of the algorithm will be shown on successful completion. See the internal [`Tracks`](@ref) object to save this trace.
 
@@ -62,17 +86,19 @@ for details on the default tolerances.
 In general, with floating point numbers, convergence must be
 understood as not an absolute statement. Even if mathematically `α` is
 an answer and `xstar` the floating point realization, it may be that
-`f(xstar) - f(α)  ≈ xstar ⋅  f'(α) ⋅ eps(α)`, so tolerances must be
+`f(xstar) - f(α)  ≈ xstar ⋅  f'(α) ⋅ eps(α)`, so the role of tolerances must be
 appreciated, and at times specified.
 
-For the `Bisection` methods, convergence is guaranteed, so the tolerances are set to be ``0`` by default.
+For the `Bisection` methods, convergence is guaranteed over `Float64`
+values, so the tolerances are set to be ``0`` by default.
 
 If a bracketing method is passed in after the method specification,
 then whenever a bracket is identified during the algorithm, the method
 will switch to the bracketing method to identify the zero. (Bracketing
-methods are mathematically guaranteed to converge, non-bracketing methods may or may not converge.)
-This is what `Order0` does by default, with an initial secant method switching
-to the `AlefeldPotraShi` method should a bracket be encountered.
+methods are mathematically guaranteed to converge, non-bracketing
+methods may or may not converge.)  This is what `Order0` does by
+default, with an initial secant method switching to the
+`AlefeldPotraShi` method should a bracket be encountered.
 
 Note: The order of the method is hinted at in the naming scheme. A
 scheme is order `r` if, with `eᵢ = xᵢ - α`, `eᵢ₊₁ = C⋅eᵢʳ`. If the
@@ -110,7 +136,7 @@ julia> find_zero(sin, 3.0, Order2())              # Use Steffensen method
 julia> find_zero(sin, big(3.0), Order16())        # rapid convergence
 3.141592653589793238462643383279502884197169399375105820974944592307816406286198
 
-julia> find_zero(sin, (3, 4), Roots.A42())      # fewer function calls than Bisection(), in this case
+julia> find_zero(sin, (3, 4), A42())              # fewer function calls than Bisection(), in this case
 3.141592653589793
 
 julia> find_zero(sin, (3, 4), FalsePosition(8))   # 1 of 12 possible algorithms for false position
@@ -144,7 +170,7 @@ julia> x0, xstar = 1.0,  1.112243913023029;
 julia> find_zero(fn, x0, Order2()) ≈ xstar
 true
 
-julia> find_zero(fn, x0, Order2(), maxevals=3)    # need more steps to converge
+julia> find_zero(fn, x0, Order2(), maxiters=3)    # need more steps to converge
 ERROR: Roots.ConvergenceFailed("Algorithm failed to converge")
 [...]
 ```
@@ -153,7 +179,7 @@ ERROR: Roots.ConvergenceFailed("Algorithm failed to converge")
 
 Passing `verbose=true` will show details on the steps of the algorithm.
 The `tracks` argument allows
-the passing of storage to record the values of `x` and `f(x)` used in
+the passing of a [`Tracks`](ref) object to record the values of `x` and `f(x)` used in
 the algorithm.
 
 !!! note
@@ -181,35 +207,6 @@ end
 find_zero(f, x0::Number; kwargs...) = find_zero(f, x0, Order0(); kwargs...)
 find_zero(f, x0; kwargs...) = find_zero(f, x0, Bisection(); kwargs...)
 
-"""
-    find_zero(M, F, state, [options], [l])
-
-Find zero using method `M`, function(s) `F`, and initial state
-`state`. Returns an approximate zero or `NaN`. Useful when some part
-of the processing pipeline is to be adjusted.
-
-* `M::AbstractUnivariateZeroMethod` a method, such as `Secant()`
-* `F`: A callable object (or tuple of callable objects for certain methods)
-* `state`: An initial state, as created by `init_state` (or `_init_state`).
-* `options::UnivariateZeroOptions`: specification of tolerances
-* `l::AbstractTracks`: used to record steps in algorithm, when requested.
-```
-
-!!! note
-    To be deprecated in favor of `solve!(init(...))`.
-"""
-function find_zero(
-    M::AbstractUnivariateZeroMethod,
-    F,
-    state::AbstractUnivariateZeroState,
-    options::UnivariateZeroOptions=init_options(M, state),
-    l::AbstractTracks=NullTracks(),
-)
-    Base.depwarn("findzero(M, F, state, ...) interface is deprecated, use `solve(ZeroProblem(f,x0), M, ...)", :find_zero)
-
-    solve!(init(M, F, state, options, l))
-end
-
 ## ---------------
 
 ## Create an Iterator interface
@@ -225,6 +222,11 @@ struct ZeroProblem{F,X}
     x₀::X
 end
 Base.broadcastable(p::ZeroProblem) = Ref(p)
+
+# possible unicode operator to lighten `solve(ZeroProblem(f,x), M)` at `solve(f ≀ x, M)`
+f ≀ x = ZeroProblem(f, x)  # \wr[tab]
+
+## --------------------------------------------------
 
 ## The actual iterating object
 struct ZeroProblemIterator{M,N,F,S,O,L}
@@ -243,7 +245,8 @@ Base.show(io::IO, Z::ZeroProblemIterator) =
 ## init(Z,p)
 ## init(Z,M,p)
 ## init(M,F,state, [options], [logger])
-## want p to be positional, not named⁺
+## want p to be a keyword, not positional. Leaving for now.
+## but the positional use is not documented (though annoyingly is being tested)
 function init(
     𝑭𝑿::ZeroProblem,
     M::AbstractUnivariateZeroMethod,
@@ -262,64 +265,35 @@ function init(
 end
 
 function init(𝑭𝑿::ZeroProblem, p′=nothing; kwargs...)
-    M = length(𝑭𝑿.x₀) == 1 ? Secant() : Bisection()
-    init(𝑭𝑿, M, p′; kwargs...)
+    M =  length(𝑭𝑿.x₀) == 1 ? Order0() : AlefeldPotraShi()
+    init(𝑭𝑿, M; p = p′, kwargs...)
 end
 
 function init(
     M::AbstractUnivariateZeroMethod,
     F,
     state::AbstractUnivariateZeroState,
-    options::UnivariateZeroOptions=init_options(M, state),
+    options::AbstractUnivariateZeroOptions=init_options(M, state),
     l::AbstractTracks=NullTracks(),
 )
     ZeroProblemIterator(M, Nothing, Callable_Function(M, F), state, options, l)
 end
 
-# Optional iteration interface to handle looping
-# errors on non-convergence, unlike solve!(init(...)) which returns NaN
-# allocates...
-# This should be deprecated
-function Base.iterate(P::ZeroProblemIterator, st=nothing)
-    ## st = (val, (state, ctr, val))
-    if st === nothing
-        state = P.state
-        ctr = 1
-    else
-        (state, ctr, val) = st
-        ctr += 1
-    end
-    M, options, l = P.M, P.options, P.logger
-    val, stopped = :no_convergence, false
-    while true
-        val, stopped = assess_convergence(M, state, options)
-        stopped && break
-        if ctr > options.maxevals
-            stopped = true
-            break
-        end
-        state, stopped = update_state(M, P.F, state, options, l)
-        log_step(l, M, state)
-        break
-    end
-
-    if stopped
-        xstar = decide_convergence(P.M, P.F, state, P.options, val)
-        isnan(xstar) && throw(ConvergenceFailed("Stopped at $(state.xn1)"))
-        nothing
-    else
-        return (state.xn1, (state, ctr, val))
-    end
-end
 
 """
-    solve(fx::ZeroProblem, [p=nothing]; kwargs...)
-    solve(fx::ZeroProblem, M, [p=nothing]; kwargs...)
-    init(fx::ZeroProblem, [M], [p=nothing];
+    solve(fx::ZeroProblem, [M], [N]; p=nothing, kwargs...)
+    init(fx::ZeroProblem, [M], [N];
+         p=nothing,
          verbose=false, tracks=NullTracks(), kwargs...)
     solve!(P::ZeroProblemIterator)
 
-Solve for the zero of a function specified through a  `ZeroProblem` or `ZeroProblemIterator`
+Solve for the zero of a scalar-valued univariate function specified through `ZeroProblem` or
+`ZeroProblemIterator` using the `CommonSolve` interface.
+
+The defaults for `M` and `N` depend on the `ZeroProblem`: if `x0` is a
+number, then `M=Secant()` and `N=AlefeldPotraShi()` is used (`Order0`); if `x0`
+has `2` (or more values) then it is assumed to be a bracketing
+interval and `M=AlefeldPotraShi()` is used.
 
 The methods involved with this interface are:
 
@@ -328,10 +302,15 @@ The methods involved with this interface are:
 
 The latter calls the following, which can be useful independently:
 
-* `init`: to initialize an iterator with a method for solution, any adjustments to the default tolerances, and a specification to log the steps or not.
+* `init`: to initialize an iterator with a method for solution, any
+  adjustments to the default tolerances, and a specification to log
+  the steps or not.
 * `solve!` to iterate to convergence.
 
-Returns `NaN`, not an error, when the problem can not be solved. Tested for zero allocations.
+Returns `NaN`, not an error like `find_zero`, when the problem can not
+be solved. Tested for zero allocations.
+
+
 
 ## Examples:
 
@@ -350,19 +329,15 @@ Or, if the iterable is required
 ```jldoctest find_zero
 julia> problem = init(fx);
 
-
 julia> solve!(problem)
 3.141592653589793
 ```
 
-The default method is `Order1()`, when  `x0` is a number, or `Bisection()` when `x0` is an iterable with 2 or more values.
-
-
-A second position argument for `solve` or `init` is used to specify a different method; keyword arguments can be used to adjust the default tolerances.
+keyword arguments can be used to adjust the default tolerances.
 
 
 ```jldoctest find_zero
-julia> solve(fx, Order5(), atol=1/100)
+julia> solve(fx, Order5(); atol=1/100)
 3.1425464815525403
 ```
 
@@ -371,12 +346,13 @@ The above is equivalent to:
 ```jldoctest find_zero
 julia> problem = init(fx, Order5(), atol=1/100);
 
-
 julia> solve!(problem)
 3.1425464815525403
 ```
 
-The  argument `p` may be used if the function(s) to be solved depend on a parameter in their second positional argument (e.g., `f(x,p)`). For example
+The keyword argument `p` may be used if the function(s) to be solved
+depend on a parameter in their second positional argument (e.g.,
+`f(x, p)`). For example
 
 ```jldoctest find_zero
 julia> f(x,p) = exp(-x) - p # to solve p = exp(-x)
@@ -385,7 +361,7 @@ f (generic function with 1 method)
 julia> fx = ZeroProblem(f, 1)
 ZeroProblem{typeof(f), Int64}(f, 1)
 
-julia> solve(fx, 1/2)  # log(2)
+julia> solve(fx; p=1/2)  # log(2)
 0.6931471805599453
 ```
 
@@ -393,7 +369,9 @@ This would be recommended, as there is no recompilation due to the function chan
 
 The argument `verbose=true` for `init` instructs that steps to be logged;
 
-The iterator interface allows for the creation of hybrid solutions, for example, this is essentially how `Order0` is constructed (`Order0` follows secant steps until a bracket is identified, after which it switches to a bracketing algorithm.)
+The iterator interface allows for the creation of hybrid solutions,
+such as is used when two methods are passed to `solve`.
+For example, this is essentially how the hybrid default is constructed:
 
 ```jldoctest find_zero
 julia> function order0(f, x)
@@ -432,7 +410,7 @@ function solve!(P::ZeroProblemIterator; verbose=false)
     while !stopped
         val, stopped = assess_convergence(M, state, options)
         stopped && break
-        ctr > options.maxevals && break
+        ctr > options.maxiters && break
 
         state, stopped = update_state(M, F, state, options, l)
 
@@ -443,45 +421,57 @@ function solve!(P::ZeroProblemIterator; verbose=false)
     val, stopped = assess_convergence(M, state, options) # udpate val flag
     α = decide_convergence(M, F, state, options, val)
 
-    if !(l isa NullTracks)
-        log_convergence(l, val)
-        log_method(l, M)
-        log_last(l, α)
-        verbose && display(l)
-    end
+    log_convergence(l, val)
+    log_method(l, M)
+    log_last(l, α)
+    verbose && display(l)
+
     α
 
 end
 
 # thread verbose through
 """
-    solve(𝐙::ZeroProblem, args...; verbose=false, kwargs...)
+    solve(fx::ZeroProblem, args...; verbose=false, kwargs...)
 
-Disptaches to `solve!(init(𝐙, args...; kwargs...))`. See [`solve!`](@ref) for details.
+Disptaches to `solve!(init(fx, args...; kwargs...))`. See [`solve!`](@ref) for details.
 """
-CommonSolve.solve(F::ZeroProblem, args...; verbose=false, kwargs...) =
-    solve!(init(F, args...; verbose=verbose, kwargs...); verbose=verbose)
+CommonSolve.solve(𝑭𝑿::ZeroProblem, args...; verbose=false, kwargs...) =
+    solve!(init(𝑭𝑿, args...; verbose=verbose, kwargs...); verbose=verbose)
 
-## --------------------------------------------------
-## Framework for setting up an iterative problem for finding a zero
-#
-# In McNamee & Pan (DOI:10.1016/j.camwa.2011.11.015 there are a number of
-# results on efficiencies of a solution, (1/d) log_10(q)
-# Those implemented here are:
-# quadratic cut (Muller) .265 (in a42)
-# Newton() newton = .1505   or 1/2log(2)
-# Order1() secant method .20 (1/1 * log(1.6)
-# FalsePostion(12) Anderson-Bjork [.226, .233]
-# FalsePostion(3) (King?) .264
-# A42() 0.191 but convergence guaranteed
-# Order8() 8th order 4 steps: .225 (log10(8)/4
-# Order16() 16th order 5 steps .240
-# Order5(): 5th order, 4 steps. 0.1747
 
-# A zero is found by specifying:
-# the method to use <: AbstractUnivariateZeroMethod
-# the function(s)
-# the initial state through a value for x either x, [a,b], or (a,b) <: AbstractUnivariateZeroState
-# the options (e.g., tolerances) <: UnivariateZeroOptions
+# Optional iteration interface to handle looping
+# * returns xₙ or (aₙ, bₙ) depending
+# * throws error on non-convergence
+function Base.iterate(P::ZeroProblemIterator, st=nothing)
+    ## st = (val, (state, ctr, flag, stopped))
 
-# The minimal amount needed to add a method, is to define a Method and an update_state method.
+    M, F, options, l = P.M, P.F, P.options, P.logger
+
+    if st === nothing
+        state = P.state
+        ctr, flag, stopped = 1, :not_converged, false
+        log_method(l, M)
+        log_step(l, M, state; init=true)
+    else
+        state, ctr, flag, stopped = st
+        ctr += 1
+    end
+
+    stopped && return nothing
+    ctr > options.maxiters && return nothing
+
+    state, stopped = update_state(M, F, state, options, l)
+    log_step(l, M, state)
+
+    flag, stopped = assess_convergence(M, state, options)
+
+    if stopped
+        α = decide_convergence(M, F, state, options, flag)
+        log_last(l, α)
+        isnan(α) && throw(ConvergenceFailed("Algorithm did not converge."))
+    end
+
+    return (last(state,M), (state, ctr, flag, stopped))
+
+end

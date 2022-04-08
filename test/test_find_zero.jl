@@ -7,7 +7,7 @@ Base.adjoint(f) = x -> ForwardDiff.derivative(f, float(x));
 # for a user-defined method
 import Roots.Setfield
 import Roots.Setfield: @set!
-struct Order3_Test <: Roots.AbstractSecant end
+struct Order3_Test <: Roots.AbstractSecantMethod end
 
 ## Test the interface
 @testset "find_zero interface tests" begin
@@ -44,15 +44,13 @@ struct Order3_Test <: Roots.AbstractSecant end
     @test @inferred(find_zero(sin, [3, 4])) ≈ π   # Bisection()
 
     ## test tolerance arguments
-    ## xatol, xrtol, atol, rtol, maxevals, maxfneval, strict
+    ## xatol, xrtol, atol, rtol, maxevals, strict
     fn, xstar = x -> sin(x) - x + 1, 1.9345632107520243
     x0, M = 20.0, Order2()
     @test find_zero(fn, x0, M) ≈ xstar   # needs 16 iterations, 33 fn evaluations, difference is exact
 
     # test of maxevals
     @test_throws Roots.ConvergenceFailed find_zero(fn, x0, M, maxevals=2)
-    # test of maxfneval REMOVED
-    # @test_throws Roots.ConvergenceFailed find_zero(fn, x0, M, maxfnevals=2)
 
     # tolerance on f, atol, rtol: f(x) ~ 0
     M = Order2()
@@ -67,9 +65,11 @@ struct Order3_Test <: Roots.AbstractSecant end
     h = 1e-6
     M = Roots.Bisection()
     tracks = Roots.Tracks(Float64, Float64)
-    @inferred(find_zero(fn, (a, b), M, tracks=tracks, xatol=h, xrtol=0.0))
-    u, v = tracks.abₛ[end]
-    @test h >= abs(u - v) >= h / 2
+    if VERSION >= v"1.6.0"
+        @inferred(find_zero(fn, (a, b), M, tracks=tracks, xatol=h, xrtol=0.0))
+        u, v = tracks.abₛ[end]
+        @test h >= abs(u - v) >= h / 2
+    end
 
     ## test of strict
     fn, x0 = x -> cos(x) - 1, pi / 4
@@ -150,7 +150,7 @@ end
     M = Roots.A42()
     G1 = Roots.Callable_Function(M, g1)
     state = @inferred(Roots.init_state(M, G1, x0_))
-    options = @inferred(Roots.init_options(M, state))
+    options = Roots.init_options(M, state)
     for M in (Roots.A42(), Roots.Bisection(), Roots.FalsePosition())
         Gₘ = Roots.Callable_Function(M, G1)
         stateₘ = @inferred(Roots.init_state(M, state, Gₘ))
@@ -201,7 +201,7 @@ end
     fxs = f.(xs)
     M = Bisection()
     state = @inferred(Roots.init_state(M, f, xs..., fxs..., m=3.5, fm=f(3.5)))
-    @test @inferred(find_zero(M, f, state)) ≈ π
+    @test @inferred(solve!(init(M, f, state))) ≈ π
 
     #     ## hybrid
     g1 = x -> exp(x) - x^4
@@ -209,7 +209,7 @@ end
     M = Roots.Bisection()
     G1 = Roots.Callable_Function(M, g1)
     state = @inferred(Roots.init_state(M, G1, x0_))
-    options = @inferred(Roots.init_options(M, state, xatol=1 / 2))
+    options = Roots.init_options(M, state, xatol=1 / 2)
     ZPI = @inferred(init(M, G1, state, options))
     ϕ = iterate(ZPI)
     while ϕ !== nothing
@@ -300,7 +300,9 @@ end
     end
 
     ## test broadcasting semantics with ZeroProblem
-    Z = ZeroProblem((x, p) -> cos(x) - p, pi / 4)
+    ## This assume parameters can be passed in a positional manner, a
+    ## style which is discouraged, as it is confusing
+    Z = ZeroProblem((x, p) -> cos(x) - x/p, pi / 4)
     @test all(solve.(Z, (1, 2)) .≈ (solve(Z, 1), solve(Z, 2)))
 end
 
@@ -310,9 +312,7 @@ end
     Ms = [
         Order0(),
         Order1(),
-        Roots.Order1B(),
         Order2(),
-        Roots.Order2B(),
         Order5(),
         Order8(),
         Order16(),
@@ -335,7 +335,7 @@ end
         xn = find_zero(fn, x0, M)
         @test abs(fn(xn)) <= 1e-10
     end
-    for M in [Order2(), Order5(), Order8(), Order16()]
+    for M in [Roots.Order1B(), Order2(), Roots.Order2B(), Order5(), Order8(), Order16()]
         @test_throws Roots.ConvergenceFailed find_zero(fn, x0, M, strict=true)
     end
 
@@ -400,8 +400,7 @@ end
         state = Roots.init_state(M, F, x0)
         options = Roots.init_options(M, state)
         l = Roots.Tracks(state)
-        find_zero(M, F, state, options, l)
-
+        solve(ZeroProblem(lhs, x0), M; tracks=l)
         @test l.steps <= 45 # 15
     end
     test_94()
@@ -411,11 +410,13 @@ end
 
     ## Use tolerance on f, not x with bisectoin
     atol = 0.01
-    u = @inferred(find_zero(sin, (3, 4), atol=atol))
-    @test atol >= abs(sin(u)) >= atol^2
+    if VERSION >= v"1.6.0"
+        u = @inferred(find_zero(sin, (3, 4), atol=atol))
+        @test atol >= abs(sin(u)) >= atol^2
 
-    ## issue #159 bracket with zeros should be found
-    @test @inferred(find_zero(x -> x + 1, (-1, 1))) == -1
+        ## issue #159 bracket with zeros should be found
+        @test @inferred(find_zero(x -> x + 1, (-1, 1))) == -1
+    end
 
     ## issue #178 passinig through method
     @test fzero(sin, 3, 4, Roots.Brent()) ≈ π
@@ -426,7 +427,7 @@ end
     end
     r = 0.05
     xs = (r + 1e-12, 1.0)
-    @test @inferred(find_zero(x -> f(r) - f(x), xs, Roots.A42())) ≈ 0.4715797678171889
+    @test find_zero(x -> f(r) - f(x), xs, Roots.A42()) ≈ 0.4715797678171889
 end
 
 struct _SampleCallableObject end
@@ -460,58 +461,6 @@ end
         @test find_zero(g, 1.1, M) ≈ 1.1673039782614187
         @test g.cnt <= 30
     end
-end
-
-@testset "find_bracket test" begin
-    fs_xs = ((x -> x^5 - x - 1, (0, 2)), (sin, (3, 4)), (x -> exp(x) - x^4, (5, 20)))
-
-    for (f, x0) in fs_xs
-        out = Roots.find_bracket(f, x0)
-        @test prod(f.(out.bracket)) <= 0
-    end
-
-    ## test size of  bracket
-    for M in (Roots.BisectionExact(), Roots.A42(), Roots.AlefeldPotraShi())
-        for (fn, b) in (
-            (x -> x == 0.0 ? 0.0 : x / exp(1 / (x * x)), (-1.0, 4.0)),
-            (x -> exp(-15 * x) * (x - 1) + x^15, (0.0, 1.0)),
-            (x -> (-40.0) * x * exp(-x), (-9, 31)),
-        )
-            l = Roots.find_bracket(fn, b, M)
-            @test l.exact || abs(l.bracket[2] - l.bracket[1]) <= eps(l.xstar)
-        end
-    end
-
-    ## subnormal
-    x0 = nextfloat(nextfloat(0.0))
-    fn = x -> (x - x0)
-    b = (0.0, 1.0)
-    m = Roots.__middle(b...)  # 1e-154
-    M = Roots.BisectionExact()
-    l = Roots.find_bracket(fn, b, M)
-    ## Here l.exact=true, but  this checks the bracket size
-    ab = abs(l.bracket[2] - l.bracket[1])
-    #@test  !(ab) <=  eps(l.xstar))
-    @test abs(-(l.bracket...)) <= m
-
-    M = Roots.A42()
-    l = Roots.find_bracket(fn, b, M)
-    ab = abs(l.bracket[2] - l.bracket[1])
-    #@test  !(ab <=  eps(l.xstar))
-    @test ab <= m
-
-    M = Roots.AlefeldPotraShi()
-    l = Roots.find_bracket(fn, b, M)
-    ab = abs(l.bracket[1] - l.bracket[1])
-    #@test  !(ab <=  eps(l.xstar))
-    @test ab ≤ m
-
-    x0 = nextfloat(0.0)
-    fn = x -> x <= 0.0 ? x - x0 : x + x0
-    b = (-1.0, 1.0)
-    M = Roots.BisectionExact()
-    l = Roots.find_bracket(fn, b, M)
-    @test !l.exact && abs(-(l.bracket...)) <= maximum(eps.(l.bracket))
 end
 
 @testset "function evalutions" begin
@@ -558,7 +507,7 @@ end
         Order16(),
         Roots.Order1B(),
         Roots.Order2B(),
-        Roots.BisectionExact(),
+        Roots.Bisection(),
         Roots.Brent(),
         Roots.Ridders(),
         Roots.ITP(),
@@ -583,8 +532,10 @@ end
 end
 
 @testset "_extrema" begin
-    @test @inferred(Roots._extrema((π, 0))) === (0.0, Float64(π))
-    @test @inferred(Roots._extrema([π, 0])) === (0.0, Float64(π))
+    if VERSION >= v"1.6.0"
+        @test @inferred(Roots._extrema((π, 0))) === (0.0, Float64(π))
+        @test @inferred(Roots._extrema([π, 0])) === (0.0, Float64(π))
+    end
     @test_throws ArgumentError Roots._extrema(π)
     @test_throws ArgumentError Roots._extrema((π, π))
     @test_throws ArgumentError Roots._extrema([π, π])

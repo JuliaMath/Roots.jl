@@ -10,7 +10,7 @@ Chandrapatla's algorithm chooses between an inverse quadratic step or a bisectio
 
 
 """
-struct Chandrapatla <: AbstractAcceleratedBisection end
+struct Chandrapatla <: AbstractBracketingMethod end
 
 struct ChandrapatlaState{T,S} <: AbstractUnivariateZeroState{T,S}
     xn1::T
@@ -53,11 +53,8 @@ function update_state(::Chandrapatla, F, o, options, l=NullTracks())
         fa, fc = fₜ, fa
     end
 
-    @set! o.xn1 = a
-    @set! o.xn0 = b
+    o = _set(o, (a, fa), (b, fb)) # a is xₙ, b is xₙ₋₁
     @set! o.c = c
-    @set! o.fxn1 = fa
-    @set! o.fxn0 = fb
     @set! o.fc = fc
 
     return (o, false)

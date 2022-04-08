@@ -31,7 +31,7 @@ find_zero
 find_zeros
 ```
 
-### CommonSolve interface
+## CommonSolve interface
 
 The problem-algorithm-solve interface is a pattern popularized in `Julia` by the `DifferentialEquations.jl` suite of packages. This can be used as an alternative to `find_zero`. Unlike `find_zero`, `solve` will return `NaN` on non-convergence.
 
@@ -141,7 +141,7 @@ Roots.LithBoonkkampIJzermanBracket
 
 The order of convergence for most methods is for *simple* zeros, values ``\alpha`` where ``f(x) = (x-\alpha) \cdot g(x)``, with ``g(\alpha)`` being non-zero. For methods which are of order ``k`` for non-simple zeros, usually an additional function call is needed per step. For example, this is the case for `Roots.Newton` as compared to `Roots.Schroder`.
 
-Derivative-free methods for non-simple zeros have the following implemented
+Derivative-free methods for non-simple zeros have the following implemented:
 
 ```@docs
 Roots.King
@@ -258,7 +258,7 @@ When an algorithm returns  a  `NaN` value,  it terminates. This  can  happen nea
     The use of  relative tolerances  to  check  if   ``f(x)  \approx  0`` can lead  to spurious  answers  where  ``x`` is very large   (and  hence the relative  tolerance  is large). The return of  very  large solutions  should  be checked against expectations  of the  answer.
 
 
-Deciding if an algorithm won't  terminate is  done  through  counting the number or  iterations performed; the default  adjusted through `maxevals`. As  most  algorithms are superlinear, convergence happens rapidly near  the answer, but  all the algorithms  can take  a while  to  get near  an  answer, even   when progress  is made. As  such, the maximum must be large enough to consider linear cases, yet small enough to avoid too many steps when an algorithm is non-convergent.
+Deciding if an algorithm won't  terminate is  done  through  counting the number or  iterations performed; the default  adjusted through `maxiters`. As  most  algorithms are superlinear, convergence happens rapidly near  the answer, but  all the algorithms  can take  a while  to  get near  an  answer, even   when progress  is made. As  such, the maximum must be large enough to consider linear cases, yet small enough to avoid too many steps when an algorithm is non-convergent.
 
 
 Convergence criteria are method dependent and are determined by  the  `Roots.assess_convergence`  methods.

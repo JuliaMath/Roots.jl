@@ -1,48 +1,11 @@
-"""
-    Order0()
-
-
-The `Order0` method is engineered to be a more robust, though possibly
-slower, alternative to the other derivative-free root-finding
-methods. The implementation roughly follows the algorithm described in
-*Personal Calculator Has Key to Solve Any Equation ``f(x) = 0``*, the
-SOLVE button from the
-[HP-34C](http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1979-12.pdf).
-The basic idea is to use a secant step. If along the way a bracket is
-found, switch to a bracketing algorithm, using `AlefeldPotraShi`.  If the secant
-step fails to decrease the function value, a quadratic step is used up
-to ``4`` times.
-
-This is not really ``0``-order: the secant method has order
-``1.6...`` [Wikipedia](https://en.wikipedia.org/wiki/Secant_method#Comparison_with_other_root-finding_methods)
-and the the bracketing method has order
-``1.6180...`` [Wikipedia](http://www.ams.org/journals/mcom/1993-61-204/S0025-5718-1993-1192965-2/S0025-5718-1993-1192965-2.pdf)
-so for reasonable starting points and functions, this algorithm should be
-superlinear, and relatively robust to non-reasonable starting points.
-
-"""
-struct Order0 <: AbstractSecant end
-
-# special case Order0 to be hybrid
-function init(
-    𝑭𝑿::ZeroProblem,
-    M::Order0,
-    p′=nothing;
-    p=nothing,
-    verbose::Bool=false,
-    tracks=NullTracks(),
-    kwargs...,
-)
-    p = p′ === nothing ? p : p′
-    init(𝑭𝑿, Secant(), AlefeldPotraShi(); p=p, verbose=verbose, tracks=tracks, kwargs...)
-end
+## Init for hybrid method -- start with a non-bracketing, finish with bracketing
 
 ## When passing 2 methods, any parameters must be passed as a named argument through
 ## the keyword p
 function init(
     𝑭𝑿::ZeroProblem,
-    M::AbstractUnivariateZeroMethod,
-    N::AbstractBracketing;
+    M::AbstractNonBracketingMethod,
+    N::AbstractBracketingMethod;
     p=nothing,
     verbose::Bool=false,
     tracks=NullTracks(),
@@ -63,11 +26,14 @@ end
 # * limit steps so as not too far or too near the previous one
 # * if not decreasing, use a quad step upto 4 times to bounce out of trap, if possible
 # First uses M, then N if bracket is identified
-function solve!(𝐙::ZeroProblemIterator{𝐌,𝐍}; verbose=false) where {𝐌,𝐍<:AbstractBracketing}
+function solve!(𝐙::ZeroProblemIterator{𝐌,𝐍}; verbose=false) where {𝐌,𝐍<:AbstractBracketingMethod}
     M, N, F, state, options, l = 𝐙.M, 𝐙.N, 𝐙.F, 𝐙.state, 𝐙.options, 𝐙.logger
 
     incfn(l, 2)
     log_step(l, M, state; init=true)
+
+    log_method(l, M)
+    log_nmethod(l, N)
 
     quad_ctr = 0
     flag = :not_converged
@@ -78,7 +44,7 @@ function solve!(𝐙::ZeroProblemIterator{𝐌,𝐍}; verbose=false) where {𝐌
         flag, converged = assess_convergence(M, state, options)
 
         converged && break
-        ctr >= options.maxevals && break
+        ctr >= options.maxiters && break
 
         state0 = state
         state0, stopped = update_state(M, F, state0, options) # state0 is proposed step
@@ -98,7 +64,11 @@ function solve!(𝐙::ZeroProblemIterator{𝐌,𝐍}; verbose=false) where {𝐌
             stateₙ = init_state(N, state0, Fₙ) # save function calls by using state0 values
             optionsₙ = init_options(N, stateₙ)
             α = solve!(init(N, Fₙ, stateₙ, optionsₙ, l))
-            break
+
+            log_method(l, M)
+            verbose && display(l)
+
+            return α
         end
 
         ## did we move too far?
@@ -133,7 +103,11 @@ function solve!(𝐙::ZeroProblemIterator{𝐌,𝐍}; verbose=false) where {𝐌
             stateₙ = init_state(N, Fₙ, a, b, fa, fb)
             optionsₙ = init_options(N, stateₙ)
             α = solve!(init(N, Fₙ, stateₙ, optionsₙ, l))
-            break
+
+            log_method(l, M)
+            verbose && display(l)
+
+            return α
         end
 
         ## did we improve?
@@ -179,11 +153,10 @@ function solve!(𝐙::ZeroProblemIterator{𝐌,𝐍}; verbose=false) where {𝐌
         log_step(l, M, state)
     end
 
-
     val, stopped = assess_convergence(M, state, options)
+    α = decide_convergence(M, F, state, options, val)
+
     log_convergence(l, val)
-    log_method(l, M)
-    log_nmethod(l, N)
     log_last(l, α)
     verbose && display(l)
 
@@ -194,26 +167,10 @@ function find_zero(
     fs,
     x0,
     M::AbstractUnivariateZeroMethod,
-    N::AbstractBracketing;
+    N::AbstractBracketingMethod;
     verbose=false,
     kwargs...,
 )
     𝐏 = ZeroProblem(fs, x0)
     solve!(init(𝐏, M, N; verbose=verbose, kwargs...), verbose=verbose)
-end
-
-# Switch to bracketing method
-# deprecate soon, not used
-function run_bisection(N::AbstractBracketing, f, ab, state)
-
-    Base.depwarn("This method is deprecated, as it is not longer used internally", :run_bisection)
-
-    steps, fnevals = state.steps, state.fnevals
-    f = Callable_Function(N, f)
-    init_state!(state, N, f; clear=true)
-    find_zero(N, f, state, init_options(N, state))
-    a, b = _extrema(ab)
-    u, v = a > b ? (b, a) : (a, b)
-    state.message *= "Bracketing used over ($u, $v), those steps not shown. "
-    return nothing
 end

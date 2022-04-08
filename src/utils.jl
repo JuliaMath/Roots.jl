@@ -20,6 +20,7 @@ nan(::Type{Float16}) = NaN16
 nan(::Type{Float32}) = NaN32
 nan(::Type{Float64}) = NaN
 nan(x::T) where {T<:Number} = NaN * one(T)
+nan(x::Type{T}) where {T <: Number} = NaN * one(T)
 nan(::Any) = NaN
 
 ## issue with approx derivative
@@ -167,11 +168,12 @@ function identify_starting_point(a, b, sfxs)
     p1
 end
 
-## ----
-
-function unicode_subscript(io, j)
+## not used
+function _unicode_subscript(io, j)
     a = ("⁻", "", "", "₀", "₁", "₂", "₃", "₄", "₅", "₆", "₇", "₈", "₉")
     for i in string(j)
         print(io, a[Int(i) - 44])
     end
 end
+
+unicode_subscript(io, j) = _unicode_subscript.(Ref(io), reverse(digits(j)))

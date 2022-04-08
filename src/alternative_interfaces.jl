@@ -164,7 +164,7 @@ function fzero(f, x0, M::AbstractUnivariateZeroMethod; kwargs...)
     find_zero(FnWrapper(f), x0, M; kwargs...)
 end
 
-function fzero(f, x0, M::AbstractUnivariateZeroMethod, N::AbstractBracketing; kwargs...)
+function fzero(f, x0, M::AbstractUnivariateZeroMethod, N::AbstractBracketingMethod; kwargs...)
     find_zero(FnWrapper(f), x0, M, N; kwargs...)
 end
 

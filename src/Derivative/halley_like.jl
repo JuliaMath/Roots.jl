@@ -26,25 +26,19 @@ initial_fncalls(M::AbstractHalleyLikeMethod) = 2 * 3
 fn_argout(::AbstractHalleyLikeMethod) = 3
 
 
-function update_state(
-    method::AbstractΔMethod,
-    F,
-    o::HalleyState{T,S},
-    options::UnivariateZeroOptions,
-    l=NullTracks(),
-) where {T,S}
+function update_state(M::AbstractΔMethod, F, o::HalleyState{T,S}, options, l=NullTracks()) where {T,S}
     xn = o.xn1
     fxn = o.fxn1
-    r1, r2 = o.Δ, o.ΔΔ
+    r1::T, r2::T = o.Δ, o.ΔΔ
 
-    Δ::T = calculateΔ(method, r1, r2)
+    Δ::T = calculateΔ(M, r1, r2)
     if isissue(Δ)
         log_message(l, "Issue with computing `Δ`")
         return (o, true)
     end
 
     xn1::T = xn - Δ
-    fxn1::S, (r1::T, r2::T) = F(xn1)
+    fxn1::S, (r1, r2) = F(xn1)
     incfn(l, 3)
 
     @set! o.xn0 = xn
@@ -62,28 +56,32 @@ end
 
 Implements Halley's [method](http://tinyurl.com/yd83eytb),
 `xᵢ₊₁ = xᵢ - (f/f')(xᵢ) * (1 - (f/f')(xᵢ) * (f''/f')(xᵢ) * 1/2)^(-1)`
-This method is cubically converging, but requires more function calls per step (3) than
-other methods.
+This method is cubically converging, it requires ``3`` function calls per step.
 
-Example
+The function, its derivative and second derivative can be passed either as a tuple of ``3`` functions *or*
+as a function returning values for ``(f, f/f', f'/f'')``, which could be useful when function evaluations are expensive.
+
+## Examples
 
 ```jldoctest with_derivative
 julia> using Roots
 
 julia> find_zero((sin, cos, x->-sin(x)), 3.0, Roots.Halley()) ≈ π
 true
-```
 
-If function evaluations are expensive one can pass in a function which
-returns `(f, f/f',f'/f'')` as follows
+julia> function f(x)
+       s,c = sincos(x)
+       (s, s/c, -c/s)
+       end;
 
-```jldoctest with_derivative
-julia> find_zero(x -> (sin(x), sin(x)/cos(x), -cos(x)/sin(x)), 3.0, Roots.Halley()) ≈ π
+julia> find_zero(f, 3.0, Roots.Halley()) ≈ π
 true
 ```
 
 This can be advantageous if the derivatives are easily computed from
 the computation for f, but otherwise would be expensive to compute separately.
+
+----
 
 The error, `eᵢ = xᵢ - α`, satisfies
 `eᵢ₊₁ ≈ -(2f'⋅f''' -3⋅(f'')²)/(12⋅(f'')²) ⋅ eᵢ³` (all evaluated at `α`).
@@ -95,10 +93,10 @@ struct Halley <: AbstractΔMethod end
 """
     Roots.QuadraticInverse()
 
-Implements the [quadratic inverse method](https://doi.org/10.2307/2322644) also known as [Chebyshev's method]((https://dl.acm.org/doi/10.1080/00207160802208358)),
+Implements the [quadratic inverse method](https://doi.org/10.2307/2322644) also known as
+[Chebyshev's method]((https://dl.acm.org/doi/10.1080/00207160802208358)),
 `xᵢ₊₁ = xᵢ - (f/f')(xᵢ) * (1 + (f/f')(xᵢ) * (f''/f')(xᵢ) * 1/2)`.
-This method is cubically converging, but requires more function calls per step (3) than
-other methods.
+This method is cubically converging, it requires ``3`` function calls per step.
 
 Example
 
@@ -146,18 +144,20 @@ Schröder's method, like Halley's method, utilizes `f`, `f'`, and
 independent of the multiplicity of the zero (cf. Schröder, E. "Über
 unendlich viele Algorithmen zur Auflösung der Gleichungen."
 Math. Ann. 2, 317-365, 1870;
-[mathworld](http://mathworld.wolfram.com/SchroedersMethod.html)). Schröder's
-method applies Newton's method to `f/f'`, a function with all
-simple zeros.
+[mathworld](http://mathworld.wolfram.com/SchroedersMethod.html)).
+
+Schröder's method applies Newton's method to `f/f'`, a function with
+all simple zeros.
 
 
-Example
+## Example
+
 ```
 m = 2
 f(x) = (cos(x)-x)^m
 fp(x) = (-x + cos(x))*(-2*sin(x) - 2)
 fpp(x) = 2*((x - cos(x))*cos(x) + (sin(x) + 1)^2)
-find_zero((f, fp, fpp), pi/4, Roots.Halley())    # 14 steps
+find_zero((f, fp, fpp), pi/4, Roots.Halley())     # 14 steps
 find_zero((f, fp, fpp), 1.0, Roots.Schroder())    # 3 steps
 ```
 
@@ -181,8 +181,8 @@ const Schroeder = Schroder # either spelling
 const Schröder = Schroder
 
 ## r1, r2 are o.Δ, o.ΔΔ
-calculateΔ(method::Halley, r1, r2) = 2r2 / (2r2 - r1) * r1
-calculateΔ(method::QuadraticInverse, r1, r2) = (1 + r1 / (2r2)) * r1
-calculateΔ(method::ChebyshevLike, r1, r2) = (1 + r1 / (2r2) * (1 + r1 / r2)) * r1
-calculateΔ(method::SuperHalley, r1, r2) = (1 + r1 / (2r2 - 2r1)) * r1
-calculateΔ(method::Schroder, r1, r2) = r2 / (r2 - r1) * r1
+calculateΔ(::Halley, r1, r2) = 2r2 / (2r2 - r1) * r1
+calculateΔ(::QuadraticInverse, r1, r2) = (1 + r1 / (2r2)) * r1
+calculateΔ(::ChebyshevLike, r1, r2) = (1 + r1 / (2r2) * (1 + r1 / r2)) * r1
+calculateΔ(::SuperHalley, r1, r2) = (1 + r1 / (2r2 - 2r1)) * r1
+calculateΔ(::Schroder, r1, r2) = r2 / (r2 - r1) * r1

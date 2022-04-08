@@ -15,7 +15,7 @@ The error, `eᵢ = xᵢ - α`, satisfies
 `eᵢ₊₂ = f[xᵢ₊₁,xᵢ,α] / f[xᵢ₊₁,xᵢ] * (xᵢ₊₁-α) * (xᵢ - α)`.
 
 """
-struct Secant <: AbstractSecant end
+struct Secant <: AbstractSecantMethod end
 const Order1 = Secant
 const Orderφ = Secant
 
@@ -40,10 +40,7 @@ function update_state(
     fx0, fx1 = fxn1, F(x1)
     incfn(l)
 
-    @set! o.xn0 = x0
-    @set! o.xn1 = x1
-    @set! o.fxn0 = fx0
-    @set! o.fxn1 = fx1
+    o = _set(o, (x1, fx1), (x0, fx0))
 
     return o, false
 end

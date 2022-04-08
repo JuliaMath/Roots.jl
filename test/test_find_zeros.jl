@@ -24,13 +24,13 @@ end
     xrts = find_zeros(F, -5, 20)
     @test length(xrts) == 3
     @test all(azero.((F,), xrts))
-    @test F.n <= 3000
+    @test F.n <= 1500 #3000
 
     F = CallableFunction(x -> cos(x) + cos(2x), 0)
     xrts = find_zeros(F, 0, 4pi)
     @test length(xrts) == 6
     @test all(azero.((F,), xrts))
-    @test F.n <= 5000
+    @test F.n <= 2000 # 5000
 
     T11(x) = 1024x^11 - 2816x^9 + 2816x^7 - 1232x^5 + 220x^3 - 11x
     U9(x) = 512x^9 - 1024x^7 + 672x^5 - 160x^3 + 10x
@@ -39,13 +39,13 @@ end
     xrts = find_zeros(F, -1, 1)
     @test length(xrts) == 11
     @test all(azero.((F,), xrts))
-    @test F.n <= 10_000
+    @test F.n <= 2500 # 10_000
 
     F = CallableFunction(U9, 0)
     xrts = find_zeros(F, -1, 1)
     @test length(xrts) == 9
     @test all(azero.((F,), xrts))
-    @test F.n <= 10_000
+    @test F.n <= 2500 # 10_000
 
     W(n) = x -> prod(x - i for i in 1:n)
     Wi(n) = x -> prod((x - i)^i for i in 1:n)
@@ -54,7 +54,7 @@ end
     xrts = find_zeros(F, -1, 21)
     @test length(xrts) == 20
     @test all(azero.((F,), xrts))
-    @test F.n <= 20_000
+    @test F.n <= 4000 #20_000
 
     F = CallableFunction(Wi(6), 0)
     xrts = find_zeros(F, -1, 7)

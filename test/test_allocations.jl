@@ -12,7 +12,7 @@ import BenchmarkTools
         Order16(),
         Roots.Order1B(),
         Roots.Order2B(),
-#        Roots.Bisection(),
+        Roots.Bisection(),
         Roots.A42(),
         Roots.AlefeldPotraShi(),
         Roots.Brent(),

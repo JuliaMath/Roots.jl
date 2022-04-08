@@ -1,4 +1,4 @@
-struct FalsePosition{R} <: AbstractSecant end
+struct FalsePosition{R} <: AbstractSecantMethod end
 
 """
 
@@ -23,7 +23,7 @@ default). The default choice has generally better performance than the
 others, though there are exceptions.
 
 For some problems, the number of function calls can be greater than
-for the `BisectionExact` method, but generally this algorithm will make
+for the `Bisection` method, but generally this algorithm will make
 fewer function calls.
 
 Examples
@@ -34,33 +34,39 @@ find_zero(x -> x^5 - x - 1, (-2, 2), FalsePosition())
 FalsePosition
 FalsePosition(x=:anderson_bjork) = FalsePosition{x}()
 
-init_state(M::FalsePosition, F, x₀, x₁, fx₀, fx₁) = init_state(BisectionExact(), F, x₀, x₁, fx₀, fx₁)
+# 12 is tough; needs more evaluations
+function default_tolerances(::FalsePosition{12}, ::Type{T}, ::Type{S}) where {T,S}
+    xatol = eps(real(T)) * oneunit(real(T))
+    xrtol = eps(real(T))  # unitless
+    atol = 4 * eps(real(float(S))) * oneunit(real(S))
+    rtol = 4 * eps(real(float(S))) * one(real(S))
+    maxiters = 250
+    strict = false
+    (xatol, xrtol, atol, rtol, maxiters, strict)
+end
+
+
+init_state(M::FalsePosition, F, x₀, x₁, fx₀, fx₁) = init_state(Bisection(), F, x₀, x₁, fx₀, fx₁)
 
 function update_state(
     method::FalsePosition,
     fs,
     o::AbstractUnivariateZeroState{T,S},
-    options::UnivariateZeroOptions,
+    options,
     l=NullTracks(),
 ) where {T,S}
     a, b = o.xn0, o.xn1
     fa, fb = o.fxn0, o.fxn1
 
     lambda = fb / (fb - fa)
-    tau = 1e-10                   # some engineering to avoid short moves; still fails on some
-    if !(tau < abs(lambda) < 1 - tau)
-        lambda = 1 / 2
-    end
 
+    ϵ = √eps(T)/100 # some engineering to avoid short moves; still fails on some
+    ϵ ≤ lambda ≤ 1-ϵ || (lambda = 1/2)
     x::T = b - lambda * (b - a)
     fx = fs(x)
     incfn(l)
 
-    if iszero(fx)
-        @set! o.xn1 = x
-        @set! o.fxn1 = fx
-        return (o, true)
-    end
+    iszero(fx) && return (_set(o, (x, fx)), true)
 
     if sign(fx) * sign(fb) < 0
         a, fa = b, fb
@@ -69,10 +75,7 @@ function update_state(
     end
     b, fb = x, fx
 
-    @set! o.xn0 = a
-    @set! o.xn1 = b
-    @set! o.fxn0 = fa
-    @set! o.fxn1 = fb
+    o = _set(o, (b, fb), (a, fa))
 
     return (o, false)
 end
