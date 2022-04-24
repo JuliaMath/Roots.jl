@@ -1,8 +1,9 @@
-[![](https://img.shields.io/badge/docs-stable-blue.svg)](https://juliahub.com/docs/Roots/)
-Linux: [![Build Status](https://travis-ci.org/JuliaMath/Roots.jl.svg?branch=master)](https://travis-ci.org/JuliaMath/Roots.jl)
-Windows: [![Build status](https://ci.appveyor.com/api/projects/status/goteuptn5kypafyl?svg=true)](https://ci.appveyor.com/project/jverzani/roots-jl)
-
 # Root finding functions for Julia
+
+[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://JuliaMath.github.io/Roots.jl/stable)
+[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://JuliaMath.github.io/Roots.jl/dev)
+[![Build Status](https://github.com/JuliaMath/Roots.jl/workflows/CI/badge.svg)](https://github.com/JuliaMath/Roots.jl/actions)
+[![codecov](https://codecov.io/gh/JuliaMath/Roots.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaMath/Roots.jl)
 
 This package contains simple routines for finding roots of continuous
 scalar functions of a single real variable. The `find_zero` function provides the
