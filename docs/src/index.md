@@ -20,9 +20,10 @@ specification of a method. These include:
   computations allows. Other methods include `Roots.A42`,
   `Roots.AlefeldPotraShi`, `Roots.Brent`, `Roots.Chandrapatlu`,
   `Roots.ITP`, `Roots.Ridders`, and ``12``-flavors of
-  `FalsePosition`. The default bracketing method is `Bisection`, as it
-  is more robust to some inputs, but `A42` and `AlefeldPotraShi`
-  typically converge in a few iterations and are more performant.
+  `FalsePosition`. The default bracketing method is `Bisection` for
+  the basic floating-point types, as it is more robust to some inputs,
+  but `A42` and `AlefeldPotraShi` typically converge in a few
+  iterations and are more performant.
 
 
 * Several derivative-free methods are implemented. These are specified
