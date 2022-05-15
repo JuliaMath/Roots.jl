@@ -252,3 +252,18 @@ function show_tracks(io::IO, s::Tracks, M::AbstractUnivariateZeroMethod)
     println(io, "")
 
 end
+
+
+## needs better name, but is this useful?
+"""
+    find_zerov(f, x, M; kwargs...)
+
+Run `find_zero` return a `Tracks` object, not the value, which can be extracted via the `last` method.
+"""
+function find_zerov(f, x, M; verbose=nothing, kwargs...)
+    Z = init(ZeroProblem(f,x), M; verbose=true, kwargs...)
+    solve!(Z)
+    Z.logger
+end
+find_zerov(f, x; verbose=nothing, kwargs...) =
+    find_zerov(f, x, find_zero_default_method(x); kwargs...)

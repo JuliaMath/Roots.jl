@@ -4,6 +4,22 @@
 
 Interface to one of several methods for finding zeros of a univariate function, e.g. solving ``f(x)=0``.
 
+# Arguments
+## Positional arguments
+
+* `f`: the function (univariate or `f(x,p)` with `p` holding parameters)
+* `x0`: the initial condition (a value, initial values, or bracketing interval)
+* `M`: some `AbstractUnivariateZeroMethod` specifying the solver
+* `N`: some bracketing method, when specified creates a hybrid method
+
+## Keyword arguments
+
+* `xatol`, `xrtol`: absolute and relatative tolerance to decide if `xₙ₊₁ ≈ xₙ`
+* `atol`, `rtol`: absolute and relatative tolerance to decide if `f(xₙ) ≈ 0`
+* `maxiters`: specify the maximum number of iterations the algorithm can take.
+* `verbose::Bool`: specifies if details about algorithm should be shown
+* `tracks`: allows specification of `Tracks` objecs
+
 # Initial starting value
 
 For most methods, `x0` is a scalar value indicating the initial value
@@ -27,9 +43,9 @@ in case of failure.
 A method is specified to indicate which algorithm to employ:
 
 * There are methods where a bracket is specified: [`Bisection`](@ref),
-  [`A42`](@ref), [`AlefeldPotraShi`](@ref),
-  [`Roots.Brent`](@ref), among others. Bisection is the default, but
-  `A42` generally requires far fewer iterations.
+  [`A42`](@ref), [`AlefeldPotraShi`](@ref), [`Roots.Brent`](@ref),
+  among others. Bisection is the default for basic floating point
+  types`, but `A42` generally requires far fewer iterations.
 
 * There are several derivative-free methods: cf. [`Order0`](@ref),
   [`Order1`](@ref) (also [`Roots.Secant`](@ref)), [`Order2`](@ref)
@@ -56,7 +72,9 @@ If no method is specified, the default method depends on `x0`:
 * If `x0` is a scalar, the default is the more robust `Order0` method.
 
 * If `x0` is a tuple, vector, or iterable with `extrema` defined
-  indicating a *bracketing* interval, then the `Bisection` method is used.
+  indicating a *bracketing* interval, then the `Bisection` method is
+  used for `Float64`, `Float32` or `Float16` types; otherwise the
+  `A42` method is used.
 
 The default methods are chosen to be robust; they may not be as efficient as some others.
 
@@ -204,8 +222,12 @@ end
 # defaults when method is not specified
 # if a number, use Order0
 # O/w use a bracketing method of an assumed iterable
-find_zero(f, x0::Number; kwargs...) = find_zero(f, x0, Order0(); kwargs...)
-find_zero(f, x0; kwargs...) = find_zero(f, x0, Bisection(); kwargs...)
+find_zero_default_method(x0::Number) = Order0()
+function find_zero_default_method(x0)
+    T = eltype(float.(_extrema(x0)))
+    T <: Union{Float16, Float32, Float64} ? Bisection() : A42()
+end
+find_zero(f, x0; kwargs...) = find_zero(f, x0, find_zero_default_method(x0); kwargs...)
 
 ## ---------------
 

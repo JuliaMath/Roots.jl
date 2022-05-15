@@ -106,7 +106,6 @@ function _middle(x, y)
         __middle(a, b)
     end
 end
-
 ## find middle assuming a,b same sign, finite
 ## Alternative "mean" definition that operates on the binary representation
 ## of a float. Using this definition, bisection will never take more than
