@@ -195,6 +195,14 @@ end
     @test @inferred(solve(fx, p=[-1 / 10, 1 / 10])) ≈
           @inferred(find_zero(x -> cos(x) - x / 10 - 1 / 10, (0, pi / 2)))
 
+
+    ### issue 321, solve and broadcasting
+    myfun(x, p) = x * sin(x) - p
+    prob = ZeroProblem(myfun, (0.0, 2.0))
+    ps = (1/4, 1/2, 3/4, 1)
+    as = (0.5111022402679033, 0.7408409550954906, 0.9333080372907439, 1.1141571408719302)
+    @test all(solve.(prob, Bisection(), ps) .≈ as)
+
     ## test with early evaluation of bracket
     f = x -> sin(x)
     xs = (3.0, 4.0)
