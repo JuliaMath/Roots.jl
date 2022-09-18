@@ -1,5 +1,6 @@
 ### Method types
 abstract type AbstractUnivariateZeroMethod end
+Base.broadcastable(method::AbstractUnivariateZeroMethod) = Ref(method)
 
 abstract type AbstractBracketingMethod <: AbstractUnivariateZeroMethod end
 abstract type AbstractBisectionMethod <: AbstractBracketingMethod end

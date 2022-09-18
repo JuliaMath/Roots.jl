@@ -185,7 +185,7 @@ julia> fn = x -> (sin(x)*cos(x) - x^3 + 1)^9;
 
 julia> x0, xstar = 1.0,  1.112243913023029;
 
-julia> find_zero(fn, x0, Order2()) ≈ xstar
+julia> isapprox(find_zero(fn, x0, Order2()), xstar; atol=1e-4)
 true
 
 julia> find_zero(fn, x0, Order2(), maxiters=3)    # need more steps to converge
