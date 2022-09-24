@@ -5,6 +5,7 @@ import BenchmarkTools
     fs = (sin, cos, x -> -sin(x))
     x0 = (3, 4)
     Ms = (
+        Order0(),
         Order1(),
         Order2(),
         Order5(),
@@ -18,14 +19,27 @@ import BenchmarkTools
         Roots.Brent(),
         Roots.Ridders(),
         Roots.ITP(),
-        Roots.Newton(),
-        Roots.Halley(),
-        Roots.Schroder(),
-    ) # not Order0(), FalsePosition()
-
+    ) # not FalsePosition()
+    Ns = (Roots.Newton(),
+          Roots.Halley(),
+          Roots.Schroder(),
+          )
     for M in Ms
         @test BenchmarkTools.@ballocated(solve(ZeroProblem($fs, $x0), $M)) == 0
     end
+    for M in Ns
+        @test BenchmarkTools.@ballocated(solve(ZeroProblem($fs, $x0), $M)) == 0
+    end
+
+    # issue #323, test allocations with parameter
+    f(x, p) = x^2 - p
+    x0 = (1.0, 2.0)
+    p = 2.0
+    for M in Ms
+        @test BenchmarkTools.@ballocated(solve(ZeroProblem($f, $x0), $M, $p)) == 0
+        @test BenchmarkTools.@ballocated(solve(ZeroProblem($f, $x0), $M; p=$p)) == 0
+    end
+
 end
 
 @testset "simple: zero allocations" begin
