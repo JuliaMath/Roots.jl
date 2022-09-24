@@ -267,8 +267,9 @@ Base.show(io::IO, Z::ZeroProblemIterator) =
 ## init(Z,p)
 ## init(Z,M,p)
 ## init(M,F,state, [options], [logger])
-## want p to be a keyword, not positional. Leaving for now.
-## but the positional use is not documented (though annoyingly is being tested)
+## p is both a keyword and positional
+## positional allows broadcasting
+## keyword more explicit
 function init(
     𝑭𝑿::ZeroProblem,
     M::AbstractUnivariateZeroMethod,
@@ -278,7 +279,7 @@ function init(
     tracks=NullTracks(),
     kwargs...,
 )
-    F = Callable_Function(M, 𝑭𝑿.F, p === nothing ? p′ : p)  #⁺
+    F = Callable_Function(M, 𝑭𝑿.F, p === nothing ? p′ : p)
     state = init_state(M, F, 𝑭𝑿.x₀)
     options = init_options(M, state; kwargs...)
     l = Tracks(verbose, tracks, state)
@@ -458,8 +459,16 @@ end
 
 Disptaches to `solve!(init(fx, args...; kwargs...))`. See [`solve!`](@ref) for details.
 """
-CommonSolve.solve(𝑭𝑿::ZeroProblem, args...; verbose=false, kwargs...) =
-    solve!(init(𝑭𝑿, args...; verbose=verbose, kwargs...); verbose=verbose)
+function CommonSolve.solve(𝑭𝑿::ZeroProblem, args...; verbose=false, kwargs...)
+   Z = init(𝑭𝑿, args...; verbose=verbose, kwargs...)
+   solve!(Z; verbose=verbose)
+end
+
+# avoid splatting (issue #323, caused allocations)
+function CommonSolve.solve(𝑭𝑿::ZeroProblem, M::AbstractUnivariateZeroMethod, p=nothing; verbose=false, kwargs...)
+   Z = init(𝑭𝑿, M, p; verbose=verbose, kwargs...)
+   solve!(Z; verbose=verbose)
+end
 
 
 # Optional iteration interface to handle looping
