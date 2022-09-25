@@ -126,8 +126,8 @@ struct LithBoonkkampIJzermanState{S′,D⁺,T,S} <: AbstractUnivariateZeroState{
     fm::NTuple{D⁺,NTuple{S′,S}}
 end
 
-log_step(l::Tracks, M::LithBoonkkampIJzerman, state; init=false) = log_step(l, Secant(), state; init=init)
-
+log_step(l::Tracks, M::LithBoonkkampIJzerman, state; init=false) =
+    log_step(l, Secant(), state; init=init)
 
 # return f^(i-1)(x); not the same as default eval call
 function evalf(F::Callable_Function{S,T,𝑭,P}, x, i) where {N,S<:Val{N},T<:Val{true},𝑭,P}

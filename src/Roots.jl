@@ -38,7 +38,6 @@ include("trace.jl")
 include("find_zero.jl")
 include("hybrid.jl")
 
-
 include("Bracketing/bracketing.jl")
 include("Bracketing/bisection.jl")
 include("Bracketing/alefeld_potra_shi.jl")
@@ -66,7 +65,6 @@ include("Derivative/lith.jl")
 include("find_zeros.jl")
 include("simple.jl")
 include("alternative_interfaces.jl")
-
 
 # cf. https://github.com/JuliaDocs/Documenter.jl/pull/1664/files
 function _update_module_doc()

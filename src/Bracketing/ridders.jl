@@ -26,27 +26,26 @@ true
 struct Ridders <: AbstractBracketingMethod end
 
 function update_state(M::Ridders, F, o, options, l=NullTracks())
-
     a, b = o.xn0, o.xn1
     fa, fb = o.fxn0, o.fxn1
 
-    x₁ = a + (b-a)/2
+    x₁ = a + (b - a) / 2
     fx₁ = F(x₁)
     incfn(l)
 
-
-    c = x₁ + (x₁-a) * sign(fa) * fx₁ / sqrt(fx₁^2 - fa*fb)
+    c = x₁ + (x₁ - a) * sign(fa) * fx₁ / sqrt(fx₁^2 - fa * fb)
     fc = F(c)
     incfn(l)
 
     if !(a < c < b)
-        nextfloat(a) ≥ b && log_message(l, "Algorithm stopped narrowing bracketing interval")
+        nextfloat(a) ≥ b &&
+            log_message(l, "Algorithm stopped narrowing bracketing interval")
         return (o, true)
     end
 
     # choose bracketing interval from [x₁, c], [c, x₁], [a,c], [c,b]
     if sign(fx₁) * sign(fc) < 0
-        a, b, fa, fc =  x₁ < c ? (x₁, c, fx₁, fc) : (c, x₁, fc, fx₁)
+        a, b, fa, fc = x₁ < c ? (x₁, c, fx₁, fc) : (c, x₁, fc, fx₁)
     elseif sign(fa) * sign(fc) < 0
         b, fb = c, fc
     else

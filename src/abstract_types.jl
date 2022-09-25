@@ -8,9 +8,9 @@ abstract type AbstractBisectionMethod <: AbstractBracketingMethod end
 abstract type AbstractNonBracketingMethod <: AbstractUnivariateZeroMethod end
 abstract type AbstractSecantMethod <: AbstractNonBracketingMethod end
 
-abstract type AbstractDerivativeMethod <:AbstractNonBracketingMethod  end
+abstract type AbstractDerivativeMethod <: AbstractNonBracketingMethod end
 abstract type AbstractNewtonLikeMethod <: AbstractDerivativeMethod end
-abstract type AbstractHalleyLikeMethod <: AbstractDerivativeMethod  end
+abstract type AbstractHalleyLikeMethod <: AbstractDerivativeMethod end
 abstract type AbstractΔMethod <: AbstractHalleyLikeMethod end
 
 # deprecated but not clear way to do so, hence these defintions not to be used

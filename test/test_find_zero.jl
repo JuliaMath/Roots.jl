@@ -195,11 +195,10 @@ end
     @test @inferred(solve(fx, p=[-1 / 10, 1 / 10])) ≈
           @inferred(find_zero(x -> cos(x) - x / 10 - 1 / 10, (0, pi / 2)))
 
-
     ### issue 321, solve and broadcasting
     myfun(x, p) = x * sin(x) - p
     prob = ZeroProblem(myfun, (0.0, 2.0))
-    ps = (1/4, 1/2, 3/4, 1)
+    ps = (1 / 4, 1 / 2, 3 / 4, 1)
     as = (0.5111022402679033, 0.7408409550954906, 0.9333080372907439, 1.1141571408719302)
     @test all(solve.(prob, Bisection(), ps) .≈ as)
 
@@ -310,21 +309,14 @@ end
     ## test broadcasting semantics with ZeroProblem
     ## This assume parameters can be passed in a positional manner, a
     ## style which is discouraged, as it is confusing
-    Z = ZeroProblem((x, p) -> cos(x) - x/p, pi / 4)
+    Z = ZeroProblem((x, p) -> cos(x) - x / p, pi / 4)
     @test all(solve.(Z, (1, 2)) .≈ (solve(Z, 1), solve(Z, 2)))
 end
 
 @testset "find_zero issue tests" begin
 
     ## Misc tests
-    Ms = [
-        Order0(),
-        Order1(),
-        Order2(),
-        Order5(),
-        Order8(),
-        Order16(),
-    ]
+    Ms = [Order0(), Order1(), Order2(), Order5(), Order8(), Order16()]
 
     ## issues with starting near a maxima. Some bounce out of it, but
     ## one would expect all to have issues

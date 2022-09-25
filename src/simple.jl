@@ -341,8 +341,6 @@ function newton(f, x0; xatol=nothing, xrtol=nothing, maxevals=100)
     throw(ConvergenceFailed("No convergence"))
 end
 
-
-
 ## --------------------------------------------------
 
 ## This is basically Order0(), but with different, default, tolerances employed
@@ -411,7 +409,7 @@ function dfree(f, xs)
         cnt += 1
 
         if sign(fa) * sign(fb) < 0
-            return solve(ZeroProblem(f, (a,b))) # faster than bisection(f, a, b)
+            return solve(ZeroProblem(f, (a, b))) # faster than bisection(f, a, b)
         end
 
         # take a secant step

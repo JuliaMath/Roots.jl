@@ -225,7 +225,7 @@ end
 find_zero_default_method(x0::Number) = Order0()
 function find_zero_default_method(x0)
     T = eltype(float.(_extrema(x0)))
-    T <: Union{Float16, Float32, Float64} ? Bisection() : A42()
+    T <: Union{Float16,Float32,Float64} ? Bisection() : A42()
 end
 find_zero(f, x0; kwargs...) = find_zero(f, x0, find_zero_default_method(x0); kwargs...)
 
@@ -288,8 +288,8 @@ function init(
 end
 
 function init(𝑭𝑿::ZeroProblem, p′=nothing; kwargs...)
-    M =  length(𝑭𝑿.x₀) == 1 ? Order0() : AlefeldPotraShi()
-    init(𝑭𝑿, M; p = p′, kwargs...)
+    M = length(𝑭𝑿.x₀) == 1 ? Order0() : AlefeldPotraShi()
+    init(𝑭𝑿, M; p=p′, kwargs...)
 end
 
 function init(
@@ -301,7 +301,6 @@ function init(
 )
     ZeroProblemIterator(M, Nothing, Callable_Function(M, F), state, options, l)
 end
-
 
 """
     solve(fx::ZeroProblem, [M], [N]; p=nothing, kwargs...)
@@ -450,7 +449,6 @@ function solve!(P::ZeroProblemIterator; verbose=false)
     verbose && display(l)
 
     α
-
 end
 
 # thread verbose through
@@ -460,16 +458,21 @@ end
 Disptaches to `solve!(init(fx, args...; kwargs...))`. See [`solve!`](@ref) for details.
 """
 function CommonSolve.solve(𝑭𝑿::ZeroProblem, args...; verbose=false, kwargs...)
-   Z = init(𝑭𝑿, args...; verbose=verbose, kwargs...)
-   solve!(Z; verbose=verbose)
+    Z = init(𝑭𝑿, args...; verbose=verbose, kwargs...)
+    solve!(Z; verbose=verbose)
 end
 
 # avoid splatting (issue #323, caused allocations)
-function CommonSolve.solve(𝑭𝑿::ZeroProblem, M::AbstractUnivariateZeroMethod, p=nothing; verbose=false, kwargs...)
-   Z = init(𝑭𝑿, M, p; verbose=verbose, kwargs...)
-   solve!(Z; verbose=verbose)
+function CommonSolve.solve(
+    𝑭𝑿::ZeroProblem,
+    M::AbstractUnivariateZeroMethod,
+    p=nothing;
+    verbose=false,
+    kwargs...,
+)
+    Z = init(𝑭𝑿, M, p; verbose=verbose, kwargs...)
+    solve!(Z; verbose=verbose)
 end
-
 
 # Optional iteration interface to handle looping
 # * returns xₙ or (aₙ, bₙ) depending
@@ -503,6 +506,5 @@ function Base.iterate(P::ZeroProblemIterator, st=nothing)
         isnan(α) && throw(ConvergenceFailed("Algorithm did not converge."))
     end
 
-    return (last(state,M), (state, ctr, flag, stopped))
-
+    return (last(state, M), (state, ctr, flag, stopped))
 end

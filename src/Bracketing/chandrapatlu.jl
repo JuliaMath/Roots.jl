@@ -29,7 +29,6 @@ function init_state(::Chandrapatla, F, x₀, x₁, fx₀, fx₁)
 end
 
 function update_state(::Chandrapatla, F, o, options, l=NullTracks())
-
     a, b, c = o.xn1, o.xn0, o.c
     fa, fb, fc = o.fxn1, o.fxn0, o.fc
 
@@ -40,7 +39,7 @@ function update_state(::Chandrapatla, F, o, options, l=NullTracks())
     ϕ² = ϕ^2
     Δ = (ϕ² < ξ) && (1 - 2ϕ + ϕ² < 1 - ξ) # Chandrapatla's inequality to determine next step
 
-    xₜ = Δ ? inverse_quadratic_step(a, b, c, fa, fb, fc) : _middle(a,b)
+    xₜ = Δ ? inverse_quadratic_step(a, b, c, fa, fb, fc) : _middle(a, b)
 
     fₜ = F(xₜ)
     incfn(l)

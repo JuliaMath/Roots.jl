@@ -20,10 +20,7 @@ import BenchmarkTools
         Roots.Ridders(),
         Roots.ITP(),
     ) # not FalsePosition()
-    Ns = (Roots.Newton(),
-          Roots.Halley(),
-          Roots.Schroder(),
-          )
+    Ns = (Roots.Newton(), Roots.Halley(), Roots.Schroder())
     for M in Ms
         @test BenchmarkTools.@ballocated(solve(ZeroProblem($fs, $x0), $M)) == 0
     end
@@ -39,7 +36,6 @@ import BenchmarkTools
         @test BenchmarkTools.@ballocated(solve(ZeroProblem($f, $x0), $M, $p)) == 0
         @test BenchmarkTools.@ballocated(solve(ZeroProblem($f, $x0), $M; p=$p)) == 0
     end
-
 end
 
 @testset "simple: zero allocations" begin
