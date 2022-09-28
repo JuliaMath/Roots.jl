@@ -558,6 +558,8 @@ fₚ = ForwardDiff.gradient(p -> f(xᵅ, p), p)
 - fₚ / fₓ
 ```
 
+The package provides a `ChainRulesCore.rrule` and `ChainRulesCore.frule` implementation that should allow automatic differentiation packages relying on `ChainRulesCore` (e.g., `Zygote`) to differentiate in `p` using the above approach.
+
 
 
 ## Potential issues
