@@ -490,6 +490,76 @@ plot!(x -> flight(x, tstar), 0, howfar(tstar))
 show(current())  # hide
 ```
 
+## Sensitivity
+
+For functions with parameters, $f(x,p)$, derivatives with respect to the $p$ variable(s) may be of interest, for example to see how sensitive the solution is to variations in the parameter.
+
+Using the implicit function theorem and following these [notes](https://math.mit.edu/~stevenj/18.336/adjoint.pdf) or this [paper](https://arxiv.org/pdf/2105.15183.pdf) on the adjoint method, we can auto-differentiate without pushing that machinery through `find_zero`.
+
+The solution, $x^*(p)$, provided by `find_zero` depends on the parameter(s), $p$. Notationally,
+
+$$
+f(x^*(p), p) = 0
+$$
+
+The implicit function theorem has conditions guaranteeing the
+existence and differentiability of $x^*(p)$.  Assuming these hold, taking the gradient (derivative) in $p$ of both sides, gives by the chain rule:
+
+$$
+\frac{\partial}{\partial_x}f(x^*(p),p)
+\frac{\partial}{\partial_p}x^*(p) +
+\frac{\partial}{\partial_p}f(x^*(p),p) I = 0.
+$$
+
+Since the partial in $x$ is a scalar quantity, we can divide to solve:
+
+$$
+\frac{\partial}{\partial_p}x^*(p) =
+-\frac{
+  \frac{\partial}{\partial_p}f(x^*(p),p)
+}{
+  \frac{\partial}{\partial_x}f(x^*(p),p)
+}
+$$
+
+
+For example, using `ForwardDiff`, we have:
+
+```@example roots
+f(x, p) = x^2 - p # p a scalar
+p = 2
+xᵅ = find_zero(f, 1, Order1(), p)
+
+fₓ = ForwardDiff.derivative(x -> f(x, p), xᵅ)
+fₚ = ForwardDiff.derivative(p -> f(xᵅ, p), p)
+
+- fₚ / fₓ
+```
+
+This problem can be solved analytically, of course, to see $x^\alpha(p) = \sqrt{p}$, so we can easily compare:
+
+```@example roots
+ForwardDiff.derivative(sqrt, 2)
+```
+
+
+The use with a vector of parameters is similar, only `derivative` is replaced by `gradient` for the `p` variable:
+
+```@example roots
+f(x, p) = x^2 - p[1]*x + p[2]
+p = [3.0, 1.0]
+x₀ = 1.0
+
+xᵅ = find_zero(f, x₀, Order1(), p)
+
+fₓ = ForwardDiff.derivative(x -> f(x, p), xᵅ)
+fₚ = ForwardDiff.gradient(p -> f(xᵅ, p), p)
+
+- fₚ / fₓ
+```
+
+The package provides a `ChainRulesCore.rrule` and `ChainRulesCore.frule` implementation that should allow automatic differentiation packages relying on `ChainRulesCore` (e.g., `Zygote`) to differentiate in `p` using the above approach.
+
 
 
 ## Potential issues

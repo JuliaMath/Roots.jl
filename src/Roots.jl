@@ -8,6 +8,7 @@ using Printf
 import CommonSolve
 import CommonSolve: solve, solve!, init
 using Setfield
+import ChainRulesCore
 
 export fzero, fzeros, secant_method
 
@@ -37,7 +38,7 @@ include("functions.jl")
 include("trace.jl")
 include("find_zero.jl")
 include("hybrid.jl")
-
+include("chain_rules.jl")
 
 include("Bracketing/bracketing.jl")
 include("Bracketing/bisection.jl")

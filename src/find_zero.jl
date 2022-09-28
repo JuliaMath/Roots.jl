@@ -1,6 +1,6 @@
 """
 
-    find_zero(f, x0, M, [N::AbstractBracketingMethod]; kwargs...)
+    find_zero(f, x0, M, [N::AbstractBracketingMethod], p′=nothing; kwargs...)
 
 Interface to one of several methods for finding zeros of a univariate function, e.g. solving ``f(x)=0``.
 
@@ -206,13 +206,14 @@ the algorithm.
 function find_zero(
     f,
     x0,
-    M::AbstractUnivariateZeroMethod;
+    M::AbstractUnivariateZeroMethod,
+    p′=nothing;
     p=nothing,
     verbose=false,
     tracks::AbstractTracks=NullTracks(),
     kwargs...,
 )
-    xstar = solve(ZeroProblem(f, x0), M; p=p, verbose=verbose, tracks=tracks, kwargs...)
+    xstar = solve(ZeroProblem(f, x0), M, p′ === nothing ? p : p′; verbose=verbose, tracks=tracks, kwargs...)
 
     isnan(xstar) && throw(ConvergenceFailed("Algorithm failed to converge"))
 
@@ -227,7 +228,11 @@ function find_zero_default_method(x0)
     T = eltype(float.(_extrema(x0)))
     T <: Union{Float16, Float32, Float64} ? Bisection() : A42()
 end
+
 find_zero(f, x0; kwargs...) = find_zero(f, x0, find_zero_default_method(x0); kwargs...)
+
+find_zero(f, x0, p; kwargs...) = find_zero(f, x0, find_zero_default_method(x0), p; kwargs...)
+
 
 ## ---------------
 
@@ -279,7 +284,7 @@ function init(
     tracks=NullTracks(),
     kwargs...,
 )
-    F = Callable_Function(M, 𝑭𝑿.F, p === nothing ? p′ : p)
+    F = Callable_Function(M, 𝑭𝑿.F, something(p′, p, missing))
     state = init_state(M, F, 𝑭𝑿.x₀)
     options = init_options(M, state; kwargs...)
     l = Tracks(verbose, tracks, state)
