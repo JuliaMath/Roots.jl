@@ -213,7 +213,7 @@ function find_zero(
     tracks::AbstractTracks=NullTracks(),
     kwargs...,
 )
-    xstar = solve(ZeroProblem(f, x0), M, isnothing(p′) ? p : p′; verbose=verbose, tracks=tracks, kwargs...)
+    xstar = solve(ZeroProblem(f, x0), M, p′ === nothing ? p : p′; verbose=verbose, tracks=tracks, kwargs...)
 
     isnan(xstar) && throw(ConvergenceFailed("Algorithm failed to converge"))
 
