@@ -1,13 +1,15 @@
 name = "Roots"
 uuid = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
-version = "2.0.4"
+version = "2.0.5"
 
 [deps]
+ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 CommonSolve = "38540f10-b2f7-11e9-35d8-d573e4eb0ff2"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Setfield = "efcf1570-3423-57d1-acb7-fd33fddbac46"
 
 [compat]
+ChainRulesCore = "1.15"
 CommonSolve = "0.1, 0.2"
 Setfield = "0.7, 0.8, 1"
 julia = "1.0"
@@ -21,6 +23,7 @@ SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
+Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [targets]
-test = ["JSON", "SpecialFunctions", "Statistics", "Test", "BenchmarkTools", "ForwardDiff", "Polynomials", "Unitful"]
+test = ["JSON", "SpecialFunctions", "Statistics", "Test", "BenchmarkTools", "ForwardDiff", "Polynomials", "Unitful", "Zygote"]

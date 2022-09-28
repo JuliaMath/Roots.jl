@@ -12,8 +12,9 @@ struct Callable_Function{Single,Tup,F,P}
         Single = Val{fn_argout(M)}
         Tup = Val{isa(f, Tuple)}
         F = typeof(f)
-        P = typeof(p)
-        new{Single,Tup,F,P}(f, p)
+        p′ = ismissing(p) ? nothing : p
+        P′ = typeof(p′)
+        new{Single,Tup,F,P′}(f, p′)
     end
 end
 

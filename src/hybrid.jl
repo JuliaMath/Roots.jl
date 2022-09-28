@@ -5,13 +5,14 @@
 function init(
     𝑭𝑿::ZeroProblem,
     M::AbstractNonBracketingMethod,
-    N::AbstractBracketingMethod;
+    N::AbstractBracketingMethod,
+    p′=nothing;
     p=nothing,
     verbose::Bool=false,
     tracks=NullTracks(),
     kwargs...,
 )
-    F = Callable_Function(M, 𝑭𝑿.F, p)
+    F = Callable_Function(M, 𝑭𝑿.F, something(p′, p, missing))
     state = init_state(M, F, 𝑭𝑿.x₀)
     options = init_options(M, state; kwargs...)
     l = Tracks(verbose, tracks, state)
@@ -167,10 +168,11 @@ function find_zero(
     fs,
     x0,
     M::AbstractUnivariateZeroMethod,
-    N::AbstractBracketingMethod;
+    N::AbstractBracketingMethod,
+    p′=nothing;
     verbose=false,
     kwargs...,
 )
     𝐏 = ZeroProblem(fs, x0)
-    solve!(init(𝐏, M, N; verbose=verbose, kwargs...), verbose=verbose)
+    solve!(init(𝐏, M, N, p′; verbose=verbose, kwargs...), verbose=verbose)
 end

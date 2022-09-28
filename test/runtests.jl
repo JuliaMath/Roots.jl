@@ -16,6 +16,7 @@ include("./test_simple.jl")
 include("./test_find_zeros.jl")
 include("./test_fzero.jl")
 include("./test_newton.jl")
+include("./test_chain_rules.jl")
 include("./test_simple.jl")
 
 include("./test_composable.jl")
