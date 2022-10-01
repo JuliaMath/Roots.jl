@@ -408,6 +408,31 @@ julia> solve(Z, Bisection(); p=3, xatol=1/16) # p=3; uses keywords for tolerance
 1.1959535058744393
 ```
 
+## Inverse functions
+
+The `find_zero` function can be used to identify inverse functions. Suppose ``f`` is a monotonic function on ``[a,b]``. Then an inverse function solves ``y = f(x)`` for ``x`` given a ``y``. This will do that task and return values in a function form:
+
+```@example roots
+function inverse_function(f, a, b, args...; kwargs...)
+    fa, fb = f(a), f(b)
+    m, M = fa < fb ? (fa, fb) : (fb, fa)
+    y -> begin
+        @assert m ≤ y ≤ M
+        find_zero(x ->f(x) - y, (a,b), args...; kwargs...)
+    end
+end
+```
+
+The fact that ``f`` is monotonic, ensures that a bracket of ``[a,b]`` can be used supposing ``y`` is between ``f(a)`` and ``f(b)``, so no guess is needed.
+
+Here we numerically find the inverse function of ``f(x) = x - \sin(x)``:
+
+```@example roots
+using Plots; unicodeplots()  # hide
+f(x) = x - sin(x)
+a, b = 0, 5pi
+plot(inverse_function(f, a, b), f(a), f(b))
+```
 
 ## Finding critical points
 
