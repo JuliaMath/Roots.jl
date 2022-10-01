@@ -492,35 +492,53 @@ show(current())  # hide
 
 ## Sensitivity
 
-For functions with parameters, $f(x,p)$, derivatives with respect to the $p$ variable(s) may be of interest, for example to see how sensitive the solution is to variations in the parameter.
+For functions with parameters, ``f(x,p)``, derivatives with respect to the ``p`` variable(s) may be of interest, for example to see how sensitive the solution is to variations in the parameter.
+
+
+A first attempt, may be to try and auto-differentiate the output of `find_zero`. For example:
+
+```@example roots
+F(p) = find_zero(f, one(p), Order1(), p)
+ForwardDiff.derivative(F, p)
+```
+
+There are issues with this approach, though here it find the correct answer, as will be seen: a) it is not as performant as what we will discuss next, b) the subtle use of `one(p)` for the starting point is needed to ensure the type for the ``x`` values is correct, and c) not all algorithms will work, in particular `Bisection` is not amenable to this approach:
+
+```@example roots
+F(p) = find_zero(f, (zero(p), one(p)), Roots.Bisection(), p)
+ForwardDiff.derivative(F, 1/2)
+```
+
+The `0.0` is the wrong answer, as the duals used by `ForwardDiff.derivative` do not flow through the `Bisection` algorithm.
+
 
 Using the implicit function theorem and following these [notes](https://math.mit.edu/~stevenj/18.336/adjoint.pdf) or this [paper](https://arxiv.org/pdf/2105.15183.pdf) on the adjoint method, we can auto-differentiate without pushing that machinery through `find_zero`.
 
-The solution, $x^*(p)$, provided by `find_zero` depends on the parameter(s), $p$. Notationally,
+The solution, ``x^*(p)``, provided by `find_zero` depends on the parameter(s), ``p``. Notationally,
 
-$$
+```math
 f(x^*(p), p) = 0
-$$
+```
 
 The implicit function theorem has conditions guaranteeing the
-existence and differentiability of $x^*(p)$.  Assuming these hold, taking the gradient (derivative) in $p$ of both sides, gives by the chain rule:
+existence and differentiability of ``x^*(p)``.  Assuming these hold, taking the gradient (derivative) in ``p`` of both sides, gives by the chain rule:
 
-$$
+```math
 \frac{\partial}{\partial_x}f(x^*(p),p)
 \frac{\partial}{\partial_p}x^*(p) +
 \frac{\partial}{\partial_p}f(x^*(p),p) I = 0.
-$$
+```
 
-Since the partial in $x$ is a scalar quantity, we can divide to solve:
+Since the partial in ``x`` is a scalar quantity, we can divide to solve:
 
-$$
+```math
 \frac{\partial}{\partial_p}x^*(p) =
 -\frac{
   \frac{\partial}{\partial_p}f(x^*(p),p)
 }{
   \frac{\partial}{\partial_x}f(x^*(p),p)
 }
-$$
+```
 
 
 For example, using `ForwardDiff`, we have:
@@ -536,7 +554,7 @@ fₚ = ForwardDiff.derivative(p -> f(xᵅ, p), p)
 - fₚ / fₓ
 ```
 
-This problem can be solved analytically, of course, to see $x^\alpha(p) = \sqrt{p}$, so we can easily compare:
+This problem can be solved analytically, of course, to see ``x^\alpha(p) = \sqrt{p}``, so we can easily compare:
 
 ```@example roots
 ForwardDiff.derivative(sqrt, 2)
