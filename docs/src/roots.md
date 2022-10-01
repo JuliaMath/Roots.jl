@@ -498,6 +498,11 @@ For functions with parameters, ``f(x,p)``, derivatives with respect to the ``p``
 A first attempt, may be to try and auto-differentiate the output of `find_zero`. For example:
 
 ```@example roots
+f(x, p) = x^2 - p # p a scalar
+p = 2
+```
+
+```@example roots
 F(p) = find_zero(f, one(p), Order1(), p)
 ForwardDiff.derivative(F, p)
 ```
@@ -544,8 +549,6 @@ Since the partial in ``x`` is a scalar quantity, we can divide to solve:
 For example, using `ForwardDiff`, we have:
 
 ```@example roots
-f(x, p) = x^2 - p # p a scalar
-p = 2
 xᵅ = find_zero(f, 1, Order1(), p)
 
 fₓ = ForwardDiff.derivative(x -> f(x, p), xᵅ)
