@@ -428,7 +428,7 @@ The fact that ``f`` is monotonic, ensures that a bracket of ``[a,b]`` can be use
 Here we numerically find the inverse function of ``f(x) = x - \sin(x)``:
 
 ```@example roots
-using Plots; unicodeplots()  # hide
+using Plots, Roots; unicodeplots()  # hide
 f(x) = x - sin(x)
 a, b = 0, 5pi
 plot(inverse_function(f, a, b), f(a), f(b))
