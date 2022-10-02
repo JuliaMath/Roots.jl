@@ -45,8 +45,8 @@ function default_tolerances(::FalsePosition{12}, ::Type{T}, ::Type{S}) where {T,
     (xatol, xrtol, atol, rtol, maxiters, strict)
 end
 
-
-init_state(M::FalsePosition, F, x₀, x₁, fx₀, fx₁) = init_state(Bisection(), F, x₀, x₁, fx₀, fx₁)
+init_state(M::FalsePosition, F, x₀, x₁, fx₀, fx₁) =
+    init_state(Bisection(), F, x₀, x₁, fx₀, fx₁)
 
 function update_state(
     method::FalsePosition,
@@ -60,8 +60,8 @@ function update_state(
 
     lambda = fb / (fb - fa)
 
-    ϵ = √eps(T)/100 # some engineering to avoid short moves; still fails on some
-    ϵ ≤ lambda ≤ 1-ϵ || (lambda = 1/2)
+    ϵ = √eps(T) / 100 # some engineering to avoid short moves; still fails on some
+    ϵ ≤ lambda ≤ 1 - ϵ || (lambda = 1 / 2)
     x::T = b - lambda * (b - a)
     fx = fs(x)
     incfn(l)

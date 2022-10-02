@@ -12,22 +12,18 @@ function ChainRulesCore.frule(
     ZP::ZeroProblem,
     M::AbstractUnivariateZeroMethod,
     p;
-    kwargs...)
-
+    kwargs...,
+)
     xᵅ = solve(ZP, M, p; kwargs...)
 
     # Use a single reverse-mode AD call with `rrule_via_ad` if `config` supports it?
     F = p -> Callable_Function(M, ZP.F, p)
     fₓ(x) = first(F(p)(x))
     fₚ(p) = first(F(p)(xᵅ))
-    fx = ChainRulesCore.frule_via_ad(config,
-                                     (ChainRulesCore.NoTangent(), true),
-                                     fₓ, xᵅ)[2]
-    fp = ChainRulesCore.frule_via_ad(config,
-                                     (ChainRulesCore.NoTangent(), Δp),
-                                     fₚ, p)[2]
+    fx = ChainRulesCore.frule_via_ad(config, (ChainRulesCore.NoTangent(), true), fₓ, xᵅ)[2]
+    fp = ChainRulesCore.frule_via_ad(config, (ChainRulesCore.NoTangent(), Δp), fₚ, p)[2]
 
-    xᵅ, -fp/fx
+    xᵅ, -fp / fx
 end
 
 ## modified from
@@ -38,19 +34,23 @@ function ChainRulesCore.rrule(
     ZP::ZeroProblem,
     M::AbstractUnivariateZeroMethod,
     p;
-    kwargs...)
-
+    kwargs...,
+)
     xᵅ = solve(ZP, M, p; kwargs...)
 
     f(x, p) = first(Callable_Function(M, ZP.F, p)(x))
     _, pullback_f = ChainRulesCore.rrule_via_ad(rc, f, xᵅ, p)
     _, fx, fp = pullback_f(true)
-    yp = -fp/fx
-    
+    yp = -fp / fx
+
     function pullback_solve_ZeroProblem(dy::Real)
         dp = yp * dy
-        return (ChainRulesCore.NoTangent(), ChainRulesCore.NoTangent(),
-                ChainRulesCore.NoTangent(), dp)
+        return (
+            ChainRulesCore.NoTangent(),
+            ChainRulesCore.NoTangent(),
+            ChainRulesCore.NoTangent(),
+            dp,
+        )
     end
 
     return xᵅ, pullback_solve_ZeroProblem

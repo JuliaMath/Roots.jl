@@ -25,8 +25,13 @@ end
 initial_fncalls(M::AbstractHalleyLikeMethod) = 2 * 3
 fn_argout(::AbstractHalleyLikeMethod) = 3
 
-
-function update_state(M::AbstractΔMethod, F, o::HalleyState{T,S}, options, l=NullTracks()) where {T,S}
+function update_state(
+    M::AbstractΔMethod,
+    F,
+    o::HalleyState{T,S},
+    options,
+    l=NullTracks(),
+) where {T,S}
     xn = o.xn1
     fxn = o.fxn1
     r1::T, r2::T = o.Δ, o.ΔΔ
@@ -89,7 +94,6 @@ The error, `eᵢ = xᵢ - α`, satisfies
 """
 struct Halley <: AbstractΔMethod end
 
-
 """
     Roots.QuadraticInverse()
 
@@ -123,7 +127,6 @@ The error, `eᵢ = xᵢ - α`, [satisfies](https://dl.acm.org/doi/10.1080/002071
 
 """
 struct QuadraticInverse <: AbstractΔMethod end
-
 
 """
 CHEBYSHEV-LIKE METHODS AND QUADRATIC EQUATIONS (J. A. EZQUERRO, J. M. GUTIÉRREZ, M. A. HERNÁNDEZ and M. A. SALANOVA)
@@ -176,7 +179,7 @@ the value of `f`, but otherwise would be expensive to compute.
 The error, `eᵢ = xᵢ - α`, is the same as `Newton` with `f` replaced by `f/f'`.
 
 """
-struct Schroder <: AbstractΔMethod  end
+struct Schroder <: AbstractΔMethod end
 const Schroeder = Schroder # either spelling
 const Schröder = Schroder
 

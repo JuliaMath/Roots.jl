@@ -1,6 +1,5 @@
 ## --------------------------------------------------
 
-
 ## Two algorithms of Alefeld, Potra, and Shi
 
 ## --------------------------------------------------
@@ -23,7 +22,6 @@ function newton_quadratic(a, b, d, fa, fb, fd, k::Int, delta=zero(a))
     a′, b′ = a + 2delta, b - 2delta
 
     A = f_abd(a, b, d, fa, fb, fd)
-
 
     r = isbracket(A, fa) ? b : a
 
@@ -59,7 +57,6 @@ end
     fab, fbd = f_ab(a, b, fa, fb), f_ab(b, d, fb, fd)
     (fbd - fab) / (d - a)
 end
-
 
 ## --------------------------------------------------
 ##
@@ -113,10 +110,14 @@ function init_state(::AlefeldPotraShi, F, x₀, x₁, fx₀, fx₁; c=_middle(x�
     return AlefeldPotraShiState(b, a, d, fb, fa, fd)
 end
 
-
 # ## 3, maybe 4, functions calls per step
-function update_state(M::AlefeldPotraShi, f, state::AlefeldPotraShiState{T,S},
-                      options, l=NullTracks()) where {T,S}
+function update_state(
+    M::AlefeldPotraShi,
+    f,
+    state::AlefeldPotraShiState{T,S},
+    options,
+    l=NullTracks(),
+) where {T,S}
     a::T, b::T, d::T = state.xn0, state.xn1, state.d
 
     fa::S, fb::S, fd::S = state.fxn0, state.fxn1, state.fd
@@ -129,7 +130,7 @@ function update_state(M::AlefeldPotraShi, f, state::AlefeldPotraShiState{T,S},
     fc::S = f(c)
     incfn(l)
 
-    (iszero(fc) || isnan(fc)) && return (_set(state, (c,fc)), true)
+    (iszero(fc) || isnan(fc)) && return (_set(state, (c, fc)), true)
     (isnan(c) || isinf(c)) && return (state, true)
 
     a, b, d, fa, fb, fd = bracket(a, b, c, fa, fb, fc)
@@ -138,7 +139,7 @@ function update_state(M::AlefeldPotraShi, f, state::AlefeldPotraShiState{T,S},
     fc = f(c)
     incfn(l)
 
-    (iszero(fc) || isnan(fc)) && return (_set(state, (c,fc)), true)
+    (iszero(fc) || isnan(fc)) && return (_set(state, (c, fc)), true)
     if isnan(c) || isinf(c)
         # tighten up bracket
         state = _set(state, (b, fb), (a, fa))
@@ -158,7 +159,7 @@ function update_state(M::AlefeldPotraShi, f, state::AlefeldPotraShiState{T,S},
     fc = f(c)
     incfn(l)
 
-    (iszero(fc) || isnan(fc)) && return (_set(state, (c,fc)), true)
+    (iszero(fc) || isnan(fc)) && return (_set(state, (c, fc)), true)
     if isnan(c) || isinf(c)
         # tighten up bracket
         state = _set(state, (b, fb), (a, fa))
@@ -211,9 +212,6 @@ function inverse_cubic_interpolation(a, b, d, ee, fa, fb, fd, fe, k, delta=zero(
     r = newton_quadratic(a, b, d, fa, fb, fd, 3, delta)
 end
 
-
-
-
 """
     Roots.A42()
 
@@ -235,7 +233,7 @@ function log_step(l::Tracks, M::AbstractAlefeldPotraShi, state; init::Bool=false
     a, b, c = state.xn0, state.xn1, state.d
     init && push!(l.abₛ, extrema((a, b, c)))
     init && log_iteration(l, 1) # take an initial step
-    push!(l.abₛ, (a,b))
+    push!(l.abₛ, (a, b))
     !init && log_iteration(l, 1)
     nothing
 end
@@ -293,8 +291,7 @@ function update_state(M::A42, F, state::A42State{T,S}, options, l=NullTracks()) 
     fc::S = F(c)
     incfn(l)
 
-
-    (iszero(fc) || isnan(fc)) && return (_set(state, (c,fc)), true)
+    (iszero(fc) || isnan(fc)) && return (_set(state, (c, fc)), true)
 
     (isnan(c) || isinf(c)) && return (state, true)
 
@@ -305,7 +302,7 @@ function update_state(M::A42, F, state::A42State{T,S}, options, l=NullTracks()) 
     fcb::S = F(cb)
     incfn(l)
 
-    (iszero(fc) || isnan(fc)) && return (_set(state, (c,fc)), true)
+    (iszero(fc) || isnan(fc)) && return (_set(state, (c, fc)), true)
     if isnan(c) || isinf(c)
         # tighten up bracket
         state = _set(state, (bb, fbb), (ab, fab))
@@ -325,7 +322,7 @@ function update_state(M::A42, F, state::A42State{T,S}, options, l=NullTracks()) 
     fch::S = F(ch)
     incfn(l)
 
-    (iszero(fch) || isnan(fch)) && return (_set(state, (ch,fch)), true)
+    (iszero(fch) || isnan(fch)) && return (_set(state, (ch, fch)), true)
     if isnan(ch) || isinf(ch)
         # tighten up bracket
         state = _set(state, (bb, fbb), (ab, fab))

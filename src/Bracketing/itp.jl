@@ -26,10 +26,11 @@ struct ITP{T,S} <: AbstractBracketingMethod
     κ₁::T
     κ₂::S
     n₀::Int
-    function ITP(κ₁::T′, κ₂::S, n₀::Int) where {T′, S}
-        0 ≤ κ₁ < Inf             ||   throw(ArgumentError("κ₁ must be between 0 and ∞"))
-        1 ≤ κ₂ < (3+√5)/2        ||   throw(ArgumentError("κ₂ must be between 1 and 1 plus the golden ratio"))
-        0 < n₀ < Inf             ||   throw(ArgumentError("n₀ must be between 0 and ∞"))
+    function ITP(κ₁::T′, κ₂::S, n₀::Int) where {T′,S}
+        0 ≤ κ₁ < Inf || throw(ArgumentError("κ₁ must be between 0 and ∞"))
+        1 ≤ κ₂ < (3 + √5) / 2 ||
+            throw(ArgumentError("κ₂ must be between 1 and 1 plus the golden ratio"))
+        0 < n₀ < Inf || throw(ArgumentError("n₀ must be between 0 and ∞"))
         T = float(T′)
 
         ## κ₂ == 2 || throw(ArgumentError("κ₂ is hardcoded to be 2"))
@@ -37,8 +38,7 @@ struct ITP{T,S} <: AbstractBracketingMethod
         new{T,S}(float(κ₁), κ₂, n₀)
     end
 end
-ITP(;κ₁ = 0.2, κ₂ = 2, n₀=1) = ITP(κ₁, κ₂, n₀)
-
+ITP(; κ₁=0.2, κ₂=2, n₀=1) = ITP(κ₁, κ₂, n₀)
 
 struct ITPState{T,S,R} <: AbstractUnivariateZeroState{T,S}
     xn1::T
@@ -51,26 +51,23 @@ struct ITPState{T,S,R} <: AbstractUnivariateZeroState{T,S}
 end
 
 function init_state(M::ITP, F, x₀, x₁, fx₀, fx₁)
-
     if x₀ > x₁
         x₀, x₁, fx₀, fx₁ = x₁, x₀, fx₁, fx₀
     end
 
     ## we compute this once the options and initial state are known
-    ϵ2n₁₂ = zero(float(x₁)/x₁) # ϵ*2^(ceil(Int, log2((b-a)/(2*ϵ))) + n₀)
+    ϵ2n₁₂ = zero(float(x₁) / x₁) # ϵ*2^(ceil(Int, log2((b-a)/(2*ϵ))) + n₀)
 
     # handle interval if fa*fb ≥ 0 (explicit, but also not needed)
     (iszero(fx₀) || iszero(fx₁)) && return ITPState(x₁, x₀, fx₁, fx₀, 0, ϵ2n₁₂, x₁)
     assert_bracket(fx₀, fx₁)
 
-    a,b,fa,fb = x₀,x₁,fx₀,fx₁
+    a, b, fa, fb = x₀, x₁, fx₀, fx₁
 
     ITPState(b, a, fb, fa, 0, ϵ2n₁₂, a)
-
 end
 
 function update_state(M::ITP, F, o, options, l=NullTracks())
-
     a, b = o.xn0, o.xn1
     fa, fb = o.fxn0, o.fxn1
     j, ϵ2n₁₂ = o.j, o.ϵ2n₁₂
@@ -79,25 +76,26 @@ function update_state(M::ITP, F, o, options, l=NullTracks())
     if iszero(ϵ2n₁₂)
         # we need the options to set the ϵ⋅2^n₁₂ part of r.
         ϵ = max(options.xabstol, max(abs(a), abs(b)) * options.xreltol)
-        ϵ2n₁₂ = ϵ * exp2(ceil(Int, log2((b-a)/(2ϵ))) + M.n₀)
+        ϵ2n₁₂ = ϵ * exp2(ceil(Int, log2((b - a) / (2ϵ))) + M.n₀)
         @set! o.ϵ2n₁₂ = ϵ2n₁₂
     end
 
-    Δ = b-a
-    x₁₂ = a + Δ/2  # middle must be (a+b)/2
-    r = ϵ2n₁₂ * exp2(-j) - Δ/2
+    Δ = b - a
+    x₁₂ = a + Δ / 2  # middle must be (a+b)/2
+    r = ϵ2n₁₂ * exp2(-j) - Δ / 2
     δ′ = κ₁ * Δ^κ₂ # a numeric literal for  κ₂ is faster
-    δ = δ′/oneunit(δ′)
+    δ = δ′ / oneunit(δ′)
     # δ = κ₁ * Δ^2
-    xᵣ = (b*fa - a*fb) / (fa - fb)
+    xᵣ = (b * fa - a * fb) / (fa - fb)
 
     σ = sign(x₁₂ - xᵣ)
-    xₜ = δ ≤ abs(x₁₂ - xᵣ)/oneunit(xᵣ) ? xᵣ + σ*δ*oneunit(xᵣ) : x₁₂
+    xₜ = δ ≤ abs(x₁₂ - xᵣ) / oneunit(xᵣ) ? xᵣ + σ * δ * oneunit(xᵣ) : x₁₂
 
     c = xᵢₜₚ = abs(xₜ - x₁₂) ≤ r ? xₜ : x₁₂ - σ * r
 
     if !(a < c < b)
-        nextfloat(a) ≥ b && log_message(l, "Algorithm stopped narrowing bracketing interval")
+        nextfloat(a) ≥ b &&
+            log_message(l, "Algorithm stopped narrowing bracketing interval")
         return (o, true)
     end
 
@@ -110,7 +108,7 @@ function update_state(M::ITP, F, o, options, l=NullTracks())
         a, fa = c, fc
     end
 
-    o = _set(o, (b,fb), (a,fa))
+    o = _set(o, (b, fb), (a, fa))
     @set! o.j = j + 1
 
     return o, false
