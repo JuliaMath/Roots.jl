@@ -19,7 +19,6 @@ struct Secant <: AbstractSecantMethod end
 const Order1 = Secant
 const Orderφ = Secant
 
-
 function update_state(
     ::Order1,
     F,

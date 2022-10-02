@@ -64,7 +64,6 @@ function update_state(
 
     o = _set(o, (x₁, f₁), (xn, fxn))
 
-
     return o, false
 
     #    nothing

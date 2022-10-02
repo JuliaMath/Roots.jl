@@ -68,7 +68,6 @@ include("find_zeros.jl")
 include("simple.jl")
 include("alternative_interfaces.jl")
 
-
 # cf. https://github.com/JuliaDocs/Documenter.jl/pull/1664/files
 function _update_module_doc()
     path = joinpath(@__DIR__, "..", "README.md")

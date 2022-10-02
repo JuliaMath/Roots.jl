@@ -14,10 +14,6 @@ end
 
 initial_fncalls(::AbstractSecantMethod) = 2
 
-
-
-
-
 ##################################################
 ## Guard against non-robust algorithms
 ##

@@ -27,13 +27,20 @@ When solving ``f(x,p) = 0`` for ``x^*(p)`` using `Bisection` one can not take th
 """
 struct Bisection <: AbstractBisectionMethod end
 
-
 initial_fncalls(::AbstractBisectionMethod) = 3 # middle
 
 # Bisection using __middle should have a,b on same side of 0.0 (though
 # possibly, may be -0.0, 1.0 so not guaranteed to be of same sign)
-function init_state(::AbstractBisectionMethod, F, x₀, x₁, fx₀, fx₁; m=_middle(x₀, x₁), fm=F(m))
-
+function init_state(
+    ::AbstractBisectionMethod,
+    F,
+    x₀,
+    x₁,
+    fx₀,
+    fx₁;
+    m=_middle(x₀, x₁),
+    fm=F(m),
+)
     if x₀ > x₁
         x₀, x₁, fx₀, fx₁ = x₁, x₀, fx₁, fx₀
     end
@@ -69,7 +76,11 @@ point values.
 For other types, default non-zero tolerances for `xatol` and `xrtol` are given.
 
 """
-function default_tolerances(::AbstractBisectionMethod, ::Type{T}, ::Type{S′}) where {T<:FloatNN,S′}
+function default_tolerances(
+    ::AbstractBisectionMethod,
+    ::Type{T},
+    ::Type{S′},
+) where {T<:FloatNN,S′}
     S = real(float(S′))
     xatol = 0 * oneunit(S)
     xrtol = 0 * one(T)
@@ -82,7 +93,7 @@ end
 
 # not float uses some non-zero tolerances for `x`
 function default_tolerances(::AbstractBisectionMethod, ::Type{T′}, ::Type{S′}) where {T′,S′}
-    T,S = real(float(T′)), real(float(S′))
+    T, S = real(float(T′)), real(float(S′))
     xatol = eps(T)^3 * oneunit(T)
     xrtol = eps(T) * one(T) # unitless
     atol = 0 * oneunit(S)
@@ -91,7 +102,6 @@ function default_tolerances(::AbstractBisectionMethod, ::Type{T′}, ::Type{S′
     strict = true
     (xatol, xrtol, atol, rtol, maxiters, strict)
 end
-
 
 # find middle of (a,b) with convention that
 # * if a, b finite, they are made non-finite
@@ -129,7 +139,6 @@ function __middle(T, S, x, y)
     sign(x + y) * reinterpret(T, mid)
 end
 
-
 ## --------------------------------------------------
 
 function update_state(M::AbstractBisectionMethod, F, o, options, l=NullTracks())
@@ -154,11 +163,11 @@ function update_state(M::AbstractBisectionMethod, F, o, options, l=NullTracks())
     return o, false
 end
 
-
 ## Special case default method for `find_zero(f, (a,b))`;  gives ~10% speedup by avoiding assess_convergence/update state dispatch
-function solve!(P::ZeroProblemIterator{𝑴, 𝑵, 𝑭, 𝑺, 𝑶, 𝑳}; verbose=false) where {
-    𝑴 <: Bisection, 𝑵, 𝑭, 𝑺, 𝑶 <: ExactOptions, 𝑳}
-
+function solve!(
+    P::ZeroProblemIterator{𝑴,𝑵,𝑭,𝑺,𝑶,𝑳};
+    verbose=false,
+) where {𝑴<:Bisection,𝑵,𝑭,𝑺,𝑶<:ExactOptions,𝑳}
     M, F, state, options, l = P.M, P.F, P.state, P.options, P.logger
 
     val, stopped = :not_converged, false
@@ -166,7 +175,6 @@ function solve!(P::ZeroProblemIterator{𝑴, 𝑵, 𝑭, 𝑺, 𝑶, 𝑳}; verb
     log_step(l, M, state; init=true)
 
     while !stopped
-
         a, b = state.xn0, state.xn1
         fa, fb = state.fxn0, state.fxn1
 
@@ -205,12 +213,11 @@ function solve!(P::ZeroProblemIterator{𝑴, 𝑵, 𝑭, 𝑺, 𝑶, 𝑳}; verb
         @set! state.fxn0 = fa
         @set! state.fxn1 = fb
 
-
         log_step(l, M, state)
         ctr += 1
     end
 
-#    val, stopped = assess_convergence(M, state, options) # udpate val flag
+    #    val, stopped = assess_convergence(M, state, options) # udpate val flag
     α = decide_convergence(M, F, state, options, val)
 
     log_convergence(l, val)
@@ -219,5 +226,4 @@ function solve!(P::ZeroProblemIterator{𝑴, 𝑵, 𝑭, 𝑺, 𝑶, 𝑳}; verb
     verbose && display(l)
 
     α
-
 end

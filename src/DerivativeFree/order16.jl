@@ -115,7 +115,6 @@ function update_state(
     return o, false
 end
 
-
 ##################################################
 ## some means of guarding against large fx when taking a steffensen step
 ## for Orders 5, 8, and 16 we restrict the size of the steffensen step

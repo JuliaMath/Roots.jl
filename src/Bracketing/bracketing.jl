@@ -23,7 +23,7 @@ initial_fncalls(::AbstractBracketingMethod) = 2
 ## No init here; for Bisection() [a₀, b₀] is just lost.
 function log_step(l::Tracks, M::AbstractBracketingMethod, state; init::Bool=false)
     a, b = state.xn0, state.xn1
-    push!(l.abₛ, a < b ? (a,b) : (b,a))
+    push!(l.abₛ, a < b ? (a, b) : (b, a))
     !init && log_iteration(l, 1)
     nothing
 end
@@ -38,9 +38,6 @@ function default_tolerances(::AbstractBracketingMethod, ::Type{T}, ::Type{S}) wh
     strict = true
     (xatol, xrtol, atol, rtol, maxevals, strict)
 end
-
-
-
 
 ## --------------------------------------------------
 

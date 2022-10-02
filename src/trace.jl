@@ -7,7 +7,6 @@
 abstract type AbstractTracks end
 struct NullTracks <: AbstractTracks end
 
-
 # logging api
 
 # how many function evaluations in init_state
@@ -23,7 +22,7 @@ log_last(::NullTracks, state) = nothing              # log α
 log_method(::NullTracks, method) = nothing           # record M
 log_nmethod(::NullTracks, method) = nothing          # record N (if hybrid)
 
-incfn(T::AbstractTracks, i=1) = log_fncall(T,i)      # legacy alias
+incfn(T::AbstractTracks, i=1) = log_fncall(T, i)      # legacy alias
 # a tracks object to record tracks
 """
     Tracks(T, S)
@@ -120,16 +119,26 @@ mutable struct Tracks{T,S} <: AbstractTracks
     method
     nmethod
 end
-Tracks(T, S) = Tracks(Tuple{T,S}[], Tuple{T,T}[], 0, 0, :algorithm_not_run, "",  nan(T), nothing, nothing)
+Tracks(T, S) = Tracks(
+    Tuple{T,S}[],
+    Tuple{T,T}[],
+    0,
+    0,
+    :algorithm_not_run,
+    "",
+    nan(T),
+    nothing,
+    nothing,
+)
 Tracks(s::AbstractUnivariateZeroState{T,S}) where {T,S} = Tracks(T, S)
 Tracks(verbose, tracks, state::AbstractUnivariateZeroState{T,S}) where {T,S} =
-    (verbose && isa(tracks, NullTracks)) ? Tracks(T,S) : tracks
+    (verbose && isa(tracks, NullTracks)) ? Tracks(T, S) : tracks
 Tracks() = Tracks(Float64, Float64) # give default
 
 function log_step(l::Tracks, M::AbstractNonBracketingMethod, state; init=false)
     init && push!(l.xfₛ, (state.xn0, state.fxn0))
     push!(l.xfₛ, (state.xn1, state.fxn1))
-    !init  && log_iteration(l, 1)
+    !init && log_iteration(l, 1)
     nothing
 end
 
@@ -145,8 +154,8 @@ log_nmethod(l::Tracks, method) = (l.nmethod = method; nothing)
 Base.first(l::AbstractTracks) = (@warn "No tracking information was kept"; nothing)
 function Base.first(l::Tracks)
     l.convergence_flag == :algorithm_not_run && error("Algorithm not run")
-    !isempty(l.xfₛ) && return (x₁= l.xfₛ[1][1], f₁= l.xfₛ[1][2])
-    return (a₁= l.abₛ[1][1], b₁= l.abₛ[1][2])
+    !isempty(l.xfₛ) && return (x₁=l.xfₛ[1][1], f₁=l.xfₛ[1][2])
+    return (a₁=l.abₛ[1][1], b₁=l.abₛ[1][2])
 end
 # return last value of algorithm
 Base.last(l::AbstractTracks) = (@warn "No tracking information was kept"; nothing)
@@ -162,8 +171,8 @@ end
 # Returns all available observations.
 Base.get(l::NullTracks) = (@warn "No tracking information was kept"; nothing)
 function Base.get(l::Tracks)
-    xf = [(xn=xᵢ, fn = fᵢ) for (xᵢ, fᵢ) ∈ l.xfₛ]
-    ab = [(a=min(u,v), b=max(u,v)) for (u,v) ∈ l.abₛ]
+    xf = [(xn=xᵢ, fn=fᵢ) for (xᵢ, fᵢ) in l.xfₛ]
+    ab = [(a=min(u, v), b=max(u, v)) for (u, v) in l.abₛ]
     vcat(xf, ab)
 end
 
@@ -184,7 +193,6 @@ end
 Base.show(io::IO, l::Tracks) = show_trace(io, l.method, l.nmethod, l)
 
 function show_trace(io::IO, method, N, tracks)
-
     flag = tracks.convergence_flag
     if flag == :algorithm_not_run
         print(io, "Algorithm has not been run")
@@ -207,8 +215,7 @@ function show_trace(io::IO, method, N, tracks)
         tracks.convergence_flag == :f_converged &&
             tracks.message == "" &&
             println(io, "* stopped as |f(x_n)| ≤ max(δ, |x|⋅ϵ) using δ = atol, ϵ = rtol")
-        tracks.convergence_flag == :exact_zero &&
-            println(io, "* stopped as f(x_n) = 0")
+        tracks.convergence_flag == :exact_zero && println(io, "* stopped as f(x_n) = 0")
         tracks.message != "" && println(io, "* Note: $(tracks.message)")
     else
         println(io, "* Convergence failed: $(tracks.message)")
@@ -227,9 +234,11 @@ function show_tracks(io::IO, s::Tracks, M::AbstractUnivariateZeroMethod)
             io,
             @sprintf(
                 "%s%s = %.17g,\t %s%s = %.17g",
-                "x", sprint(io -> unicode_subscript(io, i)),
+                "x",
+                sprint(io -> unicode_subscript(io, i)),
                 float(xi),
-                "fx", sprint(io -> unicode_subscript(io, i)),
+                "fx",
+                sprint(io -> unicode_subscript(io, i)),
                 float(fxi)
             )
         )
@@ -237,22 +246,23 @@ function show_tracks(io::IO, s::Tracks, M::AbstractUnivariateZeroMethod)
 
     # show bracketing
     i₀ = length(s.xfₛ)
-    for (i, (a,b)) in enumerate(s.abₛ)
+    for (i, (a, b)) in enumerate(s.abₛ)
         j = i₀ + i
         println(
             io,
             @sprintf(
                 "(%s%s, %s%s) = ( %.17g, %.17g )",
-                "a", sprint(io -> unicode_subscript(io, j-1)),
-                "b", sprint(io -> unicode_subscript(io, j-1)),
-                a, b
+                "a",
+                sprint(io -> unicode_subscript(io, j - 1)),
+                "b",
+                sprint(io -> unicode_subscript(io, j - 1)),
+                a,
+                b
             )
         )
     end
     println(io, "")
-
 end
-
 
 ## needs better name, but is this useful?
 """
@@ -261,7 +271,7 @@ end
 Run `find_zero` return a `Tracks` object, not the value, which can be extracted via the `last` method.
 """
 function find_zerov(f, x, M; verbose=nothing, kwargs...)
-    Z = init(ZeroProblem(f,x), M; verbose=true, kwargs...)
+    Z = init(ZeroProblem(f, x), M; verbose=true, kwargs...)
     solve!(Z)
     Z.logger
 end

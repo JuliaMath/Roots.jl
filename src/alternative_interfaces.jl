@@ -52,7 +52,6 @@ Keyword arguments are passed to `find_zero` using the `Roots.Halley()` method.
 """
 halley(f, fp, fpp, x0; kwargs...) = find_zero((f, fp, fpp), x0, Halley(); kwargs...)
 
-
 """
     Roots.quadratic_inverse(f, fp, fpp, x0; kwargs...)
 
@@ -82,10 +81,8 @@ quadratic_inverse(f, fp, fpp, x0; kwargs...) =
 superhalley(f, fp, fpp, x0; kwargs...) =
     find_zero((f, fp, fpp), x0, SuperHalley(); kwargs...)
 
-
 chebyshev_like(f, fp, fpp, x0; kwargs...) =
     find_zero((f, fp, fpp), x0, ChebyshevLike(); kwargs...)
-
 
 ## --------------------------------------------------
 
@@ -164,7 +161,13 @@ function fzero(f, x0, M::AbstractUnivariateZeroMethod; kwargs...)
     find_zero(FnWrapper(f), x0, M; kwargs...)
 end
 
-function fzero(f, x0, M::AbstractUnivariateZeroMethod, N::AbstractBracketingMethod; kwargs...)
+function fzero(
+    f,
+    x0,
+    M::AbstractUnivariateZeroMethod,
+    N::AbstractBracketingMethod;
+    kwargs...,
+)
     find_zero(FnWrapper(f), x0, M, N; kwargs...)
 end
 

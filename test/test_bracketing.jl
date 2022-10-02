@@ -219,8 +219,15 @@ avg(x) = sum(x) / length(x)
     ## test for evaluation counts, ideally not so low for these problems
 
     ## exact_bracket
-    Ms = [Roots.Brent(), Roots.A42(), Roots.AlefeldPotraShi(), Roots.Chandrapatla(), Roots.ITP(), Roots.Ridders(),
-          Roots.Bisection()]
+    Ms = [
+        Roots.Brent(),
+        Roots.A42(),
+        Roots.AlefeldPotraShi(),
+        Roots.Chandrapatla(),
+        Roots.ITP(),
+        Roots.Ridders(),
+        Roots.Bisection(),
+    ]
     results = [run_tests((f, b) -> find_zero(f, b, M), name="$M") for M in Ms]
     maxfailures = maximum([length(result.failures) for result in results])
     maxresidual = maximum([result.maxresidual for result in results])
@@ -228,7 +235,6 @@ avg(x) = sum(x) / length(x)
     @test maxfailures == 0
     @test maxresidual <= 5e-13
     @test avg(cnts) <= 4700
-
 
     ## False position has larger residuals (and failures until maxsteps is increased)
     Ms = [Roots.FalsePosition(i) for i in 1:12]
@@ -310,11 +316,11 @@ end
 
     # subnormals should still be okay
 
-   α = nextfloat(nextfloat(0.0))
-   f = x -> x - α
-   for M in (Bisection(),) #Ms XXX NOT A42, AlefeldPotraShi with xatol !==0
-       @test find_zero(f, (-1, 1), M) == α
-   end
+    α = nextfloat(nextfloat(0.0))
+    f = x -> x - α
+    for M in (Bisection(),) #Ms XXX NOT A42, AlefeldPotraShi with xatol !==0
+        @test find_zero(f, (-1, 1), M) == α
+    end
 
     # with NaN, not Inf
     f = x -> abs(x) / x
