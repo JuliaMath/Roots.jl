@@ -3,8 +3,6 @@
 # ∇f = 0 => ∂/∂ₓ f(xᵅ, p) ⋅ ∂xᵅ/∂ₚ + ∂/∂ₚf(x\^α, p) ⋅ I = 0
 # or ∂xᵅ/∂ₚ = - ∂/∂ₚ f(xᵅ, p)  / ∂/∂ₓ f(xᵅ, p)
 
-# does this work?
-# It doesn't pass a few of the tests of ChainRulesTestUtils
 function ChainRulesCore.frule(
     config::ChainRulesCore.RuleConfig{>:ChainRulesCore.HasForwardsMode},
     (_, _, _, Δp),
@@ -43,7 +41,7 @@ function ChainRulesCore.rrule(
     _, fx, fp = pullback_f(true)
     yp = -fp / fx
 
-    function pullback_solve_ZeroProblem(dy::Real)
+    function pullback_solve_ZeroProblem(dy)
         dp = yp * dy
         return (
             ChainRulesCore.NoTangent(),
