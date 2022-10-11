@@ -428,6 +428,15 @@ end
     r = 0.05
     xs = (r + 1e-12, 1.0)
     @test find_zero(x -> f(r) - f(x), xs, Roots.A42()) ≈ 0.4715797678171889
+
+    ## issue #336 verbose=true with complex values
+    ## just test that this does not error
+    for M ∈ (Order1(), Roots.Newton())
+        T = Complex{Float64}
+        tracks = Roots.Tracks(T,T)
+        find_zero((sin,cos), 1.0+1.0im, M; tracks=tracks)
+        Roots.show_tracks(IOBuffer(), tracks, M)
+    end
 end
 
 struct _SampleCallableObject end

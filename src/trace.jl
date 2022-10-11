@@ -264,6 +264,47 @@ function show_tracks(io::IO, s::Tracks, M::AbstractUnivariateZeroMethod)
     println(io, "")
 end
 
+# support for complex values
+# Issue 336. (Could DRY this up...)
+function show_tracks(io::IO, s::Roots.Tracks{T, S}, M::Roots.AbstractUnivariateZeroMethod) where {T <: Complex, S <: Complex}
+
+    # show (x,f(x))
+    for (i, (xi, fxi)) in enumerate(s.xfₛ)
+        println(
+            io,
+            @sprintf(
+                "%s%s = (%.17g, %.17g),\t %s%s = (%.17g, %.17g)",
+                "x",
+                sprint(io -> Roots.unicode_subscript(io, i)),
+                real(xi), imag(xi),
+                "fx",
+                sprint(io -> Roots.unicode_subscript(io, i)),
+                real(fxi), imag(fxi)
+            )
+        )
+    end
+
+    # show bracketing
+    i₀ = length(s.xfₛ)
+    for (i, (a, b)) in enumerate(s.abₛ)
+        j = i₀ + i
+        println(
+            io,
+            @sprintf(
+                "(%s%s, %s%s) = ( %.17g, %.17g )",
+                "a",
+                sprint(io -> unicode_subscript(io, j - 1)),
+                "b",
+                sprint(io -> unicode_subscript(io, j - 1)),
+                a,
+                b
+            )
+        )
+    end
+    println(io, "")
+end
+
+
 ## needs better name, but is this useful?
 """
     find_zerov(f, x, M; kwargs...)
