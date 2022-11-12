@@ -7,9 +7,10 @@
 
 This package contains simple routines for finding roots, or zeros, of
 scalar functions of a single real variable. The `find_zero` function
-provides the primary interface. The basic call is `find_zero(f, x0,
-[M])` where, typically, `f` is a function, `x0` a starting point or
-bracketing interval, and `M` is used to adjust the default algorithms used.
+provides the primary interface. The basic call is
+`find_zero(f, x0, [M], [p]; kws...)` where, typically, `f` is a function, `x0` a starting point or
+bracketing interval,  `M` is used to adjust the default algorithms used, and `p` can be used to pass in parameters.
+
 The various algorithms include:
 
 * Bisection-like algorithms. For functions where a bracketing interval
@@ -161,7 +162,7 @@ The
 [DifferentialEquations](https://github.com/SciML/DifferentialEquations.jl)
 interface of setting up a problem; initializing the problem; then
 solving the problem is also implemented using the methods
-`ZeroProblem`, `init`, `solve!` and `solve`.
+`ZeroProblem`, `init`, `solve!` and `solve` (from [CommonSolve](https://github.com/SciML/CommonSolve.jl)).
 
 For example, we can solve a problem with many different methods, as follows:
 
@@ -172,7 +173,7 @@ f (generic function with 1 method)
 julia> x0 = 2.0
 2.0
 
-julia> fx = ZeroProblem(f,x0)
+julia> fx = ZeroProblem(f, x0)
 ZeroProblem{typeof(f), Float64}(f, 2.0)
 
 julia> solve(fx) ≈ 0.7728829591492101
@@ -205,8 +206,8 @@ f (generic function with 1 method)
 julia> x0 = 0.1147
 0.1147
 
-julia> find_zero(f, x0, Roots.Order1()) # stopped as |f(xₙ)| ≤ |xₙ|ϵ
-5.53043654482315
+julia> find_zero(f, x0, Roots.Order1()) ≈ 5.075844588445206 # stopped as |f(xₙ)| ≤ |xₙ|ϵ
+true
 
 julia> find_zero(f, x0, Roots.Order1(), atol=0.0, rtol=0.0) # error as no check on `|f(xn)|`
 ERROR: Roots.ConvergenceFailed("Algorithm failed to converge")
@@ -238,7 +239,7 @@ true
 julia> solve(Z, Order1(), p=3) ≈ 1.170120950002626 # use p=3
 true
 
-julia> solve(Z, Order1(), 4) ≈ 1.2523532340025887 # by position, uses p=4
+julia> solve(Z, Order1(), 4) ≈ 1.2523532340025887  # by position, uses p=4
 true
 ```
 
@@ -255,7 +256,7 @@ results should be confirmed by other means.
 julia> f(x) = exp(x) - x^4
 f (generic function with 2 methods)
 
-julia> find_zeros(f, -10,10) ≈ [α₀,α₁,α₂] # from above
+julia> find_zeros(f, -10,10) ≈ [α₀, α₁, α₂] # from above
 true
 ```
 
@@ -265,7 +266,7 @@ defined, where `extrema` return two different values:
 ```julia
 julia> using IntervalSets
 
-julia> find_zeros(f, -10..10) ≈ [α₀,α₁,α₂]
+julia> find_zeros(f, -10..10) ≈ [α₀, α₁, α₂]
 true
 ```
 

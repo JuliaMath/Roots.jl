@@ -54,7 +54,7 @@ From  an initial point,  the  next  point  in  the iterative algorithm is found 
 
 ``x_{n+1}  =  x_{n}  - f(x_n)/f'(x_n).``
 
-Some facts  are helpful  to  understand the different   methods  available in `Roots`:
+Some facts  are helpful  to  understand the different methods  available in `Roots`:
 
 * For Newton's method there is a formula for the error: Set
   ``\epsilon_n = \alpha - x_n``, where ``\alpha`` is the zero, then
@@ -95,11 +95,11 @@ Roots.LithBoonkkampIJzerman{S,D}
 
 ## Derivative free methods
 
-The [secant](https://en.wikipedia.org/wiki/Secant_method) method replaces the  derivative term in Newton's method with the slope of the secant line.
+The [secant](https://en.wikipedia.org/wiki/Secant_method) method replaces the  derivative term in Newton's method with the slope of a secant line using two prior values:
 
 ``x_{n+1} = x_n - (\frac{f(x_n)-f(x_{n-1})}{x_n - x_{n-1}})^{-1}\cdot  f(x_n).``
 
-Though the secant  method   has  convergence  rate of  order ``\approx 1.618`` and is not quadratic,  it
+Though the secant  method   has  convergence  rate of  order ``\approx 1.618`` -- i.e., is not quadratic --  it
 only requires one new  function call per  step  so  can be very effective. Often  function evaluations are the  slowest part of  the computation and, as  well, no derivative is  needed. Because  it  can be  very efficient, the secant  method  is used in  the default method  of `find_zero` when  called with a single initial starting point.
 
 [Steffensen's](https://en.wikipedia.org/wiki/Steffensen%27s_method) method is a quadratically converging. derivative-free method  which uses a secant  line  based on ``x_n`` and ``x_n + f(x_n)``.  Though of  higher  order, it requires  additional function calls per step and depends on a  good initial starting value. Other  derivative free methods are available, trading off  increased function calls for higher-order convergence. They may be  of interest when arbitrary  precision is needed. A  measure of efficiency is ``q^{1/r}`` where ``q`` is the order of convergence and ``r`` the number of function calls per step.   With this measure, the secant method  would be ``\approx (1.618)^{1/1}`` and Steffensen's  would be less (``2^{1/2}``).
@@ -117,11 +117,11 @@ Order16
 
 ## Bracketing methods
 
-The [bisection](https://en.wikipedia.org/wiki/Bisection_method) identifies a zero of a *continuous* function between ``a`` and ``b``  when  ``f(a)`` and  ``f(b)`` have different  signs. (The interval ``[a,b]`` is called a bracketing interval when ``f(a)\cdot  f(b)  <0``.)  The basic  algorithm is particularly simple, an interval  ``[a_i,b_i]`` is  split  at  ``c =  (a_i+b_i)/2``. Either  ``f(c)=0``,  or one  of  ``[a_i,c]``  or  ``[c,b_i]`` is a bracketing  interval,  which is  called  ``[a_{i+1},b_{i+1}]``. From this  description,  we  see  that  ``[a_i,b_i]`` has length  ``2^{-i}`` times the length of ``[a_0,b_0]``, so  the intervals will eventually terminate by finding  a zero, ``c``,  or converge  to a zero. This convergence is slow (the efficiency  is only ``1``, but guaranteed. For  `16`-, `32`-, and `64`-bit  floating point  values, a  reinterpretation  of  how the midpoint  (``c``) is found  leads  to convergence  in  no more  than   ``64`` iterations, unlike the midpoint found above, where some cases can take many more steps to converge.
+The [bisection](https://en.wikipedia.org/wiki/Bisection_method) method identifies a zero of a *continuous* function between ``a`` and ``b``  when  ``f(a)`` and  ``f(b)`` have different  signs. (The interval ``[a,b]`` is called a bracketing interval when ``f(a)\cdot  f(b)  <0``.)  The basic  algorithm is particularly simple, an interval  ``[a_i,b_i]`` is  split  at  ``c =  (a_i+b_i)/2``. Either  ``f(c)=0``,  or one  of  ``[a_i,c]``  or  ``[c,b_i]`` is a bracketing  interval,  which is  called  ``[a_{i+1},b_{i+1}]``. From this  description,  we  see  that  ``[a_i,b_i]`` has length  ``2^{-i}`` times the length of ``[a_0,b_0]``, so  the intervals will eventually terminate by finding  a zero, ``c``,  or converge  to a zero. This convergence is slow (the efficiency  is only ``1``, but guaranteed. For  `16`-, `32`-, and `64`-bit  floating point  values, a  reinterpretation  of  how the midpoint  (``c``) is found  leads  to convergence  in  no more  than   ``64`` iterations, unlike the midpoint found above, where some cases can take many more steps to converge.
 
 In floating point,  by  guaranteed  convergence we have either an exact zero or a bracketing interval  consisting   of  two  adjacent floating point values. When applied to *non*-continuous  functions,  this algorithm  will identify   an exact  zero or  a zero crossing   of the function. (E.g., applied  to  ``f(x)=1/x`` it  will  find  ``0``.)
 
-The default selection of  midpoint described above includes no information  about the function ``f`` bounds its  sign. Algorithms exploiting  the shape of the function  can be significantly more efficient. For example, the bracketing method `Roots.AlefeldPotraShi` due to [Alefeld, Potra, and Shi](https://dl.acm.org/doi/10.1145/210089.210111) has  efficiency ``\approx 1.6686``. This method  is  also   used in the  default method for `find_zero` when a  single initial starting point is given if a bracketing interval is identified.
+The default selection of  midpoint described above includes no information  about the function ``f`` beyond its  sign. Algorithms exploiting  the shape of the function  can be significantly more efficient. For example, the bracketing method `Roots.AlefeldPotraShi` due to [Alefeld, Potra, and Shi](https://dl.acm.org/doi/10.1145/210089.210111) has  efficiency ``\approx 1.6686``. This method  is  also   used in the  default method for `find_zero` when a  single initial starting point is given if a bracketing interval is identified.
 
 ----
 
@@ -172,6 +172,7 @@ A useful  strategy  is   to  begin with a non-bracketing  method and switch to a
 Roots.Order0
 ```
 
+
 ## Rates of convergence
 
 The order of a method is ``q``, where ``e_{i+1} \approx
@@ -205,7 +206,7 @@ good example.
 | Bracketing      | A42                          | ``(2 + 7^{1/2})``      | ``3,4`` |``(2 + 7^{1/2})^{1/3} = 1.6686\dots``  |
 | Bracketing      | AlefeldPotraShi              |                        | ``3,4`` | ``1.618\dots``                        |
 | Bracketing      | Brent                        | ``\leq 1.89\dots``     | ``1``   | ``\leq 1.89\dots``                    |
-| Bracketing      | ITP                          | ``\leq \varphi         | ``1``   | ``\leq \varphi``                      |
+| Bracketing      | ITP                          | ``\leq \varphi``         | ``1``   | ``\leq \varphi``                      |
 | Bracketing      | Ridders                      | ``1.83\dots``          | ``2``   | ``1.225\dots``                          |
 | Bracketing      | FalsePosition                | ``1.442\dots``         | ``1``   | ``1.442\dots``                        |
 | Bracketing      | LithBoonkkampIJzermanBracket | ``2.91``               | ``3``   | ``1.427\dots``                        |

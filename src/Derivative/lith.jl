@@ -7,6 +7,8 @@ A family of different methods that includes the secant method and Newton's metho
 Specifies a linear multistep solver with `S` steps and `D` derivatives following [Lith, Boonkkamp, and
 IJzerman](https://doi.org/10.1016/j.amc.2017.09.003).
 
+# Extended help
+
 ## Examples
 
 ```jldoctest lith
