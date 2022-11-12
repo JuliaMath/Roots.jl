@@ -134,13 +134,18 @@ function not_near(proposed, xs, xatol, xrtol)
 end
 
 """
-    find_zeros(f, a, b=nothing; [no_pts=12, k=8, naive=false, xatol, xrtol, atol, rtol])
+    find_zeros(f, a, [b]; [no_pts=12, k=8, naive=false, xatol, xrtol, atol, rtol])
 
-Search for zeros of `f` in the interval `[a,b]`. This interval can be
-specified with two values or using a single value, such as a tuple or
-vector, for which `extrema` returns two distinct values in increasing
-order.
+Search for zeros of `f` in the interval `[a,b]` with an heuristic
+algorithm.
 
+
+* `f`: a function or callable object
+* `a`, `b`:  If `b` is specified, the interval ``[a,b]`` is used. If only `a` is specified, it is passed to `extrema` to define the interval to search over.   It is assumed that neither endpoint is a zero.
+
+Returns a vector of zeros in sorted order, possibly empty.
+
+# Extended help
 
 # Examples
 

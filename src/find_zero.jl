@@ -1,6 +1,6 @@
 """
 
-    find_zero(f, x0, M, [N::AbstractBracketingMethod], p′=nothing; kwargs...)
+    find_zero(f, x0, M, [N::AbstractBracketingMethod], [p′=nothing]; kwargs...)
 
 Interface to one of several methods for finding zeros of a univariate function, e.g. solving ``f(x)=0``.
 
@@ -11,6 +11,7 @@ Interface to one of several methods for finding zeros of a univariate function, 
 * `x0`: the initial condition (a value, initial values, or bracketing interval)
 * `M`: some `AbstractUnivariateZeroMethod` specifying the solver
 * `N`: some bracketing method, when specified creates a hybrid method
+* `p`: for specifying a paramter to `f`. Also can be a keyword, but a positional argument is helpful with broadcasting.
 
 ## Keyword arguments
 
@@ -19,6 +20,8 @@ Interface to one of several methods for finding zeros of a univariate function, 
 * `maxiters`: specify the maximum number of iterations the algorithm can take.
 * `verbose::Bool`: specifies if details about algorithm should be shown
 * `tracks`: allows specification of `Tracks` objecs
+
+# Extended help
 
 # Initial starting value
 
@@ -45,26 +48,27 @@ A method is specified to indicate which algorithm to employ:
 * There are methods where a bracket is specified: [`Bisection`](@ref),
   [`A42`](@ref), [`AlefeldPotraShi`](@ref), [`Roots.Brent`](@ref),
   among others. Bisection is the default for basic floating point
-  types`, but `A42` generally requires far fewer iterations.
+  types, but `A42` generally requires far fewer iterations.
 
 * There are several derivative-free methods: cf. [`Order0`](@ref),
   [`Order1`](@ref) (also [`Roots.Secant`](@ref)), [`Order2`](@ref)
   (also [`Steffensen`](@ref)), [`Order5`](@ref),
   [`Order8`](@ref), and [`Order16`](@ref), where the number indicates
-  the order of the convergence. Methods [`Roots.Order1B`](@ref) and
-  [`Roots.Order2B`](@ref) are useful when the desired zero has a
-  multiplicity.
+  the order of the convergence.
 
-* There are some classical methods where derivatives are required:
+* There are some classical methods where derivatives need specification:
   [`Roots.Newton`](@ref), [`Roots.Halley`](@ref),
   [`Roots.Schroder`](@ref), among others.
+
+* Methods intended for problems with multiplicities include [`Roots.Order1B`](@ref),
+  [`Roots.Order2B`](@ref), and `Roots.ThukralXB` for different `X`s.
 
 * The family [`Roots.LithBoonkkampIJzerman{S,D}`](@ref) ,for different
   `S` and `D`, uses a linear multistep method root finder. The `(2,0)`
   method is the secant method, `(1,1)` is Newton's method.
 
 For more detail, see the help page for each method (e.g.,
-`?Order1`). Non-exported methods must be qualified with module name,
+`?Order1`). Non-exported methods must be qualified with the module name,
 as in `?Roots.Schroder`.
 
 If no method is specified, the default method depends on `x0`:
@@ -400,6 +404,8 @@ julia> solve(fx; p=1/2)  # log(2)
 ```
 
 This would be recommended, as there is no recompilation due to the function changing.
+For use with broadcasting, `p` may also be the last positional argument.
+
 
 The argument `verbose=true` for `init` instructs that steps to be logged;
 

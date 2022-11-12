@@ -401,14 +401,18 @@ julia> g(x, p=1) = cos(x) - x/p;
 julia> Z = ZeroProblem(g, (0.0, pi/2))
 ZeroProblem{typeof(g), Tuple{Float64, Float64}}(g, (0.0, 1.5707963267948966))
 
-julia> solve(Z, Secant(); p=2) # uses p=2
+julia> solve(Z, Secant(), 2) # uses p=2 as a positional argument
 1.0298665293222589
 
-julia> solve(Z, Bisection(); p=3, xatol=1/16) # p=3; uses keywords for tolerances
+julia> solve(Z, Bisection(); p=3, xatol=1/16) # p=3; uses keywords for position and tolerances
 1.1959535058744393
 ```
 
-## Inverse functions
+Positional arguments are useful for broadcasting over several parameter values.
+
+## Examples
+
+### Inverse functions
 
 The `find_zero` function can be used to identify inverse functions. Suppose ``f`` is a monotonic function on ``[a,b]``. Then an inverse function solves ``y = f(x)`` for ``x`` given a ``y``. This will do that task and return values in a function form:
 
@@ -434,7 +438,7 @@ a, b = 0, 5pi
 plot(inverse_function(f, a, b), f(a), f(b))
 ```
 
-## Finding critical points
+### Finding critical points
 
 The `D` function, defined above, makes it straightforward to find critical points
 (typically where the derivative is $0$ but also where it is undefined). For example, the critical
@@ -517,8 +521,9 @@ show(current())  # hide
 
 ## Sensitivity
 
-For functions with parameters, ``f(x,p)``, derivatives with respect to the ``p`` variable(s) may be of interest, for example to see how sensitive the solution is to variations in the parameter.
+In the last example, the question of how the distance varies with the angle is clearly important.
 
+In general, for functions with parameters, ``f(x,p)``, derivatives with respect to the ``p`` variable(s) may be of interest.
 
 A first attempt, may be to try and auto-differentiate the output of `find_zero`. For example:
 
@@ -532,7 +537,7 @@ F(p) = find_zero(f, one(p), Order1(), p)
 ForwardDiff.derivative(F, p)
 ```
 
-There are issues with this approach, though here it find the correct answer, as will be seen: a) it is not as performant as what we will discuss next, b) the subtle use of `one(p)` for the starting point is needed to ensure the type for the ``x`` values is correct, and c) not all algorithms will work, in particular `Bisection` is not amenable to this approach:
+There are issues with this approach, though here it finds the correct answer, as will be seen: a) it is not as performant as what we will discuss next, b) the subtle use of `one(p)` for the starting point is needed to ensure the type for the ``x`` values is correct, and c) not all algorithms will work, in particular `Bisection` is not amenable to this approach:
 
 ```@example roots
 F(p) = find_zero(f, (zero(p), one(p)), Roots.Bisection(), p)
@@ -604,7 +609,7 @@ fₚ = ForwardDiff.gradient(p -> f(xᵅ, p), p)
 - fₚ / fₓ
 ```
 
-The package provides a `ChainRulesCore.rrule` and `ChainRulesCore.frule` implementation that should allow automatic differentiation packages relying on `ChainRulesCore` (e.g., `Zygote`) to differentiate in `p` using the above approach.
+The package provides a `ChainRulesCore.rrule` and `ChainRulesCore.frule` implementation that should allow automatic differentiation packages relying on `ChainRulesCore` (e.g., `Zygote`) to differentiate in `p` using the above approach. (Thanks to `@devmotion` for help here.)
 
 
 
@@ -659,8 +664,10 @@ julia> x,  f(x)
 
 Finally, for many functions, all of these methods need a good initial
 guess. For example, the polynomial function $f(x) = x^5 - x - 1$ has
-its one zero near $1.16$. If we start far from it, convergence may
-happen, but it isn't guaranteed:
+its one zero near $1.16$.
+
+If we start far from the zero, convergence may happen, but it isn't
+guaranteed:
 
 ```jldoctest roots
 julia> f(x) = x^5 - x - 1;
@@ -690,7 +697,7 @@ plot!(xs, ys)
 show(current())  # hide
 ```
 
-Only a few of the steps are discernible, as the function's relative maximum
+Even with real graphics, only a few of the steps are discernible, as the function's relative maximum
 causes a trap for this algorithm. Starting to the right of the
 relative minimum--nearer the zero--would avoid this trap. The default
 method employs a trick to bounce out of such traps, though it doesn't
@@ -718,12 +725,31 @@ julia> above = accumulate((x,y) -> nextfloat(x), 1:10, init=1/3);
 
 julia> below = accumulate((x,y) -> prevfloat(x), 1:10, init=1/3);
 
-julia> ns = sort([below...,1/3, above...]);
+julia> ns = sort([below...,1/3, above...]); # floating point numbers aroudn 1/3
 
 julia> maximum(abs.(f.(ns) - f1.(ns))) < 1e-14
 true
 ```
 
+
+The exponents are:
+
+```
+julia> zs .|> abs .|> log10 .|> x -> floor(Int, x)
+21-element Vector{Int64}:
+ -16
+ -16
+ -16
+ -15
+ -15
+ -16
+ -76
+ -77
+   ⋮
+ -15
+ -16
+ -75
+ ```
 
 We see the function values are close for each point, as the maximum difference
 is like $10^{-15}$. This is roughly as expected, where even one
@@ -800,7 +826,7 @@ julia> findall(iszero, f1s)
 Further, there are several sign changes of the function values for `f1s`:
 
 ```
-julia> findall(!iszero,diff(sign.(f1s)))
+julia> findall(!iszero, diff(sign.(f1s)))
 9-element Vector{Int64}:
   2
   6
@@ -827,6 +853,7 @@ mathematical function does not cross the $x$ axis at a zero, then
 there is no guarantee the floating point values will satisfy either of
 these conditions.
 
+----
 
 Now consider the function `f(x) = exp(x)-x^4`. The value`x=8.613169456441398` is a zero in this sense, as there is a change of sign:
 
@@ -864,6 +891,8 @@ julia> fp(x) * abs(x) * eps()
 ```
 
 which is about what we see.
+
+----
 
 Bisection can be a slower method than others. For `Float64` values, `Bisection()` takes no more than 64 steps, but other methods may be able to converge to a zero in 4-5 steps (assuming good starting values are specified).
 
@@ -908,7 +937,7 @@ tolerance must be relatively generous.  A conservative choice of
 absolute tolerance might be `sqrt(eps())`, or about `1e-8`,
 essentially the one made in SciPy.
 
-Though this tolerance won't be able to work really large values:
+Though this tolerance won't be able to work for really large values:
 
 ```
 julia> find_zero(x -> sqrt(eps()) - eps(x), (0,Inf))
@@ -916,7 +945,7 @@ julia> find_zero(x -> sqrt(eps()) - eps(x), (0,Inf))
 ```
 
 
-This is not the choice made in `Roots`. The fact that bisection can
+This is **not** the choice made in `Roots`. The fact that bisection can
 produce zeros as exact as possible, and the fact that the error in
 function evaluation, $f'(x)|x|\epsilon$, is not typically on the scale
 of `1e-8`, leads to a desire for more precision, if available.
@@ -1103,7 +1132,7 @@ end
 
 ```
 
-An `init_state` method can be used by some methods to add more detail to the basic state object. Here it starts the old value, `c` off as `a` as a means to ensure an initial bisection step.
+An `init_state` method can be used by some methods to add more detail to the basic state object. Here it starts the old value, `c`, off as `a` as a means to ensure an initial bisection step.
 
 ```julia
 julia> function init_state(::Chandrapatla, F, x₀, x₁, fx₀, fx₁)
