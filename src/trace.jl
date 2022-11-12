@@ -266,7 +266,11 @@ end
 
 # support for complex values
 # Issue 336. (Could DRY this up...)
-function show_tracks(io::IO, s::Roots.Tracks{T, S}, M::Roots.AbstractUnivariateZeroMethod) where {T <: Complex, S <: Complex}
+function show_tracks(
+    io::IO,
+    s::Roots.Tracks{T,S},
+    M::Roots.AbstractUnivariateZeroMethod,
+) where {T<:Complex,S<:Complex}
 
     # show (x,f(x))
     for (i, (xi, fxi)) in enumerate(s.xfₛ)
@@ -276,10 +280,12 @@ function show_tracks(io::IO, s::Roots.Tracks{T, S}, M::Roots.AbstractUnivariateZ
                 "%s%s = (%.17g, %.17g),\t %s%s = (%.17g, %.17g)",
                 "x",
                 sprint(io -> Roots.unicode_subscript(io, i)),
-                real(xi), imag(xi),
+                real(xi),
+                imag(xi),
                 "fx",
                 sprint(io -> Roots.unicode_subscript(io, i)),
-                real(fxi), imag(fxi)
+                real(fxi),
+                imag(fxi)
             )
         )
     end
@@ -303,7 +309,6 @@ function show_tracks(io::IO, s::Roots.Tracks{T, S}, M::Roots.AbstractUnivariateZ
     end
     println(io, "")
 end
-
 
 ## needs better name, but is this useful?
 """

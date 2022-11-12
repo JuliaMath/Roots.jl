@@ -431,10 +431,10 @@ end
 
     ## issue #336 verbose=true with complex values
     ## just test that this does not error
-    for M ∈ (Order1(), Roots.Newton())
+    for M in (Order1(), Roots.Newton())
         T = Complex{Float64}
-        tracks = Roots.Tracks(T,T)
-        find_zero((sin,cos), 1.0+1.0im, M; tracks=tracks)
+        tracks = Roots.Tracks(T, T)
+        find_zero((sin, cos), 1.0 + 1.0im, M; tracks=tracks)
         Roots.show_tracks(IOBuffer(), tracks, M)
     end
 end
