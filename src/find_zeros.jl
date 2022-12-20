@@ -213,9 +213,10 @@ julia> find_zeros(f, 0, 10, no_pts=21)                # too hard for default
 ```
 
 !!! note
-    There are two cases where the number of zeros may be underreported:
+    Some cases where the number of zeros may be underreported:
     * if the initial interval, `(a,b)`, is too wide
     * if there are zeros  that are very nearby
+    * the function is flat, e.g., `x->0`.
 
 ----
 
@@ -325,6 +326,7 @@ function find_zeros(f, a, b=nothing; no_pts=12, k=8, naive=false, kwargs...)
     a0 = find_non_zero(f, a0, b0, xatol, xrtol, atol, rtol)
     b0 = find_non_zero(f, b0, a0, xatol, xrtol, atol, rtol)
 
+    (isnan(a0) || isnan(b0)) && throw(DomainError("no non-zero initial points found."))
     _fz!(zs, f, a0, b0, no_pts, k)  # initial zeros
 
     ints = Interval{T}[] # collect subintervals
