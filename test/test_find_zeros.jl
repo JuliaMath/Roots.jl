@@ -117,6 +117,9 @@ end
 
     # test with constant function
     @test isempty(find_zeros(x -> 4, -10, 10))
+
+    # test with zero function (Issue #339)
+    @test_throws DomainError find_zeros(x -> 0, -2, 2)
 end
 
 @testset "find_zeros: not Float64 types" begin
