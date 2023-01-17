@@ -6,7 +6,8 @@ Documentation for [Roots.jl](https://github.com/JuliaMath/Roots.jl)
 ## About
 
 `Roots` is  a `Julia` package  for finding zeros of continuous
-scalar functions of a single real variable. That  is solving ``f(x)=0`` for ``x``.
+scalar functions of a single real variable using floating point numbers. That  is solving ``f(x)=0`` for ``x`` adjusting for floating-point idiosyncracies.
+
 The `find_zero` function provides the
 primary interface. It supports various algorithms through the
 specification of a method. These include:
@@ -17,11 +18,11 @@ specification of a method. These include:
   most floating point number types, bisection occurs in a manner
   exploiting floating point storage conventions leading to an exact
   zero or a bracketing interval as small as floating point
-  computations allows. Other methods include `Roots.A42`,
-  `Roots.AlefeldPotraShi`, `Roots.Brent`, `Roots.Chandrapatlu`,
+  computations allows. Other methods include `A42`,
+  `AlefeldPotraShi`, `Roots.Brent`, `Roots.Chandrapatlu`,
   `Roots.ITP`, `Roots.Ridders`, and ``12``-flavors of
-  `FalsePosition`. The default bracketing method is `Bisection` for
-  the basic floating-point types, as it is more robust to some inputs,
+  `FalsePosition`. The default bracketing method for
+  the basic floating-point types is `Bisection` , as it is more robust to some inputs,
   but `A42` and `AlefeldPotraShi` typically converge in a few
   iterations and are more performant.
 
@@ -45,7 +46,7 @@ specification of a method. These include:
   `Roots.Schroder` provides a quadratic method, like Newton's method,
   which is independent of the multiplicity of the zero. The
   `Roots.ThukralXB`, `X=2`, `3`, `4`, or `5` are also multiplicity
-  three. The `X` denotes the number of derivatives that need
+  free. The `X` denotes the number of derivatives that need
   specifying. The `Roots.LithBoonkkampIJzerman{S,D}` methods remember
   `S` steps and use `D` derivatives.
 
@@ -53,7 +54,7 @@ specification of a method. These include:
 
 ## Basic usage
 
-Consider  the polynomial   function  ``f(x) = x^5 - x + 1/2``. As a polynomial,  its roots, or  zeros, could  be identified with the  `roots` function of  the `Polynomials` package. However, even  that function uses a numeric method to identify   the values, as no  solution with radicals is available. That is, even for polynomials, non-linear root finders are needed to solve ``f(x)=0``.
+Consider  the polynomial   function  ``f(x) = x^5 - x + 1/2``. As a polynomial,  its roots, or  zeros, could  be identified with the  `roots` function of  the `Polynomials` package. However, even  that function uses a numeric method to identify   the values, as no  solution with radicals is available. That is, even for polynomials, non-linear root finders are needed to solve ``f(x)=0``. (Though polynomial root-finders can exploit certain properties not available for general non-linear functions.)
 
 The `Roots` package provides a variety of algorithms for this  task. In this overview, only the  default ones  are illustrated.
 
@@ -77,7 +78,7 @@ true
 
 The default algorithm is guaranteed to have an  answer nearly as accurate as is  possible  given the limitations of floating point  computations.
 
-For the zeros "near" a point,  a non-bracketing method is often used, as generally  the algorithms are more efficient and can be  used in cases where a zero does  not. Passing just  the initial point will dispatch to  such a method:
+For the zeros "near" a point,  a non-bracketing method is often used, as generally  the algorithms are more efficient and can be  used in cases where a zero does  not cross the ``x`` axis. Passing just  the initial point will dispatch to  such a method:
 
 ```jldoctest find_zero
 julia> find_zero(f,  0.6) ≈ 0.550606579334135
@@ -85,7 +86,9 @@ true
 ```
 
 
-This finds  the answer  to the left of the starting point. To get the other nearby zero, a starting point closer to the answer can be used.  However,  an initial graph might convince one  that any of the up-to-``5`` real  roots  will   occur between ``-5``  and ``5``.  The `find_zeros` function uses  heuristics and a few of the  algorithms to  identify  all zeros between the specified range. Here  we see  there  are ``3``:
+This finds  the answer  to the left of the starting point. To get the other nearby zero, a starting point closer to the answer can be used.
+
+However,  an initial graph might convince one  that any of the up-to-``5`` real  roots  will   occur between ``-5``  and ``5``.  The `find_zeros` function uses  heuristics and a few of the  algorithms to  identify  all zeros between the specified range. Here  the method successfully identifies all  ``3``:
 
 ```jldoctest find_zero
 julia> find_zeros(f, -5,  5)

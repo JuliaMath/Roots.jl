@@ -253,7 +253,7 @@ tolerances (`rtol` and `atol`).  The size of ``f'(\alpha)`` is problem
 dependent, and can be accommodated by larger relative or absolute
 tolerances.
 
-When an algorithm returns  a  `NaN` value,  it terminates. This  can  happen near convergence or  may indicate some issues.  Early termination is checked for convergence  in the  size  of ``f(x_n)`` with a relaxed tolerance when `strict=false` is specified (the default).
+When an algorithm returns  an  `NaN` value,  it terminates. This  can  happen near convergence or  may indicate some issues.  Early termination is checked for convergence  in the  size  of ``f(x_n)`` with a relaxed tolerance when `strict=false` is specified (the default).
 
 !!! note "Relative tolerances  and assessing  `f(x) ≈ 0`"
     The use of  relative tolerances  to  check  if   ``f(x)  \approx  0`` can lead  to spurious  answers  where  ``x`` is very large   (and  hence the relative  tolerance  is large). The return of  very  large solutions  should  be checked against expectations  of the  answer.
@@ -302,7 +302,7 @@ Roots.fzero
 
 ## Tracking iterations
 
-It is possible to add the keyword arguement `verbose=true` to when calling the `find_zero` function to get detailed information about the solution, and data from each iteration. If you want to save this data instead of just printing it, you can use a `Tracks` object.
+It is possible to add the keyword argument `verbose=true`  when calling the `find_zero` function to get detailed information about the solution and data from each iteration. To save this data a `Tracks` object may be passed in to `tracks`.
 
 ----
 

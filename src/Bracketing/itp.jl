@@ -18,8 +18,7 @@ of `κ₂` is `2`, and the default value of `n₀` is `1`.
 
 Suggested on
 [discourse](https://discourse.julialang.org/t/julia-implementation-of-the-interpolate-truncate-project-itp-root-finding-algorithm/77739)
-by `@TheLateKronos`, who supplied the original version of the code
-below.
+by `@TheLateKronos`, who supplied the original version of the code.
 
 """
 struct ITP{T,S} <: AbstractBracketingMethod
