@@ -13,7 +13,7 @@ end
 
 Implements Newton's [method](http://tinyurl.com/b4d7vls):
 `xᵢ₊₁ =  xᵢ - f(xᵢ)/f'(xᵢ)`.  This is a quadratically convergent method requiring
-one derivative. Two function calls per step.
+one derivative and two function calls per step.
 
 ## Examples
 

@@ -3,7 +3,7 @@
 
 Use [Chandrapatla's
 algorithm](https://doi.org/10.1016/S0965-9978(96)00051-8)
-(cf. [Scherer](https://www.google.com/books/edition/Computational_Physics/cC-8BAAAQBAJ?hl=en&gbpv=1&pg=PA95&printsec=frontcover)
+(cf. [Scherer](https://www.google.com/books/edition/Computational_Physics/cC-8BAAAQBAJ?hl=en&gbpv=1&pg=PA95&printsec=frontcover))
 to solve ``f(x) = 0``.
 
 Chandrapatla's algorithm chooses between an inverse quadratic step or a bisection step based on a computed inequality.

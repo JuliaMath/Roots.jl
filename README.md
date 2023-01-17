@@ -6,7 +6,7 @@
 [![codecov](https://codecov.io/gh/JuliaMath/Roots.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaMath/Roots.jl)
 
 This package contains simple routines for finding roots, or zeros, of
-scalar functions of a single real variable. The `find_zero` function
+scalar functions of a single real variable using floating-point math. The `find_zero` function
 provides the primary interface. The basic call is
 `find_zero(f, x0, [M], [p]; kws...)` where, typically, `f` is a function, `x0` a starting point or
 bracketing interval,  `M` is used to adjust the default algorithms used, and `p` can be used to pass in parameters.
@@ -34,13 +34,13 @@ The various algorithms include:
   `Roots.Order2B` are superlinear and quadratically converging methods
   independent of the multiplicity of the zero.
 
-* There are historic algorithms that require a derivative or two to be specified:
-  `Roots.Newton` and `Roots.Halley`. `Roots.Schroder` provides a
-  quadratic method, like Newton's method, which is independent of the
-  multiplicity of the zero.
+* There are historic algorithms that require a derivative or two to be
+  specified: `Roots.Newton` and `Roots.Halley`. `Roots.Schroder`
+  provides a quadratic method, like Newton's method, which is
+  independent of the multiplicity of the zero. This is generalized by
+  `Roots.ThukralXB` (with `X` being 2,3,4, or 5).
 
 * There are several non-exported algorithms, such as, `Roots.Brent()`,
-  `FalsePosition`, `Roots.A42`, `Roots.AlefeldPotraShi`,
   `Roots.LithBoonkkampIJzermanBracket`, and
   `Roots.LithBoonkkampIJzerman`.
 
@@ -53,21 +53,21 @@ julia> using Roots
 
 julia> f(x) = exp(x) - x^4;
 
-julia> α₀,α₁,α₂ = -0.8155534188089607, 1.4296118247255556, 8.6131694564414;
+julia> α₀, α₁, α₂ = -0.8155534188089607, 1.4296118247255556, 8.6131694564414;
 
 julia> find_zero(f, (8,9), Bisection()) ≈ α₂ # a bisection method has the bracket specified
 true
 
-julia> find_zero(f, (-10, 0)) ≈ α₀ # Bisection is default if x in `find_zero(f,x)` is not a number
+julia> find_zero(f, (-10, 0)) ≈ α₀ # Bisection is default if x in `find_zero(f, x)` is not scalar
 true
 
 
-julia> find_zero(f, (-10, 0), Roots.A42()) ≈ α₀ # fewer function evaluations
+julia> find_zero(f, (-10, 0), Roots.A42()) ≈ α₀ # fewer function evaluations than Bisection
 true
 ```
 
 For non-bracketing methods, the initial position is passed in as a
-scalar, or, possibly, for secant-like methods an iterable of ``(x_0, x_1)``:
+scalar, or, possibly, for secant-like methods an iterable like `(x_0, x_1)`:
 
 ```julia
 julia> find_zero(f, 3) ≈ α₁  # find_zero(f, x0::Number) will use Order0()
@@ -161,8 +161,8 @@ true
 The
 [DifferentialEquations](https://github.com/SciML/DifferentialEquations.jl)
 interface of setting up a problem; initializing the problem; then
-solving the problem is also implemented using the methods
-`ZeroProblem`, `init`, `solve!` and `solve` (from [CommonSolve](https://github.com/SciML/CommonSolve.jl)).
+solving the problem is also implemented using the types
+`ZeroProblem` and the methods `init`, `solve!`, and `solve` (from [CommonSolve](https://github.com/SciML/CommonSolve.jl)).
 
 For example, we can solve a problem with many different methods, as follows:
 
@@ -261,7 +261,7 @@ true
 ```
 
 The interval can also be specified using a structure with `extrema`
-defined, where `extrema` return two different values:
+defined, where `extrema` returns two different values:
 
 ```julia
 julia> using IntervalSets
