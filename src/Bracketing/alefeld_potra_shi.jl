@@ -107,7 +107,7 @@ function init_state(::AlefeldPotraShi, F, x₀, x₁, fx₀, fx₁; c=_middle(x�
     a, b, d, fa, fb, fd = bracket(a, b, c, fa, fb, fc)
     sign(a) * sign(b) < 0 && throw(ArgumentError("_middle error"))
 
-    return AlefeldPotraShiState(b, a, d, fb, fa, fd)
+    return AlefeldPotraShiState(promote(b, a, d)..., promote(fb, fa, fd)...)
 end
 
 # ## 3, maybe 4, functions calls per step

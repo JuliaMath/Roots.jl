@@ -437,6 +437,12 @@ end
         find_zero((sin, cos), 1.0 + 1.0im, M; tracks=tracks)
         Roots.show_tracks(IOBuffer(), tracks, M)
     end
+
+    ## Issue #343 non-type stable f
+    f(t) = t <= 0 ? -1 : log(t)
+    for M ∈ (Roots.Order0(), Roots.Order1(), Roots.Order2(), Roots.Order5(), Roots.Order8(), Roots.Order16())
+        @test find_zero(f, 3, M) ≈ 1
+    end
 end
 
 struct _SampleCallableObject end

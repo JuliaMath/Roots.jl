@@ -69,7 +69,7 @@ function update_state(
         mflag = false
     end
 
-    fs = f(s)
+    fs::S = f(s)
     incfn(l)
 
     iszero(fs) && return (_set(state, (s, fs)), true)

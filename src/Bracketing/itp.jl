@@ -66,7 +66,7 @@ function init_state(M::ITP, F, x₀, x₁, fx₀, fx₁)
     ITPState(b, a, fb, fa, 0, ϵ2n₁₂, a)
 end
 
-function update_state(M::ITP, F, o, options, l=NullTracks())
+function update_state(M::ITP, F, o::ITPState{T,S,R}, options, l=NullTracks()) where {T,S,R}
     a, b = o.xn0, o.xn1
     fa, fb = o.fxn0, o.fxn1
     j, ϵ2n₁₂ = o.j, o.ϵ2n₁₂
@@ -90,7 +90,7 @@ function update_state(M::ITP, F, o, options, l=NullTracks())
     σ = sign(x₁₂ - xᵣ)
     xₜ = δ ≤ abs(x₁₂ - xᵣ) / oneunit(xᵣ) ? xᵣ + σ * δ * oneunit(xᵣ) : x₁₂
 
-    c = xᵢₜₚ = abs(xₜ - x₁₂) ≤ r ? xₜ : x₁₂ - σ * r
+    c::T = xᵢₜₚ = abs(xₜ - x₁₂) ≤ r ? xₜ : x₁₂ - σ * r
 
     if !(a < c < b)
         nextfloat(a) ≥ b &&
@@ -98,7 +98,7 @@ function update_state(M::ITP, F, o, options, l=NullTracks())
         return (o, true)
     end
 
-    fc = F(c)
+    fc::S = F(c)
     incfn(l)
 
     if sign(fa) * sign(fc) < 0

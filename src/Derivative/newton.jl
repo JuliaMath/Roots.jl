@@ -87,9 +87,9 @@ function update_state(
         return o, true
     end
 
-    xn0, xn1 = xn1, xn1 - Δ
+    xn0, xn1::T = xn1, xn1 - Δ
     fxn0 = fxn1
-    fxn1, Δ = F(xn1)
+    fxn1::S, Δ = F(xn1)
     incfn(l, 2)
 
     @set! o.xn0 = xn0
