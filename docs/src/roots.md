@@ -433,6 +433,7 @@ Here we numerically find the inverse function of ``f(x) = x - \sin(x)``:
 
 ```@example roots
 using Plots, Roots; unicodeplots()  # hide
+import FreeType, FileIO # hide (for saving as png)
 f(x) = x - sin(x)
 a, b = 0, 5pi
 plot(inverse_function(f, a, b), f(a), f(b))
