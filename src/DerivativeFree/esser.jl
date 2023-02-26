@@ -76,8 +76,8 @@ function update_state(
         return o, true
     end
 
-    x0, x1 = x1, x1 - delta
-    fx0, fx1 = fx1, F(x1)
+    x0::T, x1::T = x1, x1 - delta
+    fx0::S, fx1::S = fx1, F(x1)
     incfn(l)
 
     o = _set(o, (x1, fx1), (x0, fx0))

@@ -25,7 +25,7 @@ true
 """
 struct Ridders <: AbstractBracketingMethod end
 
-function update_state(M::Ridders, F, o, options, l=NullTracks())
+function update_state(M::Ridders, F, o::AbstractUnivariateZeroState{T,S}, options, l=NullTracks()) where {T, S}
     a, b = o.xn0, o.xn1
     fa, fb = o.fxn0, o.fxn1
 
@@ -33,8 +33,8 @@ function update_state(M::Ridders, F, o, options, l=NullTracks())
     fx₁ = F(x₁)
     incfn(l)
 
-    c = x₁ + (x₁ - a) * sign(fa) * fx₁ / sqrt(fx₁^2 - fa * fb)
-    fc = F(c)
+    c::T = x₁ + (x₁ - a) * sign(fa) * fx₁ / sqrt(fx₁^2 - fa * fb)
+    fc::S = F(c)
     incfn(l)
 
     if !(a < c < b)

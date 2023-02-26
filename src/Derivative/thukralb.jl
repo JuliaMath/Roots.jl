@@ -73,8 +73,8 @@ function update_state(
     Δ = compute_thukral_Δ(M, o)
 
     isissue(Δ) && return (o, true)
-    x₁ = x₀ - Δ
-    fx₁, Δs = F(x₁)
+    x₁::T = x₀ - Δ
+    fx₁::S, Δs = F(x₁)
     incfn(l, fn_argout(M))
 
     @set! o.xn0 = x₀

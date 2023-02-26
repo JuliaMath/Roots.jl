@@ -104,7 +104,7 @@ function update_state(
     incfn(l, 2)
 
     xn1::T = zn - fzn / fpyn
-    fxn1, _ = f(xn1)
+    fxn1::S, _ = f(xn1)
     incfn(l, 2)
 
     o = _set(o, (xn1, fxn1), (xn, fxn))

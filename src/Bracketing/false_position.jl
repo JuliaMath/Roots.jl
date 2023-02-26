@@ -54,16 +54,15 @@ function update_state(
     o::AbstractUnivariateZeroState{T,S},
     options,
     l=NullTracks(),
-) where {T,S}
+) where {T, S}
     a, b = o.xn0, o.xn1
     fa, fb = o.fxn0, o.fxn1
-
     lambda = fb / (fb - fa)
 
     ϵ = √eps(T) / 100 # some engineering to avoid short moves; still fails on some
     ϵ ≤ lambda ≤ 1 - ϵ || (lambda = 1 / 2)
     x::T = b - lambda * (b - a)
-    fx = fs(x)
+    fx::S = fs(x)
     incfn(l)
 
     iszero(fx) && return (_set(o, (x, fx)), true)

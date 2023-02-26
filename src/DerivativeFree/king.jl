@@ -48,7 +48,7 @@ function update_state(::Order1B, F, o::KingState, options, l=NullTracks())
     end
 end
 
-function update_state(::King, F, o::KingState, options, l=NullTracks())
+function update_state(::King, F, o::KingState{T,S}, options, l=NullTracks()) where {T, S}
     x0, x1 = o.xn0, o.xn1
     fx0, fx1 = o.fxn0, o.fxn1
     G₀ = o.G0
@@ -70,8 +70,8 @@ function update_state(::King, F, o::KingState, options, l=NullTracks())
         return o, true
     end
 
-    x0, x1 = x1, x1 - Δ
-    fx0, fx1 = fx1, F(x1)
+    x0, x1::T = x1, x1 - Δ
+    fx0, fx1::S = fx1, F(x1)
     incfn(l)
 
     o = _set(o, (x1, fx1), (x0, fx0))

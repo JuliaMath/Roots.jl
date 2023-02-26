@@ -141,12 +141,12 @@ end
 
 ## --------------------------------------------------
 
-function update_state(M::AbstractBisectionMethod, F, o, options, l=NullTracks())
+function update_state(M::AbstractBisectionMethod, F, o::AbstractUnivariateZeroState{T,S}, options, l=NullTracks()) where {T, S}
     a, b = o.xn0, o.xn1
     fa, fb = o.fxn0, o.fxn1
 
-    c = __middle(a, b)
-    fc = F(c)
+    c::T = __middle(a, b)
+    fc::S = F(c)
     incfn(l)
 
     if sign(fa) * sign(fc) < 0
