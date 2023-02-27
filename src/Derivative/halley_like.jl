@@ -98,7 +98,7 @@ struct Halley <: AbstractΔMethod end
     Roots.QuadraticInverse()
 
 Implements the [quadratic inverse method](https://doi.org/10.2307/2322644) also known as
-[Chebyshev's method]((https://dl.acm.org/doi/10.1080/00207160802208358)),
+[Chebyshev's method](https://dl.acm.org/doi/10.1080/00207160802208358),
 `xᵢ₊₁ = xᵢ - (f/f')(xᵢ) * (1 + (f/f')(xᵢ) * (f''/f')(xᵢ) * 1/2)`.
 This method is cubically converging, it requires ``3`` function calls per step.
 
