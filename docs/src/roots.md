@@ -750,7 +750,7 @@ julia> zs .|> abs .|> log10 .|> x -> floor(Int, x)
  -15
  -16
  -75
- ```
+```
 
 We see the function values are close for each point, as the maximum difference
 is like $10^{-15}$. This is roughly as expected, where even one
