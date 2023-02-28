@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>An overview of Roots · Roots</title><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">Roots</a></span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Roots.jl</a></li><li><a class="tocitem" href="../reference/">Reference/API</a></li><li class="is-active"><a class="tocitem" href>An overview of <code>Roots</code></a><ul class="internal"><li><a class="tocitem" href="#Bracketing"><span>Bracketing</span></a></li><li><a class="tocitem" href="#Non-bracketing-problems"><span>Non-bracketing problems</span></a></li><li><a class="tocitem" href="#Classical-methods"><span>Classical methods</span></a></li><li><a class="tocitem" href="#The-problem-algorithm-solve-interface"><span>The problem-algorithm-solve interface</span></a></li><li><a class="tocitem" href="#Examples"><span>Examples</span></a></li><li><a class="tocitem" href="#Sensitivity"><span>Sensitivity</span></a></li><li><a class="tocitem" href="#Potential-issues"><span>Potential issues</span></a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>An overview of <code>Roots</code></a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>An overview of <code>Roots</code></a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/JuliaMath/Roots.jl/blob/master/docs/src/roots.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="An-overview-of-Roots"><a class="docs-heading-anchor" href="#An-overview-of-Roots">An overview of <code>Roots</code></a><a id="An-overview-of-Roots-1"></a><a class="docs-heading-anchor-permalink" href="#An-overview-of-Roots" title="Permalink"></a></h1><p>The <code>Roots</code> package contains simple routines for finding zeros of continuous scalar functions of a single real variable.  A zero of <span>$f$</span> is a value <span>$c$</span> where <span>$f(c) = 0$</span>.  The basic interface is through the function <code>find_zero</code>, which through multiple dispatch can handle many different cases.</p><p>The <a href="https://github.com/JuliaComputing/NonlinearSolve.jl">NonlinearSolve</a> package provides an alternative.</p><p>In the following, we will use  <code>ForwardDiff</code> to take derivatives.</p><pre><code class="language-julia-repl hljs">julia&gt; using Roots, ForwardDiff
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>An overview of Roots · Roots</title><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">Roots</a></span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Roots.jl</a></li><li><a class="tocitem" href="../reference/">Reference/API</a></li><li class="is-active"><a class="tocitem" href>An overview of <code>Roots</code></a><ul class="internal"><li><a class="tocitem" href="#Bracketing"><span>Bracketing</span></a></li><li><a class="tocitem" href="#Non-bracketing-problems"><span>Non-bracketing problems</span></a></li><li><a class="tocitem" href="#Classical-methods"><span>Classical methods</span></a></li><li><a class="tocitem" href="#The-problem-algorithm-solve-interface"><span>The problem-algorithm-solve interface</span></a></li><li><a class="tocitem" href="#Examples"><span>Examples</span></a></li><li><a class="tocitem" href="#Sensitivity"><span>Sensitivity</span></a></li><li><a class="tocitem" href="#Potential-issues"><span>Potential issues</span></a></li><li><a class="tocitem" href="#Searching-for-all-zeros-in-an-interval"><span>Searching for all zeros in an interval</span></a></li><li><a class="tocitem" href="#Adding-a-solver"><span>Adding a solver</span></a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>An overview of <code>Roots</code></a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>An overview of <code>Roots</code></a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/JuliaMath/Roots.jl/blob/master/docs/src/roots.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="An-overview-of-Roots"><a class="docs-heading-anchor" href="#An-overview-of-Roots">An overview of <code>Roots</code></a><a id="An-overview-of-Roots-1"></a><a class="docs-heading-anchor-permalink" href="#An-overview-of-Roots" title="Permalink"></a></h1><p>The <code>Roots</code> package contains simple routines for finding zeros of continuous scalar functions of a single real variable.  A zero of <span>$f$</span> is a value <span>$c$</span> where <span>$f(c) = 0$</span>.  The basic interface is through the function <code>find_zero</code>, which through multiple dispatch can handle many different cases.</p><p>The <a href="https://github.com/JuliaComputing/NonlinearSolve.jl">NonlinearSolve</a> package provides an alternative.</p><p>In the following, we will use  <code>ForwardDiff</code> to take derivatives.</p><pre><code class="language-julia-repl hljs">julia&gt; using Roots, ForwardDiff
 </code></pre><h2 id="Bracketing"><a class="docs-heading-anchor" href="#Bracketing">Bracketing</a><a id="Bracketing-1"></a><a class="docs-heading-anchor-permalink" href="#Bracketing" title="Permalink"></a></h2><p>For a function <span>$f$</span> (univariate, real-valued) a <em>bracket</em> is a pair $ a &lt; b $ for which <span>$f(a) \cdot f(b) &lt; 0$</span>. That is the function values have different signs at <span>$a$</span> and <span>$b$</span>. If <span>$f$</span> is a continuous function this ensures (<a href="https://en.wikipedia.org/wiki/Intermediate_value_theorem">Bolzano</a>) there will be a zero in the interval <span>$[a,b]$</span>.  If <span>$f$</span> is not continuous, then there must be a point <span>$c$</span> in <span>$[a,b]$</span> where the function &quot;jumps&quot; over <span>$0$</span>.</p><p>Such values can be found, up to floating point round off. That is, given <code>f(a) * f(b) &lt; 0</code>, a value <code>c</code> with <code>a &lt; c &lt; b</code> can be found where either <code>f(c) == 0.0</code> or  <code>f(prevfloat(c)) * f(c) &lt; 0</code> or <code>f(c) * f(nextfloat(c)) &lt; 0</code>.</p><p>To illustrate, consider the function <span>$f(x) = \cos(x) - x$</span>. From trigonometry  we can see readily infer that <span>$[0,\pi/2]$</span> is a bracket.</p><p>The <code>Roots</code> package includes the bisection algorithm through <code>find_zero</code>. We use a structure for which <code>extrema</code> returns <code>(a,b)</code> with <code>a &lt; b</code>, such as a vector or tuple, to specify the initial condition and <code>Bisection()</code> to specify the algorithm:</p><pre><code class="language-julia-repl hljs">julia&gt; f(x) = cos(x) - x;
 
 julia&gt; x = find_zero(f, (0, pi/2), Bisection())
@@ -285,221 +285,178 @@ true</code></pre><p>The exponents are:</p><pre><code class="nohighlight hljs">ju
    ⋮
  -15
  -16
- -75
- ```
+ -75</code></pre><p>We see the function values are close for each point, as the maximum difference is like <span>$10^{-15}$</span>. This is roughly as expected, where even one addition may introduce a relative error as big as <span>$2\cdot 10^{-16}$</span> and here there are several such.</p><div class="admonition is-info"><header class="admonition-header">Note</header><div class="admonition-body"><p>(These values are subject to the vagaries of floating point evaluation, so may differ depending on the underlying computer architecture.)</p></div></div><p>Generally this variation is not even a thought, as the differences are generally negligible, but when we want to identify if a value is zero, these small differences might matter. Here we look at the signs of the function values for a run of the above:</p><pre><code class="language-julia hljs">julia&gt; fs = sign.(f.(ns));
 
-We see the function values are close for each point, as the maximum difference
-is like $10^{-15}$. This is roughly as expected, where even one
-addition may introduce a relative error as big as $2\cdot 10^{-16}$ and here
-there are several such.
+julia&gt; f1s = sign.(f1.(ns));
 
-!!! note
-    (These values are subject to the vagaries of floating point evaluation, so may differ depending on the underlying computer architecture.)
+julia&gt; [ns.-1/3 fs f1s]
+21×3 Matrix{Float64}:
+ -5.55112e-16  -1.0  -1.0
+ -4.996e-16    -1.0  -1.0
+ -4.44089e-16  -1.0   1.0
+ -3.88578e-16  -1.0   1.0
+ -3.33067e-16  -1.0   1.0
+ -2.77556e-16  -1.0   1.0
+ -2.22045e-16  -1.0  -1.0
+ -1.66533e-16  -1.0  -1.0
+ -1.11022e-16  -1.0   1.0
+ -5.55112e-17  -1.0   1.0
+  0.0           0.0  -1.0
+  5.55112e-17   0.0   1.0
+  1.11022e-16   1.0   1.0
+  1.66533e-16   1.0  -1.0
+  2.22045e-16   1.0  -1.0
+  2.77556e-16   1.0  -1.0
+  3.33067e-16   1.0   1.0
+  3.88578e-16   1.0   1.0
+  4.44089e-16   1.0   1.0
+  4.996e-16     1.0  -1.0
+  5.55112e-16   1.0   0.0</code></pre><p>Parsing this shows a few surprises. First, there are two zeros of <code>f(x)</code> identified–not just one as expected mathematically–the floating point value of <code>1/3</code> and the next largest floating point number.</p><pre><code class="nohighlight hljs">julia&gt; findall(iszero, fs)
+2-element Vector{Int64}:
+ 11
+ 12</code></pre><p>For <code>f1(x)</code> there is only one zero, but it isn&#39;t the floating point value for <code>1/3</code> but rather 10 floating point numbers away.</p><pre><code class="nohighlight hljs">julia&gt; findall(iszero, f1s)
+1-element Vector{Int64}:
+ 21</code></pre><p>Further, there are several sign changes of the function values for <code>f1s</code>:</p><pre><code class="nohighlight hljs">julia&gt; findall(!iszero, diff(sign.(f1s)))
+9-element Vector{Int64}:
+  2
+  6
+  8
+ 10
+ 11
+ 13
+ 16
+ 19
+ 20
+</code></pre><p>There is no guarantee that a zero will be present, but for a mathematical function that changes sign, there will be at least one sign change.</p><p>With this in mind, an exact zero of <code>f</code> would be either where <code>iszero(f(x))</code> is true <em>or</em> where the function has a sign change (either <code>f(x)*f(prevfloat(x))&lt;0</code> or <code>f(x)*f(nextfloat(x)) &lt; 0</code>).</p><p>As mentioned, the default <code>Bisection()</code> method of <code>find_zero</code> identifies such zeros for <code>f</code> provided an initial bracketing interval is specified when <code>Float64</code> numbers are used.  However, if a mathematical function does not cross the <span>$x$</span> axis at a zero, then there is no guarantee the floating point values will satisfy either of these conditions.</p><hr/><p>Now consider the function <code>f(x) = exp(x)-x^4</code>. The value<code>x=8.613169456441398</code> is a zero in this sense, as there is a change of sign:</p><pre><code class="language-julia-repl hljs">julia&gt; f(x) = exp(x) - x^4;
 
-Generally this variation is not even a thought, as the differences are generally
-negligible, but when we want to identify if a value is zero, these
-small differences might matter. Here we look at the signs of the
-function values for a run of the above:
+julia&gt; F(x) = sign(f(x));
 
-</code></pre><p>julia julia&gt; fs = sign.(f.(ns));</p><p>julia&gt; f1s = sign.(f1.(ns));</p><p>julia&gt; [ns.-1/3 fs f1s] 21×3 Matrix{Float64}:  -5.55112e-16  -1.0  -1.0  -4.996e-16    -1.0  -1.0  -4.44089e-16  -1.0   1.0  -3.88578e-16  -1.0   1.0  -3.33067e-16  -1.0   1.0  -2.77556e-16  -1.0   1.0  -2.22045e-16  -1.0  -1.0  -1.66533e-16  -1.0  -1.0  -1.11022e-16  -1.0   1.0  -5.55112e-17  -1.0   1.0   0.0           0.0  -1.0   5.55112e-17   0.0   1.0   1.11022e-16   1.0   1.0   1.66533e-16   1.0  -1.0   2.22045e-16   1.0  -1.0   2.77556e-16   1.0  -1.0   3.33067e-16   1.0   1.0   3.88578e-16   1.0   1.0   4.44089e-16   1.0   1.0   4.996e-16     1.0  -1.0   5.55112e-16   1.0   0.0</p><pre><code class="nohighlight hljs">
+julia&gt; x=8.613169456441398
+8.613169456441398
 
-Parsing this shows a few surprises. First, there are two zeros of
-`f(x)` identified--not just one as expected mathematically--the
-floating point value of `1/3` and the next largest floating point
-number.
-</code></pre><p>julia&gt; findall(iszero, fs) 2-element Vector{Int64}:  11  12</p><pre><code class="nohighlight hljs">
+julia&gt; F(prevfloat(x)), F(x), F(nextfloat(x))
+(-1.0, -1.0, 1.0)
+</code></pre><p>However, the value of <code>f(x)</code> is not as small as one might initially expect for a zero:</p><pre><code class="nohighlight hljs">julia&gt; f(x), abs(f(x)/eps(x))
+(-2.7284841053187847e-12, 1536.0)
+</code></pre><p>The value <code>x</code> is an approximation to the actual mathematical zero, call it <span>$x$</span>. There is a difference between <span>$f(x)$</span> (the mathematical answer) and <code>f(x)</code> (the floating point answer). Roughly speaking we expect <code>f(x)</code> to be about <span>$f(x) + f&#39;(x)\cdot \delta$</span>, where <span>$\delta$</span> is the difference between <code>x</code> and <span>$x$</span>. This will be on the scale of <code>abs(x) * eps()</code>, so all told we expect an answer to be in the range of <span>$0$</span> plus or minus this value:</p><pre><code class="language-julia-repl hljs">julia&gt; fp(x) = exp(x) - 4x^3; # the derivative
 
+julia&gt; fp(x) * abs(x) * eps()
+5.637565490466956e-12
+</code></pre><p>which is about what we see.</p><hr/><p>Bisection can be a slower method than others. For <code>Float64</code> values, <code>Bisection()</code> takes no more than 64 steps, but other methods may be able to converge to a zero in 4-5 steps (assuming good starting values are specified).</p><p>When fewer function calls are desirable, then checking for an <em>approximate</em> zero may be preferred over assessing if a sign change occurs, as generally that will take two additional function calls per step. Besides, a sign change isn&#39;t guaranteed for all zeros. An approximate zero would be one where <span>$f(x) \approx 0$</span>.</p><p>By the above, we see that we must consider an appropriate tolerance. The first example shows differences in floating point evaluations from the mathematical ones might introduce errors on the scale of <code>eps</code> regardless of the size of <code>x</code>. As seen in the second example, the difference between the floating point approximation to the zero and the zero introduces a potential error <em>proportional</em> to the size of <code>x</code>. So a tolerance might consider both types of errors. An absolute tolerance is used as well as a relative tolerance, so a check might look like:</p><pre><code class="language-verbatim hljs">abs(f(x)) &lt; max(atol, abs(x) * rtol)</code></pre><p>This is different from <code>Julia</code>&#39;s <code>isapprox(f(x), 0.0)</code>, as that would use <code>abs(f(x))</code> as the multiplier, which renders a relative tolerance useless for this question.</p><p>One issue with relative tolerances is that for functions with sublinear growth, extremely large values will be considered zeros. Returning to an earlier example, with <code>Thukral8</code> we have a misidentified zero:</p><pre><code class="language-julia-repl hljs">julia&gt; find_zero(cbrt, 1, Roots.Thukral8())
+1.725042287244107e23
+</code></pre><p>The algorithm rapidly marches off towards infinity so the relative tolerance <span>$\approx |x| \cdot \epsilon$</span> used to check if <span>$f(x) \approx 0$</span> is large compared to the far-from zero <span>$f(x)$</span>.</p><p>Either the users must be educated about this possibility, or the relative tolerance should be set to <span>$0$</span>. In that case, the absolute tolerance must be relatively generous.  A conservative choice of absolute tolerance might be <code>sqrt(eps())</code>, or about <code>1e-8</code>, essentially the one made in SciPy.</p><p>Though this tolerance won&#39;t be able to work for really large values:</p><pre><code class="nohighlight hljs">julia&gt; find_zero(x -&gt; sqrt(eps()) - eps(x), (0,Inf))
+9.981132799999999e7</code></pre><p>This is <strong>not</strong> the choice made in <code>Roots</code>. The fact that bisection can produce zeros as exact as possible, and the fact that the error in function evaluation, <span>$f&#39;(x)|x|\epsilon$</span>, is not typically on the scale of <code>1e-8</code>, leads to a desire for more precision, if available.</p><p>In <code>Roots</code>, the faster algorithms use a check on both the size of <code>f(xn)</code> and the size of the difference between the last two <code>xn</code> values. The check on <code>f(xn)</code> is done with a tight tolerance, as is the check on <span>$x_n \approx x_{n-1}$</span>. If the function values get close to zero, an approximate zero is declared. Further, if the <span>$x$</span> values get close to each other <em>and</em> the function value is close to zero with a <em>relaxed</em> tolerance, then an approximate zero is declared. In practice this seems to work reasonably well. The relaxed tolerance uses the cube root of the absolute and relative tolerances.</p><h2 id="Searching-for-all-zeros-in-an-interval"><a class="docs-heading-anchor" href="#Searching-for-all-zeros-in-an-interval">Searching for all zeros in an interval</a><a id="Searching-for-all-zeros-in-an-interval-1"></a><a class="docs-heading-anchor-permalink" href="#Searching-for-all-zeros-in-an-interval" title="Permalink"></a></h2><p>The methods described above are used to identify one of possibly several zeros.  The <code>find_zeros</code> function searches the interval <span>$(a,b)$</span> for all zeros of a function <span>$f$</span>. It is straightforward to use:</p><pre><code class="language-julia-repl hljs">julia&gt; f(x) = exp(x) - x^4;
 
-For `f1(x)` there is only one zero, but it isn&#39;t the floating
-point value for `1/3` but rather 10 floating point numbers
-away.
+julia&gt; a, b = -10, 10
+(-10, 10)
 
-</code></pre><p>julia&gt; findall(iszero, f1s) 1-element Vector{Int64}:  21</p><pre><code class="nohighlight hljs">
+julia&gt; zs = find_zeros(f, a, b)
+3-element Vector{Float64}:
+ -0.8155534188089606
+  1.4296118247255556
+  8.613169456441398
+</code></pre><p>The search interval, <span>$(a,b)$</span>, is specified either through two arguments or through a single argument using a structure, such as a tuple or vector, where <code>extrema</code> returns two distinct values in increasing order.  It is assumed that neither endpoint is a zero.</p><hr/><p>The algorithm used to search for all zeros in an interval is confounded by a few things:</p><ul><li>too many zeros in the interval <span>$(a,b)$</span></li><li>nearby zeros (&quot;nearby&quot; depends on the size of <span>$(a,b)$</span>, should this be very wide)</li></ul><p>The algorithm is adaptive, so that it can succeed when there are many zeros, but it may be necessary to increase <code>no_pts</code> from the default of 12, at the cost of possibly taking longer for the search.</p><p>Here the algorithm identifies all the zeros, despite there being several:</p><pre><code class="language-julia-repl hljs">julia&gt; f(x) = cos(x)^2 + cos(x^2); a,b = 0, 10;
 
+julia&gt; rts = find_zeros(f, a, b);
 
-Further, there are several sign changes of the function values for `f1s`:
-</code></pre><p>julia&gt; findall(!iszero, diff(sign.(f1s))) 9-element Vector{Int64}:   2   6   8  10  11  13  16  19  20</p><pre><code class="nohighlight hljs">
-There is no guarantee that a zero will be present, but for a
-mathematical function that changes sign, there will be at least one
-sign change.
+julia&gt; length(rts)
+32</code></pre><p>For nearby zeros, the algorithm does pretty well, though it isn&#39;t perfect.</p><p>Here we see for <span>$f(x) = \sin(1/x)$</span>–with infinitely many zeros around <span>$0$</span>–it finds many:</p><pre><code class="language-julia-repl hljs">julia&gt; f(x) = iszero(x) ? NaN : sin(1/x);  # avoid sin(Inf) error
 
-With this in mind, an exact zero of `f` would be either where `iszero(f(x))` is true *or* where the function has a sign change (either `f(x)*f(prevfloat(x))&lt;0` or `f(x)*f(nextfloat(x)) &lt; 0`).
+julia&gt; rts = find_zeros(f, -1, 1);
 
-As mentioned, the default `Bisection()` method of `find_zero`
-identifies such zeros for `f` provided an initial bracketing interval
-is specified when `Float64` numbers are used.  However, if a
-mathematical function does not cross the $x$ axis at a zero, then
-there is no guarantee the floating point values will satisfy either of
-these conditions.
+julia&gt; length(rts) # 88 zeros identified
+88</code></pre><p>The function, <span>$f(x) = (x-0.5)^3 \cdot (x-0.499)^3$</span>, looks <em>too</em> much like <span>$g(x) = x^6$</span> to <code>find_zeros</code> for success, as the two zeros are very nearby:</p><pre><code class="language-julia-repl hljs">julia&gt; f(x) =  (x-0.5)^3 * (x-0.499)^3;
 
-----
+julia&gt; find_zeros(f, 0, 1)
+1-element Vector{Float64}:
+ 0.5</code></pre><p>The issue here isn&#39;t <em>just</em> that the algorithm can&#39;t identify zeros within <span>$0.001$</span> of each other, but that the high power makes many nearby values approximately zero.</p><p>The algorithm will have success when the powers are smaller</p><pre><code class="language-julia-repl hljs">julia&gt; f(x) =  (x-0.5)^2 * (x-0.499)^2;
 
-Now consider the function `f(x) = exp(x)-x^4`. The value`x=8.613169456441398` is a zero in this sense, as there is a change of sign:
-</code></pre><p>jldoctest roots julia&gt; f(x) = exp(x) - x^4;</p><p>julia&gt; F(x) = sign(f(x));</p><p>julia&gt; x=8.613169456441398 8.613169456441398</p><p>julia&gt; F(prevfloat(x)), F(x), F(nextfloat(x)) (-1.0, -1.0, 1.0)</p><pre><code class="nohighlight hljs">
-However, the value of `f(x)` is not as small as one might initially
-expect for a zero:
-</code></pre><p>julia&gt; f(x), abs(f(x)/eps(x)) (-2.7284841053187847e-12, 1536.0)</p><pre><code class="nohighlight hljs">
-The value `x` is an approximation to the actual mathematical zero,
-call it $x$. There is a difference between $f(x)$ (the mathematical answer) and `f(x)` (the floating point answer). Roughly speaking we expect `f(x)` to be about $f(x) + f&#39;(x)\cdot \delta$, where $\delta$ is the difference between `x` and $x$. This will be on the scale of `abs(x) * eps()`, so all told we expect an answer to be in the range of $0$ plus or minus this value:
-</code></pre><p>jldoctest roots julia&gt; fp(x) = exp(x) - 4x^3; # the derivative</p><p>julia&gt; fp(x) * abs(x) * eps() 5.637565490466956e-12</p><pre><code class="nohighlight hljs">
-which is about what we see.
+julia&gt; find_zeros(f, 0, 1)
+2-element Vector{Float64}:
+ 0.49899999999999994
+ 0.5
+</code></pre><p>It can have success for closer pairs of zeros:</p><pre><code class="language-julia-repl hljs">julia&gt; f(x) = (x-0.5) * (x - 0.49999);
 
-----
+julia&gt; find_zeros(f, 0, 1)
+2-element Vector{Float64}:
+ 0.49999
+ 0.5
+</code></pre><p>Combinations of large (even) multiplicity zeros or very nearby zeros, can lead to misidentification.</p><h3 id="IntervalRootFinding"><a class="docs-heading-anchor" href="#IntervalRootFinding">IntervalRootFinding</a><a id="IntervalRootFinding-1"></a><a class="docs-heading-anchor-permalink" href="#IntervalRootFinding" title="Permalink"></a></h3><p>The <a href="https://github.com/JuliaIntervals/IntervalRootFinding.jl">IntervalRootFinding</a> package rigorously identifies isolating intervals for the zeros of a function. This example, from that package&#39;s README, is used to illustrate the differences:</p><pre><code class="language-julia hljs">julia&gt; using IntervalArithmetic, IntervalRootFinding, Roots
 
-Bisection can be a slower method than others. For `Float64` values, `Bisection()` takes no more than 64 steps, but other methods may be able to converge to a zero in 4-5 steps (assuming good starting values are specified).
+julia&gt; f(x) = sin(x) - 0.1*x^2 + 1
+f (generic function with 1 method)
 
-When fewer function calls are desirable, then checking for an
-*approximate* zero may be preferred over assessing if a sign change
-occurs, as generally that will take two additional function calls per
-step. Besides, a sign change isn&#39;t guaranteed for all zeros. An approximate zero would be one where $f(x) \approx 0$.
+julia&gt; rts = roots(f, -10..10)
+4-element Vector{Root{Interval{Float64}}}:
+ Root([3.14959, 3.1496], :unique)
+ Root([-4.42654, -4.42653], :unique)
+ Root([-3.10682, -3.10681], :unique)
+ Root([-1.08205, -1.08204], :unique)
 
-By the above, we see that we must consider an appropriate
-tolerance. The first example shows differences in floating point
-evaluations from the mathematical ones might introduce errors on the
-scale of `eps` regardless of the size of `x`. As seen in the second
-example, the difference between the floating point approximation to
-the zero and the zero introduces a potential error *proportional* to
-the size of `x`. So a tolerance might consider both types of
-errors. An absolute tolerance is used as well as a relative tolerance,
-so a check might look like:
-</code></pre><p>verbatim abs(f(x)) &lt; max(atol, abs(x) * rtol)</p><pre><code class="nohighlight hljs">
-This is different from `Julia`&#39;s `isapprox(f(x), 0.0)`, as that would use `abs(f(x))` as the multiplier, which renders a relative tolerance useless for this question.
+julia&gt; find_zeros(f, -10, 10)
+4-element Vector{Float64}:
+ -4.426534982071949
+ -3.1068165552293254
+ -1.0820421327607177
+  3.1495967624505226</code></pre><p>Using that in this case, the intervals are bracketing intervals for <code>f</code>, we can find the zeros from the <code>roots</code> output with the following:</p><pre><code class="language-julia hljs">julia&gt; [find_zero(f, (interval(u).lo, interval(u).hi)) for u ∈ rts if u.status == :unique]
+4-element Vector{Float64}:
+  3.1495967624505226
+ -4.426534982071949
+ -3.1068165552293254
+ -1.082042132760718</code></pre><h2 id="Adding-a-solver"><a class="docs-heading-anchor" href="#Adding-a-solver">Adding a solver</a><a id="Adding-a-solver-1"></a><a class="docs-heading-anchor-permalink" href="#Adding-a-solver" title="Permalink"></a></h2><p>To add a solver the minimum needed is a type to declare the solver and an <code>update_state</code> method. In this example, we also define a state object, as the algorithm, as employed, uses more values stored than the default.</p><p>The <a href="https://en.wikipedia.org/wiki/Brent%27s_method">Wikipedia</a> page for Brent&#39;s method suggest a modern improvement, Chandrapatla&#39;s method, described <a href="https://www.google.com/books/edition/Computational_Physics/cC-8BAAAQBAJ?hl=en&amp;gbpv=1&amp;pg=PA95&amp;printsec=frontcover">here</a>. The algorithm there is mostly followed below. This is from the implementation of <code>Roots.Chandrapatla</code>.</p><p>To implement Chandrapatla&#39;s algorithm we first define a type to indicate the method and a state object which records the values <span>$x_n$</span>, <span>$x_{n-1}$</span>, and <span>$x_{n-2}$</span>, needed for the inverse quadratic step.</p><pre><code class="language-julia hljs">julia&gt; struct Chandrapatla &lt;: Roots.AbstractAcceleratedBisection end
 
-One issue with relative tolerances is that for functions with
-sublinear growth, extremely large values will be considered zeros.
-Returning to an earlier example, with `Thukral8` we have a misidentified zero:
-</code></pre><p>jldoctest roots julia&gt; find_zero(cbrt, 1, Roots.Thukral8()) 1.725042287244107e23</p><pre><code class="nohighlight hljs">
-The algorithm rapidly marches off towards infinity so the relative
-tolerance $\approx |x| \cdot \epsilon$ used to check if $f(x) \approx
-0$ is large compared to the far-from zero $f(x)$.
-
-Either the users must be educated about this possibility, or the
-relative tolerance should be set to $0$. In that case, the absolute
-tolerance must be relatively generous.  A conservative choice of
-absolute tolerance might be `sqrt(eps())`, or about `1e-8`,
-essentially the one made in SciPy.
-
-Though this tolerance won&#39;t be able to work for really large values:
-</code></pre><p>julia&gt; find_zero(x -&gt; sqrt(eps()) - eps(x), (0,Inf)) 9.981132799999999e7</p><pre><code class="nohighlight hljs">
-
-This is **not** the choice made in `Roots`. The fact that bisection can
-produce zeros as exact as possible, and the fact that the error in
-function evaluation, $f&#39;(x)|x|\epsilon$, is not typically on the scale
-of `1e-8`, leads to a desire for more precision, if available.
-
-In `Roots`, the faster algorithms use a check on both the size of
-`f(xn)` and the size of the difference between the last two `xn` values. The check on `f(xn)`
-is done with a tight tolerance, as is the check on $x_n \approx
-x_{n-1}$. If the function values get close to zero, an
-approximate zero is declared. Further, if the $x$ values get close to each other
-*and* the function value is close to zero with a *relaxed* tolerance,
-then an approximate zero is declared. In practice this seems to work
-reasonably well. The relaxed tolerance uses the cube root of the
-absolute and relative tolerances.
-
-
-
-
-
-
-
-## Searching for all zeros in an interval
-
-The methods described above are used to identify one of possibly
-several zeros.  The `find_zeros` function searches the interval $(a,b)$
-for all zeros of a function $f$. It is straightforward to use:
-</code></pre><p>jldoctest roots julia&gt; f(x) = exp(x) - x^4;</p><p>julia&gt; a, b = -10, 10 (-10, 10)</p><p>julia&gt; zs = find_zeros(f, a, b) 3-element Vector{Float64}:  -0.8155534188089606   1.4296118247255556   8.613169456441398</p><pre><code class="nohighlight hljs">
-The search interval, $(a,b)$, is specified either through two
-arguments or through a single argument using a structure, such as a
-tuple or vector, where `extrema` returns two distinct values in
-increasing order.  It is assumed that neither endpoint is a zero.
-
-
-----
-
-
-The algorithm used to search for all zeros in an interval is confounded by a few things:
-
-* too many zeros in the interval $(a,b)$
-* nearby zeros (&quot;nearby&quot; depends on the size of $(a,b)$, should this be very wide)
-
-The algorithm is adaptive, so that it can succeed when there are many
-zeros, but it may be necessary to increase `no_pts` from the default
-of 12, at the cost of possibly taking longer for the search.
-
-Here the algorithm identifies all the zeros, despite there being several:
-</code></pre><p>jldoctest roots julia&gt; f(x) = cos(x)^2 + cos(x^2); a,b = 0, 10;</p><p>julia&gt; rts = find_zeros(f, a, b);</p><p>julia&gt; length(rts) 32</p><pre><code class="nohighlight hljs">
-
-For nearby zeros, the algorithm does pretty well, though it isn&#39;t
-perfect.
-
-Here we see for $f(x) = \sin(1/x)$--with infinitely many zeros around
-$0$--it finds many:
-</code></pre><p>jldoctest roots julia&gt; f(x) = iszero(x) ? NaN : sin(1/x);  # avoid sin(Inf) error</p><p>julia&gt; rts = find_zeros(f, -1, 1);</p><p>julia&gt; length(rts) # 88 zeros identified 88</p><pre><code class="nohighlight hljs">
-The function, $f(x) = (x-0.5)^3 \cdot (x-0.499)^3$, looks *too* much like
-$g(x) = x^6$ to `find_zeros` for success, as the two zeros are very nearby:
-</code></pre><p>jldoctest roots julia&gt; f(x) =  (x-0.5)^3 * (x-0.499)^3;</p><p>julia&gt; find_zeros(f, 0, 1) 1-element Vector{Float64}:  0.5</p><pre><code class="nohighlight hljs">
-The issue here isn&#39;t *just* that the algorithm can&#39;t identify zeros
-within $0.001$ of each other, but that the high power makes many
-nearby values approximately zero.
-
-The algorithm will have success when the powers are smaller
-</code></pre><p>jldoctest roots julia&gt; f(x) =  (x-0.5)^2 * (x-0.499)^2;</p><p>julia&gt; find_zeros(f, 0, 1) 2-element Vector{Float64}:  0.49899999999999994  0.5</p><pre><code class="nohighlight hljs">
-It can have success for closer pairs of zeros:
-</code></pre><p>jldoctest roots julia&gt; f(x) = (x-0.5) * (x - 0.49999);</p><p>julia&gt; find_zeros(f, 0, 1) 2-element Vector{Float64}:  0.49999  0.5</p><pre><code class="nohighlight hljs">
-Combinations of large (even) multiplicity zeros or very nearby
-zeros, can lead to misidentification.
-
-### IntervalRootFinding
-
-The [IntervalRootFinding](https://github.com/JuliaIntervals/IntervalRootFinding.jl) package rigorously identifies isolating intervals for the zeros of a function. This example, from that package&#39;s README, is used to illustrate the differences:
-</code></pre><p>julia julia&gt; using IntervalArithmetic, IntervalRootFinding, Roots</p><p>julia&gt; f(x) = sin(x) - 0.1*x^2 + 1 f (generic function with 1 method)</p><p>julia&gt; rts = roots(f, -10..10) 4-element Vector{Root{Interval{Float64}}}:  Root([3.14959, 3.1496], :unique)  Root([-4.42654, -4.42653], :unique)  Root([-3.10682, -3.10681], :unique)  Root([-1.08205, -1.08204], :unique)</p><p>julia&gt; find_zeros(f, -10, 10) 4-element Vector{Float64}:  -4.426534982071949  -3.1068165552293254  -1.0820421327607177   3.1495967624505226</p><pre><code class="nohighlight hljs">
-Using that in this case, the intervals are bracketing intervals for `f`, we can find the zeros from the `roots` output with the following:
-</code></pre><p>julia julia&gt; [find_zero(f, (interval(u).lo, interval(u).hi)) for u ∈ rts if u.status == :unique] 4-element Vector{Float64}:   3.1495967624505226  -4.426534982071949  -3.1068165552293254  -1.082042132760718</p><pre><code class="nohighlight hljs">
-
-## Adding a solver
-
-To add a solver the minimum needed is a type to declare the solver and an `update_state` method. In this example, we also define a state object, as the algorithm, as employed, uses more values stored than the default.
-
-The [Wikipedia](https://en.wikipedia.org/wiki/Brent%27s_method) page for Brent&#39;s method suggest a modern improvement, Chandrapatla&#39;s method, described [here](https://www.google.com/books/edition/Computational_Physics/cC-8BAAAQBAJ?hl=en&amp;gbpv=1&amp;pg=PA95&amp;printsec=frontcover). The algorithm there is mostly followed below. This is from the implementation of `Roots.Chandrapatla`.
-
-To implement Chandrapatla&#39;s algorithm we first define a type to indicate the method and a state object which records the values ``x_n``, ``x_{n-1}``, and ``x_{n-2}``, needed for the inverse quadratic step.
-</code></pre><p>julia julia&gt; struct Chandrapatla &lt;: Roots.AbstractAcceleratedBisection end</p><p>julia&gt; struct ChandrapatlaState{T,S} &lt;: Roots.AbstractUnivariateZeroState{T,S}     xn1::T     xn0::T     c::T     fxn1::S     fxn0::S     fc::S end</p><pre><code class="nohighlight hljs">
-An `init_state` method can be used by some methods to add more detail to the basic state object. Here it starts the old value, `c`, off as `a` as a means to ensure an initial bisection step.
-</code></pre><p>julia julia&gt; function init_state(::Chandrapatla, F, x₀, x₁, fx₀, fx₁)     a, b, fa, fb = x₁, x₀, fx₁, fx₀     c, fc = a, fa     ChandrapatlaState(b, a, c, fb, fa, fc) end</p><pre><code class="nohighlight hljs">
-The main algorithm is implemented in the `update_state` method. The `@set!` macro from `Setfield.jl` is used to modify a state object, which otherwise is immutable.
-</code></pre><p>julia julia&gt; import Roots.Setfield: @set!;</p><p>julia&gt; function Roots.update_state(::Chandrapatla, F, o, options, l=NullTracks())</p><pre><code class="nohighlight hljs">b, a, c = o.xn1, o.xn0, o.c
-fb, fa, fc = o.fxn1, o.fxn0, o.fc
-
-# encoding: a = xₙ, b = xₙ₋₁, c = xₙ₋₂
-ξ = (a - b) / (c - b)
-ϕ = (fa - fb) / (fc - fb)
-ϕ² = ϕ^2
-Δ = (ϕ² &lt; ξ) &amp;&amp; (1 - 2ϕ + ϕ² &lt; 1 - ξ) # Chandrapatla&#39;s inequality to determine next step
-
-xₜ = Δ ? Roots.inverse_quadratic_step(a, b, c, fa, fb, fc) : a + (b-a)/2
-
-fₜ = F(xₜ)
-incfn(l)
-
-if sign(fₜ) * sign(fa) &lt; 0
-    a, b, c = xₜ, a, b
-    fa, fb, fc = fₜ, fa, fb
-else
-    a, c = xₜ, a
-    fa, fc = fₜ, fa
+julia&gt; struct ChandrapatlaState{T,S} &lt;: Roots.AbstractUnivariateZeroState{T,S}
+    xn1::T
+    xn0::T
+    c::T
+    fxn1::S
+    fxn0::S
+    fc::S
 end
+</code></pre><p>An <code>init_state</code> method can be used by some methods to add more detail to the basic state object. Here it starts the old value, <code>c</code>, off as <code>a</code> as a means to ensure an initial bisection step.</p><pre><code class="language-julia hljs">julia&gt; function init_state(::Chandrapatla, F, x₀, x₁, fx₀, fx₁)
+    a, b, fa, fb = x₁, x₀, fx₁, fx₀
+    c, fc = a, fa
+    ChandrapatlaState(b, a, c, fb, fa, fc)
+end</code></pre><p>The main algorithm is implemented in the <code>update_state</code> method. The <code>@set!</code> macro from <code>Setfield.jl</code> is used to modify a state object, which otherwise is immutable.</p><pre><code class="language-julia hljs">julia&gt; import Roots.Setfield: @set!;
 
-@set! o.xn0 = a
-@set! o.xn1 = b
-@set! o.c = c
-@set! o.fxn0 = fa
-@set! o.fxn1 = fb
-@set! o.fc = fc
+julia&gt; function Roots.update_state(::Chandrapatla, F, o, options, l=NullTracks())
 
-return (o, false)</code></pre><p>end</p><pre><code class="nohighlight hljs">
-This algorithm chooses between an inverse quadratic step or a bisection step depending on the relationship between the computed `ξ` and `Φ`. The tolerances are from the default for `AbstractBracketingMethod`.
+    b, a, c = o.xn1, o.xn0, o.c
+    fb, fa, fc = o.fxn1, o.fxn0, o.fc
 
+    # encoding: a = xₙ, b = xₙ₋₁, c = xₙ₋₂
+    ξ = (a - b) / (c - b)
+    ϕ = (fa - fb) / (fc - fb)
+    ϕ² = ϕ^2
+    Δ = (ϕ² &lt; ξ) &amp;&amp; (1 - 2ϕ + ϕ² &lt; 1 - ξ) # Chandrapatla&#39;s inequality to determine next step
 
-To see that the algorithm works, we have:
-</code></pre><p>julia julia&gt; find_zero(sin, (3,4), Chandrapatla()) 3.1415926535897927</p><p>julia&gt; find_zero(x -&gt; exp(x) - x^4, (8,9), Chandrapatla()) 8.613169456441398</p><p>julia&gt; find_zero(x -&gt; x^5 - x - 1, (1,2), Chandrapatla()) 1.1673039782614185 ```</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../reference/">« Reference/API</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.24 on <span class="colophon-date" title="Monday 27 February 2023 00:42">Monday 27 February 2023</span>. Using Julia version 1.8.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+    xₜ = Δ ? Roots.inverse_quadratic_step(a, b, c, fa, fb, fc) : a + (b-a)/2
+
+    fₜ = F(xₜ)
+    incfn(l)
+
+    if sign(fₜ) * sign(fa) &lt; 0
+        a, b, c = xₜ, a, b
+        fa, fb, fc = fₜ, fa, fb
+    else
+        a, c = xₜ, a
+        fa, fc = fₜ, fa
+    end
+
+    @set! o.xn0 = a
+    @set! o.xn1 = b
+    @set! o.c = c
+    @set! o.fxn0 = fa
+    @set! o.fxn1 = fb
+    @set! o.fc = fc
+
+    return (o, false)
+end
+</code></pre><p>This algorithm chooses between an inverse quadratic step or a bisection step depending on the relationship between the computed <code>ξ</code> and <code>Φ</code>. The tolerances are from the default for <code>AbstractBracketingMethod</code>.</p><p>To see that the algorithm works, we have:</p><pre><code class="language-julia hljs">julia&gt; find_zero(sin, (3,4), Chandrapatla())
+3.1415926535897927
+
+julia&gt; find_zero(x -&gt; exp(x) - x^4, (8,9), Chandrapatla())
+8.613169456441398
+
+julia&gt; find_zero(x -&gt; x^5 - x - 1, (1,2), Chandrapatla())
+1.1673039782614185</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../reference/">« Reference/API</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.24 on <span class="colophon-date" title="Tuesday 28 February 2023 15:25">Tuesday 28 February 2023</span>. Using Julia version 1.8.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
