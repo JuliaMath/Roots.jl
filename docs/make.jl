@@ -1,5 +1,7 @@
+ENV["GKSwstype"] = "100"
 using Documenter
 using Roots
+
 
 DocMeta.setdocmeta!(Roots, :DocTestSetup, :(using Roots); recursive=true)
 

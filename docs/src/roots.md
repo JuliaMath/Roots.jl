@@ -432,12 +432,14 @@ The fact that ``f`` is monotonic, ensures that a bracket of ``[a,b]`` can be use
 Here we numerically find the inverse function of ``f(x) = x - \sin(x)``:
 
 ```@example roots
-using Plots, Roots; unicodeplots()  # hide
-import FreeType, FileIO # hide (for saving as png)
+using Plots, Roots;
 f(x) = x - sin(x)
 a, b = 0, 5pi
 plot(inverse_function(f, a, b), f(a), f(b))
+savefig("inversefunction.svg"); nothing # hide
 ```
+
+![](inversefunction.svg)
 
 ### Finding critical points
 
@@ -487,8 +489,7 @@ To visualize the trajectory if shot at ``45`` degrees, we would have:
 
 ```@example roots
 using Roots, ForwardDiff  # hide
-using Plots; unicodeplots()  # hide
-
+using Plots;
 flight(x, theta) = (k = 1/2; a = 200*cosd(theta); b = 32/k; tand(theta)*x + (b/a)*x - b*log(a/(a-x)))
 howfar(theta) = (a = 200*cosd(theta); find_zero(x -> flight(x, theta), a-5))
 howfarp(t) = ForwardDiff.derivative(howfar,t)
@@ -497,8 +498,10 @@ theta = 45
 tstar = find_zero(howfarp, 45)
 
 plot(x -> flight(x,  theta), 0, howfar(theta))
-show(current())  # hide
+savefig("flight.svg"); nothing #hide
 ```
+
+![](flight.svg)
 
 To maximize the range we solve for the lone critical point of `howfar`
 within reasonable starting points.
@@ -517,8 +520,11 @@ This graph would show the differences in the trajectories:
 ```@example roots
 plot(x -> flight(x, 45), 0, howfar(45))
 plot!(x -> flight(x, tstar), 0, howfar(tstar))
-show(current())  # hide
+#show(current())  # hide
+savefig("flight-diff.svg"); nothing # hide
 ```
+
+![](flight-diff.svg)
 
 ## Sensitivity
 
@@ -695,8 +701,11 @@ xs = xs[repeat(collect(1:n), inner=[2], outer=[1])]
 plot(f, -1.25, 1.5, linewidth=3, legend=false)
 plot!(zero, -1.25, 1.5, linewidth=3)
 plot!(xs, ys)
-show(current())  # hide
+#show(current())  # hide
+savefig("newton.svg"); nothing # hide
 ```
+
+![](newton.svg)
 
 Even with real graphics, only a few of the steps are discernible, as the function's relative maximum
 causes a trap for this algorithm. Starting to the right of the
