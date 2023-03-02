@@ -5,8 +5,17 @@ version = "2.0.9"
 [deps]
 ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 CommonSolve = "38540f10-b2f7-11e9-35d8-d573e4eb0ff2"
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+ForwardDiffChainRules = "c9556dd2-1aed-4cfe-8560-1557cf593001"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Setfield = "efcf1570-3423-57d1-acb7-fd33fddbac46"
+
+[weakdeps]
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+ForwardDiffChainRules = "c9556dd2-1aed-4cfe-8560-1557cf593001"
+
+[extensions]
+ForwardDiffExt = "ForwardDiff"
 
 [compat]
 ChainRulesCore = "1"
