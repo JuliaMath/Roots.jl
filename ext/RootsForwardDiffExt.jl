@@ -9,7 +9,7 @@ import ForwardDiff: Dual, derivative, gradient, partials
 function solve(ZP::ZeroProblem, M::Roots.AbstractUnivariateZeroMethod, p::Dual{T}; kwargs...) where {T}
 
     f = ZP.F
-    pᵥ = p.value
+    pᵥ = ForwardDiff.value(p)
 
     xᵅ = solve(ZP, M, pᵥ; kwargs...)
 
