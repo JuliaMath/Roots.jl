@@ -28,12 +28,10 @@ function solve(ZP::ZeroProblem,
 
     xᵅ = solve(ZP, M, pᵥ; kwargs...)
 
-    fₓ = derivative(x -> f(x, pᵥ), xᵅ)
-    fₚ = gradient(p -> f(xᵅ, p), pᵥ)
-    ∂ = - fₚ / fₓ
-    Δs = ntuple(i -> ∂[i] * getindex(partials.(p), i)[i], N)
-
-    Dual{Z}(xᵅ, Δs)
+    fₓ = ForwardDiff.partials(f(ForwardDiff.Dual{T}(xᵅ, one(xᵅ)), pᵥ), 1)
+    fₚ = ForwardDiff.partials(f(xᵅ, p))
+    
+    Dual{T}(xᵅ, - fₚ / fₓ)
 end
 
 end
