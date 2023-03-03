@@ -217,13 +217,14 @@ function find_zero(
     tracks::AbstractTracks=NullTracks(),
     kwargs...,
 )
+
     xstar = solve(
         ZeroProblem(f, x0),
         M,
         p′ === nothing ? p : p′;
         verbose=verbose,
         tracks=tracks,
-        kwargs...,
+        kwargs...
     )
 
     isnan(xstar) && throw(ConvergenceFailed("Algorithm failed to converge"))
@@ -305,7 +306,7 @@ end
 
 function init(𝑭𝑿::ZeroProblem, p′=nothing; kwargs...)
     M = length(𝑭𝑿.x₀) == 1 ? Order0() : AlefeldPotraShi()
-    init(𝑭𝑿, M; p=p′, kwargs...)
+    init(𝑭𝑿, M, p′; kwargs...)
 end
 
 function init(
