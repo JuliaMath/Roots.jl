@@ -13,8 +13,8 @@ function solve(ZP::ZeroProblem, M::Roots.AbstractUnivariateZeroMethod, p::Dual{T
 
     xᵅ = solve(ZP, M, pᵥ; kwargs...)
 
-    fₓ = derivative(x -> f(x, pᵥ), xᵅ)
-    fₚ = derivative(p -> f(xᵅ, p), pᵥ)
+    fₓ = ForwardDiff.partials(f(ForwardDiff.Dual{T}(xᵅ, one(xᵅ)), pᵥ), 1)
+    fₚ = ForwardDiff.partials(f(xᵅ, p))
 
     Dual{T}(xᵅ, - fₚ / fₓ)
 end
