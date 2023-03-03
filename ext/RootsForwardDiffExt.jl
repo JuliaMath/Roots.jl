@@ -21,7 +21,7 @@ end
 
 function solve(ZP::ZeroProblem,
                M::Roots.AbstractUnivariateZeroMethod,
-               p::AbstractVector{<:Dual{Z,T,N}}; kwargs...) where {Z,T<:Real,N}
+               p::AbstractArray{<:Dual{T,<:Real}}; kwargs...) where {T}
 
     f = ZP.F
     pᵥ = map(pᵢ -> pᵢ.value, p)
