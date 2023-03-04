@@ -507,10 +507,11 @@ To maximize the range we solve for the lone critical point of `howfar`
 within reasonable starting points.
 
 As of version `v"1.9"`, the automatic differentiation provided by
-`ForwardDiff` will work through a call to `find_zero`. Prior to this
-version, it will work **if** the initial point has the proper type
-(depending on an expression of `theta` in this case).  As we use
-`200*cosd(theta)-5` for a starting point, this is satisfied.
+`ForwardDiff` will bypass working through a call to `find_zero`. Prior
+to this version, automatic differentiation will work *if* the
+initial point has the proper type (depending on an expression of
+`theta` in this case).  As we use `200*cosd(theta)-5` for a starting
+point, this is satisfied.
 
 ```jldoctest roots
 julia> (tstar = find_zero(D(howfar), 45)) ≈ 26.2623089
@@ -555,7 +556,7 @@ ForwardDiff.derivative(F, 1/2)
 ```
 
 This will be `0.0` if the differentiation is propagated through the algorithm.
-With `v"1.9"` of `Julia` or later, the derivative is calculated correctly through the method below.
+With `v"1.9"` of `Julia` or later, the derivative is calculated correctly through the method described below.
 
 
 Using the implicit function theorem and following these [notes](https://math.mit.edu/~stevenj/18.336/adjoint.pdf), this [paper](https://arxiv.org/pdf/2105.15183.pdf) on the adjoint method, or the methods more generally applied in the [ImplicitDifferentiation](https://github.com/gdalle/ImplicitDifferentiation.jl) package we can auto-differentiate without pushing that machinery through `find_zero`.
@@ -620,7 +621,7 @@ fₚ = ForwardDiff.gradient(p -> f(xᵅ, p), p)
 - fₚ / fₓ
 ```
 
-The package provides a package extension to use `ForwardDiff` directly to find derivatives or gradients with version `v"1.9"` or later of `Julia`, and a `ChainRulesCore.rrule` and `ChainRulesCore.frule` implementation that should allow automatic differentiation packages relying on `ChainRulesCore` (e.g., `Zygote`) to differentiate in `p` using the above approach. (Thanks to `@devmotion` for help here.)
+The package provides a package extension to use `ForwardDiff` directly to find derivatives or gradients, as above, with version `v"1.9"` or later of `Julia`, and a `ChainRulesCore.rrule` and `ChainRulesCore.frule` implementation that should allow automatic differentiation packages relying on `ChainRulesCore` (e.g., `Zygote`) to differentiate in `p` using the same approach. (Thanks to `@devmotion` for much help here.)
 
 
 
