@@ -8,9 +8,16 @@ CommonSolve = "38540f10-b2f7-11e9-35d8-d573e4eb0ff2"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Setfield = "efcf1570-3423-57d1-acb7-fd33fddbac46"
 
+[weakdeps]
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+
+[extensions]
+RootsForwardDiffExt = "ForwardDiff"
+
 [compat]
 ChainRulesCore = "1"
 CommonSolve = "0.1, 0.2"
+ForwardDiff = "0.10"
 Setfield = "0.7, 0.8, 1"
 julia = "1.0"
 
