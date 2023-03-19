@@ -28,7 +28,13 @@ function init_state(::Chandrapatla, F, x₀, x₁, fx₀, fx₁)
     ChandrapatlaState(a, b, c, fa, fb, fc)
 end
 
-function update_state(::Chandrapatla, F, o::ChandrapatlaState{T,S}, options, l=NullTracks()) where {T, S}
+function update_state(
+    ::Chandrapatla,
+    F,
+    o::ChandrapatlaState{T,S},
+    options,
+    l=NullTracks(),
+) where {T,S}
     a, b, c = o.xn1, o.xn0, o.c
     fa, fb, fc = o.fxn1, o.fxn0, o.fc
 

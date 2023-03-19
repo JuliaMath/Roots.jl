@@ -25,7 +25,13 @@ true
 """
 struct Ridders <: AbstractBracketingMethod end
 
-function update_state(M::Ridders, F, o::AbstractUnivariateZeroState{T,S}, options, l=NullTracks()) where {T, S}
+function update_state(
+    M::Ridders,
+    F,
+    o::AbstractUnivariateZeroState{T,S},
+    options,
+    l=NullTracks(),
+) where {T,S}
     a, b = o.xn0, o.xn1
     fa, fb = o.fxn0, o.fxn1
 
