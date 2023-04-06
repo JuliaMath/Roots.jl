@@ -153,6 +153,14 @@ function is_approx_zero_f(
     false
 end
 
+function is_approx_zero_f(
+    ::AbstractBracketingMethod,
+    state::AbstractUnivariateZeroState,
+    options::O,
+) where {O<:Union{ExactOptions,FExactOptions}}
+    false
+end
+
 ## --------------------------------------------------
 
 # test xₙ₊₁ - xₙ ≈ 0

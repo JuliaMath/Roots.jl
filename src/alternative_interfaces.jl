@@ -181,8 +181,8 @@ function fzero(f, bracket::Tuple{T,S}; kwargs...) where {T<:Number,S<:Number}
 end
 
 fzero(f, a::Number, b::Number, args...; kwargs...) = fzero(f, (a, b), args...; kwargs...)
-fzero(f, bracket::Vector{T}, args...; kwargs...) where {T<:Number} =
-    fzero(f, (bracket[1], bracket[2]), args...; kwargs...)
+
+fzero(f, x; kwargs...)  =  find_zero(FnWrapper(f), x; kwargs...)
 
 fzero(f::Function, fp::Function, x0::Real; kwargs...) =
     find_zero((f, fp), x0, Newton(); kwargs...)

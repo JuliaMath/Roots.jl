@@ -556,7 +556,7 @@ end
     @test_throws ArgumentError Roots._extrema([π, π])
 end
 
-@testset "senstivity" begin
+@testset "sensitivity" begin
     # Issue #349
     if VERSION >= v"1.9.0-"
         f(x, p) = cos(x) - first(p)*x
