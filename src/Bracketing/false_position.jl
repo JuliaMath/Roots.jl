@@ -54,7 +54,7 @@ function update_state(
     o::AbstractUnivariateZeroState{T,S},
     options,
     l=NullTracks(),
-) where {T, S}
+) where {T,S}
     a, b = o.xn0, o.xn1
     fa, fb = o.fxn0, o.fxn1
     lambda = fb / (fb - fa)

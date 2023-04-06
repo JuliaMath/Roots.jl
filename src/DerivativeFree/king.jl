@@ -48,7 +48,7 @@ function update_state(::Order1B, F, o::KingState, options, l=NullTracks())
     end
 end
 
-function update_state(::King, F, o::KingState{T,S}, options, l=NullTracks()) where {T, S}
+function update_state(::King, F, o::KingState{T,S}, options, l=NullTracks()) where {T,S}
     x0, x1 = o.xn0, o.xn1
     fx0, fx1 = o.fxn0, o.fxn1
     G₀ = o.G0

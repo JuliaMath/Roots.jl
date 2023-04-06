@@ -440,7 +440,14 @@ end
 
     ## Issue #343 non-type stable f
     f(t) = t <= 0 ? -1 : log(t)
-    for M ∈ (Roots.Order0(), Roots.Order1(), Roots.Order2(), Roots.Order5(), Roots.Order8(), Roots.Order16())
+    for M in (
+        Roots.Order0(),
+        Roots.Order1(),
+        Roots.Order2(),
+        Roots.Order5(),
+        Roots.Order8(),
+        Roots.Order16(),
+    )
         @test find_zero(f, 3, M) ≈ 1
     end
 end
@@ -559,18 +566,18 @@ end
 @testset "senstivity" begin
     # Issue #349
     if VERSION >= v"1.9.0-"
-        f(x, p) = cos(x) - first(p)*x
-        x₀ = (0,pi/2)
+        f(x, p) = cos(x) - first(p) * x
+        x₀ = (0, pi / 2)
         F(p) = solve(ZeroProblem(f, x₀), Bisection(), p)
         G(p) = find_zero(f, x₀, Bisection(), p)
-        H(p) = find_zero(f, x₀, Bisection(); p = p)
+        H(p) = find_zero(f, x₀, Bisection(); p=p)
 
         ∂ = -0.4416107917053284
         @test ForwardDiff.derivative(F, 1.0) ≈ -0.4416107917053284
-        @test ForwardDiff.gradient(F, [1.0,2])[1] ≈ -0.4416107917053284
+        @test ForwardDiff.gradient(F, [1.0, 2])[1] ≈ -0.4416107917053284
         @test ForwardDiff.derivative(G, 1.0) ≈ -0.4416107917053284
-        @test ForwardDiff.gradient(G, [1.0,2])[1] ≈ -0.4416107917053284
+        @test ForwardDiff.gradient(G, [1.0, 2])[1] ≈ -0.4416107917053284
         @test ForwardDiff.derivative(H, 1.0) ≈ -0.4416107917053284
-        @test ForwardDiff.gradient(H, [1.0,2])[1] ≈ -0.4416107917053284
+        @test ForwardDiff.gradient(H, [1.0, 2])[1] ≈ -0.4416107917053284
     end
 end
