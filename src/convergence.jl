@@ -206,7 +206,7 @@ Assess if algorithm has converged.
 
 Return a convergence flag and a Boolean indicating if algorithm has terminated (converged or not converged)
 
-If algrithm hasn't converged this returns `(:not_converged, false)`.
+If algorithm hasn't converged this returns `(:not_converged, false)`.
 
 If algorithm has stopped or converged, return flag and `true`. Flags are:
 

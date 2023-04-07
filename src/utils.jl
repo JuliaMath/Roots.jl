@@ -1,6 +1,6 @@
 ##################################################
 
-# type to throw on succesful convergence
+# type to throw on successful convergence
 mutable struct StateConverged
     x0::Number
 end
@@ -92,7 +92,7 @@ end
     steff_step(M, x, fx)
 
 Return first Steffensen step x + fx (with proper units).
-May be overriden to provide a guard when fx is too large.
+May be overridden to provide a guard when fx is too large.
 
 """
 function steff_step(M::Any, x::T, fx::S) where {T,S}
@@ -100,7 +100,7 @@ function steff_step(M::Any, x::T, fx::S) where {T,S}
 end
 
 # return vertex of parabola through (a,fa),(b,fb),(c,fc)
-# first time trhough, we have picture of a > b > c; |fa|, |fc| > |fb|, all same sign
+# first time through, we have picture of a > b > c; |fa|, |fc| > |fb|, all same sign
 function quad_vertex(c, fc, b, fb, a, fa)
     fba = (fb - fa) / (b - a)
     fbc = (fb - fc) / (b - c)

@@ -21,7 +21,7 @@ length is less than or equal to the tolerance `max(δₐ, 2abs(u)δᵣ)` with `u
 `max(tol, min(abs(a), abs(b)) * rtol)`. The latter is used only if the default
 tolerances (`atol` or `rtol`) are adjusted.
 
-When solving ``f(x,p) = 0`` for ``x^*(p)`` using `Bisection` one can not take the derivative directly via automatatic differentiation, as the algorithm is not differentiable. See [Sensitivity](https://juliamath.github.io/Roots.jl/stable/roots/#Sensitivity) in the documenation for alternatives.
+When solving ``f(x,p) = 0`` for ``x^*(p)`` using `Bisection` one can not take the derivative directly via automatatic differentiation, as the algorithm is not differentiable. See [Sensitivity](https://juliamath.github.io/Roots.jl/stable/roots/#Sensitivity) in the documentation for alternatives.
 
 
 """
@@ -223,7 +223,7 @@ function solve!(
         ctr += 1
     end
 
-    #    val, stopped = assess_convergence(M, state, options) # udpate val flag
+    #    val, stopped = assess_convergence(M, state, options) # update val flag
     α = decide_convergence(M, F, state, options, val)
 
     log_convergence(l, val)

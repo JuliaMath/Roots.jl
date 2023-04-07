@@ -102,7 +102,7 @@ The secant method is an iterative method with update step
 given by `b - fb/m` where `m` is the slope of the secant line between
 `(a,fa)` and `(b,fb)`.
 
-The inital values can be specified as a pair of 2, as in `(x₀, x₁)` or
+The initial values can be specified as a pair of 2, as in `(x₀, x₁)` or
 `[x₀, x₁]`, or as a single value, `x₁` in which case a value of `x₀` is chosen.
 
 The algorithm returns m when `abs(fm) <= max(atol, abs(m) * rtol)`.
@@ -122,7 +122,7 @@ Roots.secant_method(x -> x^5 -x - 1, 1.1)
 ```
 
 !!! note "Specialization"
-    This function will specialize on the function `f`, so that the inital
+    This function will specialize on the function `f`, so that the initial
     call can take more time than a call to the `Order1()` method, though
     subsequent calls will be much faster.  Using `FunctionWrappers.jl` can
     ensure that the initial call is also equally as fast as subsequent
@@ -201,7 +201,7 @@ which both default to `eps(one(typeof(abs(xᵢ))))^4/5` in the appropriate units
 Each iteration performs three evaluations of `f`.
 The first method picks two remaining points at random in relative proximity of `xᵢ`.
 
-Note that the method may return complex result even for real intial values
+Note that the method may return complex result even for real initial values
 as this depends on the function.
 
 Examples:
@@ -352,13 +352,13 @@ end
 
 A more robust secant method implementation
 
-Solve for `f(x) = 0` using an alogorithm from *Personal Calculator Has Key
+Solve for `f(x) = 0` using an algorithm from *Personal Calculator Has Key
 to Solve Any Equation f(x) = 0*, the SOLVE button from the
 [HP-34C](http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1979-12.pdf).
 
 This is also implemented as the `Order0` method for `find_zero`.
 
-The inital values can be specified as a pair of two values, as in
+The initial values can be specified as a pair of two values, as in
 `(a,b)` or `[a,b]`, or as a single value, in which case a value of `b`
 is computed, possibly from `fb`.  The basic idea is to follow the
 secant method to convergence unless:

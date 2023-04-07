@@ -15,7 +15,7 @@ Arguments:
 
 * `x0::Number` -- initial guess. For Newton's method this may be complex.
 
-With the `FowardDiff` package derivatives may be computed automatically. For example,  defining
+With the `ForwardDiff` package derivatives may be computed automatically. For example,  defining
 `D(f) = x -> ForwardDiff.derivative(f, float(x))` allows `D(f)` to be used for the first derivative.
 
 Keyword arguments are passed to `find_zero` using the `Roots.Newton()` method.
@@ -42,7 +42,7 @@ Arguments:
 
 * `x0::Number` -- initial guess
 
-With the `FowardDiff` package derivatives may be computed automatically. For example,  defining
+With the `ForwardDiff` package derivatives may be computed automatically. For example,  defining
 `D(f) = x -> ForwardDiff.derivative(f, float(x))` allows `D(f)` and `D(D(f))` to be used for the first and second
 derivatives, respectively.
 
@@ -67,7 +67,7 @@ Arguments:
 
 * `x0::Number` -- initial guess
 
-With the `FowardDiff` package derivatives may be computed automatically. For example,  defining
+With the `ForwardDiff` package derivatives may be computed automatically. For example,  defining
 `D(f) = x -> ForwardDiff.derivative(f, float(x))` allows `D(f)` and `D(D(f))` to be used for the first and second
 derivatives, respectively.
 
@@ -86,7 +86,7 @@ chebyshev_like(f, fp, fpp, x0; kwargs...) =
 
 ## --------------------------------------------------
 
-## MATLAB interfcae to find_zero
+## MATLAB interface to find_zero
 ## Main functions are
 ## * fzero(f, ...) to find _a_ zero of f, a univariate function
 ## * fzeros(f, ...) to attempt to find all zeros of f, a univariate function

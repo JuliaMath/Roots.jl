@@ -11,15 +11,15 @@ Interface to one of several methods for finding zeros of a univariate function, 
 * `x0`: the initial condition (a value, initial values, or bracketing interval)
 * `M`: some `AbstractUnivariateZeroMethod` specifying the solver
 * `N`: some bracketing method, when specified creates a hybrid method
-* `p`: for specifying a paramter to `f`. Also can be a keyword, but a positional argument is helpful with broadcasting.
+* `p`: for specifying a parameter to `f`. Also can be a keyword, but a positional argument is helpful with broadcasting.
 
 ## Keyword arguments
 
-* `xatol`, `xrtol`: absolute and relatative tolerance to decide if `xₙ₊₁ ≈ xₙ`
-* `atol`, `rtol`: absolute and relatative tolerance to decide if `f(xₙ) ≈ 0`
+* `xatol`, `xrtol`: absolute and relative tolerance to decide if `xₙ₊₁ ≈ xₙ`
+* `atol`, `rtol`: absolute and relative tolerance to decide if `f(xₙ) ≈ 0`
 * `maxiters`: specify the maximum number of iterations the algorithm can take.
 * `verbose::Bool`: specifies if details about algorithm should be shown
-* `tracks`: allows specification of `Tracks` objecs
+* `tracks`: allows specification of `Tracks` objects
 
 # Extended help
 
@@ -36,7 +36,7 @@ or any iterable with `extrema` defined. A bracketing interval,
 
 # Return value
 
-If the algorithm suceeds, the approximate root identified is
+If the algorithm succeeds, the approximate root identified is
 returned. A `ConvergenceFailed` error is thrown if the algorithm
 fails. The alternate form `solve(ZeroProblem(f,x0), M)` returns `NaN`
 in case of failure.
@@ -458,7 +458,7 @@ function solve!(P::ZeroProblemIterator; verbose=false)
         ctr += 1
     end
 
-    val, stopped = assess_convergence(M, state, options) # udpate val flag
+    val, stopped = assess_convergence(M, state, options) # update val flag
     α = decide_convergence(M, F, state, options, val)
 
     log_convergence(l, val)

@@ -6,7 +6,7 @@ Documentation for [Roots.jl](https://github.com/JuliaMath/Roots.jl)
 ## About
 
 `Roots` is  a `Julia` package  for finding zeros of continuous
-scalar functions of a single real variable using floating point numbers. That  is solving ``f(x)=0`` for ``x`` adjusting for floating-point idiosyncracies.
+scalar functions of a single real variable using floating point numbers. That  is solving ``f(x)=0`` for ``x`` adjusting for floating-point idiosyncrasies.
 
 The `find_zero` function provides the
 primary interface. It supports various algorithms through the
