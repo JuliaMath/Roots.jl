@@ -44,7 +44,7 @@ format. Internally either a tuple of `(x,f(x))` pairs or `(aₙ, bₙ)`
 pairs are stored, the latter for bracketing methods. (These
 implementation details may change without notice.) The methods
 `empty!`, to reset the `Tracks` object; `get`, to get the tracks;
-`last`, to get the value convered to, may be of interest.
+`last`, to get the value converted to, may be of interest.
 
 If you only want to print the information, but you don't need it later, this can conveniently be
 done by passing `verbose=true` to the root-finding function. This will not

@@ -27,7 +27,7 @@ julia> find_zero((sin,cos, x->-sin(x)), 3, Roots.LithBoonkkampIJzerman(1,2)) ≈
 true
 ```
 
-The method can be more robust to the intial condition. This example is from the paper (p13). Newton's method (the `S=1`, `D=1` case) fails if `|x₀| ≥ 1.089` but methods with more memory succeed.
+The method can be more robust to the initial condition. This example is from the paper (p13). Newton's method (the `S=1`, `D=1` case) fails if `|x₀| ≥ 1.089` but methods with more memory succeed.
 
 ```jldoctest lith
 julia> fx =  ZeroProblem((tanh,x->sech(x)^2), 1.239); # zero at 0.0
@@ -217,7 +217,7 @@ end
 
 # manufacture initial xs, ys
 # use lower memory terms to boot strap up. Secant uses initial default step
-#D=0, geneate [x0].x1,...,xs
+#D=0, generate [x0].x1,...,xs
 function init_lith(
     L::LithBoonkkampIJzerman{S,0},
     F::Callable_Function{Si,Tup,𝑭,P},
@@ -407,7 +407,7 @@ function update_state(
         d₀ = b - sign(Δ₀) * δ
     end
 
-    # compare to bisection step; extra function evalution
+    # compare to bisection step; extra function evaluation
     d₁ = a + (b - a) * (0.5) #_middle(a, b)
     f₀, f₁ = evalf(F, d₀, 1), evalf(F, d₁, 1)
 

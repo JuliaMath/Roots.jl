@@ -3,7 +3,7 @@ using Test
 using Printf
 
 ## testing bracketing methods
-## Orignially by John Travers
+## Originally by John Travers
 #
 #
 ## This set of tests is very useful for benchmarking the number of function

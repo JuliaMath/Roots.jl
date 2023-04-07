@@ -13,7 +13,7 @@ abstract type AbstractNewtonLikeMethod <: AbstractDerivativeMethod end
 abstract type AbstractHalleyLikeMethod <: AbstractDerivativeMethod end
 abstract type AbstractΔMethod <: AbstractHalleyLikeMethod end
 
-# deprecated but not clear way to do so, hence these defintions not to be used
+# deprecated but not clear way to do so, hence these definitions not to be used
 const AbstractBracketing = AbstractBracketingMethod
 const AbstractBisection = AbstractBisectionMethod
 const AbstractNonBracketing = AbstractNonBracketingMethod
