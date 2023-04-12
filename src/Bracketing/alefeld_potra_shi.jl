@@ -353,3 +353,321 @@ function update_state(M::A42, F, state::A42State{T,S}, options, l=NullTracks()) 
 
     return state, false
 end
+
+## ----
+## try to make a general framework for alefeld potra shi
+## *If* this is as efficient as A42 and AlefeldPotraShi above, we
+## can remove them, for now, this isn't
+## can opt in by creating calculateΔ function for a method
+## points a,b,d,e stored
+struct AbstractAlefeldPotraShiState{T,S} <: AbstractUnivariateZeroState{T,S}
+    xn1::T
+    xn0::T
+    d::T
+    ee::T
+    fxn1::S
+    fxn0::S
+    fd::S
+    fee::S
+end
+
+function default_tolerances(::AbstractAlefeldPotraShi, ::Type{T}, ::Type{S}) where {T,S}
+    xatol = zero(real(T)) * oneunit(real(T))
+    xrtol = eps(real(T))  # unitless
+    atol = 0 * oneunit(real(S))
+    rtol = 0 * one(real(S))
+    maxevals = 60
+    strict = true
+    (xatol, xrtol, atol, rtol, maxevals, strict)
+end
+
+
+# basic init state is like bracketing state
+# keep a < b
+# set d, ee to a
+function init_state(::AbstractAlefeldPotraShi, F, x₀, x₁, fx₀, fx₁;
+                    #c = secant_step(x₀,x₁,fx₀,fx₁),
+                    c = _middle(x₀,x₁)
+                    )
+
+    a, b, fa, fb = x₀, x₁, fx₀, fx₁
+    isinf(a) && (a = nextfloat(a))
+    isinf(b) && (b = prevfloat(b))
+
+    if a > b
+        a, b, fa, fb = b, a, fb, fa
+    end
+    c = clamp(c, a, b) # should be unnecessary, but can be with secant step
+    fc= first(F(c))
+    iszero(fa) && return AbstractAlefeldPotraShiState(b, a, a, a, fb, fa, fa, fa)
+    iszero(fb) && return AbstractAlefeldPotraShiState(b, a, a, a, fb, fa, fa, fa)
+    iszero(fc) && return AbstractAlefeldPotraShiState(c, a, a, a, fc, fa, fa, fa)
+
+
+    a, b, d, fa, fb, fd = bracket(a, b, c, fa, fb, fc)
+    assert_bracket(fa, fb)
+
+    T = typeof(d)
+    ee, fe = T(NaN) / oneunit(T(NaN)) * d, fd # use NaN for initial
+
+
+
+    AbstractAlefeldPotraShiState(b, a, d, ee, fb, fa, fd, fe)
+end
+
+# tole from paper
+function tolₑ(a,b,fa,fb, atol,rtol)
+    u = abs(fa) < abs(fb) ? abs(a) : abs(b)
+    return 2*u*rtol + atol
+end
+
+# adjust before calling bracket
+function avoid_boundaries(a,c,b, fa, fb, tols)
+
+    δ = tols.λ * tolₑ(a, b, fa, fb, tols.atol, tols.rtol)
+    if (b - a) ≤ 4δ
+        c = a/2 + b/2
+    elseif c ≤ a + 2δ
+        c = a + 2δ
+    elseif c ≥ b - 2δ
+        c = b - 2δ
+    end
+    c
+end
+
+
+# different from above; no δ adjustment
+function _newton_quadratic(a, b, d, fa, fb, fd, k::Int)
+
+    @assert a < b
+    @assert (d > b && sign(fd)*sign(fb) > 0) || (d < a && sign(fd)*sign(fa) ≥ 0)
+
+    A = f_abd(a, b, d, fa, fb, fd)
+    B = f_ab(a, b, fa, fb)
+
+    iszero(A) && return a - fa / B
+
+    r = sign(A)*sign(fa) > 0 ? a : b
+
+    for i in 1:k
+        P = fa + B * (r - a) + A * (r - a) * (r - b)
+        P′ = (B + A * (2r - a - b))
+        r -= P / P′
+    end
+
+    return r
+end
+
+function _pw_prod(as...)
+    t = one(first(as))
+    n = length(as)
+    for i ∈ 1:n-1
+        for j∈ (i+1):n
+            t *= (as[i]-as[j])
+        end
+    end
+    t
+end
+
+
+# fn calls w/in calculateΔ
+fncalls_per_step(::AbstractAlefeldPotraShi) = 1
+
+function update_state(M::AbstractAlefeldPotraShi,
+    F::Callable_Function,
+    o::AbstractAlefeldPotraShiState{T,S},
+    options,
+    l=NullTracks(),
+) where {T,S}
+
+    μ, λ = 0.5, 0.7
+    atol, rtol = options.xabstol, options.xreltol
+    tols = (;λ = λ, atol=atol, rtol=rtol)
+
+    a, b, d, ee = o.xn0, o.xn1, o.d, o.ee
+    fa, fb, fd, fee = o.fxn0, o.fxn1, o.fd, o.fee
+
+    δ₀ = b - a
+
+    # use c to track smaller of |fa|, |fb|
+    c,fc = abs(fa) < abs(fb) ? (a,fa) : (b,fb)
+
+    ps = (;a=a, b=b, d=d, ee=ee,
+          fa=fa, fb=fb, fd=fd, fee=fee,
+          atol=atol, rtol=rtol)
+    Δ, ps = calculateΔ(M, F, c, ps) # (may modify ps) <<----
+    incfn(l, fncalls_per_step(M))
+
+    a, fa, b, fb, d, fd = ps.a, ps.fa, ps.b, ps.fb, ps.d, ps.fd
+
+    iszero(fa) && return (_set(o, (a, fa)), true)
+    iszero(fb) && return (_set(o, (b, fb)), true)
+
+    x = c - Δ
+
+    x = avoid_boundaries(a,x,b,fa,fb, tols)
+    fx = first(F(x))
+    incfn(l)
+    iszero(fx) && return (_set(o, (x, fx)), true)
+    ee, fee = d, fd
+    ā,b̄,d,fā,fb̄,fd = bracket(a,b,x,fa,fb,fx)
+
+    u, fu = abs(fā) < abs(fb̄) ? (ā, fā) : (b̄, fb̄)
+
+    # 4.16 double secant step
+    fab⁻¹ = (b̄ - ā) / (fb̄ - fā)
+    c̄ = u - 2 * fab⁻¹ * fu
+
+    if 2abs(u - c̄) > b̄ - ā
+        c̄ = ā/2 + b̄/2
+    end
+
+    c̄ = avoid_boundaries(ā,c̄,b̄,fā,fb̄,  tols)
+    fc̄ = first(F(c̄)); incfn(l)
+    ee, fee = d, fd
+    â,b̂,d̂,fâ,fb̂,fd̂ = bracket(ā,b̄,c̄,fā,fb̄,fc̄)
+
+    ##
+    if (b̄ - ā) < μ*δ₀
+        a,b,d,fa,fb,fd = â,b̂,d̂,fâ,fb̂,fd̂
+    else
+        m = â/2 + b̂/2
+
+        m = avoid_boundaries(â, m, b̂, fâ, fb̂, tols)
+        fm = first(F(m))
+        incfn(l)
+        ee, fee = d̂, fd̂
+        a, b, d, fa,fb, fd = bracket(â, b̂, m, fâ, fb̂, fm)
+    end
+
+    @set! o.xn0 = a
+    @set! o.xn1 = b
+    @set! o.d = d
+    @set! o.ee = ee
+    @set! o.fxn0 = fa
+    @set! o.fxn1 = fb
+    @set! o.fd = fd
+    @set! o.fee = fee
+
+    return o, false
+end
+
+## ----
+struct A25B <: AbstractAlefeldPotraShi end
+fncalls_per_step(::A25B) = 1
+function calculateΔ(::A25B, F::Callable_Function, c₀::T, ps) where T
+    a,b,d,ee = ps.a, ps.b, ps.d, ps.ee
+    fa,fb,fd,fee = ps.fa, ps.fb, ps.fd, ps.fee
+    tols = (λ=0.7, atol=ps.atol, rtol=ps.rtol)
+
+    c = a
+    K = 2
+    for k ∈ 1:K
+        c = _newton_quadratic(a, b, d, fa, fb, fd, k+1)
+
+        k == K && break
+        c = avoid_boundaries(a,c,b,fa,fb,  tols)
+        fc = first(F(c))
+        a,b,d,fa,fb,fd = bracket(a,b,c,fa,fb,fc)
+
+        iszero(fc) && break
+        if (isnan(fc) || isnan(c) || isinf(c))
+            c = c₀
+            break
+        end
+
+    end
+
+    @set! ps.a = a
+    @set! ps.fa = fa
+    @set! ps.b = b
+    @set! ps.fb = fb
+    @set! ps.d = d
+    @set! ps.fd = fd
+
+    c₀ - c,  ps
+
+
+end
+
+struct A41B <: AbstractAlefeldPotraShi end
+fncalls_per_step(::A41B) = 1
+function calculateΔ(::A41B, F::Callable_Function, c₀::T, ps) where T
+    a,b,d,ee = ps.a, ps.b, ps.d, ps.ee
+    fa,fb,fd,fee = ps.fa, ps.fb, ps.fd, ps.fee
+    tols = (λ=0.7, atol=ps.atol, rtol=ps.rtol)
+
+    if isnan(ee) || iszero(_pw_prod(fa,fb,fd,fee))
+        c = _newton_quadratic(a, b, d, fa, fb, fd, 2)
+    else
+        c = ipzero(a, b, d, ee, fa, fb, fd, fee)
+        if !(a ≤ c ≤ b)
+            c = _newton_quadratic(a, b, d, fa, fb, fd, 2)
+        end
+    end
+
+    c = avoid_boundaries(a, c, b,fa,fb,  tols)
+    fc = first(F(c))
+    a,b,d,fa,fb,fd = bracket(a,b,c,fa,fb,fc)
+    if (isnan(fc) || isnan(c) || isinf(c))
+            c = c₀
+    end
+
+    @set! ps.a = a
+    @set! ps.fa = fa
+    @set! ps.b = b
+    @set! ps.fb = fb
+    @set! ps.d = d
+    @set! ps.fd = fd
+
+    c₀ - c,  ps
+
+
+end
+
+#
+struct A42B <: AbstractAlefeldPotraShi end
+fncalls_per_step(::A42B) = 2
+function calculateΔ(::A42B, F::Callable_Function, c₀::T, ps) where T
+    a,b,d,ee = ps.a, ps.b, ps.d, ps.ee
+    fa,fb,fd,fee = ps.fa, ps.fb, ps.fd, ps.fee
+    tols = (λ=0.7, atol=ps.atol, rtol=ps.rtol)
+    c, fc = a, fa
+    K = 2
+    for k ∈ 1:K
+        if isnan(ee) || iszero(_pw_prod(fa,fb,fd,fee))
+            c = _newton_quadratic(a, b, d, fa, fb, fd, k+1)
+        else
+            c = ipzero(a, b, d, ee, fa, fb, fd, fee)
+            if !(a ≤ c ≤ b)
+                c = _newton_quadratic(a, b, d, fa, fb, fd, k+1)
+            end
+        end
+
+        k == K && break
+
+        c = avoid_boundaries(a, c, b, fa, fb,  tols)
+        fc = first(F(c))
+        ee, fee = d, fd
+        a,b,d,fa,fb,fd = bracket(a,b,c,fa,fb,fc)
+
+        iszero(fc) && break # fa or fb is 0
+        if (isnan(fc) || isnan(c) || isinf(c))
+            c = c₀
+            break
+        end
+    end
+
+    @set! ps.a = a
+    @set! ps.fa = fa
+    @set! ps.b = b
+    @set! ps.fb = fb
+    @set! ps.d = d
+    @set! ps.fd = fd
+    @set! ps.ee = ee
+    @set! ps.fee = fee
+
+    c₀ - c,  ps
+
+
+end
