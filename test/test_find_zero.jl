@@ -545,7 +545,7 @@ end
 
         # test update state
         g = wrapper(fn)
-        stateₘ = Roots.init_state(M, state, Roots.Callable_Function(M, f))
+        stateₘ = Roots.init_state(M, state, Roots.Callable_Function(M, fn))
         G = Roots.Callable_Function(M, g)
         l = Roots.Tracks(Float64, Float64)
         Roots.update_state(M, G, stateₘ, options, l)

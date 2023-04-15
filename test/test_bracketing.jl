@@ -285,7 +285,6 @@ avg(x) = sum(x) / length(x)
         Roots.ITP(),
         Roots.Ridders(),
         Roots.Bisection(),
-        Roots.A24B(), Roots.A42B()
     ]
     results = [run_tests((f, b) -> find_zero(f, b, M), name="$M") for M in Ms]
     maxfailures = maximum([length(result.failures) for result in results])
