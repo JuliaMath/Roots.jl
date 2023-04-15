@@ -41,8 +41,8 @@ function init_state(::AbstractAlefeldPotraShi, F, x₀, x₁, fx₀, fx₁;
     a, b, fa, fb = x₀, x₁, fx₀, fx₁
     iszero(fa) && return AbstractAlefeldPotraShiState(b, a, a, a, fb, fa, fa, fa)
     iszero(fb) && return AbstractAlefeldPotraShiState(b, a, a, a, fb, fa, fa, fa)
-    isinf(a) && (a = nextfloat(a); fa = first(F(a)))
-    isinf(b) && (b = prevfloat(b); fb = first(F(b)))
+#    isinf(a) && (a = nextfloat(a); fa = first(F(a)))
+#    isinf(b) && (b = prevfloat(b); fb = first(F(b)))
 
     if a > b
         a, b, fa, fb = b, a, fb, fa
@@ -159,28 +159,13 @@ end
 
 ## --- Methods
 
-
-"""
-    Roots.AlefeldPotraShi()
-
-Follows algorithm in "ON ENCLOSING SIMPLE ROOTS OF NONLINEAR
-EQUATIONS", by Alefeld, Potra, Shi; DOI:
-[10.1090/S0025-5718-1993-1192965-2](https://doi.org/10.1090/S0025-5718-1993-1192965-2).
-
-The order of convergence is `2 + √5`; asymptotically there are 3 function evaluations per step.
-Asymptotic efficiency index is ``(2+√5)^{1/3} ≈ 1.618...``. Less efficient, but can run faster than the [`A42`](@ref) method.
-
-Originally by John Travers.
-"""
-struct AlefeldPotraShi <: AbstractAlefeldPotraShi end
-const A25 = AlefeldPotraShi # this is algorithm 2.5
-function calculateΔ(::AlefeldPotraShi, F::Callable_Function, c₀::T, ps) where T
+struct A2425{K} <: AbstractAlefeldPotraShi end
+function calculateΔ(::A2425{K}, F::Callable_Function, c₀::T, ps) where {K, T}
     a,b,d,ee = ps.a, ps.b, ps.d, ps.ee
     fa,fb,fd,fee = ps.fa, ps.fb, ps.fd, ps.fee
     tols = (λ=0.7, atol=ps.atol, rtol=ps.rtol)
 
     c = a
-    K = 2
     for k ∈ 1:K
         c = newton_quadratic(a, b, d, fa, fb, fd, k+1)
 
@@ -208,6 +193,22 @@ function calculateΔ(::AlefeldPotraShi, F::Callable_Function, c₀::T, ps) where
 
 
 end
+
+
+"""
+    Roots.AlefeldPotraShi()
+
+Follows algorithm in "ON ENCLOSING SIMPLE ROOTS OF NONLINEAR
+EQUATIONS", by Alefeld, Potra, Shi; DOI:
+[10.1090/S0025-5718-1993-1192965-2](https://doi.org/10.1090/S0025-5718-1993-1192965-2).
+
+The order of convergence is `2 + √5`; asymptotically there are 3 function evaluations per step.
+Asymptotic efficiency index is ``(2+√5)^{1/3} ≈ 1.618...``. Less efficient, but can run faster than the [`A42`](@ref) method.
+
+Originally by John Travers.
+"""
+const AlefeldPotraShi = A2425{2}
+
 
 # Algorith 5.7 is parameterized by K
 # 4.1 -> K=1; 4.2 -> K=2
@@ -363,7 +364,7 @@ function _pairwise_prod(as...)
     t
 end
 
-
+## ------- delete me ------
 
 ## --- older versions. Delete if no issues with newer
 ## try to make a general framework for alefeld potra shi
