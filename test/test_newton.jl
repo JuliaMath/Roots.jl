@@ -76,6 +76,18 @@ import Roots.newton,
     @test_throws Roots.ConvergenceFailed Roots.newton((x -> x^2 + 1, x -> 2x), 0)
 end
 
+@testset "bracketed Halley" begin
+    x₀, x̃₀, α = 1.0, 1.1, 1.1673039782614187
+    f(x) = x^5 - x - 1
+    fp(x) = 5x^4 - 1
+    fpp(x) = 20x^3
+
+    for M ∈ (Roots.BracketedHalley(), Roots.BracketedChebyshev())
+        @test find_zero((f,fp,fpp), (1, 2), M) ≈ α
+    end
+end
+
+
 @testset "Lith Boonkkamp IJzerman methods" begin
     x₀, x̃₀, α = 1.0, 1.1, 1.1673039782614187
     f(x) = x^5 - x - 1

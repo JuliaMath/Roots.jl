@@ -190,13 +190,15 @@ calculateΔ(::ChebyshevLike, r1, r2) = (1 + r1 / (2r2) * (1 + r1 / r2)) * r1
 calculateΔ(::SuperHalley, r1, r2) = (1 + r1 / (2r2 - 2r1)) * r1
 calculateΔ(::Schroder, r1, r2) = r2 / (r2 - r1) * r1
 
-## Bracketed versions
+## Bracketed versions of Halley and Chebyshev using Alefeld, Potra, Shi approach
 ## calculateΔ has *different* calling pattern
+## May take more steps and function evaluations, but should always converge
 struct BracketedHalley <: AbstractAlefeldPotraShi end
 fn_argout(::BracketedHalley) = 3
 fncalls_per_step(::BracketedHalley) = 3
 function calculateΔ(::BracketedHalley, F::Callable_Function, c, ps)
-    a, b = ps.a, ps.a
+    a, b = ps.a, ps.b
+
     fc, (Δ, Δ₂) = F(c)
     d = calculateΔ(Halley(), Δ, Δ₂)
     !(a <= c-d <= b) && (d = Δ)        # Newton
