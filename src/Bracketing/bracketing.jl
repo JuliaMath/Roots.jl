@@ -2,7 +2,7 @@
 
 function init_state(M::AbstractBracketingMethod, F::Callable_Function, x)
     x₀, x₁ = adjust_bracket(x)
-    fx₀, fx₁ = F(x₀), F(x₁)
+    fx₀, fx₁ = first(F(x₀)), first(F(x₁))
     state = init_state(M, F, x₀, x₁, fx₀, fx₁)
 end
 

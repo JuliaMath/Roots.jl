@@ -210,6 +210,64 @@ function run_tests(method; verbose=false, trace=false, name=nothing, abandon=fal
     results
 end
 
+## Run a method on all known functions.
+function run_test(f, M; verbose=false, trace=false, name=nothing, abandon=false,
+                  kwargs...)
+    d = DataFrame(i=Int[], cnt=Int[], steps=Int[], Δ=Float64[],
+                  residual=Float64[], result=Float64[])
+    for (i,p) ∈ enumerate(f.params)
+        evalcount = 0
+        function feval(x)
+            evalcount += 1
+            result = f.val(p, x)
+            result
+        end
+        result, residual = nothing, nothing
+        l = Roots.Tracks()
+        try
+            result = find_zero(feval, f.bracket(p), M; tracks=l, kwargs...)
+            isnan(result) && error("NaN")
+            residual = f.val(p, result)
+        catch ex
+            result = NaN
+            residual = NaN
+        end
+        Δ = isempty(l.abₛ) ? NaN : -(l.abₛ[end]...)
+        push!(d, (i=i, cnt=evalcount,
+                  steps=l.steps,
+                  Δ = Δ,
+                  residual=residual,
+                  result=result))
+
+    end
+    d
+end
+
+function get_stats(M; kwargs...)
+    d = DataFrame(fn=Int[], i=Int[], cnt=Int[], steps=Int[],
+                  Δ=Float64[], residual=Float64[], result=Float64[])
+    for (j,fn) ∈ enumerate(known_functions)
+        dⱼ = run_test(fn, M; kwargs...)
+        dⱼ.fn .= j
+        append!(d, dⱼ)
+    end
+    d = transform(d, 5:7 => ByRow((Δ,ϵ,a) -> min(abs(a)^(-1)*abs(Δ), abs(ϵ))) => :min)
+end
+
+# used to test BracketedHalley
+# function rt(f, M)
+#     for i in 1:length(f.params)
+#         p = f.params[i]
+#         fn = x ->f.val(p,x)
+#         try
+#             x = find_zero((fn, fn', fn''), f.bracket(p), M)#; atol=0.0, rtol=0.0)
+#                    @show x, fn(x)
+#         catch err
+#             @show :err
+#         end
+#     end
+# end
+
 avg(x) = sum(x) / length(x)
 
 @testset "bracketing methods" begin
