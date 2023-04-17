@@ -42,7 +42,7 @@ specification of a method. These include:
 
 * There are methods that require a derivative or two: `Roots.Newton`,
   `Roots.Halley` are classical ones, `Roots.QuadraticInverse`,
-  `Roots.ChebyshevLike`, `Roots.SuperHaller` are others.
+  `Roots.ChebyshevLike`, `Roots.SuperHalley` are others.
   `Roots.Schroder` provides a quadratic method, like Newton's method,
   which is independent of the multiplicity of the zero. The
   `Roots.ThukralXB`, `X=2`, `3`, `4`, or `5` are also multiplicity
@@ -56,7 +56,7 @@ specification of a method. These include:
 
 Consider  the polynomial   function  ``f(x) = x^5 - x + 1/2``. As a polynomial,  its roots, or  zeros, could  be identified with the  `roots` function of  the `Polynomials` package. However, even  that function uses a numeric method to identify   the values, as no  solution with radicals is available. That is, even for polynomials, non-linear root finders are needed to solve ``f(x)=0``. (Though polynomial root-finders can exploit certain properties not available for general non-linear functions.)
 
-The `Roots` package provides a variety of algorithms for this  task. In this overview, only the  default ones  are illustrated.
+The `Roots` package provides a variety of algorithms for this  task. In this quick overview, only the  default ones  are illustrated.
 
 For  the function ``f(x) = x^5 - x + 1/2`` a simple plot will show a zero  somewhere between ``-1.2`` and ``-1.0`` and two zeros near ``0.6``.
 

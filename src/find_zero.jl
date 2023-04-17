@@ -400,7 +400,7 @@ julia> fx = ZeroProblem(f, 1)
 ZeroProblem{typeof(f), Int64}(f, 1)
 
 julia> solve(fx; p=1/2)  # log(2)
-0.6931471805599453
+0.6931471805599454
 ```
 
 This would be recommended, as there is no recompilation due to the function changing.
