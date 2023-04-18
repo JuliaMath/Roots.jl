@@ -278,7 +278,8 @@ The asymptotic efficiency index, ``q^{1/k}``, is ``(2 + 7^{1/2})^{1/3} = 1.6686.
 Originally by John Travers.
 
 !!! note
-   The paper refenced above shows that for a continuously differentiable ``f`` over ``[a,b]`` with a simple root  the algorithm terminates at a zero or asymptotically the steps are of the inverse cubic type (Lemma 5.1). This is proved under an assumption that ``f`` is four-times continuously differentiable.
+
+    The paper refenced above shows that for a continuously differentiable ``f`` over ``[a,b]`` with a simple root  the algorithm terminates at a zero or asymptotically the steps are of the inverse cubic type (Lemma 5.1). This is proved under an assumption that ``f`` is four-times continuously differentiable.
 
 """
 const A42 = A57{2}

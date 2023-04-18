@@ -266,6 +266,13 @@ The algorithm is derived from one in a
     Bisection, on the other hand, only will look for a zero if the two endpoints have different signs,
     a much more rigid condition for a potential zero.
 
+!!! note "`IntervalRootFinding` extension"
+    As of version `1.9` an extension is provided so that when the `IntervalRootFinding` package is loaded,
+    the `find_zeros` function will call `IntervalRootFinding.roots` to find the isolating brackets and
+    `find_zero` to find the roots, when possible, **if** the interval is specified as an `Interval` object,
+    as created by `-1..1`, say.
+
+
 For example, this function (due to `@truculentmath`) is particularly tricky, as it is positive at every floating point number, but has two zeros (the vertical asymptote at `15//11` is only negative within adjacent floating point values):
 
 ```
