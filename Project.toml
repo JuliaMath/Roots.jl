@@ -16,11 +16,6 @@ IntervalRootFinding = "0.5"
 Setfield = "0.7, 0.8, 1"
 julia = "1.0"
 
-
-[weakdeps]
-ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
-IntervalRootFinding = "d2bf35a9-74e0-55ec-b149-d360ff49b807"
-
 [extensions]
 RootsForwardDiffExt = "ForwardDiff"
 RootsIntervalRootFindingExt = "IntervalRootFinding"
