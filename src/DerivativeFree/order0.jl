@@ -36,3 +36,5 @@ function init(
     p = p′ === nothing ? p : p′
     init(𝑭𝑿, Secant(), AlefeldPotraShi(); p=p, verbose=verbose, tracks=tracks, kwargs...)
 end
+
+init(::ZeroProblem, ::Order0, ::AbstractBracketingMethod; kwargs...) = throw(ArgumentError("No bracketing method specified with Order0"))

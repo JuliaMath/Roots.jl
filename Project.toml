@@ -8,12 +8,6 @@ CommonSolve = "38540f10-b2f7-11e9-35d8-d573e4eb0ff2"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Setfield = "efcf1570-3423-57d1-acb7-fd33fddbac46"
 
-[weakdeps]
-ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
-
-[extensions]
-RootsForwardDiffExt = "ForwardDiff"
-
 [compat]
 ChainRulesCore = "1"
 CommonSolve = "0.1, 0.2"
@@ -21,7 +15,11 @@ ForwardDiff = "0.10"
 Setfield = "0.7, 0.8, 1"
 julia = "1.0"
 
+[extensions]
+RootsForwardDiffExt = "ForwardDiff"
+
 [extras]
+Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 ChainRulesTestUtils = "cdddcdb0-9152-4a09-a978-84456f9df70a"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
@@ -34,4 +32,7 @@ Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [targets]
-test = ["ChainRulesTestUtils", "JSON", "SpecialFunctions", "Statistics", "Test", "BenchmarkTools", "ForwardDiff", "Polynomials", "Unitful", "Zygote"]
+test = ["Aqua", "ChainRulesTestUtils", "JSON", "SpecialFunctions", "Statistics", "Test", "BenchmarkTools", "ForwardDiff", "Polynomials", "Unitful", "Zygote"]
+
+[weakdeps]
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"

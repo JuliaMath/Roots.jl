@@ -144,13 +144,13 @@ evalf(::Callable_Function, x, i) = throw(
     ),
 )
 
-function init_state(L::LithBoonkkampIJzerman{S,0}, F, x) where {S}
+function init_state(L::LithBoonkkampIJzerman{S,0}, F::Callable_Function, x) where {S}
     x₀, x₁ = x₀x₁(x)
     fx₀, fx₁ = evalf(F, x₀, 1), evalf(F, x₁, 1)
     state = init_state(L, F, x₀, x₁, fx₀, fx₁)
 end
 
-function init_state(L::LithBoonkkampIJzerman{S,D}, F, x) where {S,D}
+function init_state(L::LithBoonkkampIJzerman{S,D}, F::Callable_Function, x) where {S,D}
     x₀ = float(first(x))
     fx₀ = evalf(F, x₀, 1)
     state = init_state(L, F, nan(x₀), x₀, nan(fx₀), fx₀)
