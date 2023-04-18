@@ -31,7 +31,7 @@ found where either `f(c) == 0.0` or  `f(prevfloat(c)) * f(c) < 0` or
 `f(c) * f(nextfloat(c)) < 0`.
 
 To illustrate, consider the function $f(x) = \cos(x) - x$. From trigonometry
- we can see readily infer that $[0,\pi/2]$ is a bracket.
+ we can see readily that $[0,\pi/2]$ is a bracket.
 
 The `Roots` package includes the bisection algorithm through
 `find_zero`. We use a structure for which `extrema` returns `(a,b)`
@@ -51,7 +51,7 @@ julia> x, f(x)
 For this function we see that `f(x)` is `0.0`.
 
 
-Functions may be parameterized. The following is a similar function as above, still having ``(0, \pi/2)`` as  bracket for ``p>0``. By passing in values of `p` to `find_zero`, different, related problems may be solved.
+Functions may be parameterized. The following is a similar function as above, still having ``(0, \pi/2)`` as a bracket when ``p>0``. By passing in values of `p` to `find_zero`, different, related problems may be solved.
 
 ```jldoctest roots
 julia> g(x, p=1) = cos(x) - x/p;
@@ -64,6 +64,9 @@ julia> find_zero(g, x0, M) # as before, solve cos(x) - x = 0 using default p=1
 
 julia> find_zero(g, x0, M; p=2) # solves cos(x) - x/2 = 0
 1.0298665293222589
+
+julia> find_zero(g, x0, M, 2) # positional argument; useful with broadcasting
+1.0298665293222589
 ```
 
 
@@ -74,8 +77,8 @@ tells us that $[\pi/2, 3\pi/2]$ will be a bracket.  The calling
 pattern for `find_zero` is `find_zero(f, x0, M; kwargs...)`, where
 `kwargs` can specify details about parameters for the problem or
 tolerances for the solver.  In this call `Bisection()` is not
-specified, as it will be the default when the initial value is
-specified as a pair of numbers:
+specified, as it will be the default (as the  initial value is
+not specified as a number is over `Float64` values:
 
 ```jldoctest roots
 julia> f(x) = sin(x);
@@ -143,8 +146,8 @@ julia> find_zero(sin, (3,4), A42())
 
 By default, bisection will converge to machine tolerance. This may
 provide more accuracy than desired. A tolerance may be specified to
-terminate early, thereby utilizing fewer resources. For example, this
-uses ``4`` steps to reach accuracy to $1/16$ (without specifying `xatol` it uses
+terminate early, thereby utilizing fewer resources. For example, the following
+``4`` steps to reach accuracy to $1/16$ (without specifying `xatol` it uses
 ``53`` steps):
 
 ```jldoctest roots
@@ -158,9 +161,10 @@ julia> rt - pi
 
 ## Non-bracketing problems
 
-Bracketing methods have guaranteed convergence, but in general may require
-many more function calls than are otherwise needed to produce an answer.  If a
-good initial guess is known, then the `find_zero` function provides an
+Bracketing methods have guaranteed convergence, but in general may
+require many more function calls than are otherwise needed to produce
+an answer and not all zeros of a function are bracketed.  If a good
+initial guess is known, then the `find_zero` function provides an
 interface to some different iterative algorithms that are more
 efficient. Unlike bracketing methods, these algorithms may not
 converge to the desired root if the initial guess is not well chosen.
@@ -221,7 +225,7 @@ algorithms `Order1` (secant method), `Order2`
 ([Steffensen](http://en.wikipedia.org/wiki/Steffensen's_method)),
 `Order5`, `Order8`, and `Order16`. The order 1 or 2 methods are
 generally quite efficient in terms of steps needed over floating point
-values. The even higher order ones are potentially useful when more
+values. The even-higher-order ones are potentially useful when more
 precision is used. These algorithms are accessed by specifying the
 method after the initial starting point:
 
@@ -259,7 +263,7 @@ julia> x, f(x)
 
 ```
 
-Starting at ``2`` converges to ``1``, showing that zeros need not be simple zeros to be found.
+Starting at ``2`` the algorithm converges to ``1``, showing that zeros need not be simple zeros to be found.
 A simple zero, $c$, has $f(x) = (x-c) \cdot g(x)$ where $g(c) \neq 0$.
 Generally speaking, non-simple zeros are
 expected to take many more function calls, as the methods are no
@@ -1124,17 +1128,20 @@ julia> [find_zero(f, (interval(u).lo, interval(u).hi)) for u ∈ rts if u.status
  -1.082042132760718
 ```
 
+!!! note "`IntervalRootFinding` extension"
+    As of version `1.9` an extension is provided so that when the `IntervalRootFinding` package is loaded, the `find_zeros` function will call `IntervalRootFinding.roots` to find the isolating brackets and `find_zero` to find the roots, when possible, **if** the interval is specified as an `Interval` object, as created by `-1..1`, say.
+
 
 ## Adding a solver
 
 To add a solver the minimum needed is a type to declare the solver and an `update_state` method. In this example, we also define a state object, as the algorithm, as employed, uses more values stored than the default.
 
-The [Wikipedia](https://en.wikipedia.org/wiki/Brent%27s_method) page for Brent's method suggest a modern improvement, Chandrapatla's method, described [here](https://www.google.com/books/edition/Computational_Physics/cC-8BAAAQBAJ?hl=en&gbpv=1&pg=PA95&printsec=frontcover). The algorithm there is mostly followed below. This is from the implementation of `Roots.Chandrapatla`.
+The [Wikipedia](https://en.wikipedia.org/wiki/Brent%27s_method) page for Brent's method suggest a modern improvement, Chandrapatla's method, described [here](https://www.google.com/books/edition/Computational_Physics/cC-8BAAAQBAJ?hl=en&gbpv=1&pg=PA95&printsec=frontcover). That description is mostly followed below and in the package implementation `Roots.Chandrapatla`.
 
 To implement Chandrapatla's algorithm we first define a type to indicate the method and a state object which records the values ``x_n``, ``x_{n-1}``, and ``x_{n-2}``, needed for the inverse quadratic step.
 
 ```julia
-julia> struct Chandrapatla <: Roots.AbstractAcceleratedBisection end
+julia> struct Chandrapatla <: Roots.AbstractBracketingMethod end
 
 julia> struct ChandrapatlaState{T,S} <: Roots.AbstractUnivariateZeroState{T,S}
     xn1::T

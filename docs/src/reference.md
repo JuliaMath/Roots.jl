@@ -135,6 +135,9 @@ Roots.Ridders
 Roots.ITP
 FalsePosition
 Roots.LithBoonkkampIJzermanBracket
+Roots.BracketedHalley
+Roots.BracketedChebyshev
+Roots.BracketedSchroder
 ```
 
 ## Non-simple zeros

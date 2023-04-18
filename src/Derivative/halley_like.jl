@@ -59,9 +59,11 @@ end
 """
     Roots.Halley()
 
-Implements Halley's [method](http://tinyurl.com/yd83eytb),
-`xᵢ₊₁ = xᵢ - (f/f')(xᵢ) * (1 - (f/f')(xᵢ) * (f''/f')(xᵢ) * 1/2)^(-1)`
-This method is cubically converging, it requires ``3`` function calls per step.
+Implements Halley's [method](http://tinyurl.com/yd83eytb), `xᵢ₊₁ = xᵢ
+- (f/f')(xᵢ) * (1 - (f/f')(xᵢ) * (f''/f')(xᵢ) * 1/2)^(-1)` This method
+is cubically converging, it requires ``3`` function calls per
+step. Halley's method finds `xₙ₊₁` as the zero of a hyperbola at the
+point `(xₙ, f(xₙ))` matching the first and second derivatives of `f`.
 
 The function, its derivative and second derivative can be passed either as a tuple of ``3`` functions *or*
 as a function returning values for ``(f, f/f', f'/f'')``, which could be useful when function evaluations are expensive.
@@ -193,6 +195,12 @@ calculateΔ(::Schroder, r1, r2) = r2 / (r2 - r1) * r1
 ## Bracketed versions of Halley and Chebyshev using Alefeld, Potra, Shi approach
 ## calculateΔ has *different* calling pattern
 ## May take more steps and function evaluations, but should always converge
+
+"""
+    BracketedHalley
+
+For a bracket `[a,b]`, uses the [`Roots.Halley`](@ref) method starting at the `x` value for which `fa` or `fb` is closest to `0`. Uses the [`Roots.AbstractAlefeldPotraShi`](@ref) framework to enforce the bracketing, taking an additional double secant step each time.
+"""
 struct BracketedHalley <: AbstractAlefeldPotraShi end
 fn_argout(::BracketedHalley) = 3
 fncalls_per_step(::BracketedHalley) = 3
@@ -205,6 +213,11 @@ function calculateΔ(::BracketedHalley, F::Callable_Function, c, ps)
     d, ps
 end
 
+"""
+    BracketedChebyshev
+
+For a bracket `[a,b]`, uses the [`Roots.Chebyshev`](@ref) method starting at the `x` value for which `fa` or `fb` is closest to `0`. Uses the [`Roots.AbstractAlefeldPotraShi`](@ref) framework to enforce the bracketing, taking an additional double secant step each time.
+"""
 struct BracketedChebyshev <: AbstractAlefeldPotraShi end
 fn_argout(::BracketedChebyshev) = 3
 fncalls_per_step(::BracketedChebyshev) = 3
@@ -212,6 +225,24 @@ function calculateΔ(::BracketedChebyshev, F::Callable_Function, c, ps)
     a, b = ps.a, ps.a
     fc, (Δ, Δ₂) = F(c)
     d = calculateΔ(QuadraticInverse(), Δ, Δ₂)
+    !(a <= c-d <= b) && (d = Δ)        # Newton
+    d, ps
+end
+
+"""
+    BracketedSchroder
+
+For a bracket `[a,b]`, uses the [`Roots.Schroder`](@ref) method starting at the `x` value for which `fa` or `fb` is closest to `0`. Uses the [`Roots.AbstractAlefeldPotraShi`](@ref) framework to enforce the bracketing, taking an additional double secant step each time.
+"""
+struct BracketedSchroder <: AbstractAlefeldPotraShi end
+fn_argout(::BracketedSchroder) = 3
+fncalls_per_step(::BracketedSchroder) = 3
+function calculateΔ(::BracketedSchroder, F::Callable_Function, c, ps)
+    a, b = ps.a, ps.b
+
+
+    fc, (Δ, Δ₂) = F(c)
+    d = calculateΔ(Schroder(), Δ, Δ₂)
     !(a <= c-d <= b) && (d = Δ)        # Newton
     d, ps
 end
