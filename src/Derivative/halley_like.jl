@@ -59,7 +59,7 @@ end
 """
     Roots.Halley()
 
-Implements Halley's [method](http://tinyurl.com/yd83eytb), `xᵢ₊₁ = xᵢ
+Implements Halley's [method](https://en.wikipedia.org/wiki/Halley%27s_method), `xᵢ₊₁ = xᵢ
 - (f/f')(xᵢ) * (1 - (f/f')(xᵢ) * (f''/f')(xᵢ) * 1/2)^(-1)` This method
 is cubically converging, it requires ``3`` function calls per
 step. Halley's method finds `xₙ₊₁` as the zero of a hyperbola at the
