@@ -209,7 +209,7 @@ function calculateΔ(::BracketedHalley, F::Callable_Function, c, ps)
 
     fc, (Δ, Δ₂) = F(c)
     d = calculateΔ(Halley(), Δ, Δ₂)
-    !(a <= c-d <= b) && (d = Δ)        # Newton
+    !(a <= c - d <= b) && (d = Δ)        # Newton
     d, ps
 end
 
@@ -225,7 +225,7 @@ function calculateΔ(::BracketedChebyshev, F::Callable_Function, c, ps)
     a, b = ps.a, ps.a
     fc, (Δ, Δ₂) = F(c)
     d = calculateΔ(QuadraticInverse(), Δ, Δ₂)
-    !(a <= c-d <= b) && (d = Δ)        # Newton
+    !(a <= c - d <= b) && (d = Δ)        # Newton
     d, ps
 end
 
@@ -240,9 +240,8 @@ fncalls_per_step(::BracketedSchroder) = 3
 function calculateΔ(::BracketedSchroder, F::Callable_Function, c, ps)
     a, b = ps.a, ps.b
 
-
     fc, (Δ, Δ₂) = F(c)
     d = calculateΔ(Schroder(), Δ, Δ₂)
-    !(a <= c-d <= b) && (d = Δ)        # Newton
+    !(a <= c - d <= b) && (d = Δ)        # Newton
     d, ps
 end

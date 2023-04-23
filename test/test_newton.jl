@@ -82,11 +82,10 @@ end
     fp(x) = 5x^4 - 1
     fpp(x) = 20x^3
 
-    for M ∈ (Roots.BracketedHalley(), Roots.BracketedChebyshev())
-        @test find_zero((f,fp,fpp), (1, 2), M) ≈ α
+    for M in (Roots.BracketedHalley(), Roots.BracketedChebyshev())
+        @test find_zero((f, fp, fpp), (1, 2), M) ≈ α
     end
 end
-
 
 @testset "Lith Boonkkamp IJzerman methods" begin
     x₀, x̃₀, α = 1.0, 1.1, 1.1673039782614187
