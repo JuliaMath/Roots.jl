@@ -234,9 +234,9 @@ In `decide_convergence`, stopped values (and `:x_converged` when `strict=false`)
 """
 function assess_convergence(M::Any, state::AbstractUnivariateZeroState, options)
     # return convergence_flag, boolean
+    is_exact_zero_f(M, state, options) && return (:exact_zero, true)
     isnan_f(M, state) && return (:nan, true)
     isinf_f(M, state) && return (:inf, true)
-    is_exact_zero_f(M, state, options) && return (:exact_zero, true)
     is_approx_zero_f(M, state, options) && return (:f_converged, true)
     iszero_Δx(M, state, options) && return (:x_converged, true)
     return (:not_converged, false)
@@ -249,12 +249,9 @@ function assess_convergence(
     options::Union{ExactOptions,FExactOptions},
 )
 
-    #    isnan_f(M, state) && return (:nan, true)
-    #    is_exact_zero_f(M, state, options) &&  return (:exact_zero, true)
-    #    iszero_Δx(M, state, options) && return (:x_converged, true)
-
-    (isnan(state.fxn1) || isnan(state.fxn0)) && return (:nan, true)
     (iszero(state.fxn1) || iszero(state.fxn0)) && return (:exact_zero, true)
+    (isnan(state.fxn1) || isnan(state.fxn0)) && return (:nan, true)
+
 
     a, b, fa, fb = state.xn0, state.xn1, state.fxn0, state.fxn1
     u, fu = choose_smallest(a, b, fa, fb)
@@ -318,8 +315,21 @@ function decide_convergence(
     a, b = state.xn0, state.xn1
     fa, fb = state.fxn0, state.fxn1
 
+    iszero(fa) && return a
+    iszero(fb) && return b
     isnan(fa) && return a
     isnan(fb) && return b
+
+    # get as close as possible with one extra function call when closeness
+    # is requested
+    if b <= nextfloat(nextfloat(a))
+        c = nextfloat(a)
+        fc = first(F(c))
+        m = minimum(abs, (fa,fb,fc))
+        abs(fc) == m && return c
+        abs(fa) == m && return a
+        return b
+    end
 
     abs(fa) < abs(fb) ? a : b
 end
