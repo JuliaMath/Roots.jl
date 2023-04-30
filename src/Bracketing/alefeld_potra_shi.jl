@@ -58,7 +58,7 @@ function init_state(::AbstractAlefeldPotraShi, F, x₀, x₁, fx₀, fx₁;
     end
 
     if c === nothing # need c, fc to be defined if one is
-        c = a < zero(a) < b ?  _middle(a,b) : secant_step(a,b,fa,fb)
+        c = a < zero(a) < b ?  _middle(a,b) : first(guarded_secant_step(a,b,fa,fb))
         fc= first(F(c))
     end
 
