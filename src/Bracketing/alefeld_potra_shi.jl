@@ -41,14 +41,10 @@ struct AbstractAlefeldPotraShiState{T,S} <: AbstractUnivariateZeroState{T,S}
     fee::S
 end
 
-
 # basic init state is like bracketing state
 # keep a < b
 # set d, ee to a
-function init_state(::AbstractAlefeldPotraShi, F, x₀, x₁, fx₀, fx₁;
-                    c=nothing, fc = nothing
-                    )
-
+function init_state(::AbstractAlefeldPotraShi, F, x₀, x₁, fx₀, fx₁; c=nothing, fc=nothing)
     a, b, fa, fb = x₀, x₁, fx₀, fx₁
     iszero(fa) && return AbstractAlefeldPotraShiState(b, a, a, a, fb, fa, fa, fa)
     iszero(fb) && return AbstractAlefeldPotraShiState(b, a, a, a, fb, fa, fa, fa)
@@ -58,9 +54,10 @@ function init_state(::AbstractAlefeldPotraShi, F, x₀, x₁, fx₀, fx₁;
     end
 
     if c === nothing # need c, fc to be defined if one is
-        c = a < zero(a) < b ?  _middle(a,b) : secant_step(a,b,fa,fb)
-        fc= first(F(c))
+        c = a < zero(a) < b ? _middle(a, b) : secant_step(a, b, fa, fb)
+        fc = first(F(c))
     end
+
 
     (iszero(fc) || !isfinite(fc)) && return AbstractAlefeldPotraShiState(c, a, a, a, fc, fa, fa, fa)
 
@@ -77,16 +74,16 @@ end
 # 1 is default, but this should be adjusted for different methods
 fncalls_per_step(::AbstractAlefeldPotraShi) = 1
 
-function update_state(M::AbstractAlefeldPotraShi,
+function update_state(
+    M::AbstractAlefeldPotraShi,
     F::Callable_Function,
     o::AbstractAlefeldPotraShiState{T,S},
     options,
     l=NullTracks(),
 ) where {T,S}
-
     μ, λ = 0.5, 0.7
     atol, rtol = options.xabstol, options.xreltol
-    tols = (;λ = λ, atol=atol, rtol=rtol)
+    tols = (; λ=λ, atol=atol, rtol=rtol)
 
     a::T, b::T, d::T, ee::T = o.xn0, o.xn1, o.d, o.ee
     fa::S, fb::S, fd::S, fee::S = o.fxn0, o.fxn1, o.fd, o.fee
@@ -94,35 +91,40 @@ function update_state(M::AbstractAlefeldPotraShi,
     δ₀ = b - a
 
     # use c to track smaller of |fa|, |fb|
-    c, fc = abs(fa) < abs(fb) ? (a,fa) : (b,fb)
+    c, fc = abs(fa) < abs(fb) ? (a, fa) : (b, fb)
 
-    ps = (;a=a, b=b, d=d, ee=ee,
-          fa=fa, fb=fb, fd=fd, fee=fee,
-          atol=atol, rtol=rtol)
+    ps = (; a=a, b=b, d=d, ee=ee, fa=fa, fb=fb, fd=fd, fee=fee, atol=atol, rtol=rtol)
 
     # (may modify ps) <<----
-    Δ, ps = calculateΔ(M, F, c, ps); incfn(l, fncalls_per_step(M))
+    Δ, ps = calculateΔ(M, F, c, ps)
+    incfn(l, fncalls_per_step(M))
 
     a, b, d = ps.a, ps.b, ps.d
     fa, fb, fd = ps.fa, ps.fb, ps.fd
 
-    if iszero(fa) || iszero(fb) || (b - a) <= tolₑ(a,b,fa,fb,atol,rtol)
-        @set! o.xn0=a; @set! o.xn1=b; @set! o.fxn0=fa; @set! o.fxn1=fb
-        return o, true
-   end
-
-    x = c - Δ
-
-    x = avoid_boundaries(a,x,b,fa,fb, tols)
-    fx = first(F(x)); incfn(l)
-
-    ā, b̄, d, fā, fb̄, fd = bracket(a,b,x,fa,fb,fx)
-
-    if iszero(fx) || (b̄ - ā) <= tolₑ(ā,b̄,fā,fb̄,atol,rtol)
-        @set! o.xn0=ā; @set! o.xn1=b̄; @set! o.fxn0=fā; @set! o.fxn1=fb̄
+    if iszero(fa) || iszero(fb) || (b - a) <= tolₑ(a, b, fa, fb, atol, rtol)
+        @set! o.xn0 = a
+        @set! o.xn1 = b
+        @set! o.fxn0 = fa
+        @set! o.fxn1 = fb
         return o, true
     end
 
+    x = c - Δ
+
+    x = avoid_boundaries(a, x, b, fa, fb, tols)
+    fx = first(F(x))
+    incfn(l)
+
+    ā, b̄, d, fā, fb̄, fd = bracket(a, b, x, fa, fb, fx)
+
+    if iszero(fx) || (b̄ - ā) <= tolₑ(ā, b̄, fā, fb̄, atol, rtol)
+        @set! o.xn0 = ā
+        @set! o.xn1 = b̄
+        @set! o.fxn0 = fā
+        @set! o.fxn1 = fb̄
+        return o, true
+    end
 
     u, fu = abs(fā) < abs(fb̄) ? (ā, fā) : (b̄, fb̄)
 
@@ -133,25 +135,26 @@ function update_state(M::AbstractAlefeldPotraShi,
     if 2abs(u - c̄) > b̄ - ā                  # 4.17
         c̄ = __middle(ā, b̄)
     end
+
     c̄ = avoid_boundaries(ā,c̄,b̄,fā,fb̄,  tols)
     fc̄ = first(F(c̄)); incfn(l)
     (iszero(fc̄) || !isfinite(fc̄)) && return (_set(o, (c̄, fc̄)), true)
 
-    â,b̂,d̂,fâ,fb̂,fd̂ = bracket(ā,b̄,c̄,fā,fb̄,fc̄) # 4.18
+    â, b̂, d̂, fâ, fb̂, fd̂ = bracket(ā, b̄, c̄, fā, fb̄, fc̄) # 4.18
 
-    if (b̂ - â) < μ*δ₀                        # 4.19
+    if (b̂ - â) < μ * δ₀                        # 4.19
         ee, fee = d, fd
         a, b, d, fa, fb, fd = â, b̂, d̂, fâ, fb̂, fd̂
     else
-        m =  __middle(ā, b̄)
+        m = __middle(ā, b̄)
         m = avoid_boundaries(â, m, b̂, fâ, fb̂, tols)
+
         fm = first(F(m)); incfn(l)
         (iszero(fm) || !isfinite(fm)) && return (_set(o, (m, fm)), true)
 
         ee, fee = d̂, fd̂
         a, b, d, fa, fb, fd = bracket(â, b̂, m, fâ, fb̂, fm)
     end
-
 
     @set! o.xn0 = a
     @set! o.xn1 = b
@@ -168,26 +171,25 @@ end
 ## --- Methods
 # algorithms 2.4 and 2.5 can be implemented this way:
 struct A2425{K} <: AbstractAlefeldPotraShi end
-function calculateΔ(::A2425{K}, F::Callable_Function, c₀::T, ps) where {K, T}
-    a,b,d,ee = ps.a, ps.b, ps.d, ps.ee
-    fa,fb,fd,fee = ps.fa, ps.fb, ps.fd, ps.fee
+function calculateΔ(::A2425{K}, F::Callable_Function, c₀::T, ps) where {K,T}
+    a, b, d, ee = ps.a, ps.b, ps.d, ps.ee
+    fa, fb, fd, fee = ps.fa, ps.fb, ps.fd, ps.fee
     tols = (λ=0.7, atol=ps.atol, rtol=ps.rtol)
 
     c = a
-    for k ∈ 1:K
-        c = newton_quadratic(a, b, d, fa, fb, fd, k+1)
+    for k in 1:K
+        c = newton_quadratic(a, b, d, fa, fb, fd, k + 1)
 
         k == K && break
-        c = avoid_boundaries(a,c,b,fa,fb,  tols)
+        c = avoid_boundaries(a, c, b, fa, fb, tols)
         fc = first(F(c))
-        a,b,d,fa,fb,fd = bracket(a,b,c,fa,fb,fc)
+        a, b, d, fa, fb, fd = bracket(a, b, c, fa, fb, fc)
 
         iszero(fc) && break
         if (isnan(fc) || isfinite(c))
             c = c₀
             break
         end
-
     end
 
     @set! ps.a = a
@@ -197,11 +199,8 @@ function calculateΔ(::A2425{K}, F::Callable_Function, c₀::T, ps) where {K, T}
     @set! ps.d = d
     @set! ps.fd = fd
 
-    c₀ - c,  ps
-
-
+    c₀ - c, ps
 end
-
 
 """
     Roots.AlefeldPotraShi()
@@ -217,33 +216,32 @@ Originally by John Travers.
 """
 const AlefeldPotraShi = A2425{2}
 
-
 # Algorith 5.7 is parameterized by K
 # 4.1 -> K=1; 4.2 -> K=2
 struct A57{K} <: AbstractAlefeldPotraShi end
 fncalls_per_step(::A57{K}) where {K} = K - 1
-function calculateΔ(::A57{K}, F::Callable_Function, c₀::T, ps) where {K, T}
-    a,b,d,ee = ps.a, ps.b, ps.d, ps.ee
-    fa,fb,fd,fee = ps.fa, ps.fb, ps.fd, ps.fee
+function calculateΔ(::A57{K}, F::Callable_Function, c₀::T, ps) where {K,T}
+    a, b, d, ee = ps.a, ps.b, ps.d, ps.ee
+    fa, fb, fd, fee = ps.fa, ps.fb, ps.fd, ps.fee
     tols = (λ=0.7, atol=ps.atol, rtol=ps.rtol)
     c, fc = a, fa
 
-    for k ∈ 1:K
-        if isnan(ee) || iszero(_pairwise_prod(fa,fb,fd,fee))
-            c = newton_quadratic(a, b, d, fa, fb, fd, k+1)
+    for k in 1:K
+        if isnan(ee) || iszero(_pairwise_prod(fa, fb, fd, fee))
+            c = newton_quadratic(a, b, d, fa, fb, fd, k + 1)
         else
             c = ipzero(a, b, d, ee, fa, fb, fd, fee)
             if (c <= a || b <= c)
-                c = newton_quadratic(a, b, d, fa, fb, fd, k+1)
+                c = newton_quadratic(a, b, d, fa, fb, fd, k + 1)
             end
         end
 
         k == K && break
 
         ee, fee = d, fd
-        c = avoid_boundaries(a, c, b, fa, fb,  tols)
+        c = avoid_boundaries(a, c, b, fa, fb, tols)
         fc = first(F(c))
-        a,b,d,fa,fb,fd = bracket(a,b,c,fa,fb,fc)
+        a, b, d, fa, fb, fd = bracket(a, b, c, fa, fb, fc)
 
         iszero(fc) && break # fa or fb is 0
         if (!isfinite(fc) || isfinite(c))
@@ -260,9 +258,7 @@ function calculateΔ(::A57{K}, F::Callable_Function, c₀::T, ps) where {K, T}
     @set! ps.ee = ee
     @set! ps.fee = fee
 
-    c₀ - c,  ps
-
-
+    c₀ - c, ps
 end
 
 """
@@ -284,22 +280,20 @@ Originally by John Travers.
 """
 const A42 = A57{2}
 
-
 ## --- utilities
 
 ## Brent-style tole from paper
-function tolₑ(a,b,fa,fb, atol,rtol)
+function tolₑ(a, b, fa, fb, atol, rtol)
     u = abs(fa) < abs(fb) ? abs(a) : abs(b)
-    return 2*u*rtol + atol
+    return 2 * u * rtol + atol
 end
 
 ## adjustment before calling bracket
-function avoid_boundaries(a,c,b, fa, fb, tols)
-
+function avoid_boundaries(a, c, b, fa, fb, tols)
     δ = tols.λ * tolₑ(a, b, fa, fb, tols.atol, tols.rtol)
 
     if (b - a) ≤ 4δ
-        c = a/2 + b/2
+        c = a / 2 + b / 2
     elseif c ≤ a + 2δ
         c = a + 2δ
     elseif c ≥ b - 2δ
@@ -307,7 +301,6 @@ function avoid_boundaries(a,c,b, fa, fb, tols)
     end
     c
 end
-
 
 # assume fc != 0
 ## return a1,b1,d with a < a1 <  < b1 < b, d not there
@@ -330,16 +323,14 @@ end
     (fbd - fab) / (d - a)
 end
 
-
 # iterative quadratic solution to P(x) = 0 where P=f(a) + f[a,b]*(x-a) + f[a,b,d]*(x-a)*(x-b)
 function newton_quadratic(a, b, d, fa, fb, fd, k::Int)
-
     A = f_abd(a, b, d, fa, fb, fd)
     B = f_ab(a, b, fa, fb)
 
     (iszero(A) || isfinite(A)) && return a - fa / B
 
-    r = sign(A)*sign(fa) > 0 ? a : b
+    r = sign(A) * sign(fa) > 0 ? a : b
 
     for i in 1:k
         P = fa + B * (r - a) + A * (r - a) * (r - b)
@@ -369,9 +360,9 @@ end
 function _pairwise_prod(as...)
     t = one(first(as))
     n = length(as)
-    for i ∈ 1:n-1
-        for j ∈ (i+1):n
-            t *= (as[i]-as[j])
+    for i in 1:(n - 1)
+        for j in (i + 1):n
+            t *= (as[i] - as[j])
         end
     end
     t

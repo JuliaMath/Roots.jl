@@ -11,7 +11,7 @@ end
 
     Roots.Newton()
 
-Implements Newton's [method](http://tinyurl.com/b4d7vls):
+Implements Newton's [method](https://en.wikipedia.org/wiki/Newton%27s_method):
 `xᵢ₊₁ =  xᵢ - f(xᵢ)/f'(xᵢ)`.  This is a quadratically convergent method requiring
 one derivative and two function calls per step.
 

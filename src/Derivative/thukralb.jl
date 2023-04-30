@@ -57,7 +57,15 @@ function init_state(M::AbstractThukralBMethod, F::Callable_Function, x)
     state = init_state(M, F, nan(x₁), x₁, nan(fx₁), fx₁; Δs=Δs)
 end
 
-function init_state(M::AbstractThukralBMethod, F, x₀::T, x₁::T, fx₀, fx₁; Δs=nothing) where {T}
+function init_state(
+    M::AbstractThukralBMethod,
+    F,
+    x₀::T,
+    x₁::T,
+    fx₀,
+    fx₁;
+    Δs=nothing,
+) where {T}
     ThukralBState(x₁, x₀, NTuple{fn_argout(M) - 1,T}(Δs), fx₁, fx₀)
 end
 
