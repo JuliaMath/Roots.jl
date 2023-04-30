@@ -211,11 +211,16 @@ function run_tests(method; verbose=false, trace=false, name=nothing, abandon=fal
 end
 
 ## Run a method on all known functions.
-function run_test(f, M; verbose=false, trace=false, name=nothing, abandon=false,
-                  kwargs...)
-    d = DataFrame(i=Int[], cnt=Int[], steps=Int[], Δ=Float64[],
-                  residual=Float64[], result=Float64[])
-    for (i,p) ∈ enumerate(f.params)
+function run_test(f, M; verbose=false, trace=false, name=nothing, abandon=false, kwargs...)
+    d = DataFrame(
+        i=Int[],
+        cnt=Int[],
+        steps=Int[],
+        Δ=Float64[],
+        residual=Float64[],
+        result=Float64[],
+    )
+    for (i, p) in enumerate(f.params)
         evalcount = 0
         function feval(x)
             evalcount += 1
@@ -233,25 +238,27 @@ function run_test(f, M; verbose=false, trace=false, name=nothing, abandon=false,
             residual = NaN
         end
         Δ = isempty(l.abₛ) ? NaN : -(l.abₛ[end]...)
-        push!(d, (i=i, cnt=evalcount,
-                  steps=l.steps,
-                  Δ = Δ,
-                  residual=residual,
-                  result=result))
-
+        push!(d, (i=i, cnt=evalcount, steps=l.steps, Δ=Δ, residual=residual, result=result))
     end
     d
 end
 
 function get_stats(M; kwargs...)
-    d = DataFrame(fn=Int[], i=Int[], cnt=Int[], steps=Int[],
-                  Δ=Float64[], residual=Float64[], result=Float64[])
-    for (j,fn) ∈ enumerate(known_functions)
+    d = DataFrame(
+        fn=Int[],
+        i=Int[],
+        cnt=Int[],
+        steps=Int[],
+        Δ=Float64[],
+        residual=Float64[],
+        result=Float64[],
+    )
+    for (j, fn) in enumerate(known_functions)
         dⱼ = run_test(fn, M; kwargs...)
         dⱼ.fn .= j
         append!(d, dⱼ)
     end
-    d = transform(d, 5:7 => ByRow((Δ,ϵ,a) -> min(abs(a)^(-1)*abs(Δ), abs(ϵ))) => :min)
+    d = transform(d, 5:7 => ByRow((Δ, ϵ, a) -> min(abs(a)^(-1) * abs(Δ), abs(ϵ))) => :min)
 end
 
 # used to test BracketedHalley
