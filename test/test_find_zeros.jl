@@ -120,6 +120,10 @@ end
 
     # test with zero function (Issue #339)
     @test_throws DomainError find_zeros(x -> 0, -2, 2)
+
+    # issue #369
+    g4(x) = sqrt(abs(x^2-1))/(x*sign(x^2-1))
+    @test isempty(find_zeros(g4, 1.1, 2))
 end
 
 @testset "find_zeros: not Float64 types" begin
