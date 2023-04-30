@@ -11,7 +11,6 @@ In the following, we will use  `ForwardDiff` to take derivatives.
 
 ```jldoctest roots
 julia> using Roots, ForwardDiff
-[ Info: Precompiling RootsForwardDiffExt [a63bd285-541a-50a0-818b-605bb84ce7b2]
 
 ```
 
