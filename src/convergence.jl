@@ -322,7 +322,7 @@ function decide_convergence(
 
     # get as close as possible with one extra function call when closeness
     # is requested
-    if b <= nextfloat(nextfloat(a))
+    if b == nextfloat(nextfloat(a))
         c = nextfloat(a)
         fc = first(F(c))
         m = minimum(abs, (fa,fb,fc))

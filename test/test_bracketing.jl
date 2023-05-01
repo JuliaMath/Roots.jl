@@ -420,4 +420,7 @@ end
         @test iszero(x)
         @test_throws ArgumentError find_zero(x -> sin(x), (2, 3)) # no bracket
     end
+
+    # last bit of accuracy, when close issue #368
+    @test find_zero(x -> sinpi(-1/40 + x / 40) + 1 - x, (0,2), A42()) == 1.0
 end
