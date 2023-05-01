@@ -108,7 +108,7 @@ will  identify discontinuities, not just zeros. For example:
 
 ```jldoctest roots
 julia> find_zero(x -> 1/x, (-1, 1))
--0.0
+0.0
 
 ```
 
