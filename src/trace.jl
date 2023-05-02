@@ -91,11 +91,10 @@ julia> find_zero(sin, (3, 4), Roots.A42(), tracks=tracker) ≈ π
 true
 
 julia> get(tracker)
-5-element Vector{NamedTuple{names, Tuple{Float64, Float64}} where names}:
+4-element Vector{NamedTuple{names, Tuple{Float64, Float64}} where names}:
  (a = 3.0, b = 4.0)
  (a = 3.0, b = 3.157162792479947)
- (a = 3.14154625558915, b = 3.1416390553287794)
- (a = 3.1415926535730327, b = 3.141592653606554)
+ (a = 3.141592614491745, b = 3.1415926926910007)
  (a = 3.141592653589793, b = 3.141592653589794)
 
 julia> last(tracker)
