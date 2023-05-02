@@ -186,7 +186,7 @@ function calculateΔ(::A2425{K}, F::Callable_Function, c₀::T, ps) where {K,T}
         a, b, d, fa, fb, fd = bracket(a, b, c, fa, fb, fc)
 
         iszero(fc) && break
-        if (isnan(fc) || isfinite(c))
+        if (isnan(fc) || !isfinite(c))
             c = c₀
             break
         end
@@ -244,7 +244,7 @@ function calculateΔ(::A57{K}, F::Callable_Function, c₀::T, ps) where {K,T}
         a, b, d, fa, fb, fd = bracket(a, b, c, fa, fb, fc)
 
         iszero(fc) && break # fa or fb is 0
-        if (!isfinite(fc) || isfinite(c))
+        if (!isfinite(fc) || !isfinite(c))
             c = c₀
             break
         end
@@ -328,7 +328,7 @@ function newton_quadratic(a, b, d, fa, fb, fd, k::Int)
     A = f_abd(a, b, d, fa, fb, fd)
     B = f_ab(a, b, fa, fb)
 
-    (iszero(A) || isfinite(A)) && return a - fa / B
+    (iszero(A) || !isfinite(A)) && return a - fa / B
 
     r = sign(A) * sign(fa) > 0 ? a : b
 
