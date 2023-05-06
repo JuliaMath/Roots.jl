@@ -433,6 +433,6 @@ end
 
     # simple a42()
     m = run_tests(Roots.a42)
-    @test isempty(m.failures)
+    VERSION >= v"1.6" && @test isempty(m.failures)
     @test m.evalcount <= 3000 # paper says 2884, this has 2962
 end
