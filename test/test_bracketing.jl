@@ -430,4 +430,9 @@ end
     xright = 3 * xleft
     x =find_zero(f, (xleft, xright))
     @test abs(f(x)) <= 2eps(BigFloat)
+
+    # simple a42()
+    m = run_tests(Roots.a42)
+    @test isempty(m.failures)
+    @test m.evalcount <= 3000 # paper says 2884, this has 2962
 end
