@@ -422,12 +422,12 @@ end
     end
 
     # last bit of accuracy, when close issue #368
-    @test find_zero(x -> sinpi(-1/40 + x / 40) + 1 - x, (0,2), A42()) == 1.0
+    @test find_zero(x -> sinpi(-1 / 40 + x / 40) + 1 - x, (0, 2), A42()) == 1.0
 
     # sloppy bug using isfinite (#373)
     f = x -> 1 - x / (x - 1)^2
     xleft = 1 + eps(BigFloat)
     xright = 3 * xleft
-    x =find_zero(f, (xleft, xright))
+    x = find_zero(f, (xleft, xright))
     @test abs(f(x)) <= 2eps(BigFloat)
 end
