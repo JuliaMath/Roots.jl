@@ -116,15 +116,14 @@ function a42(f, ab; atol=nothing, rtol=nothing, λ = 0.7, μ = 0.5)
     c = avoid_boundaries(a,c,b,fa,fb, tols)
 
     fc = f(c)
-
     iszero(fc) && return c
-
     e, fee = c, fc
     a, b, d, fa, fb, fd = bracket(a,b,c,fa,fb,fc)
+
     n = 2
     while true
         δ = tolₑ(a, b, fa, fb, tols.atol, tols.rtol)
-        (b-a) ≤ 2δ && return (abs(fa) < abs(fb) ? a : b)
+        (b-a) ≤ δ && return (abs(fa) < abs(fb) ? a : b)
 
 
         for k ∈ 1:2
@@ -143,23 +142,23 @@ function a42(f, ab; atol=nothing, rtol=nothing, λ = 0.7, μ = 0.5)
             c = avoid_boundaries(a,c,b,fa,fb, tols)
             fc = f(c)
             iszero(fc) && return c
-            δ = tolₑ(a, b, fa, fb, tols.atol, tols.rtol)
-            (b-a) ≤ 2δ && return (abs(fa) < abs(fb) ? a : b)
 
             ee, fee = d, fd
             a, b, d, fa, fb, fd = bracket(a,b,c,fa,fb,fc)
-
+            δ = tolₑ(a, b, fa, fb, tols.atol, tols.rtol)
+            (b-a) ≤ 2δ && return (abs(fa) < abs(fb) ? a : b)
+            n += 1
         end
 
         c = avoid_boundaries(a,c,b,fa,fb, tols)
         fc = f(c)
         iszero(fc) && return c
+
+        a, b, d, fa, fb, fd = bracket(a,b,c,fa,fb,fc)
         δ = tolₑ(a, b, fa, fb, tols.atol, tols.rtol)
         (b-a) ≤ 2δ && return (abs(fa) < abs(fb) ? a : b)
 
-        a, b, d, fa, fb, fd = bracket(a,b,c,fa,fb,fc)
-
-        u,fu =  abs(fa) < abs(fb) ? (a,fa) : (b,fb)
+        u, fu =  abs(fa) < abs(fb) ? (a,fa) : (b,fb)
         c = u - 2 * fu * (b-a) / (fb - fa)
 
         if 2abs(c-u) > (b - a)
@@ -169,11 +168,11 @@ function a42(f, ab; atol=nothing, rtol=nothing, λ = 0.7, μ = 0.5)
         c = avoid_boundaries(a,c,b,fa,fb, tols)
         fc = f(c)
         iszero(fc) && return c
-        δ = tolₑ(a, b, fa, fb, tols.atol, tols.rtol)
-        (b-a) ≤ 2δ && return (abs(fa) < abs(fb) ? a : b)
 
         ee, fee = d, fd
         a, b, d, fa, fb, fd = bracket(a,b,c,fa,fb,fc)
+        δ = tolₑ(a, b, fa, fb, tols.atol, tols.rtol)
+        (b-a) ≤ 2δ && return (abs(fa) < abs(fb) ? a : b)
 
         if (b-a) ≥ μ * δ₀
             c = a/2 + b/2
