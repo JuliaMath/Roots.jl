@@ -89,29 +89,72 @@ end
 
 @testset "Lith Boonkkamp IJzerman methods" begin
     x₀, x̃₀, α = 1.0, 1.1, 1.1673039782614187
-    f(x) = x^5 - x - 1
+    f(x,p = 1) = x^5 - x - p
     fp(x) = 5x^4 - 1
     fpp(x) = 20x^3
     fppp(x) = 60x
     fpppp(x) = 60
 
+    function fdf1(x,p = 1)
+        fx = f(x,p)
+        ∂fx = fp(x)
+        return fx,fx/∂fx
+    end
+
+    function fdf2(x,p = 1)
+        fx = f(x,p)
+        ∂fx = fp(x)
+        ∂2fx = fpp(x)
+        return fx,fx/∂fx,∂fx/∂2fx
+    end
+
+    function fdf3(x,p = 1)
+        fx = f(x,p)
+        ∂fx = fp(x)
+        ∂2fx = fpp(x)
+        ∂3fx = fppp(x)
+        return fx,fx/∂fx,∂fx/∂2fx,∂2fx/∂3fx
+    end
+
+    function fdf4(x,p = 1)
+        fx = f(x,p)
+        ∂fx = fp(x)
+        ∂2fx = fpp(x)
+        ∂3fx = fppp(x)
+        ∂4fx = fpppp(x)
+        return fx,fx/∂fx,∂fx/∂2fx,∂2fx/∂3fx,∂3fx/∂4fx
+    end
+
     @test solve(ZeroProblem((f,), x₀), Roots.LithBoonkkampIJzerman(3, 0)) ≈ α
     @test solve(ZeroProblem(f, x₀), Roots.LithBoonkkampIJzerman(3, 0)) ≈ α
     @test solve(ZeroProblem((f,), x₀), Roots.LithBoonkkampIJzerman(4, 0)) ≈ α
     @test solve(ZeroProblem(f, x₀), Roots.LithBoonkkampIJzerman(4, 0)) ≈ α
+    @test solve(ZeroProblem((f,), x₀), Roots.LithBoonkkampIJzerman(3, 0), 1) ≈ α
+    @test solve(ZeroProblem(f, x₀), Roots.LithBoonkkampIJzerman(3, 0), 1) ≈ α
 
     @test solve(ZeroProblem((f, fp), x₀), Roots.LithBoonkkampIJzerman(2, 1)) ≈ α
     @test solve(ZeroProblem((f, fp), x₀), Roots.LithBoonkkampIJzerman(3, 1)) ≈ α
+    @test solve(ZeroProblem(fdf1, x₀), Roots.LithBoonkkampIJzerman(2, 1)) ≈ α
+    @test solve(ZeroProblem(fdf1, x₀), Roots.LithBoonkkampIJzerman(2, 1), 1) ≈ α
 
     @test solve(ZeroProblem((f, fp, fpp), x₀), Roots.LithBoonkkampIJzerman(1, 2)) ≈ α
     @test solve(ZeroProblem((f, fp, fpp), x₀), Roots.LithBoonkkampIJzerman(2, 2)) ≈ α
+    @test solve(ZeroProblem(fdf2, x₀), Roots.LithBoonkkampIJzerman(1, 2)) ≈ α
+    @test solve(ZeroProblem(fdf2, x₀), Roots.LithBoonkkampIJzerman(1, 2), 1) ≈ α
 
     @test solve(ZeroProblem((f, fp, fpp, fppp), x₀), Roots.LithBoonkkampIJzerman(1, 3)) ≈ α
     @test solve(ZeroProblem((f, fp, fpp, fppp), x₀), Roots.LithBoonkkampIJzerman(2, 3)) ≈ α
+    @test solve(ZeroProblem(fdf3, x₀), Roots.LithBoonkkampIJzerman(1, 3)) ≈ α
+    @test solve(ZeroProblem(fdf3, x₀), Roots.LithBoonkkampIJzerman(1, 3), 1) ≈ α
+
+
+    @test solve(ZeroProblem(fdf4, x₀), Roots.LithBoonkkampIJzerman(1, 4)) ≈ α
+    @test solve(ZeroProblem(fdf4, x₀), Roots.LithBoonkkampIJzerman(1, 4), 1) ≈ α
 
     @test solve(
         ZeroProblem((f, fp, fpp, fppp, fpppp), x₀),
         Roots.LithBoonkkampIJzerman(1, 4),
+        
     ) ≈ α
     @test solve(
         ZeroProblem((f, fp, fpp, fppp, fpppp), x̃₀),
@@ -120,4 +163,8 @@ end
 
     # bracketing
     @test solve(ZeroProblem((f, fp), (1, 2)), Roots.LithBoonkkampIJzermanBracket()) ≈ α
+    @test solve(ZeroProblem(fdf1, (1, 2)), Roots.LithBoonkkampIJzermanBracket()) ≈ α
+    @test solve(ZeroProblem(fdf1, (1, 2)), Roots.LithBoonkkampIJzermanBracket(),1) ≈ α
+
+
 end
