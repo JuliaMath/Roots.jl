@@ -139,7 +139,7 @@ function evalf(F::Callable_Function{S,T,𝑭,P},x) where {N,S<:Val{N},T<:Val{tru
 end
 
 function evalf(F::Callable_Function{S,T,𝑭,P},x) where {N,S<:Val{N},T<:Val{true},𝑭,P}
-    map(f -> f(x,F.p), F.f)
+    fi = map(f -> f(x,F.p), F.f)
     R = typeof(float(first(fi)))
     convert(NTuple{N,R},fi)
 end
