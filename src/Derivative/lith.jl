@@ -133,11 +133,15 @@ log_step(l::Tracks, M::LithBoonkkampIJzerman, state; init=false) =
 
 # return f^(i-1)(x) for i in 0:N-1; not the same as default eval call
 function evalf(F::Callable_Function{S,T,𝑭,P},x) where {N,S<:Val{N},T<:Val{true},𝑭,P<:Nothing}
-    map(f -> f(x), F.f) #recommended on Slack to not allocate
+    fi = map(f -> f(x), F.f) #recommended on Slack to not allocate
+    R = typeof(float(first(fi)))
+    convert(NTuple{N,R},fi)
 end
 
 function evalf(F::Callable_Function{S,T,𝑭,P},x) where {N,S<:Val{N},T<:Val{true},𝑭,P}
     map(f -> f(x,F.p), F.f)
+    R = typeof(float(first(fi)))
+    convert(NTuple{N,R},fi)
 end
 
 #specializations for N = 1,2,3,4,5,6
