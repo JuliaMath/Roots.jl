@@ -11,6 +11,17 @@ end
 SomeInterval(a, b) = SomeInterval(promote(a, b)...)
 Base.extrema(I::SomeInterval) = I.a < I.b ? (I.a, I.b) : (I.b, I.a)
 
+# count function calls
+mutable struct Cnt
+    cnt::Int
+    f
+    Cnt(f) = new(0, f)
+end
+(f::Cnt)(x) = (f.cnt += 1; f.f(x))
+avg(x) = sum(x) / length(x)
+
+
+
 include("./test_find_zero.jl")
 include("./test_bracketing.jl")
 include("./test_derivative_free.jl")

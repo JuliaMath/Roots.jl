@@ -275,7 +275,6 @@ end
 #     end
 # end
 
-avg(x) = sum(x) / length(x)
 
 @testset "bracketing methods" begin
 
@@ -311,13 +310,6 @@ avg(x) = sum(x) / length(x)
     @test maxresidual <= 1e-5
     @test avg(cnts) <= 3000
 end
-
-mutable struct Cnt
-    cnt::Int
-    f
-    Cnt(f) = new(0, f)
-end
-(f::Cnt)(x) = (f.cnt += 1; f.f(x))
 
 ## Some tests for FalsePosition methods
 @testset "FalsePosition" begin
@@ -430,4 +422,9 @@ end
     xright = 3 * xleft
     x =find_zero(f, (xleft, xright))
     @test abs(f(x)) <= 2eps(BigFloat)
+
+    # simple a42()
+    m = run_tests(Roots.a42)
+    VERSION >= v"1.6" && @test isempty(m.failures)
+    @test m.evalcount <= 3000 # paper says 2884, this has 2877
 end
