@@ -312,7 +312,27 @@ function init_lith(
     @set! ys[1][1] = fx0
     @set! ys[1][2] = fx₁
 
-    for i in 3:S
+    # build up xs, ys
+    # redundant code, but here to avoid allocations
+    S < 3 && return (xs, ys)
+    xᵢ = lmm(Val(2), Val(0), xs, ys)
+    y1i = only_f(F,xᵢ)
+    @set! xs[3] = xᵢ
+    @set! ys[1][3] = y1i
+
+    S < 4 && return (xs, ys)
+    xᵢ = lmm(Val(3), Val(0), xs, ys)
+    y1i = only_f(F,xᵢ)
+    @set! xs[4] = xᵢ
+    @set! ys[1][4] = y1i
+
+    S < 5 && return (xs, ys)
+    xᵢ = lmm(Val(4), Val(0), xs, ys)
+    y1i = only_f(F,xᵢ)
+    @set! xs[5] = xᵢ
+    @set! ys[1][5] = y1i
+
+    for i in 5:S #3:S
         xᵢ::R = lmm(Val(i - 1), Val(0), xs, ys) # XXX allocates due to runtime i-1
         y1i::T = only_f(F,xᵢ)
         @set! xs[i] = xᵢ
@@ -343,7 +363,35 @@ function init_lith(
     end
 
     # build up to get S of them
-    for i in 2:S
+    # redundant code, but here to avoid allocations
+    S < 2 && return xs, ys
+    xᵢ = lmm(Val(1), Val(D), xs, ys)
+    @set! xs[2] = xᵢ
+    ysᵢ = evalf(F, xᵢ)
+    for j in 1:(D+1)
+        yji::T = ysᵢ[j]
+        @set! ys[j][2] = yji
+    end
+
+    S < 3 && return xs, ys
+    xᵢ = lmm(Val(2), Val(D), xs, ys)
+    @set! xs[2] = xᵢ
+    ysᵢ = evalf(F, xᵢ)
+    for j in 1:(D+1)
+        yji::T = ysᵢ[j]
+        @set! ys[j][3] = yji
+    end
+
+    S < 4 && return xs, ys
+    xᵢ = lmm(Val(3), Val(D), xs, ys)
+    @set! xs[3] = xᵢ
+    ysᵢ = evalf(F, xᵢ)
+    for j in 1:(D+1)
+        yji::T = ysᵢ[j]
+        @set! ys[j][4] = yji
+    end
+
+    for i in 4:S
         xᵢ::R = lmm(Val(i - 1), Val(D), xs, ys) # XXX allocates! clean up
         @set! xs[i] = xᵢ
         ysᵢ = evalf(F, xᵢ)
