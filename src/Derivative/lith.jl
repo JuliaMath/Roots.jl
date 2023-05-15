@@ -332,7 +332,19 @@ function init_lith(
     @set! xs[5] = xᵢ
     @set! ys[1][5] = y1i
 
-    for i in 5:S #3:S
+    S < 6 && return (xs, ys)
+    xᵢ = lmm(Val(5), Val(0), xs, ys)
+    y1i = only_f(F,xᵢ)
+    @set! xs[6] = xᵢ
+    @set! ys[1][6] = y1i
+
+    S < 7 && return (xs, ys)
+    xᵢ = lmm(Val(6), Val(0), xs, ys)
+    y1i = only_f(F,xᵢ)
+    @set! xs[7] = xᵢ
+    @set! ys[1][7] = y1i
+
+    for i in 7:S #3:S
         xᵢ::R = lmm(Val(i - 1), Val(0), xs, ys) # XXX allocates due to runtime i-1
         y1i::T = only_f(F,xᵢ)
         @set! xs[i] = xᵢ
@@ -690,6 +702,7 @@ end
 ## Using coefficients as,bs, ... returned by lmm_coefficients
 ## x = ∑ aᵢxᵢ + ∑ⱼ₊₁ⁿ ∑ᵢ bʲᵢFʲᵢ, where Fʲ is the jth derivative of g⁻¹ (F¹ = 1/f'...)
 ## Using a polynomial interpolant, H(y), going through (xᵢ,fʲ(xᵢ)), j ∈ 0:N)
+
 
 function lmm(::Val{S}, ::Val{D}, xs, ys) where {S,D}
     xi = ntuple(ii -> xs[ii], Val(S))
