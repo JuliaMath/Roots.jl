@@ -101,6 +101,8 @@ Direct implemenation of Alefeld, Potra, and Shi's Algorithm 4.2. See also [`A42(
 * `f`: function to find zero of. (If `f` is 4-times continuously differentiable, convergence to a simple root will be like ``(2 + 7^{1/2})^{1/3} = 1.6686...``
 * `ab`: a *bracketing interval
 * `atol`, `rtol`: optional tolerances. These are `0` and `eps` respectively by default.
+
+
 """
 function a42(f, ab; atol=nothing, rtol=nothing, λ = 0.7, μ = 0.5)
     a, b = adjust_bracket(ab)
@@ -125,9 +127,9 @@ function a42(f, ab; atol=nothing, rtol=nothing, λ = 0.7, μ = 0.5)
         δ = tolₑ(a, b, fa, fb, tols.atol, tols.rtol)
         (b-a) ≤ δ && return (abs(fa) < abs(fb) ? a : b)
 
-
+        ee, fee = d, fd
         for k ∈ 1:2
-            if n == 2 || iszero(_pairwise_prod(fa,fb,fc,fd))
+            if n == 2 || iszero(_pairwise_prod(fa,fb,fd,fee))
                 c = newton_quadratic(a,b,d,fa,fb,fd,k+1)
             else
                 c = ipzero(a,b,d,ee,fa,fb,fd,fee)
@@ -135,28 +137,19 @@ function a42(f, ab; atol=nothing, rtol=nothing, λ = 0.7, μ = 0.5)
                     c = newton_quadratic(a,b,d,fa,fb,fd,k+1)
                 end
             end
-
-            k == 2 && break
-
-
+            n += 1
             c = avoid_boundaries(a,c,b,fa,fb, tols)
             fc = f(c)
             iszero(fc) && return c
 
             ee, fee = d, fd
             a, b, d, fa, fb, fd = bracket(a,b,c,fa,fb,fc)
+
             δ = tolₑ(a, b, fa, fb, tols.atol, tols.rtol)
             (b-a) ≤ 2δ && return (abs(fa) < abs(fb) ? a : b)
-            n += 1
         end
 
-        c = avoid_boundaries(a,c,b,fa,fb, tols)
-        fc = f(c)
-        iszero(fc) && return c
-
-        a, b, d, fa, fb, fd = bracket(a,b,c,fa,fb,fc)
-        δ = tolₑ(a, b, fa, fb, tols.atol, tols.rtol)
-        (b-a) ≤ 2δ && return (abs(fa) < abs(fb) ? a : b)
+        n += 1
 
         u, fu =  abs(fa) < abs(fb) ? (a,fa) : (b,fb)
         c = u - 2 * fu * (b-a) / (fb - fa)
