@@ -455,13 +455,6 @@ end
 struct _SampleCallableObject end
 (::_SampleCallableObject)(x) = x^5 - x - 1
 
-mutable struct Cnt
-    cnt::Int
-    f
-    Cnt(f) = new(0, f)
-end
-(f::Cnt)(x) = (f.cnt += 1; f.f(x))
-
 @testset "find_zero with other callable types" begin
     Ms = [
         Order0(),

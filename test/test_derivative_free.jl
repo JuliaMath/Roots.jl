@@ -236,7 +236,7 @@ Base.show(io::IO, results::MethodResults1) = print(
 
 ## Run a method on all known functions.
 mindiff(a, alpha) = minimum([a - i for i in alpha])
-function run_tests(method; verbose=false, trace=false, name=nothing, abandon=false)
+function run_df_tests(method; verbose=false, trace=false, name=nothing, abandon=false)
     results = MethodResults1()
     results.name = name
     results.problems = 0
@@ -287,7 +287,6 @@ function run_tests(method; verbose=false, trace=false, name=nothing, abandon=fal
     results
 end
 
-avg(x) = sum(x) / length(x)
 D(f, h=1e-4) = x -> (f(x + h) - f(x - h)) / (2h)
 D2(f, h=1e-4) = x -> (f(x + h) - 2f(x) + f(x - h)) / h^2
 
@@ -308,7 +307,7 @@ if !isinteractive()
             Roots.Order8(),
             Roots.Order16(),
         ]
-        results = [run_tests((f, b) -> find_zero(f, b, M), name="$M") for M in Ms]
+        results = [run_df_tests((f, b) -> find_zero(f, b, M), name="$M") for M in Ms]
 
         failures = [length(result.failures) for result in results]
         residuals = [result.maxresidual for result in results]
@@ -320,7 +319,7 @@ if !isinteractive()
 
         ## methods which fall back to bisection when bracket found
         Ms = [Roots.Order0()]
-        results = [run_tests((f, b) -> find_zero(f, b, M), name="$M") for M in Ms]
+        results = [run_df_tests((f, b) -> find_zero(f, b, M), name="$M") for M in Ms]
 
         failures = [length(result.failures) for result in results]
         residuals = [result.maxresidual for result in results]
@@ -336,7 +335,7 @@ if !isinteractive()
             (f, b) -> find_zero((f, D(f), D2(f)), b, Roots.Halley()),
             (f, b) -> find_zero((f, D(f), D2(f)), b, Roots.Schroder()),
         ]
-        results = [run_tests(F) for F in Fs]
+        results = [run_df_tests(F) for F in Fs]
 
         failures = [length(result.failures) for result in results]
         residuals = [result.maxresidual for result in results]
