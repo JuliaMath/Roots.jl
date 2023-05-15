@@ -131,29 +131,94 @@ end
 log_step(l::Tracks, M::LithBoonkkampIJzerman, state; init=false) =
     log_step(l, Secant(), state; init=init)
 
-# return f^(i-1)(x); not the same as default eval call
-function evalf(F::Callable_Function{S,T,𝑭,P}, x, i) where {N,S<:Val{N},T<:Val{true},𝑭,P}
-    F.f[i](x)
+# return f^(i-1)(x) for i in 0:N-1; not the same as default eval call
+function evalf(F::Callable_Function{S,T,𝑭,P},x) where {N,S<:Val{N},T<:Val{true},𝑭,P<:Nothing}
+    fi = map(f -> f(x), F.f) #recommended on Slack to not allocate
+    R = typeof(float(first(fi)))
+    convert(NTuple{N,R},fi)
 end
-function evalf(F::Callable_Function{S,T,𝑭,P}, x, i) where {S<:Val{1},T<:Val{false},𝑭,P}
-    F.f(x)
+
+function evalf(F::Callable_Function{S,T,𝑭,P},x) where {N,S<:Val{N},T<:Val{true},𝑭,P}
+    fi = map(f -> f(x,F.p), F.f)
+    R = typeof(float(first(fi)))
+    convert(NTuple{N,R},fi)
 end
-evalf(::Callable_Function, x, i) = throw(
-    ArgumentError(
-        "LithBoonkkampIJzerman expects functions to be defined singly or as tuples",
-    ),
-)
+
+#specializations for N = 1,2,3,4,5,6
+## lmm(::Roots.LithBoonkkampIJzerman{1, D}) is defined up unitl D = 6, so specialize those
+
+function evalf(F::Callable_Function{S,T,𝑭,P},x) where {S<:Val{1},T<:Val{false},𝑭,P}
+    F(x)
+end
+
+function evalf(F::Callable_Function{S,T,𝑭,P},x) where {S<:Val{2},T<:Val{false},𝑭,P}
+    f,Δ = F(x)
+    f′ = f/Δ
+    (f,f′)
+end
+
+function evalf(F::Callable_Function{S,T,𝑭,P},x) where {S<:Val{3},T<:Val{false},𝑭,P}
+    f,Δ = F(x)
+    Δ₁,Δ₂ = Δ
+    f′ = f/Δ₁
+    f′′ = f′/Δ₂
+    (f,f′,f′′)
+end
+
+function evalf(F::Callable_Function{S,T,𝑭,P},x) where {S<:Val{4},T<:Val{false},𝑭,P}
+    f,Δ = F(x)
+    Δ₁,Δ₂,Δ₃ = Δ
+    f′ = f/Δ₁
+    f′′ = f′/Δ₂
+    f′′′ = f′′/Δ₃
+    (f,f′,f′′,f′′′)
+end
+
+function evalf(F::Callable_Function{S,T,𝑭,P},x) where {S<:Val{5},T<:Val{false},𝑭,P}
+    f,Δ = F(x)
+    Δ₁,Δ₂,Δ₃,Δ₄ = Δ
+    f′ = f/Δ₁
+    f′′ = f′/Δ₂
+    f′′′ = f′′/Δ₃
+    f′′′′ = f′′′/Δ₄
+    (f,f′,f′′,f′′′,f′′′′)
+end
+
+function evalf(F::Callable_Function{S,T,𝑭,P},x) where {S<:Val{6},T<:Val{false},𝑭,P}
+    f,Δ = F(x)
+    Δ₁,Δ₂,Δ₃,Δ₄,Δ₅ = Δ
+    f′ = f/Δ₁
+    f′′ = f′/Δ₂
+    f′′′ = f′′/Δ₃
+    f′′′′ = f′′′/Δ₄
+    f′′′′′ = f′′′′/Δ₅
+    (f,f′,f′′,f′′′,f′′′′,f′′′′′)
+end
+
+#function to obtain just the first value. optimized in case of tuple function
+function only_f(F::Callable_Function{S,T,𝑭,P},x) where {N,S<:Val{N},T<:Val{true},𝑭,P}
+    return F.f[1](x,F.p)
+end
+
+function only_f(F::Callable_Function{S,T,𝑭,P},x) where {N,S<:Val{N},T<:Val{true},𝑭,P<:Nothing}
+    return F.f[1](x)
+end
+
+function only_f(F::Callable_Function{S,T,𝑭,P},x) where {N,S<:Val{N},T<:Val{false},𝑭,P}
+    return first(F(x))
+end
 
 function init_state(L::LithBoonkkampIJzerman{S,0}, F::Callable_Function, x) where {S}
     x₀, x₁ = x₀x₁(x)
-    fx₀, fx₁ = evalf(F, x₀, 1), evalf(F, x₁, 1)
-    state = init_state(L, F, x₀, x₁, fx₀, fx₁)
+    fx₀, fx₁ = only_f(F, x₀), only_f(F, x₁)
+    state = init_state(L, F, x₀, x₁, fx₀, fx₁, nothing)
 end
 
 function init_state(L::LithBoonkkampIJzerman{S,D}, F::Callable_Function, x) where {S,D}
     x₀ = float(first(x))
-    fx₀ = evalf(F, x₀, 1)
-    state = init_state(L, F, nan(x₀), x₀, nan(fx₀), fx₀)
+    ys₀ = evalf(F, x₀)
+    fx₀ = first(ys₀)
+    state = init_state(L, F, nan(x₀), x₀, nan(fx₀), fx₀, ys₀)
 end
 
 function init_state(
@@ -163,8 +228,9 @@ function init_state(
     x₁::R,
     fx₀,
     fx₁::T,
+    ys₀
 ) where {S,D,R,T}
-    xs, ys = init_lith(L, F, x₁, fx₁, x₀, fx₀) # [x₀,x₁,…,xₛ₋₁], ...
+    xs, ys = init_lith(L, F, x₁, fx₁, x₀, fx₀, ys₀) # [x₀,x₁,…,xₛ₋₁], ...
     # skip unit consideration here, as won't fit within storage of ys
     state = LithBoonkkampIJzermanState{S,D + 1,R,T}(
         xs[end],    # xₙ
@@ -195,12 +261,13 @@ function update_state(
     end
     @set! xs[end] = xᵢ
 
+    ysᵢ = evalf(F, xᵢ)
     for i in 0:D
         i′ = i + 1
         for j in 1:(S - 1)
             @set! ys[i′][j] = ys[i′][j + 1]
         end
-        yij::T = evalf(F, xᵢ, i′)
+        yij::T = ysᵢ[i′]
         @set! ys[i′][end] = yij
     end
     incfn(l, 1 + D)
@@ -225,6 +292,7 @@ function init_lith(
     fx₁::T,
     x₀::R,
     fx₀::T,
+    ys₀
 ) where {S,Si,Tup,𝑭,P,R,T}
     xs = NTuple{S,R}(ntuple(_ -> one(R), Val(S)))
     yᵢ = NTuple{S,T}(ntuple(_ -> one(T), Val(S)))
@@ -234,7 +302,7 @@ function init_lith(
     x0::R = zero(R)
     if isnan(x₀)
         x0 = _default_secant_step(x₁)
-        fx0::T = evalf(F, x0, 1)
+        fx0::T = only_f(F,x0)
     else
         x0, fx0 = x₀, fx₀
     end
@@ -246,7 +314,7 @@ function init_lith(
 
     for i in 3:S
         xᵢ::R = lmm(Val(i - 1), Val(0), xs, ys) # XXX allocates due to runtime i-1
-        y1i::T = evalf(F, xᵢ, 1)
+        y1i::T = only_f(F,xᵢ)
         @set! xs[i] = xᵢ
         @set! ys[1][i] = y1i
     end
@@ -262,25 +330,26 @@ function init_lith(
     fx₁::T,
     x₀::R,
     fx₀::T,
+    ys₀
 ) where {S,D,Si,Tup,𝑭,P,R,T}
     xs = NTuple{S,R}(ntuple(_ -> one(R), Val(S)))
     yᵢ = NTuple{S,T}(ntuple(_ -> one(T), Val(S)))
     ys = NTuple{D + 1,NTuple{S,T}}(ntuple(_ -> yᵢ, Val(D + 1)))
 
     @set! xs[1] = x₁
-    @set! ys[1][1] = fx₁
-    for i in 1:D
-        yi1::T = evalf(F, x₁, i + 1)
-        @set! ys[i + 1][1] = yi1
+    for i in 1:D+1
+        yi1::T = ys₀[i]
+        @set! ys[i][1] = yi1
     end
 
     # build up to get S of them
     for i in 2:S
         xᵢ::R = lmm(Val(i - 1), Val(D), xs, ys) # XXX allocates! clean up
         @set! xs[i] = xᵢ
-        for j in 0:D
-            yji::T = evalf(F, xᵢ, j + 1)
-            @set! ys[j + 1][i] = yji
+        ysᵢ = evalf(F, xᵢ)
+        for j in 1:(D+1)
+            yji::T = ysᵢ[j]
+            @set! ys[j][i] = yji
         end
     end
 
@@ -323,15 +392,18 @@ struct LithBoonkkampIJzermanBracketState{T,S,R} <: AbstractUnivariateZeroState{T
     fpc::R
 end
 
-function init_state(L::LithBoonkkampIJzermanBracket, F, x₀, x₁, fx₀, fx₁)
-    a, b, fa, fb = x₀, x₁, fx₀, fx₁
+fn_argout(::LithBoonkkampIJzermanBracket) = 2
+
+function init_state(M::LithBoonkkampIJzermanBracket, F::Callable_Function, x)
+    x₀, x₁ = adjust_bracket(x)
+    fx₀,Δfx₀ = F(x₀)
+    fx₁,Δfx₁ = F(x₁)
+    a, b, fa, fb, f′a, f′b = x₀, x₁, fx₀, fx₁, fx₀/Δfx₀, fx₁/Δfx₁
     if abs(fa) < abs(fb)
         a, b, fa, fb = b, a, fb, fa
     end
-
     assert_bracket(fa, fb)
 
-    f′a, f′b = evalf(F, a, 2), evalf(F, b, 2)
     c, fc, f′c = a, fa, f′a
 
     # skip unit consideration here, as won't fit within storage of ys
@@ -409,14 +481,15 @@ function update_state(
 
     # compare to bisection step; extra function evaluation
     d₁ = a + (b - a) * (0.5) #_middle(a, b)
-    f₀, f₁ = evalf(F, d₀, 1), evalf(F, d₁, 1)
+    f₀, Δf₀ = F(d₀)
+    f₁, Δf₁ = F(d₁)
 
     # interpolation outside a,b or bisection better use that
     d::T, fd::S, f′d::S = zero(T), zero(S), zero(S)
     if (abs(f₀) < abs(f₁)) && (min(a, b) < d₀ < max(a, b))
-        d, fd, f′d = d₀, f₀, evalf(F, d₀, 2)# interp
+        d, fd, f′d = d₀, f₀, f₀/Δf₀# interp
     else
-        d, fd, f′d = d₁, f₁, evalf(F, d₁, 2)#  bisection
+        d, fd, f′d = d₁, f₁, f₁/Δf₁#  bisection
     end
 
     # either [a,d] a bracket or [d,b]
