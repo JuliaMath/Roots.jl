@@ -312,7 +312,39 @@ function init_lith(
     @set! ys[1][1] = fx0
     @set! ys[1][2] = fx₁
 
-    for i in 3:S
+    # build up xs, ys
+    # redundant code, but here to avoid allocations
+    S < 3 && return (xs, ys)
+    xᵢ = lmm(Val(2), Val(0), xs, ys)
+    y1i = only_f(F,xᵢ)
+    @set! xs[3] = xᵢ
+    @set! ys[1][3] = y1i
+
+    S < 4 && return (xs, ys)
+    xᵢ = lmm(Val(3), Val(0), xs, ys)
+    y1i = only_f(F,xᵢ)
+    @set! xs[4] = xᵢ
+    @set! ys[1][4] = y1i
+
+    S < 5 && return (xs, ys)
+    xᵢ = lmm(Val(4), Val(0), xs, ys)
+    y1i = only_f(F,xᵢ)
+    @set! xs[5] = xᵢ
+    @set! ys[1][5] = y1i
+
+    S < 6 && return (xs, ys)
+    xᵢ = lmm(Val(5), Val(0), xs, ys)
+    y1i = only_f(F,xᵢ)
+    @set! xs[6] = xᵢ
+    @set! ys[1][6] = y1i
+
+    S < 7 && return (xs, ys)
+    xᵢ = lmm(Val(6), Val(0), xs, ys)
+    y1i = only_f(F,xᵢ)
+    @set! xs[7] = xᵢ
+    @set! ys[1][7] = y1i
+
+    for i in 7:S #3:S
         xᵢ::R = lmm(Val(i - 1), Val(0), xs, ys) # XXX allocates due to runtime i-1
         y1i::T = only_f(F,xᵢ)
         @set! xs[i] = xᵢ
@@ -343,7 +375,35 @@ function init_lith(
     end
 
     # build up to get S of them
-    for i in 2:S
+    # redundant code, but here to avoid allocations
+    S < 2 && return xs, ys
+    xᵢ = lmm(Val(1), Val(D), xs, ys)
+    @set! xs[2] = xᵢ
+    ysᵢ = evalf(F, xᵢ)
+    for j in 1:(D+1)
+        yji::T = ysᵢ[j]
+        @set! ys[j][2] = yji
+    end
+
+    S < 3 && return xs, ys
+    xᵢ = lmm(Val(2), Val(D), xs, ys)
+    @set! xs[2] = xᵢ
+    ysᵢ = evalf(F, xᵢ)
+    for j in 1:(D+1)
+        yji::T = ysᵢ[j]
+        @set! ys[j][3] = yji
+    end
+
+    S < 4 && return xs, ys
+    xᵢ = lmm(Val(3), Val(D), xs, ys)
+    @set! xs[3] = xᵢ
+    ysᵢ = evalf(F, xᵢ)
+    for j in 1:(D+1)
+        yji::T = ysᵢ[j]
+        @set! ys[j][4] = yji
+    end
+
+    for i in 4:S
         xᵢ::R = lmm(Val(i - 1), Val(D), xs, ys) # XXX allocates! clean up
         @set! xs[i] = xᵢ
         ysᵢ = evalf(F, xᵢ)
@@ -642,6 +702,7 @@ end
 ## Using coefficients as,bs, ... returned by lmm_coefficients
 ## x = ∑ aᵢxᵢ + ∑ⱼ₊₁ⁿ ∑ᵢ bʲᵢFʲᵢ, where Fʲ is the jth derivative of g⁻¹ (F¹ = 1/f'...)
 ## Using a polynomial interpolant, H(y), going through (xᵢ,fʲ(xᵢ)), j ∈ 0:N)
+
 
 function lmm(::Val{S}, ::Val{D}, xs, ys) where {S,D}
     xi = ntuple(ii -> xs[ii], Val(S))
