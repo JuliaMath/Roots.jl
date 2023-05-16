@@ -58,8 +58,8 @@ function init_state(::AbstractAlefeldPotraShi, F, x₀, x₁, fx₀, fx₁; c=no
         fc = first(F(c))
     end
 
-
-    (iszero(fc) || !isfinite(fc)) && return AbstractAlefeldPotraShiState(c, a, a, a, fc, fa, fa, fa)
+    (iszero(fc) || !isfinite(fc)) &&
+        return AbstractAlefeldPotraShiState(c, a, a, a, fc, fa, fa, fa)
 
     a, b, d, fa, fb, fd = bracket(a, b, c, fa, fb, fc)
     assert_bracket(fa, fb)
@@ -136,8 +136,9 @@ function update_state(
         c̄ = __middle(ā, b̄)
     end
 
-    c̄ = avoid_boundaries(ā,c̄,b̄,fā,fb̄,  tols)
-    fc̄ = first(F(c̄)); incfn(l)
+    c̄ = avoid_boundaries(ā, c̄, b̄, fā, fb̄, tols)
+    fc̄ = first(F(c̄))
+    incfn(l)
     (iszero(fc̄) || !isfinite(fc̄)) && return (_set(o, (c̄, fc̄)), true)
 
     â, b̂, d̂, fâ, fb̂, fd̂ = bracket(ā, b̄, c̄, fā, fb̄, fc̄) # 4.18
@@ -149,7 +150,8 @@ function update_state(
         m = __middle(ā, b̄)
         m = avoid_boundaries(â, m, b̂, fâ, fb̂, tols)
 
-        fm = first(F(m)); incfn(l)
+        fm = first(F(m))
+        incfn(l)
         (iszero(fm) || !isfinite(fm)) && return (_set(o, (m, fm)), true)
 
         ee, fee = d̂, fd̂

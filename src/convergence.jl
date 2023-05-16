@@ -248,10 +248,8 @@ function assess_convergence(
     state::AbstractUnivariateZeroState,
     options::Union{ExactOptions,FExactOptions},
 )
-
     (iszero(state.fxn1) || iszero(state.fxn0)) && return (:exact_zero, true)
     (isnan(state.fxn1) || isnan(state.fxn0)) && return (:nan, true)
-
 
     a, b, fa, fb = state.xn0, state.xn1, state.fxn0, state.fxn1
     u, fu = choose_smallest(a, b, fa, fb)
@@ -325,7 +323,7 @@ function decide_convergence(
     if b == nextfloat(nextfloat(a))
         c = nextfloat(a)
         fc = first(F(c))
-        m = minimum(abs, (fa,fb,fc))
+        m = minimum(abs, (fa, fb, fc))
         abs(fc) == m && return c
         abs(fa) == m && return a
         return b
