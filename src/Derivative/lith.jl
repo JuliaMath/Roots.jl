@@ -363,9 +363,8 @@ function init_lith(
     ys = NTuple{D + 1,NTuple{S,T}}(ntuple(_ -> yᵢ, Val(D + 1)))
 
     @set! xs[1] = x₁
-    for i in 1:D+1
-        yi1::T = ys₀[i]
-        @set! ys[i][1] = yi1
+    for j in 1:(D+1)
+        @set! ys[j][1] = ys₀[j]
     end
 
     # build up to get S of them
@@ -375,8 +374,7 @@ function init_lith(
     @set! xs[2] = xᵢ
     ysᵢ = evalf(F, xᵢ)
     for j in 1:(D+1)
-        yji::T = ysᵢ[j]
-        @set! ys[j][2] = yji
+        @set! ys[j][2] = ysᵢ[j]
     end
 
     S < 3 && return xs, ys
@@ -384,8 +382,7 @@ function init_lith(
     @set! xs[3] = xᵢ
     ysᵢ = evalf(F, xᵢ)
     for j in 1:(D+1)
-        yji::T = ysᵢ[j]
-        @set! ys[j][3] = yji
+        @set! ys[j][3] = ysᵢ[j]
     end
 
     S < 4 && return xs, ys
@@ -393,8 +390,7 @@ function init_lith(
     @set! xs[4] = xᵢ
     ysᵢ = evalf(F, xᵢ)
     for j in 1:(D+1)
-        yji::T = ysᵢ[j]
-        @set! ys[j][4] = yji
+        @set! ys[j][4] = ysᵢ[j]
     end
 
     for i in 5:S
@@ -402,12 +398,11 @@ function init_lith(
         @set! xs[i] = xᵢ
         ysᵢ = evalf(F, xᵢ)
         for j in 1:(D+1)
-            yji::T = ysᵢ[j]
-            @set! ys[j][i] = yji
+            @set! ys[j][i] = ysᵢ[j]
         end
     end
 
-    xs, ys
+    return xs, ys
 end
 
 """

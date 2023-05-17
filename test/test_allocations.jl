@@ -53,6 +53,7 @@ import BenchmarkTools
     @test BenchmarkTools.@ballocated(solve(ZeroProblem($F, $x0), Roots.LithBoonkkampIJzerman{5,0}())) == 0
     @test BenchmarkTools.@ballocated(solve(ZeroProblem($F, $x0), Roots.LithBoonkkampIJzerman{6,0}())) == 0
 
+
     # issue #323, test allocations with parameter
     f(x, p) = x^2 - p
     x0 = (1.0, 2.0)
