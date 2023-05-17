@@ -140,6 +140,9 @@ An acceleration of Newton's method: Super-Halley method (J.M. Gutierrez, M.A. He
 """
 struct SuperHalley <: AbstractΔMethod end
 
+# also Euler. Fits a parabola to point (x_n, f(x_n))
+struct IrrationalHolley <: AbstractΔMethod end
+
 """
     Roots.Schroder()
 
@@ -186,6 +189,7 @@ const Schroeder = Schroder # either spelling
 const Schröder = Schroder
 
 ## r1, r2 are o.Δ, o.ΔΔ
+calculateΔ(::IrrationalHolley, r1, r2) = 2/(1 + sqrt(1-2r1/r2)) * r1
 calculateΔ(::Halley, r1, r2) = 2r2 / (2r2 - r1) * r1
 calculateΔ(::QuadraticInverse, r1, r2) = (1 + r1 / (2r2)) * r1
 calculateΔ(::ChebyshevLike, r1, r2) = (1 + r1 / (2r2) * (1 + r1 / r2)) * r1
@@ -199,7 +203,7 @@ calculateΔ(::Schroder, r1, r2) = r2 / (r2 - r1) * r1
 """
     BracketedHalley
 
-For a bracket `[a,b]`, uses the [`Roots.Halley`](@ref) method starting at the `x` value for which `fa` or `fb` is closest to `0`. Uses the [`Roots.AbstractAlefeldPotraShi`](@ref) framework to enforce the bracketing, taking an additional double secant step each time.
+For a bracket `[a,b]`, uses the [`Roots.Halley`](@ref) method starting at the `x` value for which `fa` or `fb` is closest to `0`. Uses the `Roots.AbstractAlefeldPotraShi` framework to enforce the bracketing, taking an additional double secant step each time.
 """
 struct BracketedHalley <: AbstractAlefeldPotraShi end
 fn_argout(::BracketedHalley) = 3
@@ -216,7 +220,7 @@ end
 """
     BracketedChebyshev
 
-For a bracket `[a,b]`, uses the [`Roots.Chebyshev`](@ref) method starting at the `x` value for which `fa` or `fb` is closest to `0`. Uses the [`Roots.AbstractAlefeldPotraShi`](@ref) framework to enforce the bracketing, taking an additional double secant step each time.
+For a bracket `[a,b]`, uses the [`Roots.QuadraticInverse`](@ref) method starting at the `x` value for which `fa` or `fb` is closest to `0`. Uses the `Roots.AbstractAlefeldPotraShi` framework to enforce the bracketing, taking an additional double secant step each time.
 """
 struct BracketedChebyshev <: AbstractAlefeldPotraShi end
 fn_argout(::BracketedChebyshev) = 3
@@ -232,7 +236,7 @@ end
 """
     BracketedSchroder
 
-For a bracket `[a,b]`, uses the [`Roots.Schroder`](@ref) method starting at the `x` value for which `fa` or `fb` is closest to `0`. Uses the [`Roots.AbstractAlefeldPotraShi`](@ref) framework to enforce the bracketing, taking an additional double secant step each time.
+For a bracket `[a,b]`, uses the [`Roots.Schroder`](@ref) method starting at the `x` value for which `fa` or `fb` is closest to `0`. Uses the `Roots.AbstractAlefeldPotraShi` framework to enforce the bracketing, taking an additional double secant step each time.
 """
 struct BracketedSchroder <: AbstractAlefeldPotraShi end
 fn_argout(::BracketedSchroder) = 3
