@@ -31,7 +31,7 @@ The convergence is not guaranteed for all initial guesses, ``x_0``, but for a *s
 
 The geometry of Newton's method can be illustrated by graphing the tangent line.
 
-The function ``f(x) = x^5 - x - 1`` does not have a readily available closed-form solution for its lone real zero, it being a fifth-degree polynomial, however, a graph, or other means, can show the function has one zero between ``1`` and ``2``, closer to ``1``. Starting with ``x_0=1.4``, we get a visual of ``x_1`` as follows:
+The function ``f(x) = x^5 - x - 1`` does not have a readily available closed-form solution for its lone real zero, it being a fifth-degree polynomial. However, a graph, or other means, can show the function has one zero between ``1`` and ``2``, closer to ``1``. Starting with ``x_0=1.4``, we get a visual of ``x_1`` as follows:
 
 ```@example geometry
 f(x) = x^5 - x - 1
@@ -61,7 +61,7 @@ We used `Roots.Newton()` to identify the zero.
 
 ## Secant method
 
-The secant method is much older than Newton's method, though similar in that the intersection of a line with the ``x``-axis is used as the next step in the algorithm. The secant method begins with *two* initial points, ``x_0`` and ``x_1`` and uses the secant line instead of the tangent line. The secant line has slope ``(f(x_1)-f(x_0))/(x_1-x_0)``. This yields the algorithm:
+The secant method is much older than Newton's method, though similar in that the intersection of a line with the ``x``-axis is used as the next step in the algorithm. The slope of the secant line is (historically) easy to compute, unlike the slope of the tangent line which requires the notion of a derivative. The secant method begins with *two* initial points, ``x_0`` and ``x_1`` and uses the secant line instead of the tangent line. The secant line has slope ``(f(x_1)-f(x_0))/(x_1-x_0)``. This yields the algorithm:
 
 ```math
 x_{n+1} = x_n - \left(\frac{f(x_n)-f(x_{n-1})}{x_n-x_{n-1}}\right)^{-1} \cdot f(x_n).
@@ -89,7 +89,7 @@ p
 
 The secant method is implemented in `Secant()`.
 
-Steffensen's method (`Root.Steffensen()`) is related to the secant method, though the points are not ``x_n`` and ``x_{n-1}``, rather  ``x_n + f(x_n)`` and ``x_n``. As ``x_n`` gets close to ``\alpha``, ``f(x_n)`` gets close to ``0``, so this method converges at an asymptotic rate like Newton's method.
+Steffensen's method (`Root.Steffensen()`) is related to the secant method, though the points are not ``x_n`` and ``x_{n-1}``, rather  ``x_n + f(x_n)`` and ``x_n``. As ``x_n`` gets close to ``\alpha``, ``f(x_n)`` gets close to ``0``, so this method converges at an asymptotic rate like Newton's method. (Though with a tradeoff, as the secant method needs only one new function evaluation per step, Steffensen's require two.)
 
 ### An inverse view
 
@@ -147,7 +147,7 @@ x0, x1, x2 = xs = 1.4, 1.3, 1.2
 fx0, fx1, fx2 = ys = f.(xs)
 
 @syms x[0:2], y[0:2], a, b, c
-u = solve([xᵢ ~ a*yᵢ^2 + b * yᵢ + c for (xᵢ, yᵢ) ∈ zip(x, y)], (a,b,c))
+u = solve([xᵢ ~ a*yᵢ^2 + b * yᵢ + c for (xᵢ, yᵢ) ∈ zip(x, y)], (a, b, c))
 x3 = u[c]
 for (k, v) ∈ u
   for (xᵢ, yᵢ, x,y) ∈ zip(x, y, xs, ys)
@@ -204,7 +204,7 @@ A = zeros(Float64, 4, 4)
 for i ∈ reverse(0:3)
     A[:,4-i] .= ys.^i
 end
-a,b,c,d = A \ xs
+a, b, c, d = A \ xs
 ic(y) = a * y^3 + b * y^2 + c * y + d
 
 p = plot(f, 1.1, 1.5; legend=false, linewidth=3)
@@ -412,6 +412,4 @@ The author's discuss using different osculating curves, such as a cubic equation
 x_{n+1} = x_n - (1 + \frac{1}{2}L_f(x_n) + \mathcal{O}(L_f(x_n)^2)) \cdot \frac{f(x_n)}{f'(x_n)}.
 ```
 
-
-
-[Lith, Boonkkamp, and IJzerman](https://doi.org/10.1016/j.amc.2017.09.003) develop iterative algorithms that combine 1 or more past points *and* 0, 1 or more derivatives to create a family of methods parameterized by ``S``, the number of past points, and ``D`` the number of derivatives. The past points are used to fit an inverse polynomial approximation, then derivatives used to fit an Adams-Bashworth approach to zero finding. `Roots.LithBoonkkampIJzerman{S,D}()` provides an implementation for various combination os `S` and `D`.
+The algorithms implemented in the `Roots.LithBoonkkampIJzerman{S,D}()` methods use a differential equations approach to evaluate the inverse of $f(x)$ at $0$. The methods all find inverse polynomial approximations to $f^{-1}$. The methods for $D=0$, are, as seen, for $S=2$ an inverse secant line, for $S=3$ an inverse quadratic approximation, for $S=4$ an inverse cubic; when $S=1$ and $D=1$ Euler's method turns into Newton's method, for $S=1$ and $D=2$ the inverse quadratic or Chebyshev method is used.
