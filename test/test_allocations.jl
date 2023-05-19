@@ -32,26 +32,27 @@ import BenchmarkTools
     F(x) = (sin(x), tan(x), -cot(x), tan(x), -cot(x), tan(x),-cot(x), tan(x))
     x0 = collect(range(3,4,length=6))
 
-    @test BenchmarkTools.@ballocated(solve(ZeroProblem($F, $x0), Roots.LithBoonkkampIJzerman{1,1}())) == 0
+    VERSION >= v"1.7" && @test BenchmarkTools.@ballocated(solve(ZeroProblem($F, $x0), Roots.LithBoonkkampIJzerman{1,1}())) == 0
     @test BenchmarkTools.@ballocated(solve(ZeroProblem($F, $x0), Roots.LithBoonkkampIJzerman{1,2}())) == 0
     @test BenchmarkTools.@ballocated(solve(ZeroProblem($F, $x0), Roots.LithBoonkkampIJzerman{1,3}())) == 0
     @test BenchmarkTools.@ballocated(solve(ZeroProblem($F, $x0), Roots.LithBoonkkampIJzerman{1,4}())) == 0
     @test BenchmarkTools.@ballocated(solve(ZeroProblem($F, $x0), Roots.LithBoonkkampIJzerman{1,5}())) == 0
 
     @test BenchmarkTools.@ballocated(solve(ZeroProblem($F, $x0), Roots.LithBoonkkampIJzerman{2,0}())) == 0
-    @test BenchmarkTools.@ballocated(solve(ZeroProblem($F, $x0), Roots.LithBoonkkampIJzerman{2,1}())) == 0
+    VERSION >= v"1.7" && @test BenchmarkTools.@ballocated(solve(ZeroProblem($F, $x0), Roots.LithBoonkkampIJzerman{2,1}())) == 0
     @test BenchmarkTools.@ballocated(solve(ZeroProblem($F, $x0), Roots.LithBoonkkampIJzerman{2,2}())) == 0
     @test BenchmarkTools.@ballocated(solve(ZeroProblem($F, $x0), Roots.LithBoonkkampIJzerman{2,3}())) == 0
     @test BenchmarkTools.@ballocated(solve(ZeroProblem($F, $x0), Roots.LithBoonkkampIJzerman{2,4}())) == 0
     @test BenchmarkTools.@ballocated(solve(ZeroProblem($F, $x0), Roots.LithBoonkkampIJzerman{2,5}())) == 0
 
     @test BenchmarkTools.@ballocated(solve(ZeroProblem($F, $x0), Roots.LithBoonkkampIJzerman{3,0}())) == 0
-    @test BenchmarkTools.@ballocated(solve(ZeroProblem($F, $x0), Roots.LithBoonkkampIJzerman{3,1}())) == 0
+    VERSION >= v"1.7" && @test BenchmarkTools.@ballocated(solve(ZeroProblem($F, $x0), Roots.LithBoonkkampIJzerman{3,1}())) == 0
 
     @test BenchmarkTools.@ballocated(solve(ZeroProblem($F, $x0), Roots.LithBoonkkampIJzerman{4,0}())) == 0
 
     @test BenchmarkTools.@ballocated(solve(ZeroProblem($F, $x0), Roots.LithBoonkkampIJzerman{5,0}())) == 0
     @test BenchmarkTools.@ballocated(solve(ZeroProblem($F, $x0), Roots.LithBoonkkampIJzerman{6,0}())) == 0
+
 
     # issue #323, test allocations with parameter
     f(x, p) = x^2 - p
