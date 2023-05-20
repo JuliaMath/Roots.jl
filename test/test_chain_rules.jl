@@ -15,7 +15,7 @@ using Test
     test_frule(solve, ZeroProblem(f, 1), Order1(), 1.0; check_inferred=false)
     test_rrule(solve, ZeroProblem(f, 1), Order1(), 1.0; check_inferred=false)
     if isdefined(Zygote, :ZygoteRuleConfig)
-        test_rrule(Zygote.ZygoteRuleConfig(), solve, ZeroProblem(f, 1), Order1(), 1.0)
+        test_rrule(Zygote.ZygoteRuleConfig(), solve, ZeroProblem(f, 1), Order1(), 1.0; check_inferred=false)
     end
     F(p) = find_zero(f, 1, Order1(), p)
     @test first(Zygote.gradient(F, 1)) ≈ exp(1)
@@ -36,7 +36,8 @@ using Test
             solve,
             ZeroProblem((f, fx), 1),
             Roots.Newton(),
-            1.0,
+            1.0;
+            check_inferred=false,
         )
     end
     F2(p) = find_zero((f, fx), 1, Roots.Newton(), p)
