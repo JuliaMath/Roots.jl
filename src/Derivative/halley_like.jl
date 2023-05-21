@@ -189,7 +189,7 @@ const Schroeder = Schroder # either spelling
 const Schröder = Schroder
 
 ## r1, r2 are o.Δ, o.ΔΔ
-calculateΔ(::IrrationalHalley, r1, r2) = 2/(1 + sqrt(1-2r1/r2)) * r1
+calculateΔ(::IrrationalHalley, r1, r2) = 2 / (1 + sqrt(1 - 2r1 / r2)) * r1
 calculateΔ(::Halley, r1, r2) = 2r2 / (2r2 - r1) * r1
 calculateΔ(::QuadraticInverse, r1, r2) = (1 + r1 / (2r2)) * r1
 calculateΔ(::ChebyshevLike, r1, r2) = (1 + r1 / (2r2) * (1 + r1 / r2)) * r1

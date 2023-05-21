@@ -20,8 +20,6 @@ end
 (f::Cnt)(x) = (f.cnt += 1; f.f(x))
 avg(x) = sum(x) / length(x)
 
-
-
 include("./test_find_zero.jl")
 include("./test_bracketing.jl")
 include("./test_derivative_free.jl")

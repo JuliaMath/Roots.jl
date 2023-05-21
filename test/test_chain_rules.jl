@@ -15,7 +15,14 @@ using Test
     test_frule(solve, ZeroProblem(f, 1), Order1(), 1.0; check_inferred=false)
     test_rrule(solve, ZeroProblem(f, 1), Order1(), 1.0; check_inferred=false)
     if isdefined(Zygote, :ZygoteRuleConfig)
-        test_rrule(Zygote.ZygoteRuleConfig(), solve, ZeroProblem(f, 1), Order1(), 1.0; check_inferred=false)
+        test_rrule(
+            Zygote.ZygoteRuleConfig(),
+            solve,
+            ZeroProblem(f, 1),
+            Order1(),
+            1.0;
+            check_inferred=false,
+        )
     end
     F(p) = find_zero(f, 1, Order1(), p)
     @test first(Zygote.gradient(F, 1)) ≈ exp(1)
