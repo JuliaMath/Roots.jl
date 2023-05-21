@@ -132,79 +132,85 @@ log_step(l::Tracks, M::LithBoonkkampIJzerman, state; init=false) =
     log_step(l, Secant(), state; init=init)
 
 # return f^(i-1)(x) for i in 0:N-1; not the same as default eval call
-function evalf(F::Callable_Function{S,T,𝑭,P},x) where {N,S<:Val{N},T<:Val{true},𝑭,P<:Nothing}
+function evalf(
+    F::Callable_Function{S,T,𝑭,P},
+    x,
+) where {N,S<:Val{N},T<:Val{true},𝑭,P<:Nothing}
     fi = map(f -> f(x), F.f) #recommended on Slack to not allocate
     R = typeof(float(first(fi)))
-    convert(NTuple{N,R},fi)
+    convert(NTuple{N,R}, fi)
 end
 
-function evalf(F::Callable_Function{S,T,𝑭,P},x) where {N,S<:Val{N},T<:Val{true},𝑭,P}
-    fi = map(f -> f(x,F.p), F.f)
+function evalf(F::Callable_Function{S,T,𝑭,P}, x) where {N,S<:Val{N},T<:Val{true},𝑭,P}
+    fi = map(f -> f(x, F.p), F.f)
     R = typeof(float(first(fi)))
-    convert(NTuple{N,R},fi)
+    convert(NTuple{N,R}, fi)
 end
 
 #specializations for N = 1,2,3,4,5,6
 ## lmm(::Roots.LithBoonkkampIJzerman{1, D}) is defined up unitl D = 6, so specialize those
 
-function evalf(F::Callable_Function{S,T,𝑭,P},x) where {S<:Val{1},T<:Val{false},𝑭,P}
+function evalf(F::Callable_Function{S,T,𝑭,P}, x) where {S<:Val{1},T<:Val{false},𝑭,P}
     F(x)
 end
 
-function evalf(F::Callable_Function{S,T,𝑭,P},x) where {S<:Val{2},T<:Val{false},𝑭,P}
-    f,Δ = F(x)
-    f′ = f/Δ
-    (f,f′)
+function evalf(F::Callable_Function{S,T,𝑭,P}, x) where {S<:Val{2},T<:Val{false},𝑭,P}
+    f, Δ = F(x)
+    f′ = f / Δ
+    (f, f′)
 end
 
-function evalf(F::Callable_Function{S,T,𝑭,P},x) where {S<:Val{3},T<:Val{false},𝑭,P}
-    f,Δ = F(x)
-    Δ₁,Δ₂ = Δ
-    f′ = f/Δ₁
-    f′′ = f′/Δ₂
-    (f,f′,f′′)
+function evalf(F::Callable_Function{S,T,𝑭,P}, x) where {S<:Val{3},T<:Val{false},𝑭,P}
+    f, Δ = F(x)
+    Δ₁, Δ₂ = Δ
+    f′ = f / Δ₁
+    f′′ = f′ / Δ₂
+    (f, f′, f′′)
 end
 
-function evalf(F::Callable_Function{S,T,𝑭,P},x) where {S<:Val{4},T<:Val{false},𝑭,P}
-    f,Δ = F(x)
-    Δ₁,Δ₂,Δ₃ = Δ
-    f′ = f/Δ₁
-    f′′ = f′/Δ₂
-    f′′′ = f′′/Δ₃
-    (f,f′,f′′,f′′′)
+function evalf(F::Callable_Function{S,T,𝑭,P}, x) where {S<:Val{4},T<:Val{false},𝑭,P}
+    f, Δ = F(x)
+    Δ₁, Δ₂, Δ₃ = Δ
+    f′ = f / Δ₁
+    f′′ = f′ / Δ₂
+    f′′′ = f′′ / Δ₃
+    (f, f′, f′′, f′′′)
 end
 
-function evalf(F::Callable_Function{S,T,𝑭,P},x) where {S<:Val{5},T<:Val{false},𝑭,P}
-    f,Δ = F(x)
-    Δ₁,Δ₂,Δ₃,Δ₄ = Δ
-    f′ = f/Δ₁
-    f′′ = f′/Δ₂
-    f′′′ = f′′/Δ₃
-    f′′′′ = f′′′/Δ₄
-    (f,f′,f′′,f′′′,f′′′′)
+function evalf(F::Callable_Function{S,T,𝑭,P}, x) where {S<:Val{5},T<:Val{false},𝑭,P}
+    f, Δ = F(x)
+    Δ₁, Δ₂, Δ₃, Δ₄ = Δ
+    f′ = f / Δ₁
+    f′′ = f′ / Δ₂
+    f′′′ = f′′ / Δ₃
+    f′′′′ = f′′′ / Δ₄
+    (f, f′, f′′, f′′′, f′′′′)
 end
 
-function evalf(F::Callable_Function{S,T,𝑭,P},x) where {S<:Val{6},T<:Val{false},𝑭,P}
-    f,Δ = F(x)
-    Δ₁,Δ₂,Δ₃,Δ₄,Δ₅ = Δ
-    f′ = f/Δ₁
-    f′′ = f′/Δ₂
-    f′′′ = f′′/Δ₃
-    f′′′′ = f′′′/Δ₄
-    f′′′′′ = f′′′′/Δ₅
-    (f,f′,f′′,f′′′,f′′′′,f′′′′′)
+function evalf(F::Callable_Function{S,T,𝑭,P}, x) where {S<:Val{6},T<:Val{false},𝑭,P}
+    f, Δ = F(x)
+    Δ₁, Δ₂, Δ₃, Δ₄, Δ₅ = Δ
+    f′ = f / Δ₁
+    f′′ = f′ / Δ₂
+    f′′′ = f′′ / Δ₃
+    f′′′′ = f′′′ / Δ₄
+    f′′′′′ = f′′′′ / Δ₅
+    (f, f′, f′′, f′′′, f′′′′, f′′′′′)
 end
 
 #function to obtain just the first value. optimized in case of tuple function
-function only_f(F::Callable_Function{S,T,𝑭,P},x) where {N,S<:Val{N},T<:Val{true},𝑭,P}
-    return F.f[1](x,F.p)
+function only_f(F::Callable_Function{S,T,𝑭,P}, x) where {N,S<:Val{N},T<:Val{true},𝑭,P}
+    return F.f[1](x, F.p)
 end
 
-function only_f(F::Callable_Function{S,T,𝑭,P},x) where {N,S<:Val{N},T<:Val{true},𝑭,P<:Nothing}
+function only_f(
+    F::Callable_Function{S,T,𝑭,P},
+    x,
+) where {N,S<:Val{N},T<:Val{true},𝑭,P<:Nothing}
     return F.f[1](x)
 end
 
-function only_f(F::Callable_Function{S,T,𝑭,P},x) where {N,S<:Val{N},T<:Val{false},𝑭,P}
+function only_f(F::Callable_Function{S,T,𝑭,P}, x) where {N,S<:Val{N},T<:Val{false},𝑭,P}
     return first(F(x))
 end
 
@@ -228,7 +234,7 @@ function init_state(
     x₁::R,
     fx₀,
     fx₁::T,
-    ys₀
+    ys₀,
 ) where {S,D,R,T}
     xs, ys = init_lith(L, F, x₁, fx₁, x₀, fx₀, ys₀) # [x₀,x₁,…,xₛ₋₁], ...
     # skip unit consideration here, as won't fit within storage of ys
@@ -292,7 +298,7 @@ function init_lith(
     fx₁::T,
     x₀::R,
     fx₀::T,
-    ys₀
+    ys₀,
 ) where {S,Si,Tup,𝑭,P,R,T}
     xs = NTuple{S,R}(ntuple(_ -> one(R), Val(S)))
     yᵢ = NTuple{S,T}(ntuple(_ -> one(T), Val(S)))
@@ -302,7 +308,7 @@ function init_lith(
     x0::R = zero(R)
     if isnan(x₀)
         x0 = _default_secant_step(x₁)
-        fx0::T = only_f(F,x0)
+        fx0::T = only_f(F, x0)
     else
         x0, fx0 = x₀, fx₀
     end
@@ -316,31 +322,31 @@ function init_lith(
     # redundant code, but here to avoid allocations
     S < 3 && return (xs, ys)
     xᵢ = lmm(Val(2), Val(0), xs, ys)
-    y1i = only_f(F,xᵢ)
+    y1i = only_f(F, xᵢ)
     @set! xs[3] = xᵢ
     @set! ys[1][3] = y1i
 
     S < 4 && return (xs, ys)
     xᵢ = lmm(Val(3), Val(0), xs, ys)
-    y1i = only_f(F,xᵢ)
+    y1i = only_f(F, xᵢ)
     @set! xs[4] = xᵢ
     @set! ys[1][4] = y1i
 
     S < 5 && return (xs, ys)
     xᵢ = lmm(Val(4), Val(0), xs, ys)
-    y1i = only_f(F,xᵢ)
+    y1i = only_f(F, xᵢ)
     @set! xs[5] = xᵢ
     @set! ys[1][5] = y1i
 
     S < 6 && return (xs, ys)
     xᵢ = lmm(Val(5), Val(0), xs, ys)
-    y1i = only_f(F,xᵢ)
+    y1i = only_f(F, xᵢ)
     @set! xs[6] = xᵢ
     @set! ys[1][6] = y1i
 
     for i in 7:S #3:S
         xᵢ::R = lmm(Val(i - 1), Val(0), xs, ys) # XXX allocates due to runtime i-1
-        y1i::T = only_f(F,xᵢ)
+        y1i::T = only_f(F, xᵢ)
         @set! xs[i] = xᵢ
         @set! ys[1][i] = y1i
     end
@@ -356,14 +362,14 @@ function init_lith(
     fx₁::T,
     x₀::R,
     fx₀::T,
-    ys₀
+    ys₀,
 ) where {S,D,Si,Tup,𝑭,P,R,T}
     xs = NTuple{S,R}(ntuple(_ -> one(R), Val(S)))
     yᵢ = NTuple{S,T}(ntuple(_ -> one(T), Val(S)))
     ys = NTuple{D + 1,NTuple{S,T}}(ntuple(_ -> yᵢ, Val(D + 1)))
 
     @set! xs[1] = x₁
-    for j in 1:(D+1)
+    for j in 1:(D + 1)
         @set! ys[j][1] = ys₀[j]
     end
 
@@ -373,7 +379,7 @@ function init_lith(
     xᵢ = lmm(Val(1), Val(D), xs, ys)
     @set! xs[2] = xᵢ
     ysᵢ = evalf(F, xᵢ)
-    for j in 1:(D+1)
+    for j in 1:(D + 1)
         @set! ys[j][2] = ysᵢ[j]
     end
 
@@ -381,7 +387,7 @@ function init_lith(
     xᵢ = lmm(Val(2), Val(D), xs, ys)
     @set! xs[3] = xᵢ
     ysᵢ = evalf(F, xᵢ)
-    for j in 1:(D+1)
+    for j in 1:(D + 1)
         @set! ys[j][3] = ysᵢ[j]
     end
 
@@ -389,7 +395,7 @@ function init_lith(
     xᵢ = lmm(Val(3), Val(D), xs, ys)
     @set! xs[4] = xᵢ
     ysᵢ = evalf(F, xᵢ)
-    for j in 1:(D+1)
+    for j in 1:(D + 1)
         @set! ys[j][4] = ysᵢ[j]
     end
 
@@ -397,7 +403,7 @@ function init_lith(
         xᵢ::R = lmm(Val(i - 1), Val(D), xs, ys) # XXX allocates! clean up
         @set! xs[i] = xᵢ
         ysᵢ = evalf(F, xᵢ)
-        for j in 1:(D+1)
+        for j in 1:(D + 1)
             @set! ys[j][i] = ysᵢ[j]
         end
     end
@@ -445,9 +451,9 @@ fn_argout(::LithBoonkkampIJzermanBracket) = 2
 
 function init_state(M::LithBoonkkampIJzermanBracket, F::Callable_Function, x)
     x₀, x₁ = adjust_bracket(x)
-    fx₀,Δfx₀ = F(x₀)
-    fx₁,Δfx₁ = F(x₁)
-    a, b, fa, fb, f′a, f′b = x₀, x₁, fx₀, fx₁, fx₀/Δfx₀, fx₁/Δfx₁
+    fx₀, Δfx₀ = F(x₀)
+    fx₁, Δfx₁ = F(x₁)
+    a, b, fa, fb, f′a, f′b = x₀, x₁, fx₀, fx₁, fx₀ / Δfx₀, fx₁ / Δfx₁
     if abs(fa) < abs(fb)
         a, b, fa, fb = b, a, fb, fa
     end
@@ -536,9 +542,9 @@ function update_state(
     # interpolation outside a,b or bisection better use that
     d::T, fd::S, f′d::S = zero(T), zero(S), zero(S)
     if (abs(f₀) < abs(f₁)) && (min(a, b) < d₀ < max(a, b))
-        d, fd, f′d = d₀, f₀, f₀/Δf₀# interp
+        d, fd, f′d = d₀, f₀, f₀ / Δf₀# interp
     else
-        d, fd, f′d = d₁, f₁, f₁/Δf₁#  bisection
+        d, fd, f′d = d₁, f₁, f₁ / Δf₁#  bisection
     end
 
     # either [a,d] a bracket or [d,b]
@@ -691,7 +697,6 @@ end
 ## Using coefficients as,bs, ... returned by lmm_coefficients
 ## x = ∑ aᵢxᵢ + ∑ⱼ₊₁ⁿ ∑ᵢ bʲᵢFʲᵢ, where Fʲ is the jth derivative of g⁻¹ (F¹ = 1/f'...)
 ## Using a polynomial interpolant, H(y), going through (xᵢ,fʲ(xᵢ)), j ∈ 0:N)
-
 
 function lmm(::Val{S}, ::Val{D}, xs, ys) where {S,D}
     xi = ntuple(ii -> xs[ii], Val(S))

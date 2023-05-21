@@ -275,7 +275,6 @@ end
 #     end
 # end
 
-
 @testset "bracketing methods" begin
 
     ## Test for failures, ideally all of these would be 0
