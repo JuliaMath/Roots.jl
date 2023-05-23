@@ -74,6 +74,8 @@ end
 # 1 is default, but this should be adjusted for different methods
 fncalls_per_step(::AbstractAlefeldPotraShi) = 1
 
+# `hasfield` not defined for v1.0!
+__hazfield(o, x) = Int(ccall(:jl_field_index, Cint, (Any, Any, Cint), typeof(o), x, true)+1)
 function update_state(
     M::AbstractAlefeldPotraShi,
     F::Callable_Function,
@@ -82,8 +84,8 @@ function update_state(
     l=NullTracks(),
 ) where {T,S}
     μ, λ = 0.5, 0.7
-    atol = hasfield(typeof(options), :xabstol) ? options.xabstol : 0
-    rtol = hasfield(typeof(options), :xreltol) ? options.xreltol : 0
+    atol = __hazfield(options, :xabstol) ? options.xabstol : 0
+    rtol = __hazfield(options, :xreltol) ? options.xreltol : 0
     #atol, rtol = options.xabstol, options.xreltol
     tols = (; λ=λ, atol=atol, rtol=rtol)
 
