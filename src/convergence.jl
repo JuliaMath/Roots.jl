@@ -174,7 +174,7 @@ function iszero_Δx(
         a, b = b, a
     end
 
-    nextfloat(a) == b
+    nextfloat(float(a)) == float(b)
 end
 
 function iszero_Δx(
@@ -246,7 +246,8 @@ end
 function assess_convergence(
     M::AbstractBracketingMethod,
     state::AbstractUnivariateZeroState,
-    options::Union{ExactOptions,FExactOptions},
+    options::FExactOptions,
+#    options::Union{ExactOptions,FExactOptions},
 )
     (iszero(state.fxn1) || iszero(state.fxn0)) && return (:exact_zero, true)
     (isnan(state.fxn1) || isnan(state.fxn0)) && return (:nan, true)
@@ -320,8 +321,8 @@ function decide_convergence(
 
     # get as close as possible with one extra function call when closeness
     # is requested
-    if b == nextfloat(nextfloat(a))
-        c = nextfloat(a)
+    if b == nextfloat(nextfloat(float(a)))
+        c = nextfloat(float(a))
         fc = first(F(c))
         m = minimum(abs, (fa, fb, fc))
         abs(fc) == m && return c
