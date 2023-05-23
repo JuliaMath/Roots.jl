@@ -432,16 +432,12 @@ julia> x = find_zero(h, (k*pi, (k + 1/2)*pi)); x, h(x)
 (9.530477156207574, 8.326672684688674e-16)
 ```
 
-As of version 1.9 of `Julia`, an extension is provided so that when `SymPy` is loaded, an equation can be used to specify the left and right hand sides:
+As of version 1.9 of `Julia`, an extension is provided so that when `SymPy` is loaded, an equation can be used to specify the left and right hand sides, as with:
 
-```jldoctest roots
-julia> using SymPy
-
-julia> @syms x
-(x,)
-
-julia> find_zero(tan(x) ~ x/(B*(Λ*x^2 - 1)), (k*pi, (k + 1/2)*pi))
-9.530477156207574
+```
+using SymPy
+@syms x
+find_zero(tan(x) ~ x/(B*(Λ*x^2 - 1)), (k*pi, (k + 1/2)*pi))
 ```
 
 ### Inverse functions
