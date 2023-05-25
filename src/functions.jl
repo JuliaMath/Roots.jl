@@ -8,17 +8,18 @@ fn_argout(::AbstractUnivariateZeroMethod) = 1
 struct Callable_Function{Single,Tup,F,P}
     f::F
     p::P
-    function Callable_Function(M, f, p=nothing)
-        Single = Val{fn_argout(M)}
-        Tup = Val{isa(f, Tuple)}
-        F = typeof(f)
-        p′ = ismissing(p) ? nothing : p
-        P′ = typeof(p′)
-        new{Single,Tup,F,P′}(f, p′)
-    end
 end
 
-function Callable_Function(M, F::Callable_Function, p=F.p)
+function Callable_Function(M::AbstractUnivariateZeroMethod, f, p=nothing)
+    Single = Val{fn_argout(M)}
+    Tup = Val{isa(f, Tuple)}
+    F = typeof(f)
+    p′ = ismissing(p) ? nothing : p
+    P′ = typeof(p′)
+    Callable_Function{Single,Tup,F,P′}(f, p′)
+end
+
+function Callable_Function(M::AbstractUnivariateZeroMethod, F::Callable_Function, p=F.p)
     Callable_Function(M, F.f, p)
 end
 

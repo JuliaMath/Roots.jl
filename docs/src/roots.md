@@ -416,6 +416,30 @@ Positional arguments are useful for broadcasting over several parameter values.
 
 ## Examples
 
+### Intersections
+
+A [discourse](https://discourse.julialang.org/t/help-to-plot-a-surface-plot-with-infinite-roots/98291) post involved finding the roots of ``\tan(x) = x /(B(\Lambda x^2 - 1)``. As the right hand side decays, we can see that for each positive arm of the periodic tangent function, there will be one intersection point in ``(k\pi, (k+1/2)\pi)`` for each ``k=0,1,\dots``. The standard way to find when $f(x) = g(x)$ with this package is to define an auxiliary function $h(x) = f(x) - g(x)$, as below:
+
+```jldoctest roots
+julia> k, B, Λ = 3, 1, 1;
+
+julia> f(x) = tan(x); g(x) = x/(B*(Λ*x^2 - 1));
+
+julia> h(x) = f(x) - g(x)
+h (generic function with 1 method)
+
+julia> x = find_zero(h, (k*pi, (k + 1/2)*pi)); x, h(x)
+(9.530477156207574, 8.326672684688674e-16)
+```
+
+As of version 1.9 of `Julia`, an extension is provided so that when `SymPy` is loaded, an equation can be used to specify the left and right hand sides, as with:
+
+```
+using SymPy
+@syms x
+find_zero(tan(x) ~ x/(B*(Λ*x^2 - 1)), (k*pi, (k + 1/2)*pi))
+```
+
 ### Inverse functions
 
 The `find_zero` function can be used to identify inverse functions. Suppose ``f`` is a monotonic function on ``[a,b]``. Then an inverse function solves ``y = f(x)`` for ``x`` given a ``y``. This will do that task and return values in a function form:

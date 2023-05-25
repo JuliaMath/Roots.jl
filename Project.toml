@@ -1,6 +1,6 @@
 name = "Roots"
 uuid = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
-version = "2.0.16"
+version = "2.0.17"
 
 [deps]
 ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
@@ -13,12 +13,14 @@ ChainRulesCore = "1"
 CommonSolve = "0.1, 0.2"
 ForwardDiff = "0.10"
 IntervalRootFinding = "0.5"
+SymPy = "1"
 Setfield = "0.7, 0.8, 1"
 julia = "1.0"
 
 [extensions]
 RootsForwardDiffExt = "ForwardDiff"
 RootsIntervalRootFindingExt = "IntervalRootFinding"
+RootsSymPyExt = "SymPy"
 
 [extras]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
@@ -30,13 +32,15 @@ JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 Polynomials = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+SymPy = "24249f21-da20-56a4-8eb1-6a02cf4ae2e6"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [targets]
-test = ["Aqua", "ChainRulesTestUtils", "JSON", "SpecialFunctions", "Statistics", "Test", "BenchmarkTools", "ForwardDiff", "Polynomials", "Unitful", "Zygote"]
+test = ["Aqua", "ChainRulesTestUtils", "JSON", "SpecialFunctions", "Statistics", "Test", "BenchmarkTools", "ForwardDiff", "Polynomials", "SymPy", "Unitful", "Zygote"]
 
 [weakdeps]
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 IntervalRootFinding = "d2bf35a9-74e0-55ec-b149-d360ff49b807"
+SymPy = "24249f21-da20-56a4-8eb1-6a02cf4ae2e6"
