@@ -247,7 +247,7 @@ function assess_convergence(
     M::AbstractBracketingMethod,
     state::AbstractUnivariateZeroState,
     options::FExactOptions,
-#    options::Union{ExactOptions,FExactOptions},
+    #    options::Union{ExactOptions,FExactOptions},
 )
     (iszero(state.fxn1) || iszero(state.fxn0)) && return (:exact_zero, true)
     (isnan(state.fxn1) || isnan(state.fxn0)) && return (:nan, true)
