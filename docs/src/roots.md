@@ -534,7 +534,7 @@ savefig("flight.svg"); nothing #hide
 To maximize the range we solve for the lone critical point of `howfar`
 within reasonable starting points.
 
-As of version `v"1.9"`, the automatic differentiation provided by
+As of version `v"1.9"` of `Julia`, the automatic differentiation provided by
 `ForwardDiff` will bypass working through a call to `find_zero`. Prior
 to this version, automatic differentiation will work *if* the
 initial point has the proper type (depending on an expression of
@@ -1153,7 +1153,7 @@ julia> [find_zero(f, (interval(u).lo, interval(u).hi)) for u ∈ rts if u.status
 ```
 
 !!! note "`IntervalRootFinding` extension"
-    As of version `1.9` an extension is provided so that when the `IntervalRootFinding` package is loaded, the `find_zeros` function will call `IntervalRootFinding.roots` to find the isolating brackets and `find_zero` to find the roots, when possible, **if** the interval is specified as an `Interval` object, as created by `-1..1`, say.
+    As of version `1.9` of `Julia` an extension is provided so that when the `IntervalRootFinding` package is loaded, the `find_zeros` function will call `IntervalRootFinding.roots` to find the isolating brackets and `find_zero` to find the roots, when possible, **if** the interval is specified as an `Interval` object, as created by `-1..1`, say.
 
 
 ## Adding a solver
