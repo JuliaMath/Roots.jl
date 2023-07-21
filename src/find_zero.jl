@@ -1,6 +1,6 @@
 """
 
-    find_zero(f, x0, M, [N::AbstractBracketingMethod], [p′=nothing]; kwargs...)
+    find_zero(f, x0, M, [N::AbstractBracketingMethod], [p=nothing]; kwargs...)
 
 Interface to one of several methods for finding zeros of a univariate function, e.g. solving ``f(x)=0``.
 
