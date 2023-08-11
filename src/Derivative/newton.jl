@@ -66,7 +66,7 @@ end
 # compute fx₁, Δ
 function init_state(::Newton, F, x₀::T, x₁::T, fx₀, fx₁) where {T}
     fx₁, Δ::T = F(x₁)
-    NewtonState(x₁, x₀, Δ, fx₁, fx₀)
+    NewtonState(x₁, x₀, Δ, promote(fx₁, fx₀)...)
 end
 
 initial_fncalls(M::Newton) = 2
