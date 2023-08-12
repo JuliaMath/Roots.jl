@@ -66,7 +66,7 @@ function init_state(
     fx₁;
     Δs=nothing,
 ) where {T}
-    ThukralBState(x₁, x₀, NTuple{fn_argout(M) - 1,T}(Δs), fx₁, fx₀)
+    ThukralBState(promote(x₁, x₀)..., NTuple{fn_argout(M) - 1,T}(Δs), promote(fx₁, fx₀)...)
 end
 
 function update_state(
