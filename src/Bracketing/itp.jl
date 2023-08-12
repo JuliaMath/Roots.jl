@@ -58,12 +58,12 @@ function init_state(M::ITP, F, x₀, x₁, fx₀, fx₁)
     ϵ2n₁₂ = zero(float(x₁) / x₁) # ϵ*2^(ceil(Int, log2((b-a)/(2*ϵ))) + n₀)
 
     # handle interval if fa*fb ≥ 0 (explicit, but also not needed)
-    (iszero(fx₀) || iszero(fx₁)) && return ITPState(x₁, x₀, fx₁, fx₀, 0, ϵ2n₁₂, x₁)
+    (iszero(fx₀) || iszero(fx₁)) && return ITPState(promote(x₁, x₀)..., promote(fx₁, fx₀)..., 0, ϵ2n₁₂, x₁)
     assert_bracket(fx₀, fx₁)
 
     a, b, fa, fb = x₀, x₁, fx₀, fx₁
 
-    ITPState(b, a, fb, fa, 0, ϵ2n₁₂, a)
+    ITPState(promote(b, a)..., promote(fb, fa)..., 0, ϵ2n₁₂, a)
 end
 
 function update_state(M::ITP, F, o::ITPState{T,S,R}, options, l=NullTracks()) where {T,S,R}

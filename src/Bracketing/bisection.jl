@@ -46,7 +46,7 @@ function init_state(
     end
 
     # handle interval if fa*fb ≥ 0 (explicit, but also not needed)
-    (iszero(fx₀) || iszero(fx₁)) && return UnivariateZeroState(x₁, x₀, fx₁, fx₀)
+    (iszero(fx₀) || iszero(fx₁)) && return UnivariateZeroState(promote(x₁, x₀)..., promote(fx₁, fx₀)...)
     assert_bracket(fx₀, fx₁)
     if sign(fm) * fx₀ < 0 * oneunit(fx₀)
         a, b, fa, fb = x₀, m, fx₀, fm
@@ -57,7 +57,7 @@ function init_state(
     # handles case where a=-0.0, b=1.0 without error
     sign(a) * sign(b) < 0 && throw(ArgumentError("_middle error"))
 
-    UnivariateZeroState(b, a, fb, fa)
+    UnivariateZeroState(promote(b, a)..., promote(fb, fa)...)
 end
 
 const FloatNN = Union{Float64,Float32,Float16}

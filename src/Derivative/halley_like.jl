@@ -19,7 +19,7 @@ end
 
 function init_state(::AbstractHalleyLikeMethod, F, x₀::T, x₁::T, fx₀, fx₁) where {T}
     fx₁, (Δ::T, ΔΔ::T) = F(x₁)
-    HalleyState(x₁, x₀, Δ, ΔΔ, fx₁, fx₀)
+    HalleyState(promote(x₁, x₀)..., Δ, ΔΔ, promote(fx₁, fx₀)...)
 end
 
 initial_fncalls(M::AbstractHalleyLikeMethod) = 2 * 3

@@ -10,7 +10,7 @@ function init_state(M::AbstractBracketingMethod, F, x₀, x₁, fx₀, fx₁)
     (iszero(fx₀) || iszero(fx₁)) && return UnivariateZeroState(x₁, x₀, fx₁, fx₀)
     assert_bracket(fx₀, fx₁)
     a, b, fa, fb = (x₀ < x₁) ? (x₀, x₁, fx₀, fx₁) : (x₁, x₀, fx₁, fx₀)
-    UnivariateZeroState(b, a, fb, fa)
+    UnivariateZeroState(promote(b, a)..., promote(fb, fa)...)
 end
 
 Base.last(state::AbstractUnivariateZeroState, M::AbstractBracketingMethod) =

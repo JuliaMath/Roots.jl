@@ -46,8 +46,8 @@ end
 # set d, ee to a
 function init_state(::AbstractAlefeldPotraShi, F, x₀, x₁, fx₀, fx₁; c=nothing, fc=nothing)
     a, b, fa, fb = x₀, x₁, fx₀, fx₁
-    iszero(fa) && return AbstractAlefeldPotraShiState(b, a, a, a, fb, fa, fa, fa)
-    iszero(fb) && return AbstractAlefeldPotraShiState(b, a, a, a, fb, fa, fa, fa)
+    iszero(fa) && return AbstractAlefeldPotraShiState(promote(b, a, a, a)..., promote(fb, fa, fa, fa)...)
+    iszero(fb) && return AbstractAlefeldPotraShiState(promote(b, a, a, a)..., promote(fb, fa, fa, fa)...)
 
     if a > b
         a, b, fa, fb = b, a, fb, fa
@@ -59,7 +59,7 @@ function init_state(::AbstractAlefeldPotraShi, F, x₀, x₁, fx₀, fx₁; c=no
     end
 
     (iszero(fc) || !isfinite(fc)) &&
-        return AbstractAlefeldPotraShiState(c, a, a, a, fc, fa, fa, fa)
+        return AbstractAlefeldPotraShiState(promote(c, a, a, a)..., promote(fc, fa, fa, fa)...)
 
     a, b, d, fa, fb, fd = bracket(a, b, c, fa, fb, fc)
     assert_bracket(fa, fb)

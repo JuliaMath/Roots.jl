@@ -25,7 +25,7 @@ end
 function init_state(::Chandrapatla, F, x₀, x₁, fx₀, fx₁)
     a, b, fa, fb = x₁, x₀, fx₁, fx₀
     c, fc = a, fa
-    ChandrapatlaState(a, b, c, fa, fb, fc)
+    ChandrapatlaState(promote(a, b, c)..., promote(fa, fb, fc)...)
 end
 
 function update_state(

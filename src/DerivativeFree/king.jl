@@ -28,7 +28,7 @@ end
 function init_state(::Union{King,Order1B}, F, x₀, x₁, fx₀, fx₁)
     fₛ₀ = F(x₀ - fx₀ * oneunit(x₀) / oneunit(fx₀))
     G₀ = -fx₀^2 / (fₛ₀ - fx₀)
-    KingState(x₁, x₀, fx₁, fx₀, G₀)
+    KingState(promote(x₁, x₀)..., promote(fx₁, fx₀, G₀)...)
 end
 initial_fncalls(::Union{King,Order1B}) = 3
 

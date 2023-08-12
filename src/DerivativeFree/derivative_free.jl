@@ -9,7 +9,7 @@ end
 
 # initialize from xs, fxs
 function init_state(::AbstractSecantMethod, F, x₀, x₁, fx₀, fx₁)
-    UnivariateZeroState(x₁, x₀, fx₁, fx₀)
+    UnivariateZeroState(promote(x₁, x₀)..., promote(fx₁, fx₀)...)
 end
 
 initial_fncalls(::AbstractSecantMethod) = 2
