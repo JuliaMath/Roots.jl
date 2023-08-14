@@ -463,15 +463,9 @@ function init_state(M::LithBoonkkampIJzermanBracket, F::Callable_Function, x)
 
     # skip unit consideration here, as won't fit within storage of ys
     state = LithBoonkkampIJzermanBracketState(
-        b,    # xₙ
-        a, # xₙ₋₁
-        c,
-        fb, # fₙ
-        fa, # fₙ₋₁
-        fc,
-        f′b,
-        f′a,
-        f′c,
+        promote(b,a,c)...,    # xₙ, xₙ₋₁
+        promote(fb, fa, fc)..., # fₙ, fₙ₋₁
+        promote(f′b, f′a, f′c)...
     )
 
     state
