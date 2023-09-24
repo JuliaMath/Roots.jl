@@ -21,7 +21,7 @@ CommonSolve = "0.1, 0.2"
 ForwardDiff = "0.10"
 IntervalRootFinding = "0.5"
 SymPy = "1"
-SymPyPythonCall = "0.1"
+SymPyPythonCall = "0.1,1"
 Setfield = "0.7, 0.8, 1"
 julia = "1.0"
 
