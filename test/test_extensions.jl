@@ -1,21 +1,22 @@
-import SymPy
-# import SymPyPythonCall # can't load both
+import SymPyPythonCall # can't load this and SymPy
 using ForwardDiff
 using IntervalRootFinding
 
+#=
 @testset "SymPy" begin
     SymPy.@syms x
     @test find_zero(cos(x) ~ 1/2, (0, pi/2)) ≈ find_zero(x -> cos(x) - 1/2, (0, pi/2))
     @test find_zero(1/2 ~ cos(x), (0, pi/2)) ≈ find_zero(x -> 1/2 - cos(x), (0, pi/2))
     @test find_zero(cos(x) ~ x/2, (0, pi/2)) ≈ find_zero(x -> cos(x) - x/2, (0, pi/2))
 end
+=#
 
-# @testset "SymPythonCall" begin
-#     SymPyPythonCall.@syms x
-#     @test find_zero(cos(x) ~ 1/2, (0, pi/2)) ≈ find_zero(x -> cos(x) - 1/2, (0, pi/2))
-#     @test find_zero(1/2 ~ cos(x), (0, pi/2)) ≈ find_zero(x -> 1/2 - cos(x), (0, pi/2))
-#     @test find_zero(cos(x) ~ x/2, (0, pi/2)) ≈ find_zero(x -> cos(x) - x/2, (0, pi/2))
-# end
+@testset "SymPythonCall" begin
+    SymPyPythonCall.@syms x
+    @test find_zero(cos(x) ~ 1/2, (0, pi/2)) ≈ find_zero(x -> cos(x) - 1/2, (0, pi/2))
+    @test find_zero(1/2 ~ cos(x), (0, pi/2)) ≈ find_zero(x -> 1/2 - cos(x), (0, pi/2))
+    @test find_zero(cos(x) ~ x/2, (0, pi/2)) ≈ find_zero(x -> cos(x) - x/2, (0, pi/2))
+end
 
 @testset "ForwardDiff" begin
     f(x, p) = x^2 - p
