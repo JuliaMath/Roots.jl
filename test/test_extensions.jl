@@ -1,8 +1,5 @@
-import SymPyPythonCall # can't load this and SymPy
-using ForwardDiff
-using IntervalRootFinding
-
 #=
+using SymPy
 @testset "SymPy" begin
     SymPy.@syms x
     @test find_zero(cos(x) ~ 1/2, (0, pi/2)) ≈ find_zero(x -> cos(x) - 1/2, (0, pi/2))
@@ -11,13 +8,17 @@ using IntervalRootFinding
 end
 =#
 
+#=
+using SymPyPythonCall
 @testset "SymPythonCall" begin
     SymPyPythonCall.@syms x
     @test find_zero(cos(x) ~ 1/2, (0, pi/2)) ≈ find_zero(x -> cos(x) - 1/2, (0, pi/2))
     @test find_zero(1/2 ~ cos(x), (0, pi/2)) ≈ find_zero(x -> 1/2 - cos(x), (0, pi/2))
     @test find_zero(cos(x) ~ x/2, (0, pi/2)) ≈ find_zero(x -> cos(x) - x/2, (0, pi/2))
 end
+=#
 
+using ForwardDiff
 @testset "ForwardDiff" begin
     f(x, p) = x^2 - p
     Z  = ZeroProblem(f, (0, 1000))
@@ -44,6 +45,7 @@ end
 
 end
 
+using IntervalRootFinding
 @testset "IntervalRootFinding" begin
     f(x) = sin(x + sin(x + sin(x)))
     @test find_zeros(f, (-5, 5)) ≈ [-pi, 0, pi]
