@@ -12,7 +12,7 @@ The `find_zero` function provides the
 primary interface. It supports various algorithms through the
 specification of a method. These include:
 
-* Bisection-like algorithms. For functions where a bracketing interval
+* Bisection-like methods. For functions where a bracketing interval
   is known (one where ``f(a)`` and ``f(b)`` have alternate signs),
   there are several bracketing methods, including `Bisection`.  For
   most floating point number types, bisection occurs in a manner
@@ -27,7 +27,7 @@ specification of a method. These include:
   iterations and are more performant.
 
 
-* Several derivative-free methods are implemented. These are specified
+* Several derivative-free methods. These are specified
   through the methods `Order0`, `Order1` (the secant method), `Order2`
   (the Steffensen method), `Order5`, `Order8`, and `Order16`. The
   number indicates, roughly, the order of convergence. The `Order0`
@@ -40,7 +40,7 @@ specification of a method. These include:
   multiplicity of the zero.
 
 
-* There are methods that require a derivative or two: `Roots.Newton`,
+* Methods requiring one or more derivatives: `Roots.Newton`,
   `Roots.Halley` are classical ones, `Roots.QuadraticInverse`,
   `Roots.ChebyshevLike`, `Roots.SuperHalley` are others.
   `Roots.Schroder` provides a quadratic method, like Newton's method,
@@ -78,7 +78,7 @@ true
 
 The default algorithm is guaranteed to have an  answer nearly as accurate as is  possible  given the limitations of floating point  computations.
 
-For the zeros "near" a point,  a non-bracketing method is often used, as generally  the algorithms are more efficient and can be  used in cases where a zero does  not cross the ``x`` axis. Passing just  the initial point will dispatch to  such a method:
+For the zeros "near" a point,  a non-bracketing method is often used, as generally  the algorithms are more efficient and can be  used in cases where a zero does  not cross the ``x`` axis. Passing just an initial guess will dispatch to such a method:
 
 ```jldoctest find_zero
 julia> find_zero(f,  0.6) ≈ 0.550606579334135

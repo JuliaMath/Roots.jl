@@ -26,7 +26,7 @@ See also `Roots.newton((f,fp), x0)` and `Roots.newton(fΔf, x0)` for simpler imp
 newton(f, fp, x0; kwargs...) = find_zero((f, fp), x0, Newton(); kwargs...)
 
 ## --------------------------------------------------
-
+#=
 """
     Roots.halley(f, fp, fpp, x0; kwargs...)
 
@@ -50,8 +50,10 @@ Keyword arguments are passed to `find_zero` using the `Roots.Halley()` method.
 
 
 """
+=#
 halley(f, fp, fpp, x0; kwargs...) = find_zero((f, fp, fpp), x0, Halley(); kwargs...)
 
+#=
 """
     Roots.quadratic_inverse(f, fp, fpp, x0; kwargs...)
 
@@ -75,6 +77,7 @@ Keyword arguments are passed to `find_zero` using the `Roots.QuadraticInverse()`
 
 
 """
+=#
 quadratic_inverse(f, fp, fpp, x0; kwargs...) =
     find_zero((f, fp, fpp), x0, QuadraticInverse(); kwargs...)
 
@@ -245,17 +248,14 @@ end
 
 ## fzeros
 """
-
-`fzeros(f, a, b; kwargs...)`
+    fzeros(f, a, b; kwargs...)
+    fzeros(f, ab; kwargs...)
 
 Searches for all zeros of `f` within an interval `(a,b)`. Assume neither `a` or `b` is a zero.
 
-Dispatches to `find_zeros(f, a, b; kwargs...)`.
+Compatability interface for [`find_zeros`](@ref).
 """
 function fzeros(f, a::Number, b::Number; kwargs...)
     find_zeros(FnWrapper(f), float(a), float(b); kwargs...)
 end
-fzeros(f, bracket::Vector{T}; kwargs...) where {T<:Number} =
-    fzeros(f, bracket[1], bracket[2]; kwargs...)
-fzeros(f, bracket::Tuple{T,S}; kwargs...) where {T<:Number,S<:Number} =
-    fzeros(f, bracket[1], bracket[2]; kwargs...)
+fzeros(f, ab; kwargs...) = fzeros(f, _extrema(ab)...; kwargs...)

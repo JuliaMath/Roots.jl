@@ -1,6 +1,5 @@
 ### Order2B() Esser method
 """
-    Roots.Order2B()
     Roots.Esser()
 
 Esser's method. This is a quadratically convergent method that, like
@@ -29,6 +28,12 @@ find_zero(g, x0, Roots.Order2B(), verbose=true) #  4 / 10
 ```
 """
 struct Esser <: AbstractSecantMethod end
+
+"""
+    Roots.Order2B()
+
+[`Esser`](@ref) method with guarded secant step.
+"""
 struct Order2B <: AbstractSecantMethod end
 
 function update_state(

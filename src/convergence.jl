@@ -262,11 +262,14 @@ function assess_convergence(
 end
 
 # state has stopped, this identifies if it has converged
+
+#=
 """
     decice_convergence(M,F,state,options, convergence_flag)
 
 When the algorithm terminates, this function decides the stopped value or returns NaN
 """
+=#
 function decide_convergence(
     M::AbstractNonBracketingMethod,
     F,

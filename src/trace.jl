@@ -25,11 +25,9 @@ log_nmethod(::NullTracks, method) = nothing          # record N (if hybrid)
 incfn(T::AbstractTracks, i=1) = log_fncall(T, i)      # legacy alias
 # a tracks object to record tracks
 """
-    Tracks(T, S)
-    Tracks()
+    Roots.Tracks{T,S}
 
-
-Construct a `Tracks` object used to record the progress of the algorithm.
+A `Tracks` instance is used to record the progress of an algorithm.
 `T` is the type of function inputs, and `S` is the type of function outputs. They
 both default to `Float64`. Note that because this type is not exported, you have to
 write `Roots.Tracks()` to construct a `Tracks` object.
@@ -311,11 +309,13 @@ function show_tracks(
 end
 
 ## needs better name, but is this useful?
+#=
 """
     find_zerov(f, x, M; kwargs...)
 
 Run `find_zero` return a `Tracks` object, not the value, which can be extracted via the `last` method.
 """
+=#
 function find_zerov(f, x, M; verbose=nothing, kwargs...)
     Z = init(ZeroProblem(f, x), M; verbose=true, kwargs...)
     solve!(Z)
