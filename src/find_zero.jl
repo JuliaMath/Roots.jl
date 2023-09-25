@@ -99,7 +99,7 @@ functions is used. For the classical algorithms, a function returning
 * `rtol`  - relative tolerance for `f(x)` values.
 * `maxiters`   - limit on maximum number of iterations.
 * `strict` - if `false` (the default), when the algorithm stops, possible zeros are checked with a relaxed tolerance.
-* `verbose` - if `true` a trace of the algorithm will be shown on successful completion. See the internal [`Tracks`](@ref) object to save this trace.
+* `verbose` - if `true` a trace of the algorithm will be shown on successful completion. See the internal [`Roots.Tracks`](@ref) object to save this trace.
 
 See the help string for `Roots.assess_convergence` for details on
 convergence. See the help page for `Roots.default_tolerances(method)`
@@ -201,7 +201,7 @@ ERROR: Roots.ConvergenceFailed("Algorithm failed to converge")
 
 Passing `verbose=true` will show details on the steps of the algorithm.
 The `tracks` argument allows
-the passing of a [`Tracks`](ref) object to record the values of `x` and `f(x)` used in
+the passing of a [`Roots.Tracks`](@ref) object to record the values of `x` and `f(x)` used in
 the algorithm.
 
 !!! note
@@ -319,11 +319,11 @@ function init(
 end
 
 """
+    solve!(P::ZeroProblemIterator)
     solve(fx::ZeroProblem, [M], [N]; p=nothing, kwargs...)
     init(fx::ZeroProblem, [M], [N];
          p=nothing,
          verbose=false, tracks=NullTracks(), kwargs...)
-    solve!(P::ZeroProblemIterator)
 
 Solve for the zero of a scalar-valued univariate function specified through `ZeroProblem` or
 `ZeroProblemIterator` using the `CommonSolve` interface.
@@ -475,13 +475,13 @@ end
 
 Disptaches to `solve!(init(fx, args...; kwargs...))`. See [`solve!`](@ref) for details.
 """
-function CommonSolve.solve(𝑭𝑿::ZeroProblem, args...; verbose=false, kwargs...)
+function solve(𝑭𝑿::ZeroProblem, args...; verbose=false, kwargs...)
     Z = init(𝑭𝑿, args...; verbose=verbose, kwargs...)
     solve!(Z; verbose=verbose)
 end
 
 # avoid splatting (issue #323, caused allocations)
-function CommonSolve.solve(
+function solve(
     𝑭𝑿::ZeroProblem,
     M::AbstractUnivariateZeroMethod,
     p=nothing;

@@ -88,6 +88,7 @@ function guarded_secant_step(alpha, beta, falpha, fbeta)
     end
 end
 
+#=
 """
     steff_step(M, x, fx)
 
@@ -95,6 +96,7 @@ Return first Steffensen step x + fx (with proper units).
 May be overridden to provide a guard when fx is too large.
 
 """
+=#
 function steff_step(M::Any, x::T, fx::S) where {T,S}
     x + fx * oneunit(T) / oneunit(S)
 end

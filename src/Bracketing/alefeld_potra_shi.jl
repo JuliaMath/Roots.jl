@@ -7,6 +7,7 @@
 
 ## --------------------------------------------------
 
+#=
 """
     AbstractAlefeldPotraShi
 
@@ -16,6 +17,7 @@ The `update_step` method calls a `calculateΔ` method that can be customized to 
 
 This implementation deviates slightly from the printed algorithm, as it may use an initial call to `_middle` rather than a secant step, depending on the signs of ``a`` and ``b``.
 """
+=#
 abstract type AbstractAlefeldPotraShi <: AbstractBracketingMethod end
 
 initial_fncalls(::AbstractAlefeldPotraShi) = 3 # worst case assuming fx₀, fx₁,fc must be computed

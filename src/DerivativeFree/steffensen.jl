@@ -1,6 +1,5 @@
 """
     Steffensen()
-    Order2()
 
 
 The quadratically converging
@@ -17,6 +16,12 @@ The error, `eᵢ - α`, satisfies
 `eᵢ₊₁ = f[xᵢ, xᵢ+fᵢ, α] / f[xᵢ,xᵢ+fᵢ] ⋅ (1 - f[xᵢ,α] ⋅ eᵢ²`
 """
 struct Steffensen <: AbstractSecantMethod end
+
+"""
+    Order2
+
+[`Steffensen`](@ref) with a guard on the secant step.
+"""
 struct Order2 <: AbstractSecantMethod end
 
 function update_state(

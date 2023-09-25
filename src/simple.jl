@@ -93,8 +93,9 @@ end
     return val
 end
 
+#=
 """
-    a42(f, ab; atol=nothing, rtol=nothing, λ=0.7, μ = 0.5)
+    Roots.a42(f, ab; atol=nothing, rtol=nothing, λ=0.7, μ = 0.5)
 
 Direct implemenation of Alefeld, Potra, and Shi's Algorithm 4.2. See also [`A42()`](@ref).
 
@@ -103,7 +104,9 @@ Direct implemenation of Alefeld, Potra, and Shi's Algorithm 4.2. See also [`A42(
 * `atol`, `rtol`: optional tolerances. These are `0` and `eps` respectively by default.
 
 
+Not exported
 """
+=#
 function a42(f, ab; atol=nothing, rtol=nothing, λ=0.7, μ=0.5)
     a, b = adjust_bracket(ab)
     δ₀ = b - a
@@ -370,6 +373,16 @@ end
 
 @inline qq(a, b, c) = (c - b) / (b - a)
 
+struct TupleWrapper{F,Fp}
+    f::F
+    fp::Fp
+end
+(F::TupleWrapper)(x) = begin
+    u, v = F.f(x), F.fp(x)
+    return (u, u / v)
+end
+
+#=
 """
     newton((f, f'), x0; xatol=nothing, xrtol=nothing, maxevals=100)
     newton(fΔf, x0; xatol=nothing, xrtol=nothing, maxevals=100)
@@ -394,15 +407,7 @@ Convergence here is decided by x_n ≈ x_{n-1} using the tolerances specified, w
 If the convergence fails, will return a `ConvergenceFailed` error.
 
 """
-struct TupleWrapper{F,Fp}
-    f::F
-    fp::Fp
-end
-(F::TupleWrapper)(x) = begin
-    u, v = F.f(x), F.fp(x)
-    return (u, u / v)
-end
-
+=#
 newton(f::Tuple, x0; kwargs...) = newton(TupleWrapper(f[1], f[2]), x0; kwargs...)
 function newton(f, x0; xatol=nothing, xrtol=nothing, maxevals=100)
     x = float(x0)

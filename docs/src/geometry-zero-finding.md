@@ -4,10 +4,11 @@ We illustrate the geometry behind a single step of several different, non-bracke
 
 ## Newton's method
 
-We load the `Plots`, `ForwardDiff`, and `Roots` packages:
+In addition to `Roots`, we use the `Plots` and `ForwardDiff` packages:
 
 ```@example geometry
-using Plots, ForwardDiff,  Roots
+using Roots
+using Plots, ForwardDiff
 Base.adjoint(f::Function)  = x  -> ForwardDiff.derivative(f, float(x)) # f' will compute derivative
 ```
 
@@ -82,8 +83,10 @@ plot!(sl, color=:red, linewidth=3)
 scatter!([x0, x1, x2], [0,0,0]; markercolor=:blue)
 annotate!([(x0,0,"x0", :bottom), (x1, 0, "x1", :bottom), (x2,0,"x2", :bottom)])
 scatter!([x0, x1], [f(x0), f(x1)]; markercolor=:blue)
+
 scatter!([α],[0]; markercolor=:blue)
 annotate!([(α, 0, "α", :top)])
+
 p
 ```
 
@@ -192,6 +195,7 @@ scatter!(xs, zero.(xs);  markercolor=:blue)
 
 scatter!([α],[0]; markercolor=:blue)
 annotate!([(α, 0, "α", :top)])
+
 p
 ```
 
@@ -218,8 +222,10 @@ for (i,x) ∈ enumerate(xs)
 end
 annotate!([(x4, 0, "x4", :bottom)])
 scatter!(xs, f.(xs); markercolor=:blue)
+
 scatter!([α],[0]; markercolor=:blue)
 annotate!([(α, 0, "α", :top)])
+
 p
 ```
 
@@ -266,16 +272,18 @@ x0 = 1.4
 x1 = x0 - 2 / (1 + sqrt(1 - 2L_f(x0))) * f(x0)/f'(x0)
 t2(x) = f(x0) + f'(x0)*(x-x0) + f''(x0)/2 * (x - x0)^2
 
-
-p = plot(f, 1.1, 1.5; legend=false, linewidth=3)
+a, b = 1.1, 1.5
+p = plot(f, a, b; legend=false, linewidth=3)
 plot!(zero)
 plot!(t2; color=:red, linewidth=3)
 
 scatter!([x0, x1], [0,0]; markercolor=:blue)
 annotate!([(x0,0,"x0", :bottom), (x1, 0, "x1", :bottom)])
 scatter!([x0], [f(x0)]; markercolor=:blue)
+
 scatter!([α],[0]; markercolor=:blue)
 annotate!([(α, 0, "α", :top)])
+
 p
 ```
 
@@ -300,11 +308,11 @@ We can visualize, as follows, using a contour plot to represent the hyperbola.
 x1 = x0 - 2 / (2 - L_f(x0)) * f(x0)/f'(x0)
 F(x,y) = y - f(x0) - f'(x0)*(x-x0) - f''(x0)/(2f'(x0)) * (x-x0) * (y-f(x0))
 
-
-plot(f, 1.1, 1.5; legend=false, linewidth=3)
+a, b = 1.1, 1.5
+p = plot(f, a, b; legend=false, linewidth=3)
 plot!(zero)
-xs′, ys′ = range(1.1, 1.5, length=50), range(f(1.1), f(1.5), length=50);
-zs = [F(x,y) for y ∈ ys′, x ∈ xs′];
+xs, ys = range(a, b, length=50), range(f(a), f(b), length=50);
+zs = [F(x,y) for y ∈ ys, x ∈ xs];
 contour!(xs, ys, zs; levels = [0], color=:red, linewidth=3)
 
 scatter!([x0, x1], [0,0]; markercolor=:blue)
@@ -314,6 +322,7 @@ scatter!([x0], [f(x0)]; markercolor=:blue)
 
 scatter!([α],[0]; markercolor=:blue)
 annotate!([(α, 0, "α", :top)])
+
 p
 ```
 
@@ -336,13 +345,14 @@ x_{n+1} = x_n - (1 + \frac{1}{2} L_f(x_n)) \frac{f(x_n)}{f'(x_n)}.
 This is visualized in a similar manner as the last example:
 
 ```@example geometry
-x1 = x0 + (1 - 1/2 * L_f(x0)) * f(x0) / f'(x0)
+x1 = x0 - (1 + 1/2 * L_f(x0)) * f(x0) / f'(x0)
 F(x, y) = -f''(x0)/(2f'(x0)^2) * (y-f(x0))^2 + y - f(x0)  - f'(x0) * (x- x0)
 
-plot(f, 1.1, 1.5; legend=false, linewidth=3)
+a, b = 1.1, 1.5
+p = plot(f, a, b; legend=false, linewidth=3)
 plot!(zero)
-xs′, ys′ = range(1.1, 1.5, length=50), range(f(1.1), f(1.5), length=50);
-zs = [F(x,y) for y ∈ ys′, x ∈ xs′];
+xs, ys = range(a, b, length=50), range(f(a), f(b), length=50);
+zs = [F(x,y) for y ∈ ys, x ∈ xs];
 contour!(xs, ys, zs; levels = [0], color=:red, linewidth=3)
 
 scatter!([x0, x1], [0,0]; markermarkercolor=:blue)
@@ -352,6 +362,7 @@ scatter!([x0], [f(x0)]; markermarkercolor=:blue)
 
 scatter!([α],[0]; markermarkercolor=:blue)
 annotate!([(α, 0, "α", :top)])
+
 p
 ```
 
@@ -384,23 +395,27 @@ Newton's method is recovered by letting ``b_n \rightarrow 0``, Chebyshev's metho
 The super-Halley method is when ``b_n = -f''(x_n)/f'(x_n)``. We can visualize this:
 
 ```@example geometry
-cn = -f(x0)
+cn = -f'(x0)
 bn = -f''(x0)/f'(x0)
-an = -f''(x0)/(2f'(x0)) - bn/f'(x0)
-x1 = x0 - (1 + 1/2 * (L_f(x0) / (1 + bn * (f(x0)/f'(x0))))) * f(x0)/f'(x0)
+an = -f''(x0)/(2f'(x0)^2) - bn/f'(x0)
+x1 = x0 - (1 + 1/2 * (L_f(x0) / (1 + bn * f(x0) / f'(x0)))) * f(x0)/f'(x0)
 F(x, y) = x - x0 + (y-f(x0)) * (1 + an * (y - f(x0))) / (bn * (y - f(x0)) + cn)
 
-plot(f, 1.1, 1.5; legend=false, linewidth=3)
+
+a, b= 1.1, 1.5
+p = plot(f, a, b; legend=false, linewidth=3)
 plot!(zero)
-xs′, ys′ = range(1.1, 1.5, length=50), range(f(1.1), f(1.5), length=50);
-zs = [F(x,y) for y ∈ ys′, x ∈ xs′];
+xs, ys = range(a, b, length=50), range(f(a), f(b), length=50);
+zs = [F(x,y) for y ∈ ys, x ∈ xs];
 contour!(xs, ys, zs; levels = [0], color=:red, linewidth=3)
 
 scatter!([x0, x1], [0,0]; markercolor=:blue)
 annotate!([(x0,0,"x0", :bottom), (x1, 0, "x1", :bottom)])
 scatter!([x0], [f(x0)]; markercolor=:blue)
+
 scatter!([α],[0]; markercolor=:blue)
 annotate!([(α, 0, "α", :top)])
+
 p
 ```
 

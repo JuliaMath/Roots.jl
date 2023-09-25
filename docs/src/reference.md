@@ -21,6 +21,10 @@ end
 CurrentModule = Roots
 ```
 
+```@docs
+Roots
+```
+
 ##  The `find_zero`  and `find_zeros` functions
 
 There are  two main  functions:  `find_zero`   to  identify  a  zero  of  ``f``  given  some initial starting  value or  bracketing interval and  `find_zeros` to heuristically identify  all  zeros in  a specified interval.
@@ -37,6 +41,7 @@ The problem-algorithm-solve interface is a pattern popularized in `Julia` by the
 
 ```@docs
 Roots.solve!
+Roots.solve
 Roots.ZeroProblem
 ```
 
@@ -108,7 +113,9 @@ only requires one new  function call per  step  so  can be very effective. Often
 
 ```@docs
 Secant
+Order1
 Steffensen
+Order2
 Order5
 Order8
 Order16
@@ -148,7 +155,9 @@ Derivative-free methods for non-simple zeros have the following implemented:
 
 ```@docs
 Roots.King
+Roots.Order1B
 Roots.Esser
+Roots.Order2B
 ```
 
 
@@ -300,12 +309,13 @@ Roots.dfree
 The initial naming scheme used `fzero` instead  of `fzeros`, following the name of the  MATLAB function [fzero](https://www.mathworks.com/help/matlab/ref/fzero.html). This interface  is not recommended, but, for now, still maintained.
 
 ```@docs
-Roots.fzero
+fzero
+fzeros
 ```
 
 ## Tracking iterations
 
-It is possible to add the keyword argument `verbose=true`  when calling the `find_zero` function to get detailed information about the solution and data from each iteration. To save this data a `Tracks` object may be passed in to `tracks`.
+It is possible to add the keyword argument `verbose=true`  when calling the `find_zero` function to get detailed information about the solution and data from each iteration. To save this data a `Tracks`object may be passed in to `tracks`.
 
 ----
 

@@ -1,3 +1,11 @@
+"""
+`Roots`. A package for solving `f(x) = 0` for  univariate, scalar functions.
+
+The basic methods are
+* [`find_zero`](@ref) for using one of several methods to identify a zero
+* [`ZeroProblem`](@ref) for solving for a zero using the `CommonSolve` interface
+* [`find_zeros`](@ref) for heuristically identifying all zeros in a specified interval
+"""
 module Roots
 
 if isdefined(Base, :Experimental) && isdefined(Base.Experimental, Symbol("@optlevel"))

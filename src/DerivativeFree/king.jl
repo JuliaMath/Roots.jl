@@ -1,5 +1,4 @@
 """
-    Roots.Order1B()
     Roots.King()
 
 A superlinear (order `1.6...`) modification of the secant method for multiple roots.
@@ -15,6 +14,12 @@ The *asymptotic* error, `eᵢ = xᵢ - α`, is given by
 
 """
 struct King <: AbstractSecantMethod end
+
+"""
+    Roots.Order1B()
+
+[`King`](@ref) method with guarded secant step.
+"""
 struct Order1B <: AbstractSecantMethod end
 
 struct KingState{T,S} <: AbstractUnivariateZeroState{T,S}
