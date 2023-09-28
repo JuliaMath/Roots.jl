@@ -44,7 +44,6 @@ function init_state(
     if x₀ > x₁
         x₀, x₁, fx₀, fx₁ = x₁, x₀, fx₁, fx₀
     end
-
     # handle interval if fa*fb ≥ 0 (explicit, but also not needed)
     (iszero(fx₀) || iszero(fx₁)) &&
         return UnivariateZeroState(promote(x₁, x₀)..., promote(fx₁, fx₀)...)
@@ -57,7 +56,6 @@ function init_state(
 
     # handles case where a=-0.0, b=1.0 without error
     sign(a) * sign(b) < 0 && throw(ArgumentError("_middle error"))
-
     UnivariateZeroState(promote(b, a)..., promote(fb, fa)...)
 end
 
@@ -180,6 +178,7 @@ function solve!(
     val, stopped = :not_converged, false
     ctr = 1
     log_step(l, M, state; init=true)
+    T,S = TS(state)
 
     while !stopped
         a, b = state.xn0, state.xn1
@@ -215,10 +214,10 @@ function solve!(
         end
 
         ## ----
-        @set! state.xn0 = a
-        @set! state.xn1 = b
-        @set! state.fxn0 = fa
-        @set! state.fxn1 = fb
+        @set! state.xn0 = convert(T, a)
+        @set! state.xn1 = convert(T, b)
+        @set! state.fxn0 = convert(S, fa)
+        @set! state.fxn1 = convert(S, fb)
 
         log_step(l, M, state)
         ctr += 1
