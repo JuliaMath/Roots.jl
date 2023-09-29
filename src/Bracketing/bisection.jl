@@ -179,10 +179,9 @@ function solve!(
     ctr = 1
     log_step(l, M, state; init=true)
     T,S = TS(state)
-
     while !stopped
-        a, b = state.xn0, state.xn1
-        fa, fb = state.fxn0, state.fxn1
+        a::T,  b::T  = state.xn0,  state.xn1
+        fa::S, fb::S = state.fxn0, state.fxn1
 
         ## assess_convergence
         if nextfloat(a) ≥ b
@@ -214,10 +213,10 @@ function solve!(
         end
 
         ## ----
-        @set! state.xn0 = convert(T, a)
-        @set! state.xn1 = convert(T, b)
-        @set! state.fxn0 = convert(S, fa)
-        @set! state.fxn1 = convert(S, fb)
+        @set! state.xn0 = a
+        @set! state.xn1 = b
+        @set! state.fxn0 = fa
+        @set! state.fxn1 = fb
 
         log_step(l, M, state)
         ctr += 1
