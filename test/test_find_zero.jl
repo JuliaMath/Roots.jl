@@ -118,6 +118,14 @@ struct Order3_Test <: Roots.AbstractSecantMethod end
         @test @inferred(find_zero(sin, SomeInterval(3, 4))) ≈ pi
         @test @inferred(find_zero(sin, range(3, stop=4, length=20))) ≈ pi
     end
+
+    # test issue when non type stalbe
+    h(x) = x < 2000 ? -1000 : -1000 + 0.1 * (x - 2000)
+    a, b, xᵅ = 0, 20_000, 12_000
+    for M ∈ bracketing_meths
+        @test find_zero(h, (a,b), M) ≈ xᵅ
+    end
+
 end
 
 @testset "non simple zeros" begin
