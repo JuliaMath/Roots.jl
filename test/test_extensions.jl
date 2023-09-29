@@ -2,9 +2,23 @@
 using SymPy
 @testset "SymPy" begin
     SymPy.@syms x
+
     @test find_zero(cos(x) ~ 1/2, (0, pi/2)) ≈ find_zero(x -> cos(x) - 1/2, (0, pi/2))
     @test find_zero(1/2 ~ cos(x), (0, pi/2)) ≈ find_zero(x -> 1/2 - cos(x), (0, pi/2))
     @test find_zero(cos(x) ~ x/2, (0, pi/2)) ≈ find_zero(x -> cos(x) - x/2, (0, pi/2))
+
+    @test find_zeros(cos(x) ~ 1/2, (0, pi/2)) ≈ find_zeros(x -> cos(x) - 1/2, (0, pi/2))
+    @test find_zeros(1/2 ~ cos(x), (0, pi/2)) ≈ find_zeros(x -> 1/2 - cos(x), (0, pi/2))
+    @test find_zeros(cos(x) ~ x/2, (0, pi/2)) ≈ find_zeros(x -> cos(x) - x/2, (0, pi/2))
+
+    @test fzero(cos(x) ~ 1/2, 0, pi/2) ≈ fzero(x -> cos(x) - 1/2, 0, pi/2)
+    @test fzero(1/2 ~ cos(x), 0, pi/2) ≈ fzero(x -> 1/2 - cos(x), 0, pi/2)
+    @test fzero(cos(x) ~ x/2, 0, pi/2) ≈ fzero(x -> cos(x) - x/2, 0, pi/2)
+
+    @test fzeros(cos(x) ~ 1/2, 0, pi/2) ≈ fzeros(x -> cos(x) - 1/2, 0, pi/2)
+    @test fzeros(1/2 ~ cos(x), 0, pi/2) ≈ fzeros(x -> 1/2 - cos(x), 0, pi/2)
+    @test fzeros(cos(x) ~ x/2, 0, pi/2) ≈ fzeros(x -> cos(x) - x/2, 0, pi/2)
+
 end
 =#
 
@@ -12,9 +26,23 @@ end
 using SymPyPythonCall
 @testset "SymPythonCall" begin
     SymPyPythonCall.@syms x
+
     @test find_zero(cos(x) ~ 1/2, (0, pi/2)) ≈ find_zero(x -> cos(x) - 1/2, (0, pi/2))
     @test find_zero(1/2 ~ cos(x), (0, pi/2)) ≈ find_zero(x -> 1/2 - cos(x), (0, pi/2))
     @test find_zero(cos(x) ~ x/2, (0, pi/2)) ≈ find_zero(x -> cos(x) - x/2, (0, pi/2))
+
+    @test find_zeros(cos(x) ~ 1/2, (0, pi/2)) ≈ find_zeros(x -> cos(x) - 1/2, (0, pi/2))
+    @test find_zeros(1/2 ~ cos(x), (0, pi/2)) ≈ find_zeros(x -> 1/2 - cos(x), (0, pi/2))
+    @test find_zeros(cos(x) ~ x/2, (0, pi/2)) ≈ find_zeros(x -> cos(x) - x/2, (0, pi/2))
+
+    @test fzero(cos(x) ~ 1/2, 0, pi/2) ≈ fzero(x -> cos(x) - 1/2, 0, pi/2)
+    @test fzero(1/2 ~ cos(x), 0, pi/2) ≈ fzero(x -> 1/2 - cos(x), 0, pi/2)
+    @test fzero(cos(x) ~ x/2, 0, pi/2) ≈ fzero(x -> cos(x) - x/2, 0, pi/2)
+
+    @test fzeros(cos(x) ~ 1/2, 0, pi/2) ≈ fzeros(x -> cos(x) - 1/2, 0, pi/2)
+    @test fzeros(1/2 ~ cos(x), 0, pi/2) ≈ fzeros(x -> 1/2 - cos(x), 0, pi/2)
+    @test fzeros(cos(x) ~ x/2, 0, pi/2) ≈ fzeros(x -> cos(x) - x/2, 0, pi/2)
+
 end
 =#
 
