@@ -103,7 +103,6 @@ Direct implemenation of Alefeld, Potra, and Shi's Algorithm 4.2. See also [`A42(
 * `ab`: a *bracketing interval
 * `atol`, `rtol`: optional tolerances. These are `0` and `eps` respectively by default.
 
-
 Not exported
 """
 =#

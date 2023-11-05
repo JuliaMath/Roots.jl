@@ -48,7 +48,6 @@ derivatives, respectively.
 
 Keyword arguments are passed to `find_zero` using the `Roots.Halley()` method.
 
-
 """
 =#
 halley(f, fp, fpp, x0; kwargs...) = find_zero((f, fp, fpp), x0, Halley(); kwargs...)
