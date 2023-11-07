@@ -1,10 +1,16 @@
 """
-`Roots`. A package for solving `f(x) = 0` for  univariate, scalar functions.
+    Roots
+
+A package for solving `f(x) = 0` for univariate, scalar functions.
 
 The basic methods are
 * [`find_zero`](@ref) for using one of several methods to identify a zero
 * [`ZeroProblem`](@ref) for solving for a zero using the `CommonSolve` interface
 * [`find_zeros`](@ref) for heuristically identifying all zeros in a specified interval
+
+# Extended help
+
+$(replace(read(joinpath(@__DIR__, "..", "README.md"), String), "```julia" => "```jldoctest readme"))
 """
 module Roots
 
@@ -75,15 +81,5 @@ include("Derivative/lith.jl")
 include("find_zeros.jl")
 include("simple.jl")
 include("alternative_interfaces.jl")
-
-# cf. https://github.com/JuliaDocs/Documenter.jl/pull/1664/files
-function _update_module_doc()
-    path = joinpath(@__DIR__, "..", "README.md")
-    text = read(path, String)
-    # The code blocks in the README.md should be julia blocks for the syntax highlighter.
-    text = replace(text, "```julia" => "```jldoctest readme")
-    @doc text Roots
-end
-_update_module_doc()
 
 end
