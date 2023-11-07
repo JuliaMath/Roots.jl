@@ -19,9 +19,10 @@ SymPyPythonCall = "bc8888f7-b21e-4b7c-a06a-5d9c9496438c"
 ChainRulesCore = "1"
 CommonSolve = "0.1, 0.2"
 ForwardDiff = "0.10"
-SymPy = "1"
-SymPyPythonCall = "0.1,1"
+SymPy = "1,2"
+SymPyPythonCall = "0.1, 0.2, 1"
 Setfield = "0.7, 0.8, 1"
+Printf = "1"
 julia = "1.0"
 
 

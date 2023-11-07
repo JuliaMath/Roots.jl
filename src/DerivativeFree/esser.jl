@@ -12,7 +12,7 @@ step when `|fx|` is considered too large.
 
 
 Esser, H. Computing (1975) 14: 367. DOI: [10.1007/BF02253547](https://doi.org/10.1007/BF02253547)
-Eine stets quadratisch konvergente Modifikation des Steffensen-Verfahrens
+Eine stets quadratisch konvergente Modification des Steffensen-Verfahrens
 
 
 ## Examples

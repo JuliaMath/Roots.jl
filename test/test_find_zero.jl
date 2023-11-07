@@ -123,7 +123,7 @@ struct Order3_Test <: Roots.AbstractSecantMethod end
     h(x) = x < 2000 ? -1000 : -1000 + 0.1 * (x - 2000)
     a, b, xᵅ = 0, 20_000, 12_000
     for M ∈ bracketing_meths
-        @test find_zero(h, (a,b), M) ≈ xᵅ
+        @test find_zero(h, (a, b), M) ≈ xᵅ
     end
 
 end
@@ -486,7 +486,7 @@ struct _SampleCallableObject end
     end
 end
 
-@testset "function evalutions" begin
+@testset "function evaluations" begin
     function wrapper(f)
         cnt = 0
         x -> begin

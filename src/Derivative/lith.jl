@@ -148,7 +148,7 @@ function evalf(F::Callable_Function{S,T,𝑭,P}, x) where {N,S<:Val{N},T<:Val{tr
 end
 
 #specializations for N = 1,2,3,4,5,6
-## lmm(::Roots.LithBoonkkampIJzerman{1, D}) is defined up unitl D = 6, so specialize those
+## lmm(::Roots.LithBoonkkampIJzerman{1, D}) is defined up until D = 6, so specialize those
 
 function evalf(F::Callable_Function{S,T,𝑭,P}, x) where {S<:Val{1},T<:Val{false},𝑭,P}
     F(x)

@@ -6,7 +6,7 @@ struct UnivariateZeroState{T,S} <: AbstractUnivariateZeroState{T,S}
     fxn0::S
 end
 
-TS(::AbstractUnivariateZeroState{T,S}) where {T,S} = T,S
+TS(::AbstractUnivariateZeroState{T,S}) where {T,S} = T, S
 
 # simple helper to set main properties of a state object
 function _set(state, xf1)
