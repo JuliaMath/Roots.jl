@@ -486,7 +486,7 @@ struct _SampleCallableObject end
     end
 end
 
-@testset "function evalutions" begin
+@testset "function evaluations" begin
     function wrapper(f)
         cnt = 0
         x -> begin
