@@ -97,7 +97,7 @@ end
 """
     Roots.a42(f, ab; atol=nothing, rtol=nothing, λ=0.7, μ = 0.5)
 
-Direct implemenation of Alefeld, Potra, and Shi's Algorithm 4.2. See also [`A42()`](@ref).
+Direct implementation of Alefeld, Potra, and Shi's Algorithm 4.2. See also [`A42()`](@ref).
 
 * `f`: function to find zero of. (If `f` is 4-times continuously differentiable, convergence to a simple root will be like ``(2 + 7^{1/2})^{1/3} = 1.6686...``
 * `ab`: a *bracketing interval

@@ -768,7 +768,7 @@ julia> above = accumulate((x,y) -> nextfloat(x), 1:10, init=1/3);
 
 julia> below = accumulate((x,y) -> prevfloat(x), 1:10, init=1/3);
 
-julia> ns = sort([below...,1/3, above...]); # floating point numbers aroudn 1/3
+julia> ns = sort([below...,1/3, above...]); # floating point numbers around 1/3
 
 julia> maximum(abs.(f.(ns) - f1.(ns))) < 1e-14
 true

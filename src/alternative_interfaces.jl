@@ -252,7 +252,7 @@ end
 
 Searches for all zeros of `f` within an interval `(a,b)`. Assume neither `a` or `b` is a zero.
 
-Compatability interface for [`find_zeros`](@ref).
+Compatibility interface for [`find_zeros`](@ref).
 """
 function fzeros(f, a::Number, b::Number; kwargs...)
     find_zeros(FnWrapper(f), float(a), float(b); kwargs...)

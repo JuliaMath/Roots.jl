@@ -228,7 +228,7 @@ Originally by John Travers.
 """
 const AlefeldPotraShi = A2425{2}
 
-# Algorith 5.7 is parameterized by K
+# Algorithm 5.7 is parameterized by K
 # 4.1 -> K=1; 4.2 -> K=2
 struct A57{K} <: AbstractAlefeldPotraShi end
 fncalls_per_step(::A57{K}) where {K} = K - 1
