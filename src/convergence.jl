@@ -38,7 +38,6 @@ init_options(
 
 function init_options(M, T=Float64, S=Float64; kwargs...)
     d = kwargs
-
     defs = default_tolerances(M, T, S)
     δₐ = get(d, :xatol, get(d, :xabstol, defs[1]))
     δᵣ = get(d, :xrtol, get(d, :xreltol, defs[2]))

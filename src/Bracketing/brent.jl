@@ -48,8 +48,8 @@ function update_state(
     fa, fb, fc = state.fxn0, state.fxn1, state.fc
 
     # next step depends on points; inverse quadratic
-    s::T = inverse_quadratic_step(a, b, c, fa, fb, fc)
-    (isnan(s) || isinf(s)) && (s = secant_step(a, b, fa, fb))
+    s′ = inverse_quadratic_step(a, b, c, fa, fb, fc)
+    s::T = (isnan(s′) || isinf(s′)) ? secant_step(a, b, fa, fb) : s′
 
     # guard step
     u, v = (3a + b) / 4, b
