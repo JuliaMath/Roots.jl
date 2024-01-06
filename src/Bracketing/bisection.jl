@@ -160,10 +160,10 @@ function update_state(
         a, fa = c, fc
     end
 
-    @set! o.xn0 = a
-    @set! o.xn1 = b
-    @set! o.fxn0 = fa
-    @set! o.fxn1 = fb
+    @reset o.xn0 = a
+    @reset o.xn1 = b
+    @reset o.fxn0 = fa
+    @reset o.fxn1 = fb
 
     return o, false
 end
@@ -213,10 +213,10 @@ function solve!(
         end
 
         ## ----
-        @set! state.xn0 = a
-        @set! state.xn1 = b
-        @set! state.fxn0 = fa
-        @set! state.fxn1 = fb
+        @reset state.xn0 = a
+        @reset state.xn1 = b
+        @reset state.fxn0 = fa
+        @reset state.fxn1 = fb
 
         log_step(l, M, state)
         ctr += 1

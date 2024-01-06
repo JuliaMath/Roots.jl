@@ -90,10 +90,10 @@ function update_state(
     end
 
     state = _set(state, (b, fb), (a, fa))
-    @set! state.c = c
-    @set! state.d = d
-    @set! state.fc = fc
-    @set! state.mflag = mflag
+    @reset state.c = c
+    @reset state.d = d
+    @reset state.fc = fc
+    @reset state.mflag = mflag
 
     return state, false
 end

@@ -46,12 +46,12 @@ function update_state(
     fxn1::S, (r1, r2) = F(xn1)
     incfn(l, 3)
 
-    @set! o.xn0 = xn
-    @set! o.xn1 = xn1
-    @set! o.fxn0 = fxn
-    @set! o.fxn1 = fxn1
-    @set! o.Δ = r1
-    @set! o.ΔΔ = r2
+    @reset o.xn0 = xn
+    @reset o.xn1 = xn1
+    @reset o.fxn0 = fxn
+    @reset o.fxn1 = fxn1
+    @reset o.Δ = r1
+    @reset o.ΔΔ = r2
 
     return o, false
 end
