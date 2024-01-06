@@ -1,6 +1,6 @@
 name = "Roots"
 uuid = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
-version = "2.0.23"
+version = "2.1.0"
 
 [deps]
 ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
@@ -22,7 +22,7 @@ SymPy = "1,2"
 SymPyPythonCall = "0.1, 0.2, 1"
 Accessors = "0.1.33"
 Printf = "<0.0.1, 1"
-julia = "1.0"
+julia = "1.6"
 
 
 [extensions]
