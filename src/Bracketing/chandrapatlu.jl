@@ -59,8 +59,8 @@ function update_state(
     end
 
     o = _set(o, (a, fa), (b, fb)) # a is xₙ, b is xₙ₋₁
-    @set! o.c = c
-    @set! o.fc = fc
+    @reset o.c = c
+    @reset o.fc = fc
 
     return (o, false)
 end

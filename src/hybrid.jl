@@ -89,8 +89,8 @@ function solve!(
             r = b + sign(r - b) * ts * Δx
         end
 
-        @set! state0.xn1 = r
-        @set! state0.fxn1 = first(F(r))
+        @reset state0.xn1 = r
+        @reset state0.fxn1 = first(F(r))
         incfn(l)
 
         # a sign change after shortening?
@@ -146,8 +146,8 @@ function solve!(
                 fr = F(r)
                 incfn(l)
 
-                @set! state0.xn1 = r
-                @set! state0.fxn1 = fr
+                @reset state0.xn1 = r
+                @reset state0.fxn1 = fr
                 state = state0
             end
         end

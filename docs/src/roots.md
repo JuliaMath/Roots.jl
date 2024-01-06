@@ -1188,10 +1188,10 @@ julia> function init_state(::Chandrapatla, F, x₀, x₁, fx₀, fx₁)
 end
 ```
 
-The main algorithm is implemented in the `update_state` method. The `@set!` macro from `Setfield.jl` is used to modify a state object, which otherwise is immutable.
+The main algorithm is implemented in the `update_state` method. The `@reset` macro from `Accessors.jl` is used to modify a state object, which otherwise is immutable.
 
 ```julia
-julia> import Roots.Setfield: @set!;
+julia> import Roots.Accessors: @reset;
 
 julia> function Roots.update_state(::Chandrapatla, F, o, options, l=NullTracks())
 
@@ -1217,12 +1217,12 @@ julia> function Roots.update_state(::Chandrapatla, F, o, options, l=NullTracks()
         fa, fc = fₜ, fa
     end
 
-    @set! o.xn0 = a
-    @set! o.xn1 = b
-    @set! o.c = c
-    @set! o.fxn0 = fa
-    @set! o.fxn1 = fb
-    @set! o.fc = fc
+    @reset o.xn0 = a
+    @reset o.xn1 = b
+    @reset o.c = c
+    @reset o.fxn0 = fa
+    @reset o.fxn1 = fb
+    @reset o.fc = fc
 
     return (o, false)
 end

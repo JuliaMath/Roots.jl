@@ -45,7 +45,7 @@ function update_state(::Order1B, F, o::KingState, options, l=NullTracks())
         fₛ = F(x0 - fx0 * oneunit(x0) / oneunit(fx0))
         incfn(l)
         G₀ = -fx0^2 / (fₛ - fx0)
-        @set! state.G0 = G₀
+        @reset state.G0 = G₀
 
         return (state, flag)
     else
@@ -80,7 +80,7 @@ function update_state(::King, F, o::KingState{T,S}, options, l=NullTracks()) whe
     incfn(l)
 
     o = _set(o, (x1, fx1), (x0, fx0))
-    @set! o.G0 = G₁
+    @reset o.G0 = G₁
 
     return o, false
 end

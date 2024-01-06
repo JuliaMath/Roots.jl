@@ -5,8 +5,8 @@ using ForwardDiff;
 Base.adjoint(f) = x -> ForwardDiff.derivative(f, float(x));
 
 # for a user-defined method
-import Roots.Setfield
-import Roots.Setfield: @set!
+import Roots.Accessors
+import Roots.Accessors: @reset
 struct Order3_Test <: Roots.AbstractSecantMethod end
 
 ## Test the interface
@@ -270,10 +270,10 @@ end
         wn = xn1 - r1 - r1^2 / r2
         fwn::S = f(wn)
 
-        @set! o.xn0 = xn
-        @set! o.xn1 = wn
-        @set! o.fxn0 = fxn
-        @set! o.fxn1 = fwn
+        @reset o.xn0 = xn
+        @reset o.xn1 = wn
+        @reset o.fxn0 = fxn
+        @reset o.fxn1 = fwn
 
         return (o, false)
     end

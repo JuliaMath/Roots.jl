@@ -92,11 +92,11 @@ function update_state(
     fxn1::S, Δ = F(xn1)
     incfn(l, 2)
 
-    @set! o.xn0 = xn0
-    @set! o.xn1 = xn1
-    @set! o.Δ = Δ
-    @set! o.fxn0 = fxn0
-    @set! o.fxn1 = fxn1
+    @reset o.xn0 = xn0
+    @reset o.xn1 = xn1
+    @reset o.Δ = Δ
+    @reset o.fxn0 = fxn0
+    @reset o.fxn1 = fxn1
 
     return o, false
 end
