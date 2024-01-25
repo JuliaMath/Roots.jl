@@ -56,6 +56,8 @@ function init_state(::AbstractAlefeldPotraShi, F, x₀, x₁, fx₀, fx₁; c=no
         promote(b, a, a, a)...,
         promote(fb, fa, fa, fa)...,
     )
+    assert_bracket(fa, fb)
+
 
     if a > b
         a, b, fa, fb = b, a, fb, fa
