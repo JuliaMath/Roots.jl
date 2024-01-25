@@ -12,6 +12,32 @@ function ChainRulesCore.frule(
     p;
     kwargs...,
 )
+    @show :frule, p
+    xᵅ = solve(ZP, M, p; kwargs...)
+
+    # Use a single reverse-mode AD call with `rrule_via_ad` if `config` supports it?
+    F = p -> Callable_Function(M, ZP.F, p)
+    fₓ(x) = first(F(p)(x))
+    fₚ(p) = first(F(p)(xᵅ))
+    fx = ChainRulesCore.frule_via_ad(config, (ChainRulesCore.NoTangent(), true), fₓ, xᵅ)[2]
+    fp = ChainRulesCore.frule_via_ad(config, (ChainRulesCore.NoTangent(), Δp), fₚ, p)[2]
+
+    xᵅ, -fp / fx
+end
+
+
+
+function ChainRulesCore.frule(
+    config::ChainRulesCore.RuleConfig{>:ChainRulesCore.HasForwardsMode},
+    (_, _, _, Δp),
+    ::typeof(solve),
+    ZP::ZeroProblem,
+    M::AbstractUnivariateZeroMethod,
+    ::Nothing;
+    kwargs...,
+)
+
+    @show :frule, :nothing
     xᵅ = solve(ZP, M, p; kwargs...)
 
     # Use a single reverse-mode AD call with `rrule_via_ad` if `config` supports it?
@@ -34,6 +60,7 @@ function ChainRulesCore.rrule(
     p;
     kwargs...,
 )
+    @show :rrule, p
     xᵅ = solve(ZP, M, p; kwargs...)
 
     f(x, p) = first(Callable_Function(M, ZP.F, p)(x))
@@ -48,6 +75,38 @@ function ChainRulesCore.rrule(
             ChainRulesCore.NoTangent(),
             ChainRulesCore.NoTangent(),
             dp,
+        )
+    end
+
+    return xᵅ, pullback_solve_ZeroProblem
+end
+
+function ChainRulesCore.rrule(
+    rc::ChainRulesCore.RuleConfig{>:ChainRulesCore.HasReverseMode},
+    ::typeof(solve),
+    ZP::ZeroProblem,
+    M::AbstractUnivariateZeroMethod,
+    ::Nothing;
+    kwargs...,
+)
+    @show :rrule, nothing
+    xᵅ = solve(ZP, M; kwargs...)
+    𝐹 = typeof(ZP.F)
+    @show 𝐹
+    f(x, p) = first(Callable_Function(M, p)(x))
+    _, pullback_f = ChainRulesCore.rrule_via_ad(rc, f, xᵅ, ZP.F)
+    _, fx, fp = pullback_f(true)
+    @show fx, first(fp)
+    yp = -first(fp) / fx
+
+    function pullback_solve_ZeroProblem(dy)
+        dp = yp * dy
+        @show dp
+        return (
+            ChainRulesCore.NoTangent(),
+            ChainRulesCore.NoTangent(),
+            fx,#ChainRulesCore.NoTangent(),
+            dp
         )
     end
 
