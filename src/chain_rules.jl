@@ -67,8 +67,12 @@ function ChainRulesCore.rrule(
     _, pullback_f = ChainRulesCore.rrule_via_ad(rc, f, xᵅ, p)
     _, fx, fp = pullback_f(true)
     yp = -fp / fx
-
+    @show ZP.F
+    @show fp
+    @show fx
+    @show yp
     function pullback_solve_ZeroProblem(dy)
+        @show dy
         dp = yp * dy
         return (
             ChainRulesCore.NoTangent(),
@@ -89,25 +93,40 @@ function ChainRulesCore.rrule(
     ::Nothing;
     kwargs...,
 )
-    @show :rrule, nothing
+    @show :rrule, nothing, :XXX_not_working_for_hessian
+    𝑓(x,p) = p(x)
+    𝑍𝑃 = ZeroProblem(𝑓, ZP.x₀)
+    @show ZP.F
+
     xᵅ = solve(ZP, M; kwargs...)
-    𝐹 = typeof(ZP.F)
-    @show 𝐹
-    f(x, p) = first(Callable_Function(M, p)(x))
+    f(x, p) = first(Callable_Function(M, 𝑍𝑃.F, p)(x))
+    # XXX --> this is failing
     _, pullback_f = ChainRulesCore.rrule_via_ad(rc, f, xᵅ, ZP.F)
     _, fx, fp = pullback_f(true)
-    @show fx, first(fp)
-    yp = -first(fp) / fx
-
+    @show isa(first(fp), Number), typeof(first(fp))
+    yp = NamedTuple{keys(fp)}(values(fp)./(-fx))
+    @show [getfield(ZP.F,k) for k in keys(fp)]
+    @show fp
+    @show fx
+    @show yp
     function pullback_solve_ZeroProblem(dy)
-        dp = yp * dy
-        @show dp
-        return (
-            ChainRulesCore.NoTangent(),
-            ChainRulesCore.NoTangent(),
-            fx,#ChainRulesCore.NoTangent(),
-            dp
-        )
+        #𝐹 = hasproperty(ZP.F, :backing) ? getfield(ZP.F, :backing) : ZP.F
+        #dys = [getfield(𝐹,k) / fx for k in keys(fp)]
+        #@show dys
+        #dys = [getfield(fp,k)*getfield(ZP.F,k) / fx for k in keys(fp)]
+        #@show dy
+        dF = ChainRulesCore.Tangent{typeof(ZP.F)}(; yp...) # but not right for hessian
+        dsolve = ChainRulesCore.NoTangent()
+
+        dZP = ChainRulesCore.Tangent{typeof(ZP)}(;
+                                                 F = dF,
+                                                 x₀ = ChainRulesCore.NoTangent()
+                                                 )
+
+        dM = ChainRulesCore.NoTangent()
+        dp = ChainRulesCore.NoTangent()
+        dF = ChainRulesCore.@thunk(values(yp) .* dy)
+        return dsolve, dZP, dM, dp, dF
     end
 
     return xᵅ, pullback_solve_ZeroProblem
