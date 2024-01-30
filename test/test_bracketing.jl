@@ -308,6 +308,12 @@ end
     @test maxfailures <= 0
     @test maxresidual <= 1e-5
     @test avg(cnts) <= 3000
+
+    ## issue 412 check for bracket
+    f = x -> x - 1
+    for M ∈ Ms
+        @test_throws ArgumentError find_zero(f, (-3,0), M)
+    end
 end
 
 ## Some tests for FalsePosition methods

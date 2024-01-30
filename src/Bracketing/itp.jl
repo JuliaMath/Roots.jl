@@ -77,7 +77,7 @@ function update_state(M::ITP, F, o::ITPState{T,S,R}, options, l=NullTracks()) wh
         # we need the options to set the ϵ⋅2^n₁₂ part of r.
         ϵ = max(options.xabstol, max(abs(a), abs(b)) * options.xreltol)
         ϵ2n₁₂ = ϵ * exp2(ceil(Int, log2((b - a) / (2ϵ))) + M.n₀)
-        @set! o.ϵ2n₁₂ = ϵ2n₁₂
+        @reset o.ϵ2n₁₂ = ϵ2n₁₂
     end
 
     Δ = b - a
@@ -109,7 +109,7 @@ function update_state(M::ITP, F, o::ITPState{T,S,R}, options, l=NullTracks()) wh
     end
 
     o = _set(o, (b, fb), (a, fa))
-    @set! o.j = j + 1
+    @reset o.j = j + 1
 
     return o, false
 end

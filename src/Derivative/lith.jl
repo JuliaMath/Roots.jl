@@ -263,27 +263,27 @@ function update_state(
     isissue(o.xn1 - xᵢ) && return (o, true)
 
     for i in 1:(S - 1)
-        @set! xs[i] = xs[i + 1]
+        @reset xs[i] = xs[i + 1]
     end
-    @set! xs[end] = xᵢ
+    @reset xs[end] = xᵢ
 
     ysᵢ = evalf(F, xᵢ)
     for i in 0:D
         i′ = i + 1
         for j in 1:(S - 1)
-            @set! ys[i′][j] = ys[i′][j + 1]
+            @reset ys[i′][j] = ys[i′][j + 1]
         end
         yij::T = ysᵢ[i′]
-        @set! ys[i′][end] = yij
+        @reset ys[i′][end] = yij
     end
     incfn(l, 1 + D)
 
-    @set! o.xn0 = o.xn1
-    @set! o.xn1 = xᵢ
-    @set! o.fxn0 = o.fxn1
-    @set! o.fxn1 = ys[1][end]
-    @set! o.m = xs
-    @set! o.fm = ys
+    @reset o.xn0 = o.xn1
+    @reset o.xn1 = xᵢ
+    @reset o.fxn0 = o.fxn1
+    @reset o.fxn1 = ys[1][end]
+    @reset o.m = xs
+    @reset o.fm = ys
 
     return (o, false)
 end
@@ -313,42 +313,42 @@ function init_lith(
         x0, fx0 = x₀, fx₀
     end
 
-    @set! xs[1] = x0
-    @set! xs[2] = x₁
-    @set! ys[1][1] = fx0
-    @set! ys[1][2] = fx₁
+    @reset xs[1] = x0
+    @reset xs[2] = x₁
+    @reset ys[1][1] = fx0
+    @reset ys[1][2] = fx₁
 
     # build up xs, ys
     # redundant code, but here to avoid allocations
     S < 3 && return (xs, ys)
     xᵢ = lmm(Val(2), Val(0), xs, ys)
     y1i = only_f(F, xᵢ)
-    @set! xs[3] = xᵢ
-    @set! ys[1][3] = y1i
+    @reset xs[3] = xᵢ
+    @reset ys[1][3] = y1i
 
     S < 4 && return (xs, ys)
     xᵢ = lmm(Val(3), Val(0), xs, ys)
     y1i = only_f(F, xᵢ)
-    @set! xs[4] = xᵢ
-    @set! ys[1][4] = y1i
+    @reset xs[4] = xᵢ
+    @reset ys[1][4] = y1i
 
     S < 5 && return (xs, ys)
     xᵢ = lmm(Val(4), Val(0), xs, ys)
     y1i = only_f(F, xᵢ)
-    @set! xs[5] = xᵢ
-    @set! ys[1][5] = y1i
+    @reset xs[5] = xᵢ
+    @reset ys[1][5] = y1i
 
     S < 6 && return (xs, ys)
     xᵢ = lmm(Val(5), Val(0), xs, ys)
     y1i = only_f(F, xᵢ)
-    @set! xs[6] = xᵢ
-    @set! ys[1][6] = y1i
+    @reset xs[6] = xᵢ
+    @reset ys[1][6] = y1i
 
     for i in 7:S #3:S
         xᵢ::R = lmm(Val(i - 1), Val(0), xs, ys) # XXX allocates due to runtime i-1
         y1i::T = only_f(F, xᵢ)
-        @set! xs[i] = xᵢ
-        @set! ys[1][i] = y1i
+        @reset xs[i] = xᵢ
+        @reset ys[1][i] = y1i
     end
 
     xs, ys
@@ -368,43 +368,43 @@ function init_lith(
     yᵢ = NTuple{S,T}(ntuple(_ -> one(T), Val(S)))
     ys = NTuple{D + 1,NTuple{S,T}}(ntuple(_ -> yᵢ, Val(D + 1)))
 
-    @set! xs[1] = x₁
+    @reset xs[1] = x₁
     for j in 1:(D + 1)
-        @set! ys[j][1] = ys₀[j]
+        @reset ys[j][1] = ys₀[j]
     end
 
     # build up to get S of them
     # redundant code, but here to avoid allocations
     S < 2 && return xs, ys
     xᵢ = lmm(Val(1), Val(D), xs, ys)
-    @set! xs[2] = xᵢ
+    @reset xs[2] = xᵢ
     ysᵢ = evalf(F, xᵢ)
     for j in 1:(D + 1)
-        @set! ys[j][2] = ysᵢ[j]
+        @reset ys[j][2] = ysᵢ[j]
     end
 
     S < 3 && return xs, ys
     xᵢ = lmm(Val(2), Val(D), xs, ys)
-    @set! xs[3] = xᵢ
+    @reset xs[3] = xᵢ
     ysᵢ = evalf(F, xᵢ)
     for j in 1:(D + 1)
-        @set! ys[j][3] = ysᵢ[j]
+        @reset ys[j][3] = ysᵢ[j]
     end
 
     S < 4 && return xs, ys
     xᵢ = lmm(Val(3), Val(D), xs, ys)
-    @set! xs[4] = xᵢ
+    @reset xs[4] = xᵢ
     ysᵢ = evalf(F, xᵢ)
     for j in 1:(D + 1)
-        @set! ys[j][4] = ysᵢ[j]
+        @reset ys[j][4] = ysᵢ[j]
     end
 
     for i in 5:S
         xᵢ::R = lmm(Val(i - 1), Val(D), xs, ys) # XXX allocates! clean up
-        @set! xs[i] = xᵢ
+        @reset xs[i] = xᵢ
         ysᵢ = evalf(F, xᵢ)
         for j in 1:(D + 1)
-            @set! ys[j][i] = ysᵢ[j]
+            @reset ys[j][i] = ysᵢ[j]
         end
     end
 
@@ -558,15 +558,15 @@ function update_state(
     end
 
     incfn(l, 3)
-    @set! state.xn1 = b
-    @set! state.xn0 = a
-    @set! state.c = c
-    @set! state.fxn1 = fb
-    @set! state.fxn0 = fa
-    @set! state.fc = fc
-    @set! state.fp0 = f′a
-    @set! state.fpc = f′c
-    @set! state.fp1 = f′b
+    @reset state.xn1 = b
+    @reset state.xn0 = a
+    @reset state.c = c
+    @reset state.fxn1 = fb
+    @reset state.fxn0 = fa
+    @reset state.fc = fc
+    @reset state.fp0 = f′a
+    @reset state.fpc = f′c
+    @reset state.fp1 = f′b
 
     return (state, false)
 end

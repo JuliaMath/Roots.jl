@@ -85,11 +85,11 @@ function update_state(
     fx₁::S, Δs = F(x₁)
     incfn(l, fn_argout(M))
 
-    @set! o.xn0 = x₀
-    @set! o.fxn0 = o.fxn1
-    @set! o.Δs = NTuple{fn_argout(M) - 1,T}(Δs)
-    @set! o.xn1 = x₁
-    @set! o.fxn1 = fx₁
+    @reset o.xn0 = x₀
+    @reset o.fxn0 = o.fxn1
+    @reset o.Δs = NTuple{fn_argout(M) - 1,T}(Δs)
+    @reset o.xn1 = x₁
+    @reset o.fxn1 = fx₁
 
     return (o, false)
 end

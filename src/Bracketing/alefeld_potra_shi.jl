@@ -56,6 +56,8 @@ function init_state(::AbstractAlefeldPotraShi, F, x₀, x₁, fx₀, fx₁; c=no
         promote(b, a, a, a)...,
         promote(fb, fa, fa, fa)...,
     )
+    assert_bracket(fa, fb)
+
 
     if a > b
         a, b, fa, fb = b, a, fb, fa
@@ -113,10 +115,10 @@ function update_state(
     fa, fb, fd = ps.fa, ps.fb, ps.fd
 
     if iszero(fa) || iszero(fb) || (b - a) <= tolₑ(a, b, fa, fb, atol, rtol)
-        @set! o.xn0 = a
-        @set! o.xn1 = b
-        @set! o.fxn0 = fa
-        @set! o.fxn1 = fb
+        @reset o.xn0 = a
+        @reset o.xn1 = b
+        @reset o.fxn0 = fa
+        @reset o.fxn1 = fb
         return o, true
     end
 
@@ -129,10 +131,10 @@ function update_state(
     ā, b̄, d, fā, fb̄, fd = bracket(a, b, x, fa, fb, fx)
 
     if iszero(fx) || (b̄ - ā) <= tolₑ(ā, b̄, fā, fb̄, atol, rtol)
-        @set! o.xn0 = ā
-        @set! o.xn1 = b̄
-        @set! o.fxn0 = fā
-        @set! o.fxn1 = fb̄
+        @reset o.xn0 = ā
+        @reset o.xn1 = b̄
+        @reset o.fxn0 = fā
+        @reset o.fxn1 = fb̄
         return o, true
     end
 
@@ -168,14 +170,14 @@ function update_state(
         a, b, d, fa, fb, fd = bracket(â, b̂, m, fâ, fb̂, fm)
     end
 
-    @set! o.xn0 = a
-    @set! o.xn1 = b
-    @set! o.d = d
-    @set! o.ee = ee
-    @set! o.fxn0 = fa
-    @set! o.fxn1 = fb
-    @set! o.fd = fd
-    @set! o.fee = fee
+    @reset o.xn0 = a
+    @reset o.xn1 = b
+    @reset o.d = d
+    @reset o.ee = ee
+    @reset o.fxn0 = fa
+    @reset o.fxn1 = fb
+    @reset o.fd = fd
+    @reset o.fee = fee
 
     return o, false
 end
@@ -204,12 +206,12 @@ function calculateΔ(::A2425{K}, F::Callable_Function, c₀::T, ps) where {K,T}
         end
     end
 
-    @set! ps.a = a
-    @set! ps.fa = fa
-    @set! ps.b = b
-    @set! ps.fb = fb
-    @set! ps.d = d
-    @set! ps.fd = fd
+    @reset ps.a = a
+    @reset ps.fa = fa
+    @reset ps.b = b
+    @reset ps.fb = fb
+    @reset ps.d = d
+    @reset ps.fd = fd
 
     c₀ - c, ps
 end
@@ -261,14 +263,14 @@ function calculateΔ(::A57{K}, F::Callable_Function, c₀::T, ps) where {K,T}
             break
         end
     end
-    @set! ps.a = a
-    @set! ps.fa = fa
-    @set! ps.b = b
-    @set! ps.fb = fb
-    @set! ps.d = d
-    @set! ps.fd = fd
-    @set! ps.ee = ee
-    @set! ps.fee = fee
+    @reset ps.a = a
+    @reset ps.fa = fa
+    @reset ps.b = b
+    @reset ps.fb = fb
+    @reset ps.d = d
+    @reset ps.fd = fd
+    @reset ps.ee = ee
+    @reset ps.fee = fee
 
     c₀ - c, ps
 end

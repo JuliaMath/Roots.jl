@@ -21,7 +21,7 @@ end
 using Printf
 import CommonSolve
 import CommonSolve: solve, solve!, init
-using Setfield
+using Accessors
 import ChainRulesCore
 
 export fzero, fzeros, secant_method

@@ -11,20 +11,20 @@ TS(::AbstractUnivariateZeroState{T,S}) where {T,S} = T, S
 # simple helper to set main properties of a state object
 function _set(state, xf1)
     x, fx = xf1
-    @set! state.xn1 = x
-    @set! state.fxn1 = fx
+    @reset state.xn1 = x
+    @reset state.fxn1 = fx
 
     state
 end
 
 function _set(state, xf1, xf0)
     x, fx = xf1
-    @set! state.xn1 = x
-    @set! state.fxn1 = fx
+    @reset state.xn1 = x
+    @reset state.fxn1 = fx
 
     x, fx = xf0
-    @set! state.xn0 = x
-    @set! state.fxn0 = fx
+    @reset state.xn0 = x
+    @reset state.fxn0 = fx
 
     state
 end
