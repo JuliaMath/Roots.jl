@@ -4,6 +4,13 @@ using Zygote
 using Test
 
 # issue #325 add frule, rrule
+struct 𝐺
+    p
+end
+(g::𝐺)(x) = cos(x) - g.p * x
+G(p) = find_zero(𝐺(p), (0, pi/2), Bisection())
+F₃(p) = find_zero((x,p) -> cos(x) - p*x, (0, pi/2), Bisection(), p)
+
 
 @testset "Test frule and rrule" begin
     # Type inference tests of `test_frule` and `test_rrule` with the default
@@ -33,7 +40,7 @@ using Test
     G(p) = find_zero(g, 1, Order1(), p)
     @test first(Zygote.gradient(G, [0, 4])) ≈ [1 / 2, 1 / 4]
 
-    # a tuple of functions 
+    # a tuple of functions
     fx(x, p) = 1 / x
     test_frule(solve, ZeroProblem((f, fx), 1), Roots.Newton(), 1.0; check_inferred=false)
     test_rrule(solve, ZeroProblem((f, fx), 1), Roots.Newton(), 1.0; check_inferred=false)
@@ -67,4 +74,26 @@ using Test
     )
     G2(p) = find_zero((g, gx), 1, Roots.Newton(), p)
     @test first(Zygote.gradient(G2, [0, 4])) ≈ [1 / 2, 1 / 4]
+
+    # test Functor; issue #408
+    x = rand()
+    @test first(Zygote.gradient(F₃, x)) ≈ first(Zygote.gradient(G, x))
+    @test first(Zygote.hessian(F₃, x)) ≈ first(Zygote.hessian(G, x))
+    # test_frule, test_rrule aren't successful
+    #=
+    # DimensionMismatch: arrays could not be broadcast to a common size; got a dimension with lengths 3 and 2
+    test_frule(
+        solve,
+        ZeroProblem(𝐺(2), (0.0, pi/2)),
+        Roots.Bisection();
+        check_inferred=false,
+    )
+    # MethodError: no method matching keys(::NoTangent)
+    test_rrule(
+        solve,
+        ZeroProblem(𝐺(2), (0.0, pi/2)),
+        Roots.Bisection();
+        check_inferred=false,
+    )
+    =#
 end

@@ -1,6 +1,5 @@
-
 module RootsForwardDiffExt
-
+#=
 using Roots
 using ForwardDiff
 import ForwardDiff: Dual, value, partials
@@ -28,5 +27,5 @@ function Roots.solve(ZP::ZeroProblem,
     fₚ = partials(f(xᵅ, 𝐩))
     Dual{T}(xᵅ, - fₚ / fₓ)
 end
-
+=#
 end
