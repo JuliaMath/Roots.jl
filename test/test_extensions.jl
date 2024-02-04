@@ -56,19 +56,17 @@ using ForwardDiff
         @test ForwardDiff.derivative(F, p) ≈ 1 / (2sqrt(p))
     end
 
-    # Hessian is *broken*
+    # Hessian is *fixed* for F(p) = find_zero(f, x₀, M, p)
     f = (x, p) -> x^2 - sum(p .^ 2)
     Z = ZeroProblem(f, (0, 1000))
     F = p -> solve(Z, Roots.Bisection(), p)
     Z = ZeroProblem(f, (0, 1000))
     F = p -> solve(Z, Roots.Bisection(), p)
-    hess(f, p) = ForwardDiff.jacobian(p -> ForwardDiff.gradient(F, p), p)
     for p ∈ ([1,2], [1,3], [1,4])
         @test F(p) ≈ sqrt(sum(p .^ 2))
-        @test_throws DimensionMismatch ForwardDiff.hessian(F, p)
         a, b = p
         n = sqrt(a^2 + b^2)^3
-        @test hess(F, p) ≈ [b^2 -a*b; -a*b a^2] / n
+        @test ForwardDiff.hessian(F, p) ≈ [b^2 -a*b; -a*b a^2] / n
     end
 end
 

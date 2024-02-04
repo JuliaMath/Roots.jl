@@ -3,6 +3,18 @@
 # ∇f = 0 => ∂/∂ₓ f(xᵅ, p) ⋅ ∂xᵅ/∂ₚ + ∂/∂ₚf(x\^α, p) ⋅ I = 0
 # or ∂xᵅ/∂ₚ = - ∂/∂ₚ f(xᵅ, p)  / ∂/∂ₓ f(xᵅ, p)
 
+# There are two cases considered
+# F(p) = find_zero(f(x,p), x₀, M, p) # f a function
+# G(p) = find_zero(𝐺(p), x₀, M)      # 𝐺 a functor
+# For G(p) first order derivatives are working
+# **but** hessian is not with Zygote. *MOREOVER* it fails
+# with the **wrong answer** not an error.
+#
+# (`Zygote.hessian` calls `ForwardDiff` and that isn't working with a functor;
+# `Zygote.hessian_reverse` doesn't seem to work here, though perhaps
+# that is fixable.)
+
+
 # this assumes a function and a parameter `p` passed in
 import ChainRulesCore: Tangent, NoTangent, frule, rrule
 function ChainRulesCore.frule(
@@ -77,6 +89,7 @@ function ChainRulesCore.rrule(
     f(x, p) = first(Roots.Callable_Function(M, ZP.F, p)(x))
     _, pullback_f = ChainRulesCore.rrule_via_ad(rc, f, xᵅ, p)
     _, fx, fp = pullback_f(true)
+
     yp = -fp / fx
     function pullback_solve_ZeroProblem(dy)
         dp = yp * dy
