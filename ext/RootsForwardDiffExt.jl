@@ -15,7 +15,6 @@ import ForwardDiff: Dual, value, partials, Partials, derivative, gradient!
 # Zygote.hessian            ✓                    x (wrong answer!)
 # Zygote.hessian_reverse    ✓                    x (MethodError)
 
-#=
 function Roots.solve(ZP::ZeroProblem,
                      M::Roots.AbstractUnivariateZeroMethod,
                      𝐩::Dual{T};
@@ -58,5 +57,4 @@ function Roots.solve(ZP::ZeroProblem,
 
     Dual{T}(xᵅ, Partials(ntuple(k -> dx[k], Val(N))))
 end
-=#
 end
