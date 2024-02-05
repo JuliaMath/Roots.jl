@@ -78,7 +78,8 @@ F₃(p) = find_zero((x,p) -> cos(x) - p*x, (0, pi/2), Bisection(), p)
     # test Functor; issue #408
     x = rand()
     @test first(Zygote.gradient(F₃, x)) ≈ first(Zygote.gradient(G₃, x))
-    @test_broken first(Zygote.hessian(F₃, x)) ≈ first(Zygote.hessian(G₃, x))
+    # ForwardDiff extension makes this fail.
+    VERSION >= v"1.9.0" && @test_broken first(Zygote.hessian(F₃, x)) ≈ first(Zygote.hessian(G₃, x))
     # test_frule, test_rrule aren't successful
     #=
     # DimensionMismatch: arrays could not be broadcast to a common size; got a dimension with lengths 3 and 2
