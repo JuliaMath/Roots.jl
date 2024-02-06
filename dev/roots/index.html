@@ -380,7 +380,7 @@ end
     a, b, fa, fb = x₁, x₀, fx₁, fx₀
     c, fc = a, fa
     ChandrapatlaState(b, a, c, fb, fa, fc)
-end</code></pre><p>The main algorithm is implemented in the <code>update_state</code> method. The <code>@set!</code> macro from <code>Setfield.jl</code> is used to modify a state object, which otherwise is immutable.</p><pre><code class="language-julia hljs">julia&gt; import Roots.Setfield: @set!;
+end</code></pre><p>The main algorithm is implemented in the <code>update_state</code> method. The <code>@reset</code> macro from <code>Accessors.jl</code> is used to modify a state object, which otherwise is immutable.</p><pre><code class="language-julia hljs">julia&gt; import Roots.Accessors: @reset;
 
 julia&gt; function Roots.update_state(::Chandrapatla, F, o, options, l=NullTracks())
 
@@ -406,12 +406,12 @@ julia&gt; function Roots.update_state(::Chandrapatla, F, o, options, l=NullTrack
         fa, fc = fₜ, fa
     end
 
-    @set! o.xn0 = a
-    @set! o.xn1 = b
-    @set! o.c = c
-    @set! o.fxn0 = fa
-    @set! o.fxn1 = fb
-    @set! o.fc = fc
+    @reset o.xn0 = a
+    @reset o.xn1 = b
+    @reset o.c = c
+    @reset o.fxn0 = fa
+    @reset o.fxn1 = fb
+    @reset o.fc = fc
 
     return (o, false)
 end
@@ -422,4 +422,4 @@ julia&gt; find_zero(x -&gt; exp(x) - x^4, (8,9), Chandrapatla())
 8.613169456441398
 
 julia&gt; find_zero(x -&gt; x^5 - x - 1, (1,2), Chandrapatla())
-1.1673039782614185</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../reference/">« Reference/API</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.1.2 on <span class="colophon-date" title="Tuesday 7 November 2023 17:50">Tuesday 7 November 2023</span>. Using Julia version 1.9.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+1.1673039782614185</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../reference/">« Reference/API</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.2.1 on <span class="colophon-date" title="Tuesday 6 February 2024 21:40">Tuesday 6 February 2024</span>. Using Julia version 1.10.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
