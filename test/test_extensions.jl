@@ -51,7 +51,7 @@ using ForwardDiff
     f = (x, p) -> x^2 - p
     Z = ZeroProblem(f, (0, 1000))
     F = p -> solve(Z, Roots.Bisection(), p)
-    for p ∈ (3, 5, 7, 11)
+    for p in (3, 5, 7, 11)
         @test F(p) ≈ sqrt(p)
         @test ForwardDiff.derivative(F, p) ≈ 1 / (2sqrt(p))
     end
@@ -62,7 +62,7 @@ using ForwardDiff
     F = p -> solve(Z, Roots.Bisection(), p)
     Z = ZeroProblem(f, (0, 1000))
     F = p -> solve(Z, Roots.Bisection(), p)
-    for p ∈ ([1,2], [1,3], [1,4])
+    for p in ([1, 2], [1, 3], [1, 4])
         @test F(p) ≈ sqrt(sum(p .^ 2))
         a, b = p
         n = sqrt(a^2 + b^2)^3

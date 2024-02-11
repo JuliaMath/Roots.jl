@@ -74,7 +74,6 @@ derivatives, respectively.
 
 Keyword arguments are passed to `find_zero` using the `Roots.QuadraticInverse()` method.
 
-
 """
 =#
 quadratic_inverse(f, fp, fpp, x0; kwargs...) =
