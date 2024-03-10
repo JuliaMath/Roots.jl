@@ -8,9 +8,8 @@ struct 𝐺
     p
 end
 (g::𝐺)(x) = cos(x) - g.p * x
-G₃(p) = find_zero(𝐺(p), (0, pi/2), Bisection())
-F₃(p) = find_zero((x,p) -> cos(x) - p*x, (0, pi/2), Bisection(), p)
-
+G₃(p) = find_zero(𝐺(p), (0, pi / 2), Bisection())
+F₃(p) = find_zero((x, p) -> cos(x) - p * x, (0, pi / 2), Bisection(), p)
 
 @testset "Test frule and rrule" begin
     # Type inference tests of `test_frule` and `test_rrule` with the default
@@ -79,7 +78,8 @@ F₃(p) = find_zero((x,p) -> cos(x) - p*x, (0, pi/2), Bisection(), p)
     x = rand()
     @test first(Zygote.gradient(F₃, x)) ≈ first(Zygote.gradient(G₃, x))
     # ForwardDiff extension makes this fail.
-    VERSION >= v"1.9.0" && @test_broken first(Zygote.hessian(F₃, x)) ≈ first(Zygote.hessian(G₃, x))
+    VERSION >= v"1.9.0" &&
+        @test_broken first(Zygote.hessian(F₃, x)) ≈ first(Zygote.hessian(G₃, x))
     # test_frule, test_rrule aren't successful
     #=
     # DimensionMismatch: arrays could not be broadcast to a common size; got a dimension with lengths 3 and 2

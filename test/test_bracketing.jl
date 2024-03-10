@@ -311,8 +311,8 @@ end
 
     ## issue 412 check for bracket
     f = x -> x - 1
-    for M ∈ Ms
-        @test_throws ArgumentError find_zero(f, (-3,0), M)
+    for M in Ms
+        @test_throws ArgumentError find_zero(f, (-3, 0), M)
     end
 end
 

@@ -180,7 +180,7 @@ function solve!(
     log_step(l, M, state; init=true)
     T, S = TS(state)
     while !stopped
-        a::T, b::T   = state.xn0,  state.xn1
+        a::T, b::T   = state.xn0, state.xn1
         fa::S, fb::S = state.fxn0, state.fxn1
 
         ## assess_convergence

@@ -14,7 +14,6 @@
 # `Zygote.hessian_reverse` doesn't seem to work here, though perhaps
 # that is fixable.)
 
-
 # this assumes a function and a parameter `p` passed in
 import ChainRulesCore: Tangent, NoTangent, frule, rrule
 function ChainRulesCore.frule(
@@ -47,8 +46,7 @@ ChainRulesCore.frule(
     M::Roots.AbstractUnivariateZeroMethod,
     ::Nothing;
     kwargs...,
-) =
-    frule(config, xdots, solve, ZP, M; kwargs...)
+) = frule(config, xdots, solve, ZP, M; kwargs...)
 
 function ChainRulesCore.frule(
     config::ChainRulesCore.RuleConfig{>:ChainRulesCore.HasForwardsMode},
@@ -62,14 +60,18 @@ function ChainRulesCore.frule(
     foo = ZP.F
     zprob2 = ZeroProblem(|>, ZP.x₀)
     nms = fieldnames(typeof(foo))
-    nt = NamedTuple{nms}(getfield(foo, n) for n ∈ nms)
-    dfoo = Tangent{typeof(foo)}(;nt...)
+    nt = NamedTuple{nms}(getfield(foo, n) for n in nms)
+    dfoo = Tangent{typeof(foo)}(; nt...)
 
-    return frule(config,
-                 (NoTangent(), NoTangent(), NoTangent(), dfoo),
-                 Roots.solve, zprob2, M, foo)
+    return frule(
+        config,
+        (NoTangent(), NoTangent(), NoTangent(), dfoo),
+        Roots.solve,
+        zprob2,
+        M,
+        foo,
+    )
 end
-
 
 ##
 
@@ -112,9 +114,7 @@ ChainRulesCore.rrule(
     M::Roots.AbstractUnivariateZeroMethod,
     ::Nothing;
     kwargs...,
-) =
-    ChainRulesCore.rrule(rc, solve, ZP, M; kwargs...)
-
+) = ChainRulesCore.rrule(rc, solve, ZP, M; kwargs...)
 
 function ChainRulesCore.rrule(
     rc::ChainRulesCore.RuleConfig{>:ChainRulesCore.HasReverseMode},
@@ -123,8 +123,6 @@ function ChainRulesCore.rrule(
     M::Roots.AbstractUnivariateZeroMethod;
     kwargs...,
 )
-
-
     𝑍𝑃 = ZeroProblem(|>, ZP.x₀)
     xᵅ = solve(ZP, M; kwargs...)
     f(x, p) = first(Roots.Callable_Function(M, 𝑍𝑃.F, p)(x))
@@ -132,15 +130,12 @@ function ChainRulesCore.rrule(
     _, pullback_f = ChainRulesCore.rrule_via_ad(rc, f, xᵅ, ZP.F)
     _, fx, fp = pullback_f(true)
 
-    yp = NamedTuple{keys(fp)}(-fₚ/fx for fₚ ∈ values(fp))
+    yp = NamedTuple{keys(fp)}(-fₚ / fx for fₚ in values(fp))
 
     function pullback_solve_ZeroProblem(dy)
         dF = ChainRulesCore.Tangent{typeof(ZP.F)}(; yp...)
 
-        dZP = ChainRulesCore.Tangent{typeof(ZP)}(;
-                                                 F = dF,
-                                                 x₀ = ChainRulesCore.NoTangent()
-                                                 )
+        dZP = ChainRulesCore.Tangent{typeof(ZP)}(; F=dF, x₀=ChainRulesCore.NoTangent())
 
         dsolve = ChainRulesCore.NoTangent()
         dM = ChainRulesCore.NoTangent()
