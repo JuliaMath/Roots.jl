@@ -8,7 +8,13 @@ DocMeta.setdocmeta!(Roots, :DocTestSetup, :(using Roots); recursive=true)
 makedocs(
     sitename = "Roots",
     format = Documenter.HTML(ansicolor=true),
-    modules = [Roots]
+    modules = [Roots],
+    pages=[
+        "Home" => "index.md",
+        "Overview" => "roots.md",
+        "Reference/API" => "reference.md",
+        "Geometry" => "geometry-zero-finding.md"
+    ]
 )
 
 deploydocs(

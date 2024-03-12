@@ -59,8 +59,8 @@ end
 """
     Roots.Halley()
 
-Implements Halley's [method](https://en.wikipedia.org/wiki/Halley%27s_method), `xᵢ₊₁ = xᵢ
-- (f/f')(xᵢ) * (1 - (f/f')(xᵢ) * (f''/f')(xᵢ) * 1/2)^(-1)` This method
+Implements Halley's [method](https://en.wikipedia.org/wiki/Halley%27s_method),
+`xᵢ₊₁ = xᵢ - (f/f')(xᵢ) * (1 - (f/f')(xᵢ) * (f''/f')(xᵢ) * 1/2)^(-1)` This method
 is cubically converging, it requires ``3`` function calls per
 step. Halley's method finds `xₙ₊₁` as the zero of a hyperbola at the
 point `(xₙ, f(xₙ))` matching the first and second derivatives of `f`.
@@ -131,12 +131,12 @@ The error, `eᵢ = xᵢ - α`, [satisfies](https://dl.acm.org/doi/10.1080/002071
 struct QuadraticInverse <: AbstractΔMethod end
 
 """
-CHEBYSHEV-LIKE METHODS AND QUADRATIC EQUATIONS (J. A. EZQUERRO, J. M. GUTIÉRREZ, M. A. HERNÁNDEZ and M. A. SALANOVA)
+Chebyshev-like methods and quadratic equations (J. A. Ezquerro, J. M. Gutiérrez, M. A. Hernández and M. A. Salanova)
 """
 struct ChebyshevLike <: AbstractΔMethod end
 
 """
-An acceleration of Newton's method: Super-Halley method (J.M. Gutierrez, M.A. Hernandez
+An acceleration of Newton's method: Super-Halley method (J.M. Gutierrez, M.A. Hernandez)
 """
 struct SuperHalley <: AbstractΔMethod end
 

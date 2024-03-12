@@ -218,7 +218,7 @@ end
 """
     Roots.AlefeldPotraShi()
 
-Follows algorithm 4.1 in "ON ENCLOSING SIMPLE ROOTS OF NONLINEAR
+Follows Algorithm 4.1 in "ON ENCLOSING SIMPLE ROOTS OF NONLINEAR
 EQUATIONS", by Alefeld, Potra, Shi; DOI:
 [10.1090/S0025-5718-1993-1192965-2](https://doi.org/10.1090/S0025-5718-1993-1192965-2).
 
@@ -279,7 +279,7 @@ end
 
 Bracketing method which finds the root of a continuous function within
 a provided bracketing interval `[a, b]`, without requiring derivatives. It is based
-on algorithm 4.2 described in: G. E. Alefeld, F. A. Potra, and
+on Algorithm 4.2 described in: G. E. Alefeld, F. A. Potra, and
 Y. Shi, "Algorithm 748: enclosing zeros of continuous functions," ACM
 Trans. Math. Softw. 21, 327–344 (1995), DOI: [10.1145/210089.210111](https://doi.org/10.1145/210089.210111).
 The asymptotic efficiency index, ``q^{1/k}``, is ``(2 + 7^{1/2})^{1/3} = 1.6686...``.
