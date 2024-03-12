@@ -306,7 +306,7 @@ Roots.dfree
 
 ## MATLAB interface
 
-The initial naming scheme used `fzero` instead  of `fzeros`, following the name of the  MATLAB function [fzero](https://www.mathworks.com/help/matlab/ref/fzero.html). This interface  is not recommended, but, for now, still maintained.
+The initial naming scheme used `fzero` instead  of `find_zero`, following the name of the  MATLAB function [fzero](https://www.mathworks.com/help/matlab/ref/fzero.html). This interface  is not recommended, but, for now, still maintained.
 
 ```@docs
 fzero

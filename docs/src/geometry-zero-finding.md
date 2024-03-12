@@ -90,7 +90,7 @@ annotate!([(α, 0, "α", :top)])
 p
 ```
 
-The secant method is implemented in `Secant()`.
+The secant method is implemented in `Secant()`. As the tangent line is the best local approximation to the function near a point, it should be expected that the secant method converges a slower rate than Newton's method.
 
 Steffensen's method (`Root.Steffensen()`) is related to the secant method, though the points are not ``x_n`` and ``x_{n-1}``, rather  ``x_n + f(x_n)`` and ``x_n``. As ``x_n`` gets close to ``\alpha``, ``f(x_n)`` gets close to ``0``, so this method converges at an asymptotic rate like Newton's method. (Though with a tradeoff, as the secant method needs only one new function evaluation per step, Steffensen's require two.)
 

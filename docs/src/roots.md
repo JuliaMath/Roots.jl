@@ -14,7 +14,55 @@ julia> using Roots, ForwardDiff
 
 ```
 
-## Bracketing
+## Basic usage
+
+Consider  the polynomial   function  ``f(x) = x^5 - x + 1/2``. As a polynomial,  its roots, or  zeros, could  be identified with the  `roots` function of  the `Polynomials` package. However, even  that function uses a numeric method to identify   the values, as no  solution with radicals is available. That is, even for polynomials, non-linear root finders are needed to solve ``f(x)=0``. (Though polynomial root-finders can exploit certain properties not available for general non-linear functions.)
+
+The `Roots` package provides a variety of algorithms for this  task. In this quick overview, only the  default ones  are illustrated.
+
+For  the function ``f(x) = x^5 - x + 1/2`` a simple plot over ``[-2,2]``will show a zero  somewhere **between** ``-1.5`` and ``-0.5`` and two zeros near ``0.6``. ("Between", as the continuous function has different signs at ``-1.5`` and ``-0.5``.)
+
+For the zero between two values at which the function changes sign, a
+bracketing method is useful, as bracketing methods are guaranteed to
+converge for continuous functions by the intermediate value
+theorem. A bracketing algorithm will be used when the initial data is
+passed as a tuple:
+
+```jldoctest find_zero
+julia> using Roots
+
+julia> f(x) =  x^5 - x + 1/2
+f (generic function with 1 method)
+
+julia> find_zero(f, (-3/2,  -1/2)) ≈ -1.0983313019186336
+true
+```
+
+The default algorithm is guaranteed to have an  answer nearly as accurate as is  possible  given the limitations of floating point  computations.
+
+For the zeros **near** a point,  a non-bracketing method is often used, as generally  the algorithms are more efficient and can be  used in cases where a zero does  not cross the ``x`` axis. Passing just an initial guess will dispatch to such a method:
+
+```jldoctest find_zero
+julia> find_zero(f,  0.6) ≈ 0.550606579334135
+true
+```
+
+
+This finds  the answer  to the left of the starting point. To get the other nearby zero, a starting point closer to the answer can be used.
+
+However,  an initial graph might convince one  that any of the up-to-``5`` real roots will occur between ``-2``  and ``2``.  The `find_zeros` function uses  heuristics and a few of the algorithms to identify all zeros between the specified range. Here the method successfully identifies all  ``3``:
+
+```jldoctest find_zero
+julia> find_zeros(f, -2,  2)
+3-element Vector{Float64}:
+ -1.0983313019186334
+  0.5506065793341349
+  0.7690997031778959
+```
+
+This shows the two main entry points of `Roots`: `find_zero` to locate a zero between or near values using one of many methods and `find_zeros` to heuristically identify all zeros within some interval.
+
+## Bracketing methods
 
 For a function $f$ (univariate, real-valued) a *bracket* is a pair $ a < b $
 for which $f(a) \cdot f(b) < 0$. That is the function values have
@@ -159,11 +207,11 @@ julia> rt - pi
 
 ```
 
-## Non-bracketing problems
+## Non-bracketing methods
 
 Bracketing methods have guaranteed convergence, but in general may
 require many more function calls than are otherwise needed to produce
-an answer and not all zeros of a function are bracketed.  If a good
+an answer and not all zeros of a function may be bracketed.  If a good
 initial guess is known, then the `find_zero` function provides an
 interface to some different iterative algorithms that are more
 efficient. Unlike bracketing methods, these algorithms may not
@@ -191,7 +239,7 @@ julia> x, f(x)
 
 ```
 
-For the polynomial $f(x) = x^3 - 2x - 5$, an initial guess of 2 seems reasonable:
+For the polynomial $f(x) = x^3 - 2x - 5$, an initial guess of $2$ seems reasonable:
 
 ```jldoctest roots
 julia> f(x) = x^3 - 2x - 5;
@@ -199,8 +247,8 @@ julia> f(x) = x^3 - 2x - 5;
 julia> x = find_zero(f, 2)
 2.0945514815423265
 
-julia> x, f(x), sign(f(prevfloat(x)) * f(nextfloat(x)))
-(2.0945514815423265, -8.881784197001252e-16, -1.0)
+julia> f(x), sign(f(prevfloat(x)) * f(x)), sign(f(x) * f(nextfloat(x)))
+(-8.881784197001252e-16, 1.0, -1.0)
 
 ```
 
@@ -215,7 +263,7 @@ julia> x, sin(x), x - pi
 
 ```
 
-### Higher order methods
+### Higher-order methods
 
 The default call to `find_zero` uses a first order method and then
 possibly bracketing, which potentially involves more function
@@ -223,7 +271,7 @@ calls than necessary. There may be times where a more efficient algorithm is sou
 For such, a higher-order method might be better suited. There are
 algorithms `Order1` (secant method), `Order2`
 ([Steffensen](http://en.wikipedia.org/wiki/Steffensen's_method)),
-`Order5`, `Order8`, and `Order16`. The order 1 or 2 methods are
+`Order5`, `Order8`, and `Order16`. The order $1$ or $2$ methods are
 generally quite efficient in terms of steps needed over floating point
 values. The even-higher-order ones are potentially useful when more
 precision is used. These algorithms are accessed by specifying the
@@ -263,8 +311,7 @@ julia> x, f(x)
 
 ```
 
-Starting at ``2`` the algorithm converges to ``1``, showing that zeros need not be simple zeros to be found.
-A simple zero, $c$, has $f(x) = (x-c) \cdot g(x)$ where $g(c) \neq 0$.
+Starting at ``2`` the algorithm converges towards ``1``, showing that zeros need not be simple zeros to be found. A simple zero, $c,$ has $f(x) = (x-c) \cdot g(x)$ where $g(c) \neq 0$.
 Generally speaking, non-simple zeros are
 expected to take many more function calls, as the methods are no
 longer super-linear. This is the case here, where `Order2` uses $51$
@@ -370,7 +417,7 @@ julia> find_zero(dfᵏs(f, 2), 2, Roots.LithBoonkkampIJzerman(2,2)) # like Halle
 
 The problem-algorithm-solve interface is a pattern popularized in `Julia` by the `DifferentialEquations.jl` suite of packages. The pattern consists of setting up a *problem* then *solving* the problem by specifying an *algorithm*. This is very similar to what is specified in the `find_zero(f, x0, M)` interface where `f` and `x0` specify the problem, `M` the algorithm, and `find_zero` calls the solver.
 
-To break this up into steps, `Roots` has methods `ZeroProblem` and `init`, `solve`, and `solve!` from the `CommonSolve.jl` package.
+To break this up into steps, `Roots` has the type `ZeroProblem` and methods for `init`, `solve`, and `solve!` from the `CommonSolve.jl` package.
 
 Consider solving ``\sin(x) = 0`` using the `Secant` method starting with the interval ``[3,4]``.
 
@@ -704,7 +751,7 @@ julia> x,  f(x)
 
 Finally, for many functions, all of these methods need a good initial
 guess. For example, the polynomial function $f(x) = x^5 - x - 1$ has
-its one zero near $1.16$.
+its one real zero near $1.16$.
 
 If we start far from the zero, convergence may happen, but it isn't
 guaranteed:
@@ -740,7 +787,7 @@ savefig("newton.svg"); nothing # hide
 
 ![](newton.svg)
 
-Even with real graphics, only a few of the steps are discernible, as the function's relative maximum
+Graphically only a few of the steps are discernible, as the function's relative maximum
 causes a trap for this algorithm. Starting to the right of the
 relative minimum--nearer the zero--would avoid this trap. The default
 method employs a trick to bounce out of such traps, though it doesn't
@@ -854,7 +901,7 @@ julia> findall(iszero, fs)
 
 
 For `f1(x)` there is only one zero, but it isn't the floating
-point value for `1/3` but rather 10 floating point numbers
+point value for `1/3` but rather $10$ floating point numbers
 away.
 
 
