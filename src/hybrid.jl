@@ -80,7 +80,7 @@ function solve!(
         r, a, b = state0.xn1, state.xn0, state.xn1
         Δr = abs(r - b)
         Δx = abs(b - a)
-        ts, TB = 1e-3, 1e2 # too small, too big
+        ts, TB = one(r)/1000, 100*one(r) # too small, too big
         if Δr >= TB * Δx
             adj = true
             r = b + sign(r - b) * TB * Δx  ## too big
