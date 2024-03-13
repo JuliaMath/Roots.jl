@@ -107,7 +107,7 @@ function quad_vertex(c, fc, b, fb, a, fa)
     fba = (fb - fa) / (b - a)
     fbc = (fb - fc) / (b - c)
 
-    1 / 2 * ((a + b) - fba / (fbc - fba) * (c - a))
+    ((a + b) - fba / (fbc - fba) * (c - a)) / 2
 end
 
 ## inverse quadratic
