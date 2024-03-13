@@ -42,7 +42,7 @@ function solve!(
     quad_ctr = 0
     flag = :not_converged
     ctr = 0
-    α = NaN * state.xn1
+    α = nan(typeof(state.xn1)) * state.xn1
     while true
         ctr += 1
         flag, converged = assess_convergence(M, state, options)

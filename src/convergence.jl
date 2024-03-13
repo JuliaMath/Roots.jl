@@ -273,10 +273,10 @@ When the algorithm terminates, this function decides the stopped value or return
 function decide_convergence(
     M::AbstractNonBracketingMethod,
     F,
-    state::AbstractUnivariateZeroState,
+    state::AbstractUnivariateZeroState{T,S},
     options,
     val,
-)
+) where {T, S}
     xn0, xn1 = state.xn0, state.xn1
     fxn1 = state.fxn1
     val ∈ (:f_converged, :exact_zero, :converged) && return xn1
@@ -303,7 +303,7 @@ function decide_convergence(
         end
     end
 
-    NaN * xn1
+    nan(T) * xn1
 end
 
 # assumes stopped = :x_converged
