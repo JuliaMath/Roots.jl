@@ -93,6 +93,11 @@ import BenchmarkTools
         @test BenchmarkTools.@ballocated(solve(ZeroProblem($f, $x0), $M, $p)) == 0
         @test BenchmarkTools.@ballocated(solve(ZeroProblem($f, $x0), $M; p=$p)) == 0
     end
+
+    # issue #423 type instability
+    for M in Ms
+        @test @inferred solve(ZeroProblem(sin, 3.0f0)) ≈ pi
+    end
 end
 
 @testset "simple: zero allocations" begin
