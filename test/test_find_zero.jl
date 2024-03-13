@@ -37,6 +37,7 @@ struct Order3_Test <: Roots.AbstractSecantMethod end
         @test find_zero(sin, big(3), m) ≈ pi
         @test find_zero(sin, big(3.0), m) ≈ pi
         @test find_zero(x -> x^2 - 2.0f0, 2.0f0, m) ≈ sqrt(2) # issue 421
+        @test isnan(solve(ZeroProblem(x -> x^2 + 2, 0.5f0)))
     end
 
     ## defaults for method argument
