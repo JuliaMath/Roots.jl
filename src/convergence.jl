@@ -276,7 +276,7 @@ function decide_convergence(
     state::AbstractUnivariateZeroState{T,S},
     options,
     val,
-) where {T, S}
+) where {T,S}
     xn0, xn1 = state.xn0, state.xn1
     fxn1 = state.fxn1
     val ∈ (:f_converged, :exact_zero, :converged) && return xn1
