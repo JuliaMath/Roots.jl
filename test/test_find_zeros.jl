@@ -124,6 +124,10 @@ end
     # issue #369
     g4(x) = sqrt(abs(x^2 - 1)) / (x * sign(x^2 - 1))
     @test isempty(find_zeros(g4, 1.1, 2))
+
+    # solve interface
+    Z = ZeroProblem(x -> prod(x - i for i in 1:5), (0,6))
+    @test solve(Z, AllZeros()) ≈ 1:5
 end
 
 @testset "find_zeros: not Float64 types" begin
