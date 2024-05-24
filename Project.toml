@@ -1,6 +1,6 @@
 name = "Roots"
 uuid = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
-version = "2.1.5"
+version = "2.1.6"
 
 [deps]
 ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
@@ -28,7 +28,7 @@ Polynomials = "1,2,3,4"
 SpecialFunctions = "1,2"
 Statistics = "1"
 SymPy = "1,2"
-SymPyPythonCall = "0.1, 0.2, 1"
+SymPyPythonCall = "0.1, 0.2, 0.3, 1"
 Unitful = "1"
 Zygote = "0.6"
 Test = "<0.0.1, 1"
