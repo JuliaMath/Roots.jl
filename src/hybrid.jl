@@ -23,7 +23,7 @@ end
 # Robust version using some tricks: idea from algorithm described in
 # [The SOLVE button from the
 # HP-34]C(http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1979-12.pdf).
-# * use bracketing method if one identifed
+# * use bracketing method if one is identified
 # * limit steps so as not too far or too near the previous one
 # * if not decreasing, use a quad step upto 4 times to bounce out of trap, if possible
 # First uses M, then N if bracket is identified
