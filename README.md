@@ -2,8 +2,8 @@
 
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://JuliaMath.github.io/Roots.jl/stable)
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://JuliaMath.github.io/Roots.jl/dev)
-[![Build Status](https://github.com/JuliaMath/Roots.jl/workflows/CI/badge.svg)](https://github.com/JuliaMath/Roots.jl/actions)
-[![codecov](https://codecov.io/gh/JuliaMath/Roots.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaMath/Roots.jl)
+[![Build Status](https://github.com/JuliaMath/Roots.jl/actions/workflows/ci.yml/badge.svg)](https://github.com/JuliaMath/Roots.jl/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/JuliaMath/Roots.jl/graph/badge.svg?token=EbswopIDMU)](https://codecov.io/gh/JuliaMath/Roots.jl)
 
 This package contains simple routines for finding roots, or zeros, of
 scalar functions of a single real variable using floating-point math. The `find_zero` function

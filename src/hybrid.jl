@@ -23,7 +23,7 @@ end
 # Robust version using some tricks: idea from algorithm described in
 # [The SOLVE button from the
 # HP-34]C(http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1979-12.pdf).
-# * use bracketing method if one identifed
+# * use bracketing method if one is identified
 # * limit steps so as not too far or too near the previous one
 # * if not decreasing, use a quad step upto 4 times to bounce out of trap, if possible
 # First uses M, then N if bracket is identified
@@ -80,7 +80,7 @@ function solve!(
         r, a, b = state0.xn1, state.xn0, state.xn1
         Δr = abs(r - b)
         Δx = abs(b - a)
-        ts, TB = one(r)/1000, 100*one(r) # too small, too big
+        ts, TB = one(r) / 1000, 100 * one(r) # too small, too big
         if Δr >= TB * Δx
             adj = true
             r = b + sign(r - b) * TB * Δx  ## too big
