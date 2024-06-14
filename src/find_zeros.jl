@@ -415,6 +415,6 @@ julia> solve(Z, AllZeros())
 struct AllZeros <: AbstractUnivariateZeroMethod
 end
 function solve(𝑭𝑿::ZeroProblem, ::AllZeros; kwargs...)
-    (;F,x₀) = 𝑭𝑿
-    find_zeros(F,x₀; kwargs...)
+    F,x₀ = 𝑭𝑿.F, 𝑭𝑿.x₀
+    find_zeros(F, x₀; kwargs...)
 end
