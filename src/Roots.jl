@@ -40,7 +40,8 @@ export find_zero,
     Order2,
     Order5,
     Order8,
-    Order16
+    Order16,
+    AllZeros
 
 export Bisection, A42, AlefeldPotraShi, FalsePosition
 

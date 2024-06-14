@@ -184,6 +184,13 @@ A useful  strategy  is   to  begin with a non-bracketing  method and switch to a
 Roots.Order0
 ```
 
+## All zeros
+
+The `find_zeros` function heuristically scans an interval for all zeros using a combination of bracketing and non-bracketing methods. The `AllZeros` method may be passed to `solve` to call this.
+
+```@docs
+Roots.AllZeros
+```
 
 ## Rates of convergence
 
