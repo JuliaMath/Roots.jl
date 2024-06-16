@@ -126,7 +126,7 @@ end
     @test isempty(find_zeros(g4, 1.1, 2))
 
     # solve interface
-    Z = ZeroProblem(x -> prod(x - i for i in 1:5), (0,6))
+    Z = ZeroProblem(x -> prod(x - i for i in 1:5), (0, 6))
     @test solve(Z, AllZeros()) ≈ 1:5
 end
 
