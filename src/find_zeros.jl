@@ -393,7 +393,6 @@ function find_zeros(f, a, b=nothing; no_pts=12, k=8, naive=false, kwargs...)
     return zs[inds]
 end
 
-
 # solve interface
 """
     AllZeros
@@ -412,9 +411,8 @@ julia> solve(Z, AllZeros())
 ```
 
 """
-struct AllZeros <: AbstractUnivariateZeroMethod
-end
+struct AllZeros <: AbstractUnivariateZeroMethod end
 function solve(𝑭𝑿::ZeroProblem, ::AllZeros; kwargs...)
-    F,x₀ = 𝑭𝑿.F, 𝑭𝑿.x₀
+    F, x₀ = 𝑭𝑿.F, 𝑭𝑿.x₀
     find_zeros(F, x₀; kwargs...)
 end
