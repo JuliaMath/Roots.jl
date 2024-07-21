@@ -40,6 +40,10 @@ using ForwardDiff
         xrts = find_zeros(y, 0s, 10s)
         @test length(xrts) == 1
         @test xrts[1] ≈ 1.886053370668014s
+
+        # issue #434
+        xzs1=find_zeros(x -> cos(x / 1u"m"), -1.6u"m",2u"m")
+        @test length(xzs1) == 2 && maximum(xzs1) ≈ 1.5707963267948966 * u"m"
     end
 
     # Polynomials
