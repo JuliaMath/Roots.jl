@@ -107,8 +107,8 @@ end
 
 # adjust what we mean by x1 ~ x2 for purposes of adding a new zero
 function approx_close(z1, z2, xatol, xrtol)
-    tol = max(sqrt(xatol), max(abs(z1), abs(z2)) * sqrt(xrtol))
-    abs(z1 - z2) < tol
+    z₁,z₂,δ,ϵ = _unitless.((z1, z2, xatol, xrtol))
+    return isapprox(z₁, z₂; atol=sqrt(δ), rtol=sqrt(ϵ))
 end
 
 # is proposed not near xs? (false and we add proposed)

@@ -206,7 +206,7 @@ f (generic function with 1 method)
 julia> x0 = 0.1147
 0.1147
 
-julia> find_zero(f, x0, Roots.Order1()) ≈ 5.075844588445206 # stopped as |f(xₙ)| ≤ |xₙ|ϵ
+julia> find_zero(f, x0, Roots.Order5()) ≈ 5.936596662527689 # stopped as |f(xₙ)| ≤ |xₙ|ϵ
 true
 
 julia> find_zero(f, x0, Roots.Order1(), atol=0.0, rtol=0.0) # error as no check on `|f(xn)|`

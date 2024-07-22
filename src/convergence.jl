@@ -199,6 +199,18 @@ function iszero_Δx(
     isapprox(a, b, atol=δₐ, rtol=δᵣ)
 end
 
+# test when fconverged to ensure not runawa
+function is_small_Δx(M::AbstractUnivariateZeroMethod,
+                     state::AbstractUnivariateZeroState,
+                     options)
+    δ = abs(state.xn1 - state.xn0)
+    δₐ, δᵣ = options.xabstol, options.xreltol
+    Δₓ = max(_unitless(δₐ), _unitless(abs(state.xn1)) * δᵣ)
+    Δₓ = sqrt(sqrt(sqrt((abs(_unitless(Δₓ)))))) # faster than x^(1/8)
+    return δ ≤ Δₓ
+end
+
+
 isnan_f(M::AbstractBracketingMethod, state) = isnan(state.fxn1) || isnan(state.fxn0)
 isnan_f(M::AbstractNonBracketingMethod, state) = isnan(state.fxn1)
 
@@ -279,6 +291,7 @@ function decide_convergence(
 ) where {T,S}
     xn0, xn1 = state.xn0, state.xn1
     fxn1 = state.fxn1
+
     val ∈ (:f_converged, :exact_zero, :converged) && return xn1
 
     ## XXX this could be problematic
@@ -299,7 +312,8 @@ function decide_convergence(
         elseif val == :not_converged
             # this is the case where runaway can happen
             ## XXX Need a good heuristic to catch that
-            is_approx_zero_f(M, state, options, :relaxed) && return xn1
+            is_approx_zero_f(M, state, options, :relaxed) &&
+                is_small_Δx(M, state, options) && return xn1
         end
     end
 
