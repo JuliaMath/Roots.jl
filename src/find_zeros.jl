@@ -107,7 +107,7 @@ end
 
 # adjust what we mean by x1 ~ x2 for purposes of adding a new zero
 function approx_close(z1, z2, xatol, xrtol)
-    z₁,z₂,δ,ϵ = _unitless.((z1, z2, xatol, xrtol))
+    z₁, z₂, δ, ϵ = _unitless.((z1, z2, xatol, xrtol))
     return isapprox(z₁, z₂; atol=sqrt(δ), rtol=sqrt(ϵ))
 end
 
