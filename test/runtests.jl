@@ -37,4 +37,4 @@ VERSION >= v"1.9.0" && include("./test_extensions.jl")
 #include("./runbenchmarks.jl")
 #include("./test_derivative_free_interactive.jl")
 
-Aqua.test_all(Roots; ambiguities=false)
+Aqua.test_all(Roots)#; ambiguities=false)

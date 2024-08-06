@@ -217,6 +217,7 @@ function find_zero(
     tracks::AbstractTracks=NullTracks(),
     kwargs...,
 )
+
     xstar = solve(
         ZeroProblem(f, x0),
         M,

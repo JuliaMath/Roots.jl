@@ -224,8 +224,7 @@ _method_lookup = Dict(
     if haskey(_method_lookup, order)
         M = _method_lookup[order]
     else
-        warn("Invalid order specified. See ?fzero.")
-        throw(ArgumentError())
+        throw(ArgumentError("Invalid order specified. See ?fzero."))
     end
 
     # d = (kv[1] == :ftol ? :atol=>kv[2] :

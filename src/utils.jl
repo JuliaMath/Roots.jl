@@ -157,7 +157,7 @@ end
 ## if N is big enough. (THough this depends on algorithm, a, b and function)
 ## N here would need to be tuned. But, as is, this may prove useful anyways.
 function identify_starting_point(f, a, b, N)
-    pts = range(a, stop=b, length=N + 1)
+    pts = range(a, b, N + 1)
     fxs = f.(pts)
     sfxs = sign.(f.(pts))
     identify_starting_point(a, b, sfxs)
@@ -178,4 +178,8 @@ function _unicode_subscript(io, j)
     end
 end
 
-unicode_subscript(io, j) = _unicode_subscript.(Ref(io), reverse(digits(j)))
+function unicode_subscript(io, j)
+    for i ∈ reverse(digits(j))
+        _unicode_subscript(io,i)
+    end
+end
