@@ -205,7 +205,7 @@ function is_small_Δx(
     state::AbstractUnivariateZeroState,
     options,
 )
-    δ = abs(state.xn1 - state.xn0)
+    δ = _unitless(abs(state.xn1 - state.xn0))
     δₐ, δᵣ = options.xabstol, options.xreltol
     Δₓ = max(_unitless(δₐ), _unitless(abs(state.xn1)) * δᵣ)
     Δₓ = sqrt(sqrt(sqrt((abs(_unitless(Δₓ)))))) # faster than x^(1/8)
