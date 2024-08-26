@@ -24,17 +24,19 @@ using ForwardDiff
     @testset "find zero(s) with Unitful" begin
         s = u"s"
         m = u"m"
-        g = 9.8 * m / s^2
+        g = (9 + 8//10) * m / s^2
         v0 = 10m / s
         y0 = 16m
         y(t) = -g * t^2 + v0 * t + y0
 
         for order in orders
             @test find_zero(y, 1.8s, order) ≈ 1.886053370668014s
+            @test find_zero(y, 1.8f0s, order) isa typeof(1.88f0s)
         end
 
         for M in [Roots.Bisection(), Roots.A42(), Roots.AlefeldPotraShi()]
             @test find_zero(y, (1.8s, 1.9s), M) ≈ 1.886053370668014s
+            @test find_zero(y, (1.8f0s, 1.9f0s), M) isa typeof(1.88f0s)
         end
 
         xrts = find_zeros(y, 0s, 10s)
@@ -44,6 +46,10 @@ using ForwardDiff
         # issue #434
         xzs1 = find_zeros(x -> cos(x / 1u"m"), -1.6u"m", 2u"m")
         @test length(xzs1) == 2 && maximum(xzs1) ≈ 1.5707963267948966 * u"m"
+
+        FX = ZeroProblem(y, (0f0s, 2f0s))
+        prob = Roots.init(FX, Roots.AlefeldPotraShi())
+        @test Roots.is_small_Δx(prob.M, prob.state, prob.options) isa Bool  # does not throw
     end
 
     # Polynomials
