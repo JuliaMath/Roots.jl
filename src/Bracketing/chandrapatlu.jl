@@ -24,6 +24,7 @@ end
 # a = most recent, b prior
 function init_state(::Chandrapatla, F, x₀, x₁, fx₀, fx₁)
     a, b, fa, fb = x₁, x₀, fx₁, fx₀
+    assert_bracket(fa, fb)
     c, fc = a, fa
     ChandrapatlaState(promote(a, b, c)..., promote(fa, fb, fc)...)
 end
