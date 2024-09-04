@@ -313,9 +313,9 @@ end
     @test avg(cnts) <= 3000
 
     ## issue 412 check for bracket
-    f = x -> x - 1
     for M in Ms
-        @test_throws ArgumentError find_zero(f, (-3, 0), M)
+        @test_throws ArgumentError find_zero(x -> x - 1, (-3, 0), M)
+        @test_throws ArgumentError find_zero(x -> 1 + x^2, (10, 20), M)
     end
 end
 
