@@ -1,3 +1,8 @@
+module RootsChainRulesCoreExt
+
+using Roots
+import ChainRulesCore
+
 # View find_zero as solving `f(x, p) = 0` for `xᵅ(p)`.
 # This is implicitly defined. By the implicit function theorem, we have:
 # ∇f = 0 => ∂/∂ₓ f(xᵅ, p) ⋅ ∂xᵅ/∂ₚ + ∂/∂ₚf(x\^α, p) ⋅ I = 0
@@ -15,7 +20,6 @@
 # that is fixable.)
 
 # this assumes a function and a parameter `p` passed in
-import ChainRulesCore: Tangent, NoTangent, frule, rrule
 function ChainRulesCore.frule(
     config::ChainRulesCore.RuleConfig{>:ChainRulesCore.HasForwardsMode},
     (_, _, _, Δp),
@@ -42,17 +46,17 @@ ChainRulesCore.frule(
     config::ChainRulesCore.RuleConfig{>:ChainRulesCore.HasForwardsMode},
     xdots,
     ::typeof(solve),
-    ZP::Roots.ZeroProblem,
+    ZP::ZeroProblem,
     M::Roots.AbstractUnivariateZeroMethod,
     ::Nothing;
     kwargs...,
-) = frule(config, xdots, solve, ZP, M; kwargs...)
+) = ChainRulesCore.frule(config, xdots, solve, ZP, M; kwargs...)
 
 function ChainRulesCore.frule(
     config::ChainRulesCore.RuleConfig{>:ChainRulesCore.HasForwardsMode},
     (_, Δq, _),
     ::typeof(solve),
-    ZP::Roots.ZeroProblem,
+    ZP::ZeroProblem,
     M::Roots.AbstractUnivariateZeroMethod;
     kwargs...,
 )
@@ -61,12 +65,12 @@ function ChainRulesCore.frule(
     zprob2 = ZeroProblem(|>, ZP.x₀)
     nms = fieldnames(typeof(foo))
     nt = NamedTuple{nms}(getfield(foo, n) for n in nms)
-    dfoo = Tangent{typeof(foo)}(; nt...)
+    dfoo = ChainRulesCore.Tangent{typeof(foo)}(; nt...)
 
-    return frule(
+    return ChainRulesCore.frule(
         config,
-        (NoTangent(), NoTangent(), NoTangent(), dfoo),
-        Roots.solve,
+        (ChainRulesCore.NoTangent(), ChainRulesCore.NoTangent(), ChainRulesCore.NoTangent(), dfoo),
+        solve,
         zprob2,
         M,
         foo,
@@ -146,3 +150,5 @@ function ChainRulesCore.rrule(
 
     return xᵅ, pullback_solve_ZeroProblem
 end
+
+end # module
