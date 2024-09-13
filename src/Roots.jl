@@ -22,7 +22,6 @@ using Printf
 import CommonSolve
 import CommonSolve: solve, solve!, init
 using Accessors
-import ChainRulesCore
 
 export fzero, fzeros, secant_method
 
@@ -53,7 +52,6 @@ include("functions.jl")
 include("trace.jl")
 include("find_zero.jl")
 include("hybrid.jl")
-include("chain_rules.jl")
 
 include("Bracketing/bracketing.jl")
 include("Bracketing/bisection.jl")
@@ -82,5 +80,9 @@ include("Derivative/lith.jl")
 include("find_zeros.jl")
 include("simple.jl")
 include("alternative_interfaces.jl")
+
+if !isdefined(Base, :get_extension)
+    include("../ext/RootsChainRulesCoreExt.jl")
+end
 
 end

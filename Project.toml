@@ -1,6 +1,6 @@
 name = "Roots"
 uuid = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
-version = "2.1.8"
+version = "2.2.0"
 
 [deps]
 Accessors = "7d9f7c33-5ae7-4f3b-8dc6-eff91059b697"
@@ -9,12 +9,14 @@ CommonSolve = "38540f10-b2f7-11e9-35d8-d573e4eb0ff2"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 
 [weakdeps]
+ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 IntervalRootFinding = "d2bf35a9-74e0-55ec-b149-d360ff49b807"
 SymPy = "24249f21-da20-56a4-8eb1-6a02cf4ae2e6"
 SymPyPythonCall = "bc8888f7-b21e-4b7c-a06a-5d9c9496438c"
 
 [extensions]
+RootsChainRulesCoreExt = "ChainRulesCore"
 RootsForwardDiffExt = "ForwardDiff"
 RootsIntervalRootFindingExt = "IntervalRootFinding"
 RootsSymPyExt = "SymPy"
