@@ -330,6 +330,10 @@ function decide_convergence(
         #_is_f_approx_0(fxn1, xn1, options.abstol, options.reltol) && return xn1
     else
         if val == :x_converged
+            # The XExact case isn't always spelled out in the type, so
+            # we replicate a bit here
+            δ, ϵ = options.abstol, options.reltol
+            iszero(δ) && iszero(ϵ) && return xn1
             is_approx_zero_f(M, state, options, true) && return xn1
         elseif val == :not_converged
             # this is the case where runaway can happen
