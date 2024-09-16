@@ -32,8 +32,8 @@ end
 function default_tolerances(::AbstractBracketingMethod, ::Type{T}, ::Type{S}) where {T,S}
     xatol = eps(real(T))^3 * oneunit(real(T))
     xrtol = eps(real(T))  # unitless
-    atol = 0 * oneunit(real(S))
-    rtol = 0 * one(real(S))
+    atol = zero(oneunit(real(S)))
+    rtol = zero(one(real(S)))
     maxevals = 60
     strict = true
     (xatol, xrtol, atol, rtol, maxevals, strict)

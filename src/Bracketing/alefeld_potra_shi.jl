@@ -81,6 +81,22 @@ function init_state(::AbstractAlefeldPotraShi, F, x₀, x₁, fx₀, fx₁; c=no
     AbstractAlefeldPotraShiState(promote(b, a, d, ee)..., promote(fb, fa, fd, fe)...)
 end
 
+# avoid type-stability issue due to dynamic dispatch based on kwargs
+function init_options(
+    M::AbstractAlefeldPotraShi,
+    state::AbstractUnivariateZeroState{T,S};
+    kwargs...,
+) where {T,S}
+    d = kwargs
+    defs = default_tolerances(M, T, S)
+    δₐ = get(d, :xatol, get(d, :xabstol, defs[1]))
+    δᵣ = get(d, :xrtol, get(d, :xreltol, defs[2]))
+    maxiters = get(d, :maxiters, get(d, :maxevals, get(d, :maxsteps, defs[5])))
+    strict = get(d, :strict, defs[6])
+    Roots.FExactOptions(δₐ, δᵣ, maxiters, strict)
+end
+
+
 # fn calls w/in calculateΔ
 # 1 is default, but this should be adjusted for different methods
 fncalls_per_step(::AbstractAlefeldPotraShi) = 1

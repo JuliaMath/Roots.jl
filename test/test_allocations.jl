@@ -4,6 +4,7 @@ import BenchmarkTools
 @testset "solve: zero allocations" begin
     fs = (sin, cos, x -> -sin(x))
     x0 = (3, 4)
+    x0′ = big.(x0)
     Ms = (
         Order0(),
         Order1(),
@@ -23,9 +24,11 @@ import BenchmarkTools
     Ns = (Roots.Newton(), Roots.Halley(), Roots.Schroder())
     for M in Ms
         @test BenchmarkTools.@ballocated(solve(ZeroProblem($fs, $x0), $M)) == 0
+        @inferred solve(ZeroProblem(fs, x0′), M)
     end
     for M in Ns
         @test BenchmarkTools.@ballocated(solve(ZeroProblem($fs, $x0), $M)) == 0
+        @inferred solve(ZeroProblem(fs, x0′), M)
     end
 
     # Allocations in Lith

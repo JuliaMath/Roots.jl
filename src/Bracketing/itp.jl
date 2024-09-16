@@ -67,6 +67,25 @@ function init_state(M::ITP, F, x₀, x₁, fx₀, fx₁)
     ITPState(promote(b, a)..., promote(fb, fa)..., 0, ϵ2n₁₂, a)
 end
 
+function init_options(
+    M::ITP,
+    state::AbstractUnivariateZeroState{T,S};
+    kwargs...,
+) where {T,S}
+
+    d = kwargs
+    defs = default_tolerances(M, T, S)
+    δₐ = get(d, :xatol, get(d, :xabstol, defs[1]))
+    δᵣ = get(d, :xrtol, get(d, :xreltol, defs[2]))
+    ϵₐ = get(d, :atol, get(d, :abstol, defs[3]))
+    ϵᵣ = get(d, :rtol, get(d, :reltol, defs[4]))
+    maxiters = get(d, :maxiters, get(d, :maxevals, get(d, :maxsteps, defs[5])))
+    strict = get(d, :strict, defs[6])
+
+    return UnivariateZeroOptions(δₐ, δᵣ, ϵₐ, ϵᵣ, maxiters, strict)
+end
+
+
 function update_state(M::ITP, F, o::ITPState{T,S,R}, options, l=NullTracks()) where {T,S,R}
     a, b = o.xn0, o.xn1
     fa, fb = o.fxn0, o.fxn1

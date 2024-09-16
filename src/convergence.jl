@@ -36,23 +36,44 @@ init_options(
     kwargs...,
 ) where {T,S} = init_options(M, T, S; kwargs...)
 
+# this function is an issue (#446) it is type unstable.
+# this is a fall back now, but in #446 more
+# specific choices based on M are made.
 function init_options(M, T=Float64, S=Float64; kwargs...)
     d = kwargs
-
     defs = default_tolerances(M, T, S)
     δₐ = get(d, :xatol, get(d, :xabstol, defs[1]))
     δᵣ = get(d, :xrtol, get(d, :xreltol, defs[2]))
     ϵₐ = get(d, :atol, get(d, :abstol, defs[3]))
     ϵᵣ = get(d, :rtol, get(d, :reltol, defs[4]))
-    M = get(d, :maxiters, get(d, :maxevals, get(d, :maxsteps, defs[5])))
+    maxiters = get(d, :maxiters, get(d, :maxevals, get(d, :maxsteps, defs[5])))
     strict = get(d, :strict, defs[6])
 
-    iszero(δₐ) && iszero(δᵣ) && iszero(ϵₐ) && iszero(ϵᵣ) && return ExactOptions(M, strict)
-    iszero(δₐ) && iszero(δᵣ) && return XExactOptions(ϵₐ, ϵᵣ, M, strict)
-    iszero(ϵₐ) && iszero(ϵᵣ) && return FExactOptions(δₐ, δᵣ, M, strict)
+    iszero(δₐ) && iszero(δᵣ) && iszero(ϵₐ) && iszero(ϵᵣ) && return ExactOptions(maxiters, strict)
+    iszero(δₐ) && iszero(δᵣ) && return XExactOptions(ϵₐ, ϵᵣ, maxiters, strict)
+    iszero(ϵₐ) && iszero(ϵᵣ) && return FExactOptions(δₐ, δᵣ, maxiters, strict)
 
-    return UnivariateZeroOptions(δₐ, δᵣ, ϵₐ, ϵᵣ, M, strict)
+    return UnivariateZeroOptions(δₐ, δᵣ, ϵₐ, ϵᵣ, maxiters, strict)
 end
+
+function init_options(
+    M::AbstractNonBracketingMethod,
+    state::AbstractUnivariateZeroState{T,S};
+    kwargs...,
+) where {T,S}
+
+    d = kwargs
+    defs = default_tolerances(M, T, S)
+    δₐ = get(d, :xatol, get(d, :xabstol, defs[1]))
+    δᵣ = get(d, :xrtol, get(d, :xreltol, defs[2]))
+    ϵₐ = get(d, :atol, get(d, :abstol, defs[3]))
+    ϵᵣ = get(d, :rtol, get(d, :reltol, defs[4]))
+    maxiters = get(d, :maxiters, get(d, :maxevals, get(d, :maxsteps, defs[5])))
+    strict = get(d, :strict, defs[6])
+
+    return UnivariateZeroOptions(δₐ, δᵣ, ϵₐ, ϵᵣ, maxiters, strict)
+end
+
 
 ## --------------------------------------------------
 
@@ -309,6 +330,10 @@ function decide_convergence(
         #_is_f_approx_0(fxn1, xn1, options.abstol, options.reltol) && return xn1
     else
         if val == :x_converged
+            # The XExact case isn't always spelled out in the type, so
+            # we replicate a bit here
+            δ, ϵ = options.abstol, options.reltol
+            iszero(δ) && iszero(ϵ) && return xn1
             is_approx_zero_f(M, state, options, true) && return xn1
         elseif val == :not_converged
             # this is the case where runaway can happen
