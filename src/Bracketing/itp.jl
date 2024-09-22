@@ -72,7 +72,6 @@ function init_options(
     state::AbstractUnivariateZeroState{T,S};
     kwargs...,
 ) where {T,S}
-
     d = kwargs
     defs = default_tolerances(M, T, S)
     δₐ = get(d, :xatol, get(d, :xabstol, defs[1]))
@@ -84,7 +83,6 @@ function init_options(
 
     return UnivariateZeroOptions(δₐ, δᵣ, ϵₐ, ϵᵣ, maxiters, strict)
 end
-
 
 function update_state(M::ITP, F, o::ITPState{T,S,R}, options, l=NullTracks()) where {T,S,R}
     a, b = o.xn0, o.xn1
