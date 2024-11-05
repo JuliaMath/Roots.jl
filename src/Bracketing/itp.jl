@@ -1,5 +1,5 @@
 """
-    Roots.ITP(;[κ₁-0.2, κ₂=2, n₀=1])
+    Roots.ITP(;[κ₁=0.2, κ₂=2, n₀=1])
 
 Use the [ITP](https://en.wikipedia.org/wiki/ITP_method) bracketing
 method.  This method claims it "is the first root-finding algorithm
@@ -7,7 +7,7 @@ that achieves the superlinear convergence of the secant method
 while retaining the optimal worst-case performance of the bisection
 method."
 
-The values `κ1`, `κ₂`, and `n₀` are tuning parameters.
+The values `κ₁`, `κ₂`, and `n₀` are tuning parameters.
 
 The
 [suggested](https://docs.rs/kurbo/0.8.1/kurbo/common/fn.solve_itp.html)
