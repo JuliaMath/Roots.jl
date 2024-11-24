@@ -96,7 +96,6 @@ function init_options(
     Roots.FExactOptions(δₐ, δᵣ, maxiters, strict)
 end
 
-
 # fn calls w/in calculateΔ
 # 1 is default, but this should be adjusted for different methods
 fncalls_per_step(::AbstractAlefeldPotraShi) = 1
