@@ -49,7 +49,11 @@ function init_options(M, T=Float64, S=Float64; kwargs...)
     maxiters = get(d, :maxiters, get(d, :maxevals, get(d, :maxsteps, defs[5])))
     strict = get(d, :strict, defs[6])
 
-    iszero(δₐ) && iszero(δᵣ) && iszero(ϵₐ) && iszero(ϵᵣ) && return ExactOptions(maxiters, strict)
+    iszero(δₐ) &&
+        iszero(δᵣ) &&
+        iszero(ϵₐ) &&
+        iszero(ϵᵣ) &&
+        return ExactOptions(maxiters, strict)
     iszero(δₐ) && iszero(δᵣ) && return XExactOptions(ϵₐ, ϵᵣ, maxiters, strict)
     iszero(ϵₐ) && iszero(ϵᵣ) && return FExactOptions(δₐ, δᵣ, maxiters, strict)
 
@@ -61,7 +65,6 @@ function init_options(
     state::AbstractUnivariateZeroState{T,S};
     kwargs...,
 ) where {T,S}
-
     d = kwargs
     defs = default_tolerances(M, T, S)
     δₐ = get(d, :xatol, get(d, :xabstol, defs[1]))
@@ -73,7 +76,6 @@ function init_options(
 
     return UnivariateZeroOptions(δₐ, δᵣ, ϵₐ, ϵᵣ, maxiters, strict)
 end
-
 
 ## --------------------------------------------------
 

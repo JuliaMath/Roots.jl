@@ -24,7 +24,7 @@ using ForwardDiff
     @testset "find zero(s) with Unitful" begin
         s = u"s"
         m = u"m"
-        g = (9 + 8//10) * m / s^2
+        g = (9 + 8 // 10) * m / s^2
         v0 = 10m / s
         y0 = 16m
         y(t) = -g * t^2 + v0 * t + y0
@@ -47,7 +47,7 @@ using ForwardDiff
         xzs1 = find_zeros(x -> cos(x / 1u"m"), -1.6u"m", 2u"m")
         @test length(xzs1) == 2 && maximum(xzs1) ≈ 1.5707963267948966 * u"m"
 
-        FX = ZeroProblem(y, (0f0s, 2f0s))
+        FX = ZeroProblem(y, (0.0f0s, 2.0f0s))
         prob = Roots.init(FX, Roots.AlefeldPotraShi())
         @test Roots.is_small_Δx(prob.M, prob.state, prob.options) isa Bool  # does not throw
     end
