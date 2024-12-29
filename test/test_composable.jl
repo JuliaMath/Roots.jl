@@ -7,6 +7,7 @@ using Test
 using Unitful
 using Polynomials
 using ForwardDiff
+using Measurements
 
 @testset "Test composability with other packages" begin
     orders = [
@@ -82,4 +83,18 @@ using ForwardDiff
     α = find_zero(D(h), (0, 1)) # find lowest point on loop
     @test h(α) ≤ h(α + 0.1)
     @test h(α) ≤ h(α - 0.1)
+
+
+    # Measurements # issue #453
+    @testset "Measurements.jl" begin
+        a = measurement(1.0 , 0.1)
+        b = measurement(-3.0 , 0.1)
+        c = measurement(-10.0, 0.1)
+        f(x) = a*x^2 + b*x + c
+        x₀ = (measurement(-3.0, 0.1), measurement(0.0, 0.1))
+        for M ∈ (A42(), AlefeldPotraShi(), Bisection())
+            @test find_zero(f,x₀, M) ≈ -2.0
+        end
+        @test find_zero(f, measurement(0.0, 0.1)) ≈ -2.0
+    end
 end
