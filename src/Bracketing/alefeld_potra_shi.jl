@@ -108,6 +108,7 @@ function update_state(
     options,
     l=NullTracks(),
 ) where {T,S}
+
     atol, rtol = options.xabstol, options.xreltol
     μ, λ = oftype(rtol, 0.5), oftype(rtol, 0.7)
     tols = (; λ=λ, atol=atol, rtol=rtol)
@@ -145,7 +146,10 @@ function update_state(
 
     ā, b̄, d, fā, fb̄, fd = bracket(a, b, x, fa, fb, fx)
 
-    if iszero(fx) || (b̄ - ā) <= tolₑ(ā, b̄, fā, fb̄, atol, rtol)
+
+    if ((b̄ - ā) <= tolₑ(ā, b̄, fā, fb̄, atol, rtol) ||
+        iszero(fx) ||      # exact zero
+        !isbracket(fā,fb̄)) # catch non bracket?, issue #453
         @reset o.xn0 = ā
         @reset o.xn1 = b̄
         @reset o.fxn0 = fā
