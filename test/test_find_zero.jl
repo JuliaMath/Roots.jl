@@ -583,3 +583,13 @@ end
         @test ForwardDiff.gradient(H, [1.0, 2])[1] ≈ -0.4416107917053284
     end
 end
+
+@testset "bracketing_atol" begin
+    ## issue $457
+    f(x) = x^2 - 4
+    @test find_zero(f, (0,Inf)) ≈ 2 # 2.0 correct
+    @test find_zero(f, (0,Inf), atol=1) ≈ 1.9997558593749998
+    @test find_zero(f, (0,Inf),atol=1e-5) ≈ 1.9999998807907102
+    @test find_zero(f, (0,8), atol=1) ≈ 1.99609375
+    @test find_zero(f, (0,8), atol=1e-3) ≈ 2.0000152587890625
+end

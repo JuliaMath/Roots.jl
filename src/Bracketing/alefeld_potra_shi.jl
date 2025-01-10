@@ -16,6 +16,9 @@ An abstract type for Alefeld-Potra-Shi type bracketing problems, as discussed in
 The `update_step` method calls a `calculateΔ` method that can be customized to turn an algorithm based on interpolation into a bracketed algorithm. See [`Roots.BracketedHalley`](@ref) for an example.
 
 This implementation deviates slightly from the printed algorithm, as it may use an initial call to `_middle` rather than a secant step, depending on the signs of ``a`` and ``b``.
+
+!!! note
+    These algorithms do not check the size of `f` for convergence, so the `atol` or `rtol` are not utilized.
 """
 =#
 abstract type AbstractAlefeldPotraShi <: AbstractBracketingMethod end
