@@ -278,7 +278,11 @@ function assess_convergence(M::Any, state::AbstractUnivariateZeroState, options)
     return (:not_converged, false)
 end
 
-function assess_convergence(M::AbstractBisection, state::AbstractUnivariateZeroState, options::O) where {O <: Union{ExactOptions, XExactOptions}}
+function assess_convergence(
+    M::AbstractBisection,
+    state::AbstractUnivariateZeroState,
+    options::O,
+) where {O<:Union{ExactOptions,XExactOptions}}
     # return convergence_flag, boolean
     # no check if f == ∞
     is_exact_zero_f(M, state, options) && return (:exact_zero, true)
@@ -287,7 +291,6 @@ function assess_convergence(M::AbstractBisection, state::AbstractUnivariateZeroS
     iszero_Δx(M, state, options) && return (:x_converged, true)
     return (:not_converged, false)
 end
-
 
 # speeds up exact f values by just a bit (2% or so) over the above, so guess this is worth it.
 function assess_convergence(
