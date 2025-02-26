@@ -111,7 +111,7 @@ function update_state(
     l=NullTracks(),
 ) where {T,S}
     atol, rtol = options.xabstol, options.xreltol
-    μ, λ = oftype(rtol, 0.5), oftype(rtol, 0.7)
+    μ, λ = oftype(float(rtol), 0.5), oftype(float(rtol), 0.7)
     tols = (; λ=λ, atol=atol, rtol=rtol)
 
     a::T, b::T, d::T, ee::T = o.xn0, o.xn1, o.d, o.ee
@@ -209,7 +209,7 @@ struct A2425{K} <: AbstractAlefeldPotraShi end
 function calculateΔ(::A2425{K}, F::Callable_Function, c₀::T, ps) where {K,T}
     a, b, d, ee = ps.a, ps.b, ps.d, ps.ee
     fa, fb, fd, fee = ps.fa, ps.fb, ps.fd, ps.fee
-    tols = (λ=oftype(ps.rtol, 0.7), atol=ps.atol, rtol=ps.rtol)
+    tols = (λ=oftype(float(ps.rtol), 0.7), atol=ps.atol, rtol=ps.rtol)
 
     c = a
     for k in 1:K
@@ -258,7 +258,7 @@ fncalls_per_step(::A57{K}) where {K} = K - 1
 function calculateΔ(::A57{K}, F::Callable_Function, c₀::T, ps) where {K,T}
     a, b, d, ee = ps.a, ps.b, ps.d, ps.ee
     fa, fb, fd, fee = ps.fa, ps.fb, ps.fd, ps.fee
-    tols = (λ=oftype(ps.rtol, 0.7), atol=ps.atol, rtol=ps.rtol)
+    tols = (λ=oftype(float(ps.rtol), 0.7), atol=ps.atol, rtol=ps.rtol)
     c, fc = a, fa
 
     for k in 1:K
