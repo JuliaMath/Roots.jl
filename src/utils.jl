@@ -111,12 +111,12 @@ function quad_vertex(c, fc, b, fb, a, fa)
 end
 
 ## inverse quadratic
-function inverse_quadratic_step(a::T, b, c, fa, fb, fc) where {T}
+function inverse_quadratic_step(a::T, b, c, fa::S, fb, fc) where {T,S}
     s = zero(T)
     s += a * fb * fc / (fa - fb) / (fa - fc) # quad step
     s += b * fa * fc / (fb - fa) / (fb - fc)
     s += c * fa * fb / (fc - fa) / (fc - fb)
-    s
+    float(s)
 end
 
 ## Different functions for approximating f'(xn)

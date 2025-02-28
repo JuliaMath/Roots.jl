@@ -237,6 +237,7 @@ function init_state(
     ys₀,
 ) where {S,D,R,T}
     xs, ys = init_lith(L, F, x₁, fx₁, x₀, fx₀, ys₀) # [x₀,x₁,…,xₛ₋₁], ...
+
     # skip unit consideration here, as won't fit within storage of ys
     state = LithBoonkkampIJzermanState{S,D + 1,R,T}(
         xs[end],    # xₙ
@@ -703,17 +704,20 @@ function lmm(::LithBoonkkampIJzerman{2,0}, xs, fs)
     x0, x1 = xs
     f0, f1 = fs
 
-    (f0 * x1 - f1 * x0) / (f0 - f1)
+    (f0 * x1 - f1 * x0) / (f0 - f1) |> float
 end
 
 function lmm(::LithBoonkkampIJzerman{3,0}, xs, fs)
+    xs, fs
     x0, x1, x2 = xs
     f0, f1, f2 = fs
 
     (
         f0^2 * f1 * x2 - f0^2 * f2 * x1 - f0 * f1^2 * x2 + f0 * f2^2 * x1 + f1^2 * f2 * x0 -
         f1 * f2^2 * x0
-    ) / (f0^2 * f1 - f0^2 * f2 - f0 * f1^2 + f0 * f2^2 + f1^2 * f2 - f1 * f2^2)
+    ) / (
+        f0^2 * f1 - f0^2 * f2 - f0 * f1^2 + f0 * f2^2 + f1^2 * f2 - f1 * f2^2
+    ) |> float
 end
 
 function lmm(::LithBoonkkampIJzerman{4,0}, xs, fs)
@@ -745,7 +749,7 @@ function lmm(::LithBoonkkampIJzerman{4,0}, xs, fs)
         f0 * f2^3 * f3^2 - f0 * f2^2 * f3^3 - f1^3 * f2^2 * f3 +
         f1^3 * f2 * f3^2 +
         f1^2 * f2^3 * f3 - f1^2 * f2 * f3^3 - f1 * f2^3 * f3^2 + f1 * f2^2 * f3^3
-    )
+    ) |> float
 end
 
 function lmm(::LithBoonkkampIJzerman{5,0}, xs, fs)
@@ -901,7 +905,7 @@ function lmm(::LithBoonkkampIJzerman{5,0}, xs, fs)
         f1 * f2^4 * f3^2 * f4^3 +
         f1 * f2^3 * f3^4 * f4^2 - f1 * f2^3 * f3^2 * f4^4 - f1 * f2^2 * f3^4 * f4^3 +
         f1 * f2^2 * f3^3 * f4^4
-    )
+    ) |> float
 end
 
 function lmm(::LithBoonkkampIJzerman{6,0}, xs, fs)
