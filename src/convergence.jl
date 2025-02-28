@@ -235,6 +235,13 @@ function is_small_Δx(
     return δ ≤ Δₓ
 end
 
+
+isnan_x(M::AbstractBracketingMethod, state) = isnan(state.xn1) || isnan(state.xn0)
+isnan_x(M::AbstractNonBracketingMethod, state) = isnan(state.xn1)
+
+isinf_x(M::AbstractBracketingMethod, state) = isinf(state.xn1) || isinf(state.xn0)
+isinf_x(M::AbstractNonBracketingMethod, state) = isinf(state.xn1)
+
 isnan_f(M::AbstractBracketingMethod, state) = isnan(state.fxn1) || isnan(state.fxn0)
 isnan_f(M::AbstractNonBracketingMethod, state) = isnan(state.fxn1)
 
@@ -271,6 +278,8 @@ In `decide_convergence`, stopped values (and `:x_converged` when `strict=false`)
 function assess_convergence(M::Any, state::AbstractUnivariateZeroState, options)
     # return convergence_flag, boolean
     is_exact_zero_f(M, state, options) && return (:exact_zero, true)
+    isnan_x(M, state) && return (:nan, true)
+    isinf_x(M, state) && return (:inf, true)
     isnan_f(M, state) && return (:nan, true)
     isinf_f(M, state) && return (:inf, true)
     is_approx_zero_f(M, state, options) && return (:f_converged, true)
@@ -330,7 +339,23 @@ function decide_convergence(
     val ∈ (:f_converged, :exact_zero, :converged) && return xn1
 
     ## XXX this could be problematic
-    val == :nan && return xn1
+    if val == :nan
+        # return if Δx small
+        Δₓ = abs(xn1 - xn0)
+        δₐ, δᵣ = options.xabstol, options.xreltol
+        u = min(abs(xn0), abs(xn1))
+        δₓ = max(δₐ, 2 * abs(u) * δᵣ) # needs non-zero δₐ to stop near 0
+        Δₓ ≤ δₓ && return xn1
+
+        # or if abs(fxn0) small
+        ϵₐ, ϵᵣ = options.abstol, options.reltol
+        Δ = max(_unitless(ϵₐ), _unitless(xn0) * ϵᵣ)
+        abs(state.fxn0) ≤ Δ * oneunit(state.fxn0) && return xn0
+
+        # else
+        return nan(T) * xn1
+#        return xn1
+    end
     val == :inf_nan && return xn1
 
     ## stopping is a heuristic, x_converged can mask issues
