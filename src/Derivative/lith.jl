@@ -715,9 +715,7 @@ function lmm(::LithBoonkkampIJzerman{3,0}, xs, fs)
     (
         f0^2 * f1 * x2 - f0^2 * f2 * x1 - f0 * f1^2 * x2 + f0 * f2^2 * x1 + f1^2 * f2 * x0 -
         f1 * f2^2 * x0
-    ) / (
-        f0^2 * f1 - f0^2 * f2 - f0 * f1^2 + f0 * f2^2 + f1^2 * f2 - f1 * f2^2
-    ) |> float
+    ) / (f0^2 * f1 - f0^2 * f2 - f0 * f1^2 + f0 * f2^2 + f1^2 * f2 - f1 * f2^2) |> float
 end
 
 function lmm(::LithBoonkkampIJzerman{4,0}, xs, fs)

@@ -69,7 +69,7 @@ Base.show(io::IO, alpha::Interval) = print(io, "($(alpha.a), $(alpha.b))")
 # check if f(a) is non zero using tolerances max(atol, eps()), rtol
 function _non_zero(fa, a::T, atol, rtol) where {T}
     a, r = atol, abs(a) * rtol * oneunit(fa) / oneunit(a), oneunit(fa) * eps(T)
-    return abs(fa) >= max(promote(a,r)...)
+    return abs(fa) >= max(promote(a, r)...)
 end
 
 # After splitting by zeros we have intervals (zm, zn) this is used to shrink

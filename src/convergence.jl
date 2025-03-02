@@ -235,7 +235,6 @@ function is_small_Δx(
     return δ ≤ Δₓ
 end
 
-
 isnan_x(M::AbstractBracketingMethod, state) = isnan(state.xn1) || isnan(state.xn0)
 isnan_x(M::AbstractNonBracketingMethod, state) = isnan(state.xn1)
 
@@ -357,7 +356,7 @@ function decide_convergence(
 
         # else
         return nan(T) * xn1
-#        return xn1
+        #        return xn1
     end
     val == :inf_nan && return xn1
 
