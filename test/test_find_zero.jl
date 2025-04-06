@@ -41,7 +41,6 @@ struct Order3_Test <: Roots.AbstractSecantMethod end
         @test isnan(solve(ZeroProblem(x -> x^2 + 2, 0.5f0)))
     end
 
-
     ## defaults for method argument
     @test find_zero(sin, 3.0) ≈ pi    # order0()
     @test @inferred(find_zero(sin, (3, 4))) ≈ π   # Bisection()

@@ -113,7 +113,7 @@ function a42(f, ab; atol=nothing, rtol=nothing, λ=0.7, μ=0.5)
     assert_bracket(fa, fb)
 
     tols = (
-        λ    = λ,
+        λ   = λ,
         atol = isnothing(atol) ? zero(one(a)) : atol,
         rtol = isnothing(rtol) ? eps(one(a)) : rtol,
     )
