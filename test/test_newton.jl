@@ -89,11 +89,11 @@ end
 
 @testset "Lith Boonkkamp IJzerman methods" begin
     x₀, x̃₀, α = 1.0, 1.1, 1.1673039782614187
-    f(x, p=1)  = x^5 - x - p
-    fp(x)      = 5x^4 - 1
-    fpp(x)     = 20x^3
-    fppp(x)    = 60x
-    fpppp(x)   = 60
+    f(x, p=1) = x^5 - x - p
+    fp(x) = 5x^4 - 1
+    fpp(x) = 20x^3
+    fppp(x) = 60x
+    fpppp(x) = 60
 
     function fdf1(x, p=1)
         fx = f(x, p)

@@ -94,7 +94,7 @@ import BenchmarkTools
     p = 2.0
     for M in Ms
         @test BenchmarkTools.@ballocated(solve(ZeroProblem($f, $x0), $M, $p)) == 0
-        @test BenchmarkTools.@ballocated(solve(ZeroProblem($f, $x0), $M; p=$p)) == 0
+        @test BenchmarkTools.@ballocated(solve(ZeroProblem($f, $x0), $M; p=($p))) == 0
     end
 
     # issue #423 type instability
