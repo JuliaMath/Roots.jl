@@ -60,7 +60,7 @@ function update_state(
     tol = max(options.xabstol, max(abs(b), abs(c), abs(d)) * options.xreltol)
     if !(u < s < v) ||
        (mflag && abs(s - b) >= abs(b - c) / 2) ||
-       (!mflag && abs(s - b) >= abs(b - c) / 2) ||
+       (!mflag && abs(s - b) >= abs(c - d) / 2) ||
        (mflag && abs(b - c) <= tol) ||
        (!mflag && abs(c - d) <= tol)
         s = _middle(a, b)
