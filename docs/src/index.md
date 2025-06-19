@@ -35,7 +35,8 @@ specification of a method. These include:
   a bracketing method when a bracket is encountered, The higher order
   methods promise higher order (faster) convergence, though don't
   always yield results with fewer function calls than `Order1` or
-  `Order2`. The methods `Roots.Order1B` and `Roots.Order2B` are
+  `Order2`. `Roots.Sidi` is a family of methods.
+  The methods `Roots.Order1B` and `Roots.Order2B` are
   superlinear and quadratically converging methods independent of the
   multiplicity of the zero.
 

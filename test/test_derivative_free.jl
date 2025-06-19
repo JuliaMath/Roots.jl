@@ -306,6 +306,8 @@ if !isinteractive()
             Roots.Order5(),
             Roots.Order8(),
             Roots.Order16(),
+            Roots.Sidi(2),
+            Roots.Sidi(3)
         ]
         results = [run_df_tests((f, b) -> find_zero(f, b, M), name="$M") for M in Ms]
 
@@ -356,6 +358,7 @@ if !isinteractive()
             Roots.Order5(),
             Roots.Order8(),
             Roots.Order16(),
+            Roots.Sidi(2)
         ]
         Ts = [Float16, Float32, BigFloat]
 

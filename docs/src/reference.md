@@ -105,7 +105,7 @@ The [secant](https://en.wikipedia.org/wiki/Secant_method) method replaces the  d
 ``x_{n+1} = x_n - (\frac{f(x_n)-f(x_{n-1})}{x_n - x_{n-1}})^{-1}\cdot  f(x_n).``
 
 Though the secant  method   has  convergence  rate of  order ``\approx 1.618`` -- i.e., is not quadratic --  it
-only requires one new  function call per  step  so  can be very effective. Often  function evaluations are the  slowest part of  the computation and, as  well, no derivative is  needed. Because  it  can be  very efficient, the secant  method  is used in  the default method  of `find_zero` when  called with a single initial starting point.
+only requires one new  function call per  step  so  can be very effective. Often  function evaluations are the  slowest part of  the computation and, as  well, no derivative is  needed. Because  it  can be  very efficient, the secant  method  is used in  the default method  of `find_zero` when  called with a single initial starting point. The `Roots.Sidi` methods generalize the secant method.
 
 [Steffensen's](https://en.wikipedia.org/wiki/Steffensen%27s_method) method is a quadratically converging. derivative-free method  which uses a secant  line  based on ``x_n`` and ``x_n + f(x_n)``.  Though of  higher  order, it requires  additional function calls per step and depends on a  good initial starting value. Other  derivative free methods are available, trading off  increased function calls for higher-order convergence. They may be  of interest when arbitrary  precision is needed. A  measure of efficiency is ``q^{1/r}`` where ``q`` is the order of convergence and ``r`` the number of function calls per step.   With this measure, the secant method  would be ``\approx (1.618)^{1/1}`` and Steffensen's  would be less (``2^{1/2}``).
 
@@ -119,6 +119,7 @@ Order2
 Order5
 Order8
 Order16
+Roots.Sidi
 ```
 
 
