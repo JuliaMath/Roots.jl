@@ -321,8 +321,7 @@ end
 # helper for development use only
 function __init(f,x,M,p=nothing; kwargs...)
     s = init(ZeroProblem(f,x), M, p;kwargs...)
-    (;M,F,state,options,logger) = s
-    (;M,F,state,options,logger)
+    (M=s.M, F=s.F, state=s.state, options=s.options,logger=s.logger)
 end
 
 """
