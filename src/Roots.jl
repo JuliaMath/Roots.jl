@@ -70,6 +70,7 @@ include("DerivativeFree/order8.jl")
 include("DerivativeFree/order16.jl")
 include("DerivativeFree/king.jl")
 include("DerivativeFree/esser.jl")
+include("DerivativeFree/sidi.jl")
 include("DerivativeFree/order0.jl")
 
 include("Derivative/newton.jl")

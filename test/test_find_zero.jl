@@ -28,6 +28,7 @@ struct Order3_Test <: Roots.AbstractSecantMethod end
         Roots.Thukral16(),
         Roots.LithBoonkkampIJzerman(3, 0),
         Roots.LithBoonkkampIJzerman(4, 0),
+        Roots.Sidi(2)
     ]
 
     ## different types of initial values
@@ -593,4 +594,11 @@ end
     @test find_zero(f, (0, Inf), atol=1e-5) ≈ 1.9999998807907102
     @test find_zero(f, (0, 8), atol=1) ≈ 1.99609375
     @test find_zero(f, (0, 8), atol=1e-3) ≈ 2.0000152587890625
+end
+
+@testset "similar methods" begin
+    Lsidi,Lsec = Roots.Tracks(),Roots.Tracks()
+    find_zero(sin, 3.0, Roots.Sidi(1); tracks=Lsidi)
+    find_zero(sin, 3.0, Roots.Secant(); tracks=Lsec)
+    @test Lsidi.xfₛ[3:end] ==  Lsec.xfₛ[3:end] # drop x₀x₁ ordering
 end

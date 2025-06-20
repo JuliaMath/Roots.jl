@@ -318,6 +318,12 @@ function init(
     ZeroProblemIterator(M, Nothing, Callable_Function(M, F), state, options, l)
 end
 
+# helper for development use only
+function __init(f,x,M,p=nothing; kwargs...)
+    s = init(ZeroProblem(f,x), M, p;kwargs...)
+    (M=s.M, F=s.F, state=s.state, options=s.options,logger=s.logger)
+end
+
 """
     solve!(P::ZeroProblemIterator)
     solve(fx::ZeroProblem, [M], [N]; p=nothing, kwargs...)
