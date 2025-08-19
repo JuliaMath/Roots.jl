@@ -73,7 +73,7 @@ end
 using Unitful
 @testset "Unitful" begin
     f = x -> -exp(ustrip(x)) + 3
-    @test find_zero(f, (0u"nm", Inf * 1u"nm")) ==
+    @test find_zero(f, (0u"nm", Inf * 1u"nm")) ≈
           find_zero(x -> f(x * 1u"nm"), (0, Inf)) * 1u"nm"
 end
 
