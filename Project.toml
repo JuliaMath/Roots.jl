@@ -14,6 +14,7 @@ ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 IntervalRootFinding = "d2bf35a9-74e0-55ec-b149-d360ff49b807"
 SymPy = "24249f21-da20-56a4-8eb1-6a02cf4ae2e6"
 SymPyPythonCall = "bc8888f7-b21e-4b7c-a06a-5d9c9496438c"
+Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
 [extensions]
 RootsChainRulesCoreExt = "ChainRulesCore"
@@ -21,6 +22,7 @@ RootsForwardDiffExt = "ForwardDiff"
 RootsIntervalRootFindingExt = "IntervalRootFinding"
 RootsSymPyExt = "SymPy"
 RootsSymPyPythonCallExt = "SymPyPythonCall"
+RootsUnitfulExt = "Unitful"
 
 [compat]
 Accessors = "0.1.33"
