@@ -6,6 +6,14 @@ function init_state(M::AbstractBracketingMethod, F::Callable_Function, x)
     state = init_state(M, F, x₀, x₁, fx₀, fx₁)
 end
 
+## pass in x values via old state
+function init_state(M::AbstractBracketingMethod, stateₒ::UnivariateZeroState, F::Callable_Function)
+    x₀, x₁ = stateₒ.xn0, stateₒ.xn1
+    fx₀, fx₁ = stateₒ.fxn0, stateₒ.fxn1
+    state = init_state(M, F, x₀, x₁, fx₀, fx₁)
+end
+
+
 function init_state(M::AbstractBracketingMethod, F, x₀, x₁, fx₀, fx₁)
     (iszero(fx₀) || iszero(fx₁)) && return UnivariateZeroState(x₁, x₀, fx₁, fx₀)
     assert_bracket(fx₀, fx₁)

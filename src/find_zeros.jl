@@ -319,7 +319,7 @@ function find_zeros(f, a, b=nothing; no_pts=12, k=8, naive=false, kwargs...)
 
     # set tolerances if not specified
     fa0, fb0 = promote(float(f(a0)), float(f(b0)))
-    d        = Dict(kwargs)
+    d        = Dict(kwargs...)
     T, S     = real(eltype(a0)), real(eltype(fa0))
     xatol::T = get(d, :xatol, eps(one(T))^(4 / 5) * oneunit(T))
     xrtol    = get(d, :xrtol, eps(one(T)) * one(T))

@@ -173,7 +173,7 @@ function fzero(
 end
 
 function fzero(f, bracket::Tuple{T,S}; kwargs...) where {T<:Number,S<:Number}
-    d = Dict(kwargs)
+    d = Dict(kwargs...)
     if haskey(d, :order)
         find_zero(FnWrapper(f), bracket, _method_lookup[d[:order]]; kwargs...)
     else
@@ -224,8 +224,7 @@ _method_lookup = Dict(
     if haskey(_method_lookup, order)
         M = _method_lookup[order]
     else
-        warn("Invalid order specified. See ?fzero.")
-        throw(ArgumentError())
+        throw(ArgumentError("Invalid order specified. See ?fzero."))
     end
 
     # d = (kv[1] == :ftol ? :atol=>kv[2] :
@@ -234,7 +233,7 @@ _method_lookup = Dict(
     #      kv[1] == :xtolrel ? xrtol=>kv[2] :
     #      kv[1] => kv[1] for kv in kwargs)
 
-    d = Dict(kwargs)
+    d = Dict(kwargs...)
     for (o, n) in ((:ftol, :atol), (:ftolrel, :rtol), (:xtol, :xatol), (:xtolrel, :xrtol))
         if haskey(d, o)
             d[n] = d[o]
