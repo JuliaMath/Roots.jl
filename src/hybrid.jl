@@ -61,7 +61,7 @@ function solve!(
             log_step(l, M, state0)
             !isa(l, NullTracks) && log_message(
                 l,
-                "Used bracketing method $N on  [$(min(state0.xn0,state0.xn1)),$(max(state0.xn0,state0.xn1))]",
+                "Used bracketing method $N on  [$(min(state0.xn0,state0.xn1)),$(max(state0.xn0,state0.xn1))]"
             )
 
             Fₙ = Callable_Function(N, F)

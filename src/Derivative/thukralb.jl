@@ -30,6 +30,7 @@ R. Thukral, JOURNAL OF ADVANCES IN MATHEMATICS 13(3):7230-7237, DOI: [10.24297/j
 """
 abstract type AbstractThukralBMethod <: AbstractHalleyLikeMethod end
 initial_fncalls(M::AbstractThukralBMethod) = fn_argout(M)
+fn_argout(::AbstractThukralBMethod) = 1
 
 struct Thukral2B <: AbstractThukralBMethod end
 fn_argout(::Thukral2B) = 3
@@ -62,11 +63,13 @@ function init_state(
     F,
     x₀::T,
     x₁::T,
-    fx₀,
-    fx₁;
-    Δs=nothing,
-) where {T}
-    ThukralBState(promote(x₁, x₀)..., NTuple{fn_argout(M) - 1,T}(Δs), promote(fx₁, fx₀)...)
+    fx₀::S,
+    fx₁::S;
+    Δs=NTuple{0,S}(),
+) where {T,S}
+    ThukralBState(promote(x₁, x₀)...,
+                  NTuple{fn_argout(M) - 1,T}(Δs),
+                  promote(fx₁, fx₀)...)
 end
 
 function update_state(

@@ -82,7 +82,9 @@ function _init_sidi(f, x, k)
     fs = Vector{typeof(fx₀)}(undef, k+1)
 
     n = length(x)
-    xs[1:n] .= x
+    for (i,xᵢ) in enumerate(x)
+        xs[i] = xᵢ
+    end
 
     xs[1] = x[1]
     xs[2] = x[2]
