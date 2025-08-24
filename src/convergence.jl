@@ -226,7 +226,7 @@ end
 function is_small_Δx(
     M::AbstractUnivariateZeroMethod,
     state::AbstractUnivariateZeroState,
-    options::Union{UnivariateZeroOptions,FExactOptions}
+    options::Union{UnivariateZeroOptions,FExactOptions},
 )
     δ = _unitless(abs(state.xn1 - state.xn0))
     δₐ, δᵣ = options.xabstol, options.xreltol
