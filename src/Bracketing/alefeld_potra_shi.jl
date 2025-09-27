@@ -92,6 +92,11 @@ function init_options(
 ) where {T,S}
     d = kwargs
     defs = default_tolerances(M, T, S)
+    # warn if atol or rtol are passed in
+    if haskey(d, :atol) || haskey(d, :rtol)
+        @warn "This bracketing method only has tolerances `xatol` and `xrtol`. Any settings for `atol` or `rtol` are ignored."
+    end
+
     δₐ = get(d, :xatol, get(d, :xabstol, defs[1]))
     δᵣ = get(d, :xrtol, get(d, :xreltol, defs[2]))
     maxiters = get(d, :maxiters, get(d, :maxevals, get(d, :maxsteps, defs[5])))
