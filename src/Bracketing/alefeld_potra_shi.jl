@@ -94,7 +94,7 @@ function init_options(
     defs = default_tolerances(M, T, S)
     # warn if atol or rtol are passed in
     if haskey(d, :atol) || haskey(d, :rtol)
-        @warn "This bracketing method only has tolerances `xatol` and `xrtol`. Any settions for `atol` or `rtol` are ignored."
+        @warn "This bracketing method only has tolerances `xatol` and `xrtol`. Any settings for `atol` or `rtol` are ignored."
     end
 
     Δₐ = get(d, :xatol, get(d, :xabstol, defs[1]))
