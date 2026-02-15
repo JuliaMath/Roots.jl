@@ -141,6 +141,7 @@ Roots.Brent
 Roots.Chandrapatla
 Roots.Ridders
 Roots.ITP
+Roots.ModAB
 FalsePosition
 Roots.LithBoonkkampIJzermanBracket
 Roots.BracketedHalley
@@ -229,6 +230,7 @@ good example.
 | Bracketing      | ITP                          | ``\leq \varphi``         | ``1``   | ``\leq \varphi``                      |
 | Bracketing      | Ridders                      | ``1.83\dots``          | ``2``   | ``1.225\dots``                          |
 | Bracketing      | FalsePosition                | ``1.442\dots``         | ``1``   | ``1.442\dots``                        |
+| Bracketing      | ModAB                        | ``≈1.7\dots``          | ``1``   | ``1.7\dots``                          |
 | Bracketing      | LithBoonkkampIJzermanBracket | ``2.91``               | ``3``   | ``1.427\dots``                        |
 | Robust          | King                         | ``\varphi=1.618\dots`` | ``2``   | ``1.272\dots``                        |
 | Robust          | Esser                        | ``2``                  | ``3``   | ``1.259\dots``                        |
