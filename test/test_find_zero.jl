@@ -114,7 +114,7 @@ struct Order3_Test <: Roots.AbstractSecantMethod end
         Roots.FalsePosition(2),
     )
 
-    # test flexbility in interval specification
+    # test flexibility in interval specification
     for M in bracketing_meths
         @test @inferred(find_zero(sin, (3, 4))) ≈ pi
         @test @inferred(find_zero(sin, [3, 4])) ≈ pi
