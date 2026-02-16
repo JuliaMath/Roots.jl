@@ -14,6 +14,9 @@ makedocs(
         "Overview" => "roots.md",
         "Reference/API" => "reference.md",
         "Geometry" => "geometry-zero-finding.md"
+    ],
+    doctestfilters = [
+        r"(?<=\d\.\d{12})\d+", # Ignore any digit after the 12th decimal place
     ]
 )
 
