@@ -100,10 +100,7 @@ function update_state(
     end
 
 
-    δ, ϵ = options.xabstol, options.xreltol
-    if iszero(y3) ||
-        (side == :left && isapprox(x3, x1; atol=δ, rtol=ϵ)) ||
-        (side == :right && isapprox(x3, x2; atol=δ, rtol=ϵ))
+    if iszero(y3) || abs(y3) ≤ 4eps(S) # small y stops as well
         @reset o.xn0 = x2
         @reset o.xn1 = x3
         @reset o.fxn0 = y2
@@ -115,10 +112,10 @@ function update_state(
 
     if side == :left
         m = 1 - y3/y1
-        y2 = m ≤ 0 ? y2/2 : y2*m)
+        y2 = m ≤ 0 ? y2/2 : y2*m
     elseif side == :right
         m = 1 - y3/y2
-        y1 = m ≤ 0 ? y1/2 : y1*m)
+        y1 = m ≤ 0 ? y1/2 : y1*m
     end
 
     if sign(y1) == sign(y3)
