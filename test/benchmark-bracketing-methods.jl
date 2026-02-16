@@ -1,3 +1,4 @@
+module BenchmarkBracketingMethods
 # from https://github.com/Proektsoftbg/Numerical/blob/main/Numerical-Julia/root_modab_benchmark.jl
 
 using Test
@@ -338,5 +339,7 @@ end
     nms, cnts = run_benchmark()
 
     # bisect ≥ A42 ≥ ITP ≥ ModAB
-    @test cnt[1] ≥ cnt[4] ≥ cnt[5] ≥ cnt[6]
+    @test cnts[1] ≥ cnts[4] ≥ cnts[5] ≥ cnts[6]
+end
+
 end

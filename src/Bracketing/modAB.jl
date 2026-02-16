@@ -10,11 +10,32 @@ This method is a "hybrid" method which chooses between Anderson-Bjork or Bisecti
 
 It is intended to fast and stable enough for equations in structural mechanics.
 
-Andeson-Bjork is a false-position method with adjustments to avoid endpoints that don't move. It has super-linear convergence with a factor of 1.7. This method starts with (simple) bisection and switches to Anderson-Bjork when the difference between the value at the midpoint and the value of the midline are smalle enough.
+Andeson-Bjork is a false-position method with adjustments to avoid endpoints that don't move. It has super-linear convergence with a factor of 1.7. This method starts with (simple) bisection and switches to Anderson-Bjork when the difference between the value at the midpoint and the value of the midline are small enough.
 
 ## Examples
 
 ```
+julia> mutable struct Cnt
+           cnt::Int
+           f
+           Cnt(f) = new(0, f)
+       end
+
+julia> (f::Cnt)(x) = (f.cnt += 1; f.f(x))
+
+julia> f(x) = (sin(x) - x / 4)^3; (a,b) = (2,4); # multiplicity at root
+
+julia> F = Cnt(f); x = find_zero(F, (a,b), Roots.Bisection()); (x, F.cnt)
+(2.4745767873698292, 54)
+
+julia> F = Cnt(f); x = find_zero(F, (a,b), Roots.Ridders()); (x, F.cnt)
+(2.474576787369829, 85)
+
+julia> F = Cnt(f); x = find_zero(F, (a,b), Roots.FalsePosition(:anderson_bjork)); (x, F.cnt)
+(2.4745666938402757, 40)
+
+julia> F = Cnt(f); x = find_zero(F, (a,b), Roots.ModAB()); (x, F.cnt)
+(2.474578857421875, 18)
 ```
 
 ## Reference
