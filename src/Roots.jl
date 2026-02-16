@@ -61,6 +61,7 @@ include("Bracketing/ridders.jl")
 include("Bracketing/itp.jl")
 include("Bracketing/chandrapatlu.jl")
 include("Bracketing/false_position.jl")
+include("Bracketing/modAB.jl")
 
 include("DerivativeFree/derivative_free.jl")
 include("DerivativeFree/secant.jl")

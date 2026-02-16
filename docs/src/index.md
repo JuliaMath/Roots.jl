@@ -20,7 +20,7 @@ specification of a method. These include:
   zero or a bracketing interval as small as floating point
   computations allows. Other methods include `A42`,
   `AlefeldPotraShi`, `Roots.Brent`, `Roots.Chandrapatlu`,
-  `Roots.ITP`, `Roots.Ridders`, and ``12``-flavors of
+  `Roots.ITP`, `Roots.Ridders`, `Roots.ModAB`, and ``12``-flavors of
   `FalsePosition`. The default bracketing method for
   the basic floating-point types is `Bisection` , as it is more robust to some inputs,
   but `A42` and `AlefeldPotraShi` typically converge in a few

@@ -323,7 +323,7 @@ end
 
 #=
 """
-    decice_convergence(M,F,state,options, convergence_flag)
+    decide_convergence(M,F,state,options, convergence_flag)
 
 When the algorithm terminates, this function decides the stopped value or returns NaN
 """

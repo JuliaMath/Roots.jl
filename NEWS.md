@@ -6,7 +6,7 @@ CHANGES in v0.7.4
   robustness. (#147)
 * add Schroder method (order 2 for multiplicity with derivative), King (1B)
   (superlinear for multiplicity, no derivative), Esser (2B) (order 2
-  for multipicity, no derivative) (#143, #147)
+  for multiplicity, no derivative) (#143, #147)
 * close issue #143 by allowing fns to Newton, Halley to compute f, f/fp, fp/fpp
 * add `newton` function to simple.jl
 * change find_zeros to identify zeros on [a,b], not (a,b). Closes #141.

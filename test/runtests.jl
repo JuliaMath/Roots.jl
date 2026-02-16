@@ -35,6 +35,7 @@ VERSION >= v"1.6.0" && include("./test_allocations.jl")
 VERSION >= v"1.9.0" && include("./test_extensions.jl")
 
 #include("./runbenchmarks.jl")
+#include("./benchmark-bracketing-methods.jl")
 #include("./test_derivative_free_interactive.jl")
 
 Aqua.test_all(Roots; ambiguities=false)

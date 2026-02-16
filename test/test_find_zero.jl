@@ -114,7 +114,7 @@ struct Order3_Test <: Roots.AbstractSecantMethod end
         Roots.FalsePosition(2),
     )
 
-    # test flexbility in interval specification
+    # test flexibility in interval specification
     for M in bracketing_meths
         @test @inferred(find_zero(sin, (3, 4))) ≈ pi
         @test @inferred(find_zero(sin, [3, 4])) ≈ pi
@@ -245,7 +245,7 @@ end
 
     ## test creation of new methods
     ## xn - f/f' - f'' * f^2 / 2(f')^3 = xn - r1 - r1^2/r2 is third order,
-    # had to previousely define:
+    # had to previously define:
     function Roots.update_state(
         M::Order3_Test,
         f,
@@ -429,7 +429,7 @@ end
         @test @inferred(find_zero(x -> x + 1, (-1, 1))) == -1
     end
 
-    ## issue #178 passinig through method
+    ## issue #178 passing through method
     @test fzero(sin, 3, 4, Roots.Brent()) ≈ π
 
     ## issue #188 with A42
