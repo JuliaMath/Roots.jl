@@ -109,6 +109,8 @@ function update_state(
         x3 = x1/2 + x2/2 #__middle(x1, x2)
         y3::S = F(x3)
         incfn(l)
+
+        # continue with bisection?
         ym = y1/2 + y2/2
         if abs(ym - y3) < κ * (abs(ym) + abs(y3))
             bisection = false
@@ -130,7 +132,35 @@ function update_state(
         return (o, true)
     end
 
+    if sign(y1) == sign(y3)
+        if side == :right
+            m = 1 - y3 / y1
+            if m <= 0
+                y2 /= 2
+            else
+                y2 *= m
+            end
+        elseif !bisection
+            side = :right
+        end
+        x1 = x3
+        y1 = y3
+    else
+        if side == :left
+            m = 1 - y3 / y2
+            if m <= 0
+                y1 /= 2
+            else
+                y1 *= m
+            end
+        elseif !bisection
+            side = :left
+        end
+        x2 = x3
+        y2 = y3
+    end
 
+    #=
     if side == :left
         m = 1 - y3/y1
         y2 = m ≤ 0 ? y2/2 : y2*m
@@ -146,12 +176,20 @@ function update_state(
         !bisection && (side = :right)
         x2, y2 = x3, y3
     end
+    =#
 
+    #=
     if rem(cnt, N) == 0
         bisection == true # restart
         side = :nothing
     end
+    =#
 
+    if cnt > N
+        N = 2N
+        bisection=true
+        side = :nothing
+    end
 
     @reset o.xn0 = x1
     @reset o.xn1 = x2
