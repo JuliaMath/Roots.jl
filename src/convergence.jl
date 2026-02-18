@@ -313,7 +313,7 @@ function assess_convergence(
     a, b, fa, fb = state.xn0, state.xn1, state.fxn0, state.fxn1
     u, fu = choose_smallest(a, b, fa, fb)
     δₐ, δᵣ = options.xabstol, options.xreltol
-    δₓ = max(δₐ, 2 * abs(u) * δᵣ) # needs non-zero δₐ to stop near 0
+    δₓ = max(δₐ, 2 * (abs(u) * δᵣ)) # needs non-zero δₐ to stop near 0
     abs(b - a) ≤ δₓ && return (:x_converged, true)
 
     return (:not_converged, false)

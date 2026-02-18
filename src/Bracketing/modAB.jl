@@ -64,7 +64,7 @@ struct ModABState{T,S} <: AbstractUnivariateZeroState{T,S}
 end
 
 function init_state(M::ModAB, F::Callable_Function, x)
-    x₀, x₁ = extrema(x₀x₁(x))
+    x₀, x₁ = adjust_bracket(x)
     fx₀, fx₁ = first(F(x₀)), first(F(x₁))
 
     state = init_state(M, F, x₀, x₁, fx₀, fx₁)
@@ -76,12 +76,21 @@ function init_state(::ModAB, F, x₀::T, x₁::T, fx₀, fx₁) where {T}
     bisection = true
     side = :nothing
     assert_bracket(fx₀, fx₁)
-    ModABState(promote(x₁, x₀)..., promote(fx₁, fx₀)..., cnt, bisection, side)
+
+    m = _middle(x₀, x₁)
+    fm = F(m)
+    if sign(fm) * fx₀ < 0 * oneunit(fx₀)
+        a, b, fa, fb = x₀, m, fx₀, fm
+    else
+        a, b, fa, fb = m, x₁, fm, fx₁
+    end
+
+    ModABState(promote(b, a)..., promote(fb, fa)..., cnt, bisection, side)
 end
 
 
 
-initial_fncalls(M::ModAB) = 2
+initial_fncalls(M::ModAB) = 3
 
 function update_state(
     ::ModAB,
@@ -106,7 +115,7 @@ function update_state(
 
     if bisection
         # take bisection step
-        x3 = x1/2 + x2/2 #__middle(x1, x2)
+        x3 = __middle(x1,x2)
         y3::S = F(x3)
         incfn(l)
 
@@ -122,7 +131,6 @@ function update_state(
         incfn(l)
     end
 
-
     if iszero(y3) || abs(y3) ≤ 4eps(S) # small y stops as well
         @reset o.xn0 = x2
         @reset o.xn1 = x3
@@ -132,35 +140,6 @@ function update_state(
         return (o, true)
     end
 
-    if sign(y1) == sign(y3)
-        if side == :right
-            m = 1 - y3 / y1
-            if m <= 0
-                y2 /= 2
-            else
-                y2 *= m
-            end
-        elseif !bisection
-            side = :right
-        end
-        x1 = x3
-        y1 = y3
-    else
-        if side == :left
-            m = 1 - y3 / y2
-            if m <= 0
-                y1 /= 2
-            else
-                y1 *= m
-            end
-        elseif !bisection
-            side = :left
-        end
-        x2 = x3
-        y2 = y3
-    end
-
-    #=
     if side == :left
         m = 1 - y3/y1
         y2 = m ≤ 0 ? y2/2 : y2*m
@@ -176,14 +155,6 @@ function update_state(
         !bisection && (side = :right)
         x2, y2 = x3, y3
     end
-    =#
-
-    #=
-    if rem(cnt, N) == 0
-        bisection == true # restart
-        side = :nothing
-    end
-    =#
 
     if cnt > N
         N = 2N
