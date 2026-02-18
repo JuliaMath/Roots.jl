@@ -253,8 +253,8 @@ const all_problems = vcat(problems1, problems2, problems3)
 
 const solvers = [
     ("bisect", bisect_solver),
-#    (" brent", brent_solver),
-#    ("ridder", ridder_solver),
+    (" brent", brent_solver),
+    ("ridder", ridder_solver),
     ("   A42", a42_solver),
     ("   ITP", itp_solver),
     (" ModAB", modab_solve),
@@ -336,10 +336,10 @@ function run_benchmark(;verbose = false)
 end
 
 @testset "count bracketing steps" begin
-#    nms, cnts = run_benchmark()
+    nms, cnts = run_benchmark()
 
     # bisect ≥ A42 ≥ ITP ≥ ModAB
-#    @test cnts[1] ≥ cnts[4] ≥ cnts[5] ≥ cnts[6]
+    @test cnts[1] ≥ cnts[4] ≥ cnts[5] ≥ cnts[6]
 end
 
 end
