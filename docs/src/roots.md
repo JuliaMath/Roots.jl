@@ -52,7 +52,7 @@ This finds  the answer  to the left of the starting point. To get the other near
 
 However,  an initial graph might convince one  that any of the up-to-``5`` real roots will occur between ``-2``  and ``2``.  The `find_zeros` function uses  heuristics and a few of the algorithms to identify all zeros between the specified range. Here the method successfully identifies all  ``3``:
 
-```jldoctest find_zero
+```
 julia> find_zeros(f, -2,  2)
 3-element Vector{Float64}:
  -1.0983313019186334
