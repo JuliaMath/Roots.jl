@@ -158,7 +158,7 @@ function update_state(
     end
 
     # restart bisection?
-    N = -Int(log2(eps(T))/2) + 1
+    -Int(log2(eps(T))) ÷ 2 + 1
     if rem(cnt, N) == 0
         bisection == true
         side = :nothing
