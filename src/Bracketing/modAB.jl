@@ -86,7 +86,7 @@ function default_tolerances(::ModAB,::Type{T},::Type{S}) where {T,S}
     xrtol = 4 * eps(real(T))  # unitless
     atol = 4 * eps(real(float(S))) * oneunit(real(S))
     rtol = zero(real(S))
-    maxiters = 100
+    maxiters = -Int(log2(eps(T))) + 1 #
     strict = true
     (xatol, xrtol, atol, rtol, maxiters, strict)
 end
@@ -157,9 +157,9 @@ function update_state(
         x2, y2 = x1, y1
     end
 
-    # restart bisection?
+    # give up and finish with bisection?
     N = -Int(log2(eps(T))) ÷ 2 + 1
-    if rem(cnt, N) == 0
+    if cnt > N
         bisection == true
         side = :nothing
     end
