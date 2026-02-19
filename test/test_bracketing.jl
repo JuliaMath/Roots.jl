@@ -291,7 +291,6 @@ end
         Roots.Ridders(),
         Roots.Bisection(),
         Roots.ModAB(),
-
     ]
     results = [run_tests((f, b) -> find_zero(f, b, M), name="$M") for M in Ms]
     maxfailures = maximum(length(result.failures) for result in results)

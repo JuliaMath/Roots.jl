@@ -4,7 +4,7 @@
 """
     Roots.modAB()
 
-Implementation of Modified Anderson-Bjork’s method for solving non-linear equations in structural mechanics by N Ganchovski and A Traykov.
+Implementation of modified Anderson-Bjork method for solving non-linear equations in structural mechanics by N Ganchovski and A Traykov.
 
 This method is a "hybrid" method which chooses between Anderson-Bjork or Bisection.
 
@@ -50,7 +50,7 @@ DOI 10.1088/1757-899X/1276/1/012010
 Thanks much to `Proektsoftbg` for suggesting the method and providing an implementation (https://github.com/Proektsoftbg/Numerical/tree/main/Numerical-Julia)
 
 """
-struct ModAB <: AbstractBracketingMethod end
+struct ModAB <: AbstractSecantMethod end
 
 # init state
 struct ModABState{T,S} <: AbstractUnivariateZeroState{T,S}
@@ -64,13 +64,12 @@ struct ModABState{T,S} <: AbstractUnivariateZeroState{T,S}
 end
 
 function init_state(M::ModAB, F::Callable_Function, x)
-    x₀, x₁ = extrema(x₀x₁(x))
+    x₀, x₁ = adjust_bracket(x)
     fx₀, fx₁ = first(F(x₀)), first(F(x₁))
 
     state = init_state(M, F, x₀, x₁, fx₀, fx₁)
 end
 
-# compute fx₁, Δ
 function init_state(::ModAB, F, x₀::T, x₁::T, fx₀, fx₁) where {T}
     cnt = 0
     bisection = true
@@ -79,9 +78,19 @@ function init_state(::ModAB, F, x₀::T, x₁::T, fx₀, fx₁) where {T}
     ModABState(promote(x₁, x₀)..., promote(fx₁, fx₀)..., cnt, bisection, side)
 end
 
-
-
 initial_fncalls(M::ModAB) = 2
+
+# adjust to stop on smallish Δx
+function default_tolerances(::ModAB,::Type{T},::Type{S}) where {T,S}
+    xatol = 4 * eps(real(T)) * oneunit(real(T))
+    xrtol = 4 * eps(real(T))  # unitless
+    atol = 4 * eps(real(float(S))) * oneunit(real(S))
+    rtol = zero(real(S))
+    maxiters = 100
+    strict = true
+    (xatol, xrtol, atol, rtol, maxiters, strict)
+end
+
 
 function update_state(
     ::ModAB,
@@ -94,21 +103,29 @@ function update_state(
     x1, x2 = o.xn0, o.xn1
     y1, y2 = o.fxn0, o.fxn1
 
+    if x1 > x2 # we store x3 as x2; fix order
+        x1, x2 = x2, x1
+        y1, y2 = y2, y1
+    end
+
+
     # The results show that there is no significant difference (about one iteration)
     # for k (0.1, 0.9). The optimal value is located between 0.1 – 0.4.
     κ = one(x1) / 4
 
-    N = -log2(eps(T))/2 + 1
 
     cnt::Int = o.cnt + 1
     bisection::Bool = o.bisection
     side::Symbol = o.side
 
+    # find x3, y3
     if bisection
         # take bisection step
-        x3 = x1/2 + x2/2 #__middle(x1, x2)
+        x3 = x1/2 + x2/2
         y3::S = F(x3)
         incfn(l)
+
+        # continue with bisection?
         ym = y1/2 + y2/2
         if abs(ym - y3) < κ * (abs(ym) + abs(y3))
             bisection = false
@@ -120,43 +137,37 @@ function update_state(
         incfn(l)
     end
 
-
-    if iszero(y3) || abs(y3) ≤ 4eps(S) # small y stops as well
-        @reset o.xn0 = x2
-        @reset o.xn1 = x3
-        @reset o.fxn0 = y2
-        @reset o.fxn1 = y3
-
-        return (o, true)
-    end
-
-
-    if side == :left
-        m = 1 - y3/y1
-        y2 = m ≤ 0 ? y2/2 : y2*m
-    elseif side == :right
-        m = 1 - y3/y2
-        y1 = m ≤ 0 ? y1/2 : y1*m
-    end
-
+    # anderson-bjork adjustment to y
     if sign(y1) == sign(y3)
-        !bisection && (side = :left)
-        x1, y1 = x3, y3
+        if side == :right
+            m = 1 - y3 / y1
+            y2 = m ≤ 0 ? y2/2 : y2 * m
+        elseif !bisection
+            side = :right
+        end
+        # use x3,x2
     else
-        !bisection && (side = :right)
-        x2, y2 = x3, y3
+        if side == :left
+            m = 1 - y3 / y2
+            y1 = m ≤ 0 ? y1/2 : y1*m
+        elseif !bisection
+            side = :left
+        end
+        #use x1 x2
+        x2, y2 = x1, y1
     end
 
+    # restart bisection?
+    N = -Int(log2(eps(T))/2) + 1
     if rem(cnt, N) == 0
-        bisection == true # restart
+        bisection == true
         side = :nothing
     end
 
-
-    @reset o.xn0 = x1
-    @reset o.xn1 = x2
-    @reset o.fxn0 = y1
-    @reset o.fxn1 = y2
+    @reset o.xn0 = x2
+    @reset o.xn1 = x3
+    @reset o.fxn0 = y2
+    @reset o.fxn1 = y3
     @reset o.cnt = cnt
     @reset o.bisection = bisection
     @reset o.side = side
@@ -164,87 +175,3 @@ function update_state(
     return o, false
 
 end
-
-
-
-
-#=
-
-    x1, x2 = min(left, right), max(left, right)
-    y1 = f(x1) - target
-    abs(y1) <= precision && return x1
-
-    y2 = f(x2) - target
-    abs(y2) <= precision && return x2
-
-    n_max = -Int(floor(log2(precision) / 2.0)) + 1
-    eps1 = precision / 4
-    eps = precision * (x2 - x1) / 2.0
-    if abs(target) > 1
-        eps1 *= target
-    end
-
-    side = 0
-    ans = x1
-    bisection = true
-    k = 0.25
-
-    for i in 1:200
-        if bisection
-            x3 = (x1 + x2) / 2.0
-            y3 = f(x3) - target
-            ym = (y1 + y2) / 2.0
-            if abs(ym - y3) < k * (abs(y3) + abs(ym))
-                bisection = false
-            end
-        else
-            x3 = (x1 * y2 - y1 * x2) / (y2 - y1)
-            if x3 < x1 - eps || x3 > x2 + eps
-                return NaN
-            end
-            y3 = f(x3) - target
-        end
-
-        if abs(y3) < eps1 || abs(x3 - ans) < eps
-            if x1 > x2
-                return side == 1 ? x2 : x1
-            end
-            return clamp(x3, x1, x2)
-        end
-
-        ans = x3
-        if sign(y1) == sign(y3)
-            if side == 1
-                m = 1 - y3 / y1
-                if m <= 0
-                    y2 /= 2
-                else
-                    y2 *= m
-                end
-            elseif !bisection
-                side = 1
-            end
-            x1 = x3
-            y1 = y3
-        else
-            if side == -1
-                m = 1 - y3 / y2
-                if m <= 0
-                    y1 /= 2
-                else
-                    y1 *= m
-                end
-            elseif !bisection
-                side = -1
-            end
-            x2 = x3
-            y2 = y3
-        end
-
-        if i % n_max == 0
-            bisection = true
-        end
-    end
-    return ans
-end
-=#
