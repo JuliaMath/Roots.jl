@@ -137,9 +137,8 @@ function update_state(
     side::Symbol = o.side
     gaveup = false
     N = -Int(log2(eps(T))) ÷ 2 + 1
-    cnt == N && @show :giveup, N
-    # find x3, y3
 
+    # find x3, y3
     if cnt > N
         gaveup = true # finish with Bisection() method
         if sign(x1) * sign(x2) < 0
