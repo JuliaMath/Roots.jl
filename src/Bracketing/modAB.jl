@@ -4,13 +4,13 @@
 """
     Roots.modAB()
 
-Implementation of modified Anderson-Bjork method for solving non-linear equations in structural mechanics by N Ganchovski and A Traykov.
+Implementation of a modified Anderson-Bjork method by N Ganchovski and A Traykov.
 
-This method is a "hybrid" method which chooses between Anderson-Bjork or Bisection.
+The method is advertised as intended to be fast and stable enough for solving non-linear equations in structural mechanics.
 
-It is intended to fast and stable enough for equations in structural mechanics.
+This method is a "hybrid" method which chooses between Anderson-Bjork or simple bisection, starting with bisection and moving to Anderson-Bjork when a condition is met. The condition used is a measure of the relative deviation of the function from a straight line at the middle point between the bracketing values. If too many steps are taken, the  more robust bisection method is used to ensure convergence in a bounded number of steps.
 
-Andeson-Bjork is a false-position method with adjustments to avoid endpoints that don't move. It has super-linear convergence with a factor of 1.7. This method starts with (simple) bisection and switches to Anderson-Bjork when the difference between the value at the midpoint and the value of the midline are small enough.
+Andeson-Bjork is a false-position method with adjustments to avoid endpoints that don't move. It has super-linear convergence with a factor of `≈ 1.7`.
 
 ## Examples
 
@@ -38,6 +38,16 @@ julia> F = Cnt(f); x = find_zero(F, (a,b), Roots.ModAB()); (x, F.cnt)
 (2.474578857421875, 18)
 ```
 
+## Notes
+
+* Unlike some other bracketing methods, this implementation stops on a small residual (small `f(xₙ)`, by default with only an absolute tolerance) in addition to a small bracket (small `|xₙ - xₙ₋₁|`). All of `xabstol`, `xreltol`, `abstol`, and `reltol` may be specified. The method, unlike `Bisection`, does not expect that `nextfloat(a) ≥ b` for the last identified bracketing interval `[a,b]`.
+
+* Over `Float64`, this method should handle infinite intervals (likely falling back to the method of `Bisection`).
+
+* This method seems to perform quite efficiently when the root has multiplicities, as in the example.
+
+* That the value found in the example by `ModAB` and `Bisection` agree only through the first 5 decimal points is due to the `ModAB` algorithm stopping on small `f(xₙ)` values, as `Bisection` iterates up to the last floating point bit unless it finds an exact numeric zero.
+
 ## Reference
 
 N Ganchovski and A Traykov 2023 IOP Conf. Ser.: Mater. Sci. Eng. 1276 012010
@@ -46,7 +56,11 @@ DOI 10.1088/1757-899X/1276/1/012010
 
 [https://iopscience.iop.org/article/10.1088/1757-899X/1276/1/012010](https://iopscience.iop.org/article/10.1088/1757-899X/1276/1/012010)
 
+
+A new high order method of regula falsi type for computing a root of an equation; Ned Anderson & Åke Björck. [https://link.springer.com/article/10.1007/BF01951936](https://link.springer.com/article/10.1007/BF01951936).
+
 ## Hat tip:
+
 Thanks much to `Proektsoftbg` for suggesting the method and providing an implementation (https://github.com/Proektsoftbg/Numerical/tree/main/Numerical-Julia)
 
 """
@@ -81,12 +95,16 @@ end
 initial_fncalls(M::ModAB) = 2
 
 # adjust to stop on smallish Δx
+# xatol is small, but allows convergence of extreme case:
+# find_zero(x ->  x < eps(0.0) ? -1.0 : 1.0, (-Inf, Inf), Roots.ModAB())
+# maxiters for T ∈ (Float16, Float32, Float64) need only be N + X
+# where X is 16,32,or 64, N is -Int(log2(eps(T))) ÷ 2 + 1
 function default_tolerances(::ModAB,::Type{T},::Type{S}) where {T,S}
-    xatol = 4 * eps(real(T)) * oneunit(real(T))
-    xrtol = 4 * eps(real(T))  # unitless
+    xatol = 2 * eps(zero(T)) * oneunit(real(T)) # not quite 0
+    xrtol = eps(real(T))  # unitless
     atol = 4 * eps(real(float(S))) * oneunit(real(S))
     rtol = zero(real(S))
-    maxiters = -Int(log2(eps(T))) + 1 #
+    maxiters = 3 * (-Int(log2(eps(T))) + 1)
     strict = true
     (xatol, xrtol, atol, rtol, maxiters, strict)
 end
@@ -117,15 +135,27 @@ function update_state(
     cnt::Int = o.cnt + 1
     bisection::Bool = o.bisection
     side::Symbol = o.side
-
+    gaveup = false
+    N = -Int(log2(eps(T))) ÷ 2 + 1
+    cnt == N && @show :giveup, N
     # find x3, y3
-    if bisection
+
+    if cnt > N
+        gaveup = true # finish with Bisection() method
+        if sign(x1) * sign(x2) < 0
+            x3 = zero(x1)
+        else
+            x3 = __middle(x1, x2)
+        end
+        y3 = first(F(x3))
+        incfn(l)
+    elseif bisection
         # take bisection step
         x3 = x1/2 + x2/2
-        y3::S = F(x3)
+        y3 = first(F(x3))
         incfn(l)
 
-        # continue with bisection?
+        # continue with simple bisection?
         ym = y1/2 + y2/2
         if abs(ym - y3) < κ * (abs(ym) + abs(y3))
             bisection = false
@@ -133,13 +163,13 @@ function update_state(
     else
         # take false position step
         x3 = (x1*y2 - y1*x2) / (y2 - y1)
-        y3 = F(x3)
+        y3 = first(F(x3))
         incfn(l)
     end
 
     # anderson-bjork adjustment to y
     if sign(y1) == sign(y3)
-        if side == :right
+        if side == :right && !gaveup
             m = 1 - y3 / y1
             y2 = m ≤ 0 ? y2/2 : y2 * m
         elseif !bisection
@@ -147,7 +177,7 @@ function update_state(
         end
         # use x3,x2
     else
-        if side == :left
+        if side == :left && !gaveup
             m = 1 - y3 / y2
             y1 = m ≤ 0 ? y1/2 : y1*m
         elseif !bisection
@@ -155,13 +185,6 @@ function update_state(
         end
         #use x1 x2
         x2, y2 = x1, y1
-    end
-
-    # give up and finish with bisection?
-    N = -Int(log2(eps(T))) ÷ 2 + 1
-    if cnt > N
-        bisection == true
-        side = :nothing
     end
 
     @reset o.xn0 = x2

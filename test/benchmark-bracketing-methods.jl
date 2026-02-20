@@ -245,7 +245,16 @@ const problems3 = [
     Problem("f91", x -> x * sin(1 / x) - 0.1 - 0.01, 0.01, 1.0),
 ]
 
-const all_problems = vcat(problems1, problems2, problems3)
+
+const problems_oo = [
+Problem("f92", x -> sign(x - eps(0.0)), -Inf, Inf),
+Problem("f92", x -> sign(x - pi), -Inf, Inf),
+Problem("f93", x -> atan(x - eps(0.0)), -Inf, Inf),
+Problem("f93", x -> atan(x - pi), -Inf, Inf)
+]
+
+
+const all_problems = vcat(problems1, problems2, problems3, problems_oo)
 
 # ---------------------------------------------------------------------------
 # Solver table
