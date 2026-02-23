@@ -14,7 +14,7 @@ mutable struct CountedFunc{F} <: Function
 end
 CountedFunc(f) = CountedFunc(f, 0)
 (cf::CountedFunc)(x) = (cf.count += 1; cf.f(x))
-reset!(cf::CountedFunc) = (cf.count = 0; cf)
+reset!(cf::CountedFunc) = (cf.count=0; cf)
 
 # ---------------------------------------------------------------------------
 # ModAB solver (translated from ModAB.cs)
@@ -109,10 +109,15 @@ function make_roots_solver(method, name::String)
         g = target != 0 ? x -> f(x) - target : f
         a, b = min(left, right), max(left, right)
         try
-            return find_zero(g, (a, b), method;
-                             xatol=precision, xrtol=0.0,
-                             #atol=precision, rtol=0.0,
-                             maxiters=200)
+            return find_zero(
+                g,
+                (a, b),
+                method;
+                xatol=precision,
+                xrtol=0.0,
+                #atol=precision, rtol=0.0,
+                maxiters=200,
+            )
         catch
             return NaN
         end
@@ -120,12 +125,12 @@ function make_roots_solver(method, name::String)
     return solver
 end
 
-bisect_solver  = make_roots_solver(Bisection(),     "bisect")
-brent_solver   = make_roots_solver(Roots.Brent(),   "brent")
-ridder_solver  = make_roots_solver(Roots.Ridders(), "ridder")
-a42_solver     = make_roots_solver(Roots.A42(),     "A42")
-itp_solver     = make_roots_solver(Roots.ITP(),     "ITP")
-modab_solve    = make_roots_solver(Roots.ModAB(),   "ModAB")
+bisect_solver = make_roots_solver(Bisection(), "bisect")
+brent_solver  = make_roots_solver(Roots.Brent(), "brent")
+ridder_solver = make_roots_solver(Roots.Ridders(), "ridder")
+a42_solver    = make_roots_solver(Roots.A42(), "A42")
+itp_solver    = make_roots_solver(Roots.ITP(), "ITP")
+modab_solve   = make_roots_solver(Roots.ModAB(), "ModAB")
 # ---------------------------------------------------------------------------
 # Problem definition
 # ---------------------------------------------------------------------------
@@ -172,7 +177,12 @@ const problems1 = [
     Problem("f24", x -> (x + 2) * (x + 1) * (x - 3)^3, 2.6, 4.6),
     Problem("f25", x -> (x - 4)^5 * log(x), 3.6, 5.6),
     Problem("f26", x -> (sin(x) - x / 4)^3, 2, 4),
-    Problem("f27", x -> (81 - P(x) * (108 - P(x) * (54 - P(x) * (12 - P(x))))) * sign(P(x) - 3), 1, 3),
+    Problem(
+        "f27",
+        x -> (81 - P(x) * (108 - P(x) * (54 - P(x) * (12 - P(x))))) * sign(P(x) - 3),
+        1,
+        3,
+    ),
     Problem("f28", x -> sin((x - 7.143)^3), 7, 8),
     Problem("f29", x -> exp((x - 3)^5) - 1, 2.6, 4.6),
     Problem("f30", x -> exp((x - 3)^5) - exp(x - 1), 4, 5),
@@ -245,14 +255,12 @@ const problems3 = [
     Problem("f91", x -> x * sin(1 / x) - 0.1 - 0.01, 0.01, 1.0),
 ]
 
-
 const problems_oo = [
-Problem("f92", x -> sign(x - eps(0.0)), -Inf, Inf),
-Problem("f92", x -> sign(x - pi), -Inf, Inf),
-Problem("f93", x -> atan(x - eps(0.0)), -Inf, Inf),
-Problem("f93", x -> atan(x - pi), -Inf, Inf)
+    Problem("f92", x -> sign(x - eps(0.0)), -Inf, Inf),
+    Problem("f92", x -> sign(x - pi), -Inf, Inf),
+    Problem("f93", x -> atan(x - eps(0.0)), -Inf, Inf),
+    Problem("f93", x -> atan(x - pi), -Inf, Inf),
 ]
-
 
 const all_problems = vcat(problems1, problems2, problems3, problems_oo)
 
@@ -274,14 +282,15 @@ const solvers = [
 # Benchmark runner
 # ---------------------------------------------------------------------------
 
-function run_benchmark(;verbose = false)
+function run_benchmark(; verbose=false)
     eps = 1e-14
     col_w = 22
 
     io = IOBuffer()
     # --- Results ---
     println(io, "Results")
-    header = lpad("Func", 4) * "; " * join([lpad(name, col_w) for (name, _) in solvers], "; ")
+    header =
+        lpad("Func", 4) * "; " * join([lpad(name, col_w) for (name, _) in solvers], "; ")
     println(io, header)
     for p in all_problems
         line = lpad(p.name, 4) * "; "
