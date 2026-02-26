@@ -73,8 +73,7 @@ struct ModABState{T,S} <: AbstractUnivariateZeroState{T,S}
     fxn1::S
     fxn0::S
     cnt::Int
-    bisection::Bool
-    side::Symbol
+    algo::Symbol
 end
 
 function init_state(M::ModAB, F::Callable_Function, x)
@@ -86,10 +85,9 @@ end
 
 function init_state(::ModAB, F, x₀::T, x₁::T, fx₀, fx₁) where {T}
     cnt = 0
-    bisection = true
-    side = :nothing
+    algo = :simple_bisection
     assert_bracket(fx₀, fx₁)
-    ModABState(promote(x₁, x₀)..., promote(fx₁, fx₀)..., cnt, bisection, side)
+    ModABState(promote(x₁, x₀)..., promote(fx₁, fx₀)..., cnt, algo)
 end
 
 initial_fncalls(M::ModAB) = 2
@@ -129,57 +127,51 @@ function update_state(
     κ = one(x1) / 4
 
     cnt::Int = o.cnt + 1
-    bisection::Bool = o.bisection
-    side::Symbol = o.side
-    gaveup = false
+    algo::Symbol = o.algo
     N = -Int(log2(eps(T))) ÷ 2 + 1
 
-    # find x3, y3
-    if cnt > N
-        gaveup = true # finish with Bisection() method
-        if sign(x1) * sign(x2) < 0
-            x3 = zero(x1)
-        else
-            x3 = __middle(x1, x2)
-        end
-        y3 = first(F(x3))
-        incfn(l)
-    elseif bisection
-        # take bisection step
-        x3 = x1/2 + x2/2
-        y3 = first(F(x3))
-        incfn(l)
+    # XXX for now
+    # :algo is (:simple_bisection, :bisection, :falseposition, :ab_left, :ab_right)
+    cnt == N && (algo = :bisection)
+    if algo ∈ (:simple_bisection, :bisection)
+        if algo == :simple_bisection
+            # take bisection step
+            x3 = x1/2 + x2/2
+            y3 = first(F(x3))
 
-        # continue with simple bisection?
-        ym = y1/2 + y2/2
-        if abs(ym - y3) < κ * (abs(ym) + abs(y3))
-            bisection = false
+            # continue with simple bisection?
+            ym = y1/2 + y2/2
+            if abs(ym - y3) < κ * (abs(ym) + abs(y3))
+                algo = :falseposition
+            end
+
+        elseif algo == :bisection
+            # use middle
+            x3 = sign(x1) * sign(x2) < 0 ? zero(x1) : __middle(x1,x2)
+            y3 = first(F(x3))
         end
+        incfn(l)
+        (x2,y2) = sign(y1) == sign(y3) ? (x2,y2) : (x1, y1)
     else
         # take false position step
         x3 = (x1*y2 - y1*x2) / (y2 - y1)
         y3 = first(F(x3))
         incfn(l)
-    end
-
-    # anderson-bjork adjustment to y
-    if sign(y1) == sign(y3)
-        if side == :right && !gaveup
-            m = 1 - y3 / y1
-            y2 = m ≤ 0 ? y2/2 : y2 * m
-        elseif !bisection
-            side = :right
+        if sign(y1) == sign(y3)
+            if algo == :ab_right
+                m = 1 - y3 / y1
+                y2 = m ≤ 0 ? y2/2 : y2 * m
+            end
+            algo = :ab_right
+            # x2, y2 stays
+        else
+            if algo == :ab_left
+                m = 1 - y3 / y2
+                y1 = m ≤ 0 ? y1/2 : y1*m
+            end
+            algo = :ab_left
+            x2, y2 = x1, y1
         end
-        # use x3,x2
-    else
-        if side == :left && !gaveup
-            m = 1 - y3 / y2
-            y1 = m ≤ 0 ? y1/2 : y1*m
-        elseif !bisection
-            side = :left
-        end
-        #use x1 x2
-        x2, y2 = x1, y1
     end
 
     @reset o.xn0 = x2
@@ -187,8 +179,7 @@ function update_state(
     @reset o.fxn0 = y2
     @reset o.fxn1 = y3
     @reset o.cnt = cnt
-    @reset o.bisection = bisection
-    @reset o.side = side
+    @reset o.algo = algo
 
     return o, false
 end
