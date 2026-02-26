@@ -131,7 +131,7 @@ function update_state(
     N = -Int(log2(eps(T))) ÷ 2 + 1
 
     # XXX for now
-    # :algo is (:simple_bisection, :bisection, :falseposition, :ab_left, :ab_right)
+    # :algo is (:simple_bisection, :bisection, :ab_left, :ab_right)
     cnt == N && (algo = :bisection)
     if algo ∈ (:simple_bisection, :bisection)
         if algo == :simple_bisection
@@ -142,9 +142,8 @@ function update_state(
             # continue with simple bisection?
             ym = y1/2 + y2/2
             if abs(ym - y3) < κ * (abs(ym) + abs(y3))
-                algo = :falseposition
+                algo = (sign(y1) == sign(y3)) ? :ab_right : :ab_left
             end
-
         elseif algo == :bisection
             # use middle
             x3 = sign(x1) * sign(x2) < 0 ? zero(x1) : __middle(x1,x2)
@@ -163,14 +162,14 @@ function update_state(
                 y2 = m ≤ 0 ? y2/2 : y2 * m
             end
             algo = :ab_right
-            # x2, y2 stays
+            # x1 dropped, right stays fixed
         else
             if algo == :ab_left
                 m = 1 - y3 / y2
                 y1 = m ≤ 0 ? y1/2 : y1*m
             end
             algo = :ab_left
-            x2, y2 = x1, y1
+            x2, y2 = x1, y1 # x2 dropped, left stays fixed
         end
     end
 
