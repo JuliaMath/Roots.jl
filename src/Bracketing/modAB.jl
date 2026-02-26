@@ -128,51 +128,46 @@ function update_state(
 
     cnt::Int = o.cnt + 1
     algo::Symbol = o.algo
-    N = -Int(log2(eps(T))) ÷ 2 + 1
+    N = -Int(log2(eps(T))) ÷ 2
 
-    # XXX for now
-    # :algo is (:simple_bisection, :bisection, :ab_left, :ab_right)
-    cnt == N && (algo = :bisection)
-    if algo ∈ (:simple_bisection, :bisection)
-        if algo == :simple_bisection
-            # take bisection step
-            x3 = x1/2 + x2/2
-            y3 = first(F(x3))
+    # :algo ∈ (:simple_bisection, :ab_left, :ab_right, :bisection)
+    x3 = (algo == :simple_bisection) ? x1/2 + x2/2 :
+        (algo ∈ (:ab_left, :ab_right)) ? (x1*y2 - y1*x2) / (y2 - y1) :
+        sign(x1) * sign(x2) < 0 ? zero(x1) : __middle(x1,x2)
 
-            # continue with simple bisection?
-            ym = y1/2 + y2/2
-            if abs(ym - y3) < κ * (abs(ym) + abs(y3))
-                algo = (sign(y1) == sign(y3)) ? :ab_right : :ab_left
-            end
-        elseif algo == :bisection
-            # use middle
-            x3 = sign(x1) * sign(x2) < 0 ? zero(x1) : __middle(x1,x2)
-            y3 = first(F(x3))
+    y3 = first(F(x3))
+    incfn(l)
+
+    # adjustments?
+    if algo == :simple_bisection
+        ym = y1/2 + y2/2
+        if abs(ym - y3) < κ * (abs(ym) + abs(y3))
+            algo = (sign(y1) == sign(y3)) ? :ab_right : :ab_left
         end
-        incfn(l)
-        (x2,y2) = sign(y1) == sign(y3) ? (x2,y2) : (x1, y1)
-    else
-        # take false position step
-        x3 = (x1*y2 - y1*x2) / (y2 - y1)
-        y3 = first(F(x3))
-        incfn(l)
+    elseif algo ∈ (:ab_left, :ab_right)
+        # Anderson-Björck modification
         if sign(y1) == sign(y3)
             if algo == :ab_right
                 m = 1 - y3 / y1
                 y2 = m ≤ 0 ? y2/2 : y2 * m
             end
             algo = :ab_right
-            # x1 dropped, right stays fixed
         else
             if algo == :ab_left
                 m = 1 - y3 / y2
                 y1 = m ≤ 0 ? y1/2 : y1*m
             end
             algo = :ab_left
-            x2, y2 = x1, y1 # x2 dropped, left stays fixed
         end
     end
+    if cnt == N
+        algo = :bisection
+    end
 
+    # choose interval (we store x2,x3 in order of appearance)
+    (x2,y2) = sign(y1) == sign(y3) ? (x2,y2) : (x1, y1)
+
+    # store and return
     @reset o.xn0 = x2
     @reset o.xn1 = x3
     @reset o.fxn0 = y2
