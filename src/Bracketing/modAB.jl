@@ -131,9 +131,10 @@ function update_state(
     N = -Int(log2(eps(T))) ÷ 2
 
     # :algo ∈ (:simple_bisection, :ab_left, :ab_right, :bisection)
-    x3 = (algo == :simple_bisection) ? x1/2 + x2/2 :
+    x3 =
+        (algo == :simple_bisection) ? x1/2 + x2/2 :
         (algo ∈ (:ab_left, :ab_right)) ? (x1*y2 - y1*x2) / (y2 - y1) :
-        sign(x1) * sign(x2) < 0 ? zero(x1) : __middle(x1,x2)
+        sign(x1) * sign(x2) < 0 ? zero(x1) : __middle(x1, x2)
 
     y3 = first(F(x3))
     incfn(l)
@@ -165,7 +166,7 @@ function update_state(
     end
 
     # choose interval (we store x2,x3 in order of appearance)
-    (x2,y2) = sign(y1) == sign(y3) ? (x2,y2) : (x1, y1)
+    (x2, y2) = sign(y1) == sign(y3) ? (x2, y2) : (x1, y1)
 
     # store and return
     @reset o.xn0 = x2
