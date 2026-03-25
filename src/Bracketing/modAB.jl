@@ -122,10 +122,6 @@ function update_state(
         y1, y2 = y2, y1
     end
 
-    # The results show that there is no significant difference (about one iteration)
-    # for k (0.1, 0.9). The optimal value is located between 0.1 – 0.4.
-    κ = one(x1) / 4
-
     cnt::Int = o.cnt + 1
     algo::Symbol = o.algo
     N = -Int(log2(eps(T))) ÷ 2
@@ -142,6 +138,8 @@ function update_state(
     # adjustments?
     if algo == :simple_bisection
         ym = y1/2 + y2/2
+        r = 1 - abs(ym / (y2 - y1)) # Symmetry factor
+        κ = r*r                     # factor to check is we switch algorithms from simple bisection
         if abs(ym - y3) < κ * (abs(ym) + abs(y3))
             algo = (sign(y1) == sign(y3)) ? :ab_right : :ab_left
         end
