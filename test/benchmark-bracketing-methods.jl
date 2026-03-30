@@ -100,7 +100,14 @@ function mod_ab(f, left::Real, right::Real, target::Real=0.0; precision::Float64
     return ans
 end
 
-function modab_CS(f, left::Real, right::Real, target::Real=0.0; precision::Float64=1e-14, maxIter::Int=200)
+function modab_CS(
+    f,
+    left::Real,
+    right::Real,
+    target::Real=0.0;
+    precision::Float64=1e-14,
+    maxIter::Int=200,
+)
     x1, x2 = min(left, right), max(left, right)
     y1 = f(x1) - target
     abs(y1) <= precision && return x1
