@@ -61,6 +61,7 @@ x₈ = 1.4142135626888697,	 fx₈ = 8.9314555751229818e-10
 x₉ = 1.4142135623730947,	 fx₉ = -8.8817841970012523e-16
 
 julia> tracker = Roots.Tracks()
+Algorithm has not been run
 
 julia> find_zero(sin, (3, 4), Roots.A42(), tracks=tracker) ≈ π
 true
@@ -75,10 +76,10 @@ Results of univariate zero finding:
 * stopped as x_n ≈ x_{n-1} using atol=xatol, rtol=xrtol
 
 Trace:
-x₀ = 3,	 fx₀ = 4
-x₂ = 3,	 fx₂ = 3.157162792479947
-x₃ = 3.1415926144917452,	 fx₃ = 3.1415926926910007
-x₄ = 3.1415926535897931,	 fx₄ = 3.141592653589794
+(a₁, b₁) = ( 3, 4 )
+(a₃, b₃) = ( 3, 3.157162792479947 )
+(a₄, b₄) = ( 3.1415926144917452, 3.1415926926910007 )
+(a₅, b₅) = ( 3.1415926535897931, 3.141592653589794 )
 ```
 
 !!! note
