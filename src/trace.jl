@@ -268,11 +268,11 @@ function show_tracks(io::IO, s::Tracks, M::AbstractBracketingMethod)
 end
 
 ## --- these could be deleted as methods ...
-"""
-    find_zerov(f, x, M; kwargs...)
+#=
+find_zerov(f, x, M; kwargs...)
 
 Run `find_zero` return a `Tracks` object, not the value, which can be extracted via the `last` method.
-"""
+=#
 function find_zerov(f, x, M; tracks=nothing, kwargs...)
     tracks′ = isnothing(tracks) ? Roots.Tracks() : tracks
     Z = init(ZeroProblem(f, x), M; tracks=tracks′, kwargs...)
