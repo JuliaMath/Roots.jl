@@ -30,11 +30,12 @@ Base.last(state::AbstractUnivariateZeroState, M::AbstractBracketingMethod) =
 fn_argout(::AbstractBracketingMethod) = 1
 initial_fncalls(::AbstractBracketingMethod) = 2
 
-## tracks for bisection, different from secant, we show bracketing interval
 ## No init here; for Bisection() [a₀, b₀] is just lost.
 function log_step(l::Tracks, M::AbstractBracketingMethod, state; init::Bool=false)
+    h, 𝑀 = l.h, Symbol(M)
     a, b = state.xn0, state.xn1
-    push!(l.abₛ, a < b ? (a, b) : (b, a))
+    n = haskey(h, 𝑀) ? length(h, 𝑀) : 0
+    push!(h, 𝑀, n + 1, a < b ? (a,b) : (b,a))
     !init && log_iteration(l, 1)
     nothing
 end

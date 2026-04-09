@@ -217,15 +217,19 @@ function find_zero(
     tracks::AbstractTracks=NullTracks(),
     kwargs...,
 )
-    xstar = solve(
-        ZeroProblem(f, x0),
-        M,
-        p′ === nothing ? p : p′;
-        verbose=verbose,
-        tracks=tracks,
-        kwargs...,
-    )
 
+    Z = ZeroProblem(f, x0)
+    F = Callable_Function(M, Z.F, something(p′, p, missing))
+    state = init_state(M, F, Z.x₀)
+    options = init_options(M, state; kwargs...)
+    #tracks′ =  (verbose && isa(tracks, NullTracks)) ? Tracks(state) : tracks
+    tracks′ =  (verbose && isa(tracks, NullTracks)) ? Tracks() : tracks
+    #l = Tracks(verbose, tracks, state)
+    incfn(tracks, initial_fncalls(M))
+    𝑍 = ZeroProblemIterator(M, nothing, F, state, options, tracks′)
+    xstar = solve!(𝑍)
+
+    verbose && display(tracks)
     isnan(xstar) && throw(ConvergenceFailed("Algorithm failed to converge"))
 
     xstar
@@ -298,7 +302,7 @@ function init(
     F = Callable_Function(M, 𝑭𝑿.F, something(p′, p, missing))
     state = init_state(M, F, 𝑭𝑿.x₀)
     options = init_options(M, state; kwargs...)
-    l = Tracks(verbose, tracks, state)
+    l = verbose && isa(tracks, NullTracks) ? Tracks() : tracks #Tracks(verbose, tracks, state)
     incfn(l, initial_fncalls(M))
     ZeroProblemIterator(M, nothing, F, state, options, l)
 end
@@ -470,7 +474,9 @@ function solve!(P::ZeroProblemIterator; verbose=false)
     log_convergence(l, val)
     log_method(l, M)
     log_last(l, α)
-    verbose && display(l)
+
+    #verbose && display(l)
+
 
     α
 end

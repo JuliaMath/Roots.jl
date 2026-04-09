@@ -4,8 +4,30 @@
 ## when no logging this should get optimized out
 ## when logging, this allocates
 
+using ValueHistories
+
 abstract type AbstractTracks end
 struct NullTracks <: AbstractTracks end
+mutable struct Tracks <: AbstractTracks
+    h::MVHistory{History}
+    steps::Int
+    fncalls::Int
+    convergence_flag::Symbol
+    message::String
+    alpha
+    method
+    nmethod
+end
+
+Tracks() = Tracks(MVHistory(),
+                  0,
+                  0,
+                  :algorithm_not_run,
+                  "",
+                  NaN,
+                  nothing,
+                  nothing
+                  )
 
 # logging api
 
@@ -23,6 +45,29 @@ log_method(::NullTracks, method) = nothing           # record M
 log_nmethod(::NullTracks, method) = nothing          # record N (if hybrid)
 
 incfn(T::AbstractTracks, i=1) = log_fncall(T, i)      # legacy alias
+
+# for Tracks
+function log_step(l::Tracks, M::AbstractNonBracketingMethod, x; init=false)
+    h, 𝑀 = l.h, Symbol(M)
+    init && push!(h, 𝑀, 1, (x.xn0, x.fxn0))
+    n = haskey(h, 𝑀) ? length(h, 𝑀) : 0
+    push!(h, 𝑀, n + 1, (x.xn1, x.fxn1))
+    !init && log_iteration(l, 1)
+    nothing
+end
+
+## tracks for bisection, different from secant, we show bracketing interval
+
+
+log_fncall(l::Tracks, i=1) = (l.fncalls += i; nothing)
+log_iteration(l::Tracks, n=1) = (l.steps += n; nothing)
+log_message(l::Tracks, msg) = (l.message *= msg; nothing)
+log_convergence(l::Tracks, msg) = (l.convergence_flag=msg; nothing)
+log_last(l::Tracks, α) = (l.alpha=α; nothing)
+log_method(l::Tracks, method) = (l.method=method; nothing)
+log_nmethod(l::Tracks, method) = (l.nmethod=method; nothing)
+
+#=
 # a tracks object to record tracks
 """
     Roots.Tracks{T,S}
@@ -147,8 +192,10 @@ log_convergence(l::Tracks, msg) = (l.convergence_flag=msg; nothing)
 log_last(l::Tracks, α) = (l.alpha=α; nothing)
 log_method(l::Tracks, method) = (l.method=method; nothing)
 log_nmethod(l::Tracks, method) = (l.nmethod=method; nothing)
+=#
 
 # copy some API from ValueHistories
+#=
 Base.first(l::AbstractTracks) = (@warn "No tracking information was kept"; nothing)
 function Base.first(l::Tracks)
     l.convergence_flag == :algorithm_not_run && error("Algorithm not run")
@@ -187,7 +234,8 @@ function Base.empty!(l::Tracks{T,S}) where {T,S}
     l.method = l.nmethod = nothing
     nothing
 end
-
+=#
+Base.show(io::IO, l::NullTracks) = nothing
 Base.show(io::IO, l::Tracks) = show_trace(io, l.method, l.nmethod, l)
 
 function show_trace(io::IO, method, N, tracks)
@@ -197,11 +245,12 @@ function show_trace(io::IO, method, N, tracks)
         return nothing
     end
 
+    n = haskey(tracks.h, Symbol(method)) ? length(tracks.h, Symbol(method)) : 0
     converged = !isnan(tracks.alpha)
     println(io, "Results of univariate zero finding:\n")
     if converged
         println(io, "* Converged to: $(tracks.alpha)")
-        if N === nothing || length(tracks.abₛ) == 0
+        if N === nothing || n == 0
             println(io, "* Algorithm: $(method)")
         else
             println(io, "* Algorithm: $(method); finished with bracketing method $N")
@@ -222,12 +271,14 @@ function show_trace(io::IO, method, N, tracks)
     println(io, "")
     println(io, "Trace:")
     show_tracks(io, tracks, method)
+    !isnothing(N) && show_tracks(io, tracks, N)
 end
 
 function show_tracks(io::IO, s::Tracks, M::AbstractUnivariateZeroMethod)
 
     # show (x,f(x))
-    for (i, (xi, fxi)) in enumerate(s.xfₛ)
+    ind, xf =  get(s.h, Symbol(M))
+    for (i, (xi, fxi)) ∈ zip(ind, xf)
         println(
             io,
             @sprintf(
@@ -241,11 +292,16 @@ function show_tracks(io::IO, s::Tracks, M::AbstractUnivariateZeroMethod)
             )
         )
     end
+end
 
-    # show bracketing
-    i₀ = length(s.xfₛ)
-    for (i, (a, b)) in enumerate(s.abₛ)
-        j = i₀ + i
+function show_tracks(io::IO, s::Tracks, M::AbstractBracketingMethod)
+    # show (a,b)
+    h = s.h
+    i₀ = haskey(h, Symbol(s.nmethod)) ? length(h, Symbol(s.method)) : 0
+    ind, ab =  get(s.h, Symbol(M))
+
+    for (i, (a, b)) in zip(ind, ab)
+        j = i₀ + 1 + (i + 1)
         println(
             io,
             @sprintf(
@@ -262,13 +318,14 @@ function show_tracks(io::IO, s::Tracks, M::AbstractUnivariateZeroMethod)
     println(io, "")
 end
 
+#=
 # support for complex values
 # Issue 336. (Could DRY this up...)
 function show_tracks(
     io::IO,
-    s::Roots.Tracks{T,S},
-    M::Roots.AbstractUnivariateZeroMethod,
-) where {T<:Complex,S<:Complex}
+    s::Tracks,
+    M::AbstractUnivariateZeroMethod,
+)# where {T<:Complex,S<:Complex}
 
     # show (x,f(x))
     for (i, (xi, fxi)) in enumerate(s.xfₛ)
@@ -307,7 +364,7 @@ function show_tracks(
     end
     println(io, "")
 end
-
+=#
 ## needs better name, but is this useful?
 #=
 """

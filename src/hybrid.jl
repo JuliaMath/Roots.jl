@@ -15,7 +15,7 @@ function init(
     F = Callable_Function(M, 𝑭𝑿.F, something(p′, p, missing))
     state = init_state(M, F, 𝑭𝑿.x₀)
     options = init_options(M, state; kwargs...)
-    l = Tracks(verbose, tracks, state)
+    l =  (verbose && isa(tracks, NullTracks)) ? Tracks() : tracks
     incfn(l, initial_fncalls(M))
     ZeroProblemIterator(M, N, F, state, options, l)
 end
@@ -55,7 +55,7 @@ function solve!(
 
         ## did we find a zero or a bracketing interval?
         if iszero(state0.fxn1)
-            state = state0
+            state = stagte0
             break
         elseif sign(state0.fxn0) * sign(state0.fxn1) < 0
             log_step(l, M, state0)
