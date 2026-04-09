@@ -7,6 +7,7 @@ Accessors = "7d9f7c33-5ae7-4f3b-8dc6-eff91059b697"
 ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 CommonSolve = "38540f10-b2f7-11e9-35d8-d573e4eb0ff2"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+ValueHistories = "98cad3c8-aec3-5f06-8e41-884608649ab7"
 
 [weakdeps]
 ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
@@ -44,6 +45,7 @@ SymPy = "1,2"
 SymPyPythonCall = "0.1, 0.2, 0.3, 0.4, 0.5, 1"
 Test = "<0.0.1, 1"
 Unitful = "1"
+ValueHistories = "0.5.6"
 Zygote = "0.6, 0.7"
 julia = "1.10"
 

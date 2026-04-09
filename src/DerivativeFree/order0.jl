@@ -23,6 +23,32 @@ superlinear, and relatively robust to non-reasonable starting points.
 """
 struct Order0 <: AbstractSecantMethod end
 
+function find_zero(
+    f,
+    x0,
+    M::Order0,
+    p′=nothing;
+    p=nothing,
+    verbose=false,
+    tracks::AbstractTracks=NullTracks(),
+    kwargs...,
+)
+    M, N = Secant(), AlefeldPotraShi();
+    xstar = solve(
+        ZeroProblem(f, x0),
+        M, N;
+        p = p′ === nothing ? p : p′,
+        verbose=verbose,
+        tracks=tracks,
+        kwargs...,
+    )
+
+    verbose && display(tracks)
+    isnan(xstar) && throw(ConvergenceFailed("Algorithm failed to converge"))
+
+    xstar
+end
+
 # special case Order0 to be hybrid
 function init(
     𝑭𝑿::ZeroProblem,

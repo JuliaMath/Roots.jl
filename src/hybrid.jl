@@ -52,7 +52,7 @@ function solve!(
 
         ## did we find a zero or a bracketing interval?
         if iszero(state0.fxn1)
-            state = state0
+            state = stagte0
             break
         elseif sign(state0.fxn0) * sign(state0.fxn1) < 0
             log_step(l, M, state0)
