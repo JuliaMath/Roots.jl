@@ -1,7 +1,9 @@
 # 1 step taken in set up
 function log_step(l::Tracks, M::AbstractDerivativeMethod, state; init=false)
-    init && push!(l.xfₛ, (state.xn0, state.fxn0))
-    push!(l.xfₛ, (state.xn1, state.fxn1))
+    h, 𝑀 = l.h, nameof(typeof(M))
+    init && push!(h, 𝑀, 1, (state.xn0, state.fxn0))
+    n = haskey(h, 𝑀) ? length(h, 𝑀) : 1
+    push!(h, 𝑀, n + 1, (state.xn1, state.fxn1))
     init && log_iteration(l, 1)
     !init && log_iteration(l, 1)
     nothing

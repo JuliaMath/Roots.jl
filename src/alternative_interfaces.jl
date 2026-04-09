@@ -167,9 +167,16 @@ function fzero(
     x0,
     M::AbstractUnivariateZeroMethod,
     N::AbstractBracketingMethod;
+    verbose = false,
+    tracks = NullTracks(),
     kwargs...,
 )
-    find_zero(FnWrapper(f), x0, M, N; kwargs...)
+    if verbose && isa(tracks, NullTracks)
+        tracks = Tracks()
+    end
+    a = find_zero(FnWrapper(f), x0, M, N; tracks, kwargs...)
+    verbose && display(tracks)
+    a
 end
 
 function fzero(f, bracket::Tuple{T,S}; kwargs...) where {T<:Number,S<:Number}
@@ -220,7 +227,7 @@ _method_lookup = Dict(
     "16"        => Order16(),
 )
 
-@noinline function derivative_free(f, x0; order=0, kwargs...)
+@noinline function derivative_free(f, x0; verbose::Bool=false, tracks=NullTracks(), order=0, kwargs...)
     if haskey(_method_lookup, order)
         M = _method_lookup[order]
     else
@@ -240,7 +247,14 @@ _method_lookup = Dict(
         end
     end
 
-    find_zero(FnWrapper(f), x0, M; d...)
+    if verbose && isa(tracks, NullTracks)
+        tracks = Tracks()
+    end
+
+
+    a = find_zero(FnWrapper(f), x0, M; tracks, d...)
+    verbose && display(tracks)
+    a
 end
 
 ## fzeros

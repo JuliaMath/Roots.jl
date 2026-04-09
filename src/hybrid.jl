@@ -8,16 +8,14 @@ function init(
     N::AbstractBracketingMethod,
     p′=nothing;
     p=nothing,
-    verbose::Bool=false,
     tracks=NullTracks(),
     kwargs...,
 )
     F = Callable_Function(M, 𝑭𝑿.F, something(p′, p, missing))
     state = init_state(M, F, 𝑭𝑿.x₀)
     options = init_options(M, state; kwargs...)
-    l =  (verbose && isa(tracks, NullTracks)) ? Tracks() : tracks
-    incfn(l, initial_fncalls(M))
-    ZeroProblemIterator(M, N, F, state, options, l)
+    incfn(tracks, initial_fncalls(M))
+    ZeroProblemIterator(M, N, F, state, options, tracks)
 end
 
 # Robust version using some tricks: idea from algorithm described in
@@ -29,7 +27,6 @@ end
 # First uses M, then N if bracket is identified
 function solve!(
     𝐙::ZeroProblemIterator{𝐌,𝐍};
-    verbose=false,
 ) where {𝐌,𝐍<:AbstractBracketingMethod}
     M, N, F, state, options, l = 𝐙.M, 𝐙.N, 𝐙.F, 𝐙.state, 𝐙.options, 𝐙.logger
 
@@ -55,7 +52,7 @@ function solve!(
 
         ## did we find a zero or a bracketing interval?
         if iszero(state0.fxn1)
-            state = stagte0
+            state = state0
             break
         elseif sign(state0.fxn0) * sign(state0.fxn1) < 0
             log_step(l, M, state0)
@@ -70,7 +67,6 @@ function solve!(
             α = solve!(init(N, Fₙ, stateₙ, optionsₙ, l))
 
             log_method(l, M)
-            verbose && display(l)
 
             return α
         end
@@ -106,7 +102,6 @@ function solve!(
             α = solve!(init(N, Fₙ, stateₙ, optionsₙ, l))
 
             log_method(l, M)
-            verbose && display(l)
 
             return α
         end
@@ -159,7 +154,6 @@ function solve!(
 
     log_convergence(l, val)
     log_last(l, α)
-    verbose && display(l)
 
     isnan(α) ? decide_convergence(M, F, state, options, flag) : α
 end
@@ -170,9 +164,8 @@ function find_zero(
     M::AbstractUnivariateZeroMethod,
     N::AbstractBracketingMethod,
     p′=nothing;
-    verbose=false,
     kwargs...,
 )
     𝐏 = ZeroProblem(fs, x0)
-    solve!(init(𝐏, M, N, p′; verbose=verbose, kwargs...), verbose=verbose)
+    solve!(init(𝐏, M, N, p′; kwargs...))
 end

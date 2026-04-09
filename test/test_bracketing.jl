@@ -237,7 +237,9 @@ function run_test(f, M; verbose=false, trace=false, name=nothing, abandon=false,
             result = NaN
             residual = NaN
         end
-        Δ = isempty(l.abₛ) ? NaN : -(l.abₛ[end]...)
+        𝑀 = nameof(typeof(M))
+        _, abₛ = get(l.h, 𝑀)
+        Δ = isempty(abₛ) ? NaN : -(abₛ[end]...)
         push!(d, (i=i, cnt=evalcount, steps=l.steps, Δ=Δ, residual=residual, result=result))
     end
     d

@@ -68,7 +68,7 @@ struct Order3_Test <: Roots.AbstractSecantMethod end
     a, b = 1.5, 2.0
     h = 1e-6
     M = Roots.Bisection()
-    tracks = Roots.Tracks()#; Roots.Tracks(Float64, Float64)
+    tracks = Roots.Tracks()
     if VERSION >= v"1.6.0"
         @inferred(find_zero(fn, (a, b), M, tracks=tracks, xatol=h, xrtol=0.0))
         #XXX u, v = tracks.abₛ[end]
@@ -410,7 +410,7 @@ end
         F = Roots.Callable_Function(M, lhs, nothing) #Roots.DerivativeFree(lhs)
         state = Roots.init_state(M, F, x0)
         options = Roots.init_options(M, state)
-        l = Roots.Tracks() #(state)
+        l = Roots.Tracks()
         solve(ZeroProblem(lhs, x0), M; tracks=l)
         @test l.steps <= 45 # 15
     end
@@ -442,9 +442,10 @@ end
 
     ## issue #336 verbose=true with complex values
     ## just test that this does not error
+
     for M in (Order1(), Roots.Newton())
         T = Complex{Float64}
-        tracks = Roots.Tracks() #(T, T)
+        tracks = Roots.Tracks()
         find_zero((sin, cos), 1.0 + 1.0im, M; tracks=tracks)
         Roots.show_tracks(IOBuffer(), tracks, M)
     end
@@ -551,7 +552,7 @@ end
         g = wrapper(fn)
         stateₘ = Roots.init_state(M, state, Roots.Callable_Function(M, fn))
         G = Roots.Callable_Function(M, g)
-        l = Roots.Tracks() #(Float64, Float64)
+        l = Roots.Tracks()
         Roots.update_state(M, G, stateₘ, options, l)
         @test g.cnt.contents == l.fncalls
     end
@@ -600,5 +601,8 @@ end
     Lsidi, Lsec = Roots.Tracks(), Roots.Tracks()
     find_zero(sin, 3.0, Roots.Sidi(1); tracks=Lsidi)
     find_zero(sin, 3.0, Roots.Secant(); tracks=Lsec)
-    @test Lsidi.xfₛ[3:end] == Lsec.xfₛ[3:end] # drop x₀x₁ ordering
+    𝐿₁, 𝐿₂ = nameof(typeof(Roots.Sidi(1))), nameof(typeof(Roots.Secant()))
+    _,xfs₁ = get(Lsidi.h, 𝐿₁)
+    _,xfs₂ = get(Lsec.h, 𝐿₂)
+    @test xfs₁[3:end] == xfs₂[3:end] # drop x₀x₁ ordering
 end

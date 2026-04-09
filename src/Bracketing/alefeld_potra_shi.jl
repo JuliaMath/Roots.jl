@@ -27,7 +27,7 @@ initial_fncalls(::AbstractAlefeldPotraShi) = 3 # worst case assuming fx₀, fx�
 
 ## initial step, needs to log a,b,d
 function log_step(l::Tracks, M::AbstractAlefeldPotraShi, state; init::Bool=false)
-    h, 𝑀 = l.h, Symbol(M)
+    h, 𝑀 = l.h, nameof(typeof(M))
     a, b, c = state.xn0, state.xn1, state.d
     init && push!(h, 𝑀, 0, extrema((a, b, c)))
     init && log_iteration(l, 1) # take an initial step

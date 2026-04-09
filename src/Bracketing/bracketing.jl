@@ -32,7 +32,7 @@ initial_fncalls(::AbstractBracketingMethod) = 2
 
 ## No init here; for Bisection() [a₀, b₀] is just lost.
 function log_step(l::Tracks, M::AbstractBracketingMethod, state; init::Bool=false)
-    h, 𝑀 = l.h, Symbol(M)
+    h, 𝑀 = l.h, nameof(typeof(M))
     a, b = state.xn0, state.xn1
     n = haskey(h, 𝑀) ? length(h, 𝑀) : 0
     push!(h, 𝑀, n + 1, a < b ? (a,b) : (b,a))
