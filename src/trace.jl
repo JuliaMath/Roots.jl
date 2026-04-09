@@ -172,7 +172,7 @@ log_convergence(l::Tracks, msg) = (l.convergence_flag=msg; nothing)
 log_last(l::Tracks, α) = (l.alpha=α; nothing)
 log_method(l::Tracks, method) = (l.method=method; nothing)
 log_nmethod(l::Tracks, method) = (l.nmethod=method; nothing)
-=#
+
 
 # reset tracker
 Base.empty!(l::NullTracks) = nothing
