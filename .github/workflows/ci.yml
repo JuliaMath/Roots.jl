@@ -22,7 +22,7 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - '1.10' # LTS support
+          - 'lts' # LTS support
           - '1'   # last released version
         os:
           - ubuntu-latest
