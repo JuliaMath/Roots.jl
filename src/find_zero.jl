@@ -214,14 +214,6 @@ function find_zero(
     kwargs...,
 )
 
-    p′′ = something(p′, p, missing)
-    Z = init(ZeroProblem(f, x0),
-             M;
-             p=p′′, tracks=tracks,
-             kwargs...)
-    xstar = solve!(Z)
-
-    #=
     xstar = solve(
         ZeroProblem(f, x0),
         M,
@@ -229,7 +221,7 @@ function find_zero(
         tracks=tracks,
         kwargs...,
     )
-    =#
+
     isnan(xstar) && throw(ConvergenceFailed("Algorithm failed to converge"))
 
     xstar
