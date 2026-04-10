@@ -35,8 +35,11 @@ for T ∈ Ts
         JET.@test_opt find_zero(f, T(a), M)
         JET.@test_call find_zero(f, T(a), M)
         JET.@test_opt find_zero(f, T(a), M; atol=.0001)
+        JET.@test_call find_zero(f, T(a), M; atol=.0001)
         JET.@test_opt solve(ZeroProblem(f, T(a)), M)
+        JET.@test_call solve(ZeroProblem(f, T(a)), M)
         JET.@test_opt solve(ZeroProblem(f, T(a)), M; atol=0.001)
+        JET.@test_call solve(ZeroProblem(f, T(a)), M; atol=0.001)
     end
 end
 
