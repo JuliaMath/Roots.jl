@@ -290,6 +290,7 @@ function init(
     tracks=NullTracks(),
     kwargs...,
 )
+
     F = Callable_Function(M, 𝑭𝑿.F, something(p′, p, missing))
     state = init_state(M, F, 𝑭𝑿.x₀)
     options = init_options(M, state; kwargs...)
@@ -347,7 +348,7 @@ The latter calls the following, which can be useful independently:
 Returns `NaN`, not an error like `find_zero`, when the problem can not
 be solved. Tested for zero allocations.
 
-
+The `verbose` keyword is deprecated; pass a `Tracks` object to trace the algorithm.
 
 ## Examples:
 
@@ -441,6 +442,14 @@ julia> order0(sin, 3)
 """
 function solve!(P::ZeroProblemIterator)
     M, F, state, options, l = P.M, P.F, P.state, P.options, P.logger
+
+    if verbose !== false
+        Base.depwarn(
+            "The `verbose` keyword is deprecated. Pass a `tracks=Roots.Tracks()` object to the solver to see a trace.",
+            :solve!
+        )
+    end
+
 
     val, stopped = :not_converged, false
     ctr = 1
