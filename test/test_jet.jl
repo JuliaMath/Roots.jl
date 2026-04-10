@@ -41,29 +41,31 @@ for T ∈ Ts
 end
 
 bracketing =  [
-    Roots.Brent(),
     Roots.A42(),
     Roots.AlefeldPotraShi(),
-    Roots.Chandrapatla(),
-    Roots.ITP(),
-    Roots.Ridders(),
     Roots.Bisection(),
+    Roots.Brent(),
+    Roots.Chandrapatla(),
     Roots.FalsePosition(),
+    Roots.ITP(),
     Roots.ModAB(),
+    Roots.Ridders(),
 ]
 
 for T ∈ Ts
     for M ∈ bracketing
-        ## work on these!
-        (T == BigFloat && M == Roots.Brent()) && continue
-        (T == BigFloat && M == Roots.Chandrapatla()) && continue
-        (T == BigFloat && M == Roots.ITP()) && continue
-        (T == BigFloat && M == Roots.Ridders()) && continue
-        (T == BigFloat && M == Roots.Bisection()) && continue
-        (T == BigFloat && M == Roots.ModAB()) && continue
-
-        JET.@test_opt find_zero(f, (T(a), T(b)), M)
-        JET.@test_opt find_zero(f, (T(a), T(b)), M; atol=.0001)
+        # work on these!
+        if  (T == BigFloat && M == Roots.Bisection()) ||
+            (T == BigFloat && M == Roots.Brent()) ||
+            (T == BigFloat && M == Roots.Chandrapatla()) ||
+            (T == BigFloat && M == Roots.ITP()) ||
+            (T == BigFloat && M == Roots.ModAB()) ||
+            (T == BigFloat && M == Roots.Ridders())
+            continue
+        else
+            JET.@test_opt find_zero(f, (T(a), T(b)), M)
+            JET.@test_opt find_zero(f, (T(a), T(b)), M; atol=.0001)
+        end
         JET.@test_opt solve(ZeroProblem(f, (T(a), T(b))), M)
         JET.@test_opt solve(ZeroProblem(F, (T(a), T(b))), M; atol=0.001)
     end
