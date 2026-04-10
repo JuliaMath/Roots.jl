@@ -121,7 +121,7 @@ function Base.push!(h::MVHistory, k::Symbol, i, val)
     end
 end
 Base.get(h::MVHistory, k::Symbol) = h.d[k]
-Base.length(h::MVHistory, k::Symbol) = length(h.d[k])
+Base.length(h::MVHistory, k::Symbol) = length(first(h.d[k]))
 
 Tracks() = Tracks(MVHistory(),
                   0,
