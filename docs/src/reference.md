@@ -325,7 +325,9 @@ fzeros
 
 ## Tracking iterations
 
-It is possible to add the keyword argument `verbose=true`  when calling the `find_zero` function to get detailed information about the solution and data from each iteration. To save this data a `Tracks`object may be passed in to `tracks`.
+To save this data a `Roots.Tracks`object may be passed in to `tracks` and displayed later.
+
+Passing the keyword argument `verbose=true`  is now deprecated when calling the `find_zero` function to get detailed information about the solution and data from each iteration.
 
 ----
 
