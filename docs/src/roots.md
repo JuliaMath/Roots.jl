@@ -11,10 +11,7 @@ In the following, we will use  `ForwardDiff` to take derivatives.
 
 ```jldoctest roots
 julia> using Roots, ForwardDiff
-Precompiling packages...
-    292.4 ms  ✓ Roots → RootsForwardDiffExt
-  1 dependency successfully precompiled in 0 seconds. 36 already precompiled.
-
+[...]
 ```
 
 ## Basic usage
