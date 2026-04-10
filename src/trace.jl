@@ -4,7 +4,6 @@
 ## when no logging this should get optimized out
 ## when logging, this allocates
 
-using ValueHistories
 
 abstract type AbstractTracks end
 
@@ -90,7 +89,7 @@ Trace:
 
 """
 mutable struct Tracks <: AbstractTracks
-    h::MVHistory{History}
+    h
     steps::Int
     fncalls::Int
     convergence_flag::Symbol
@@ -99,6 +98,30 @@ mutable struct Tracks <: AbstractTracks
     method
     nmethod
 end
+
+# mimic MVHistory from ValueHistories
+# we only need a fraction of the feature set and avoid dependencies
+struct MVHistory
+    d::Dict{Symbol, Any}
+end
+
+function MVHistory()
+    d = Dict{Symbol,Any}()
+    MVHistory(d)
+end
+
+Base.haskey(h::MVHistory, k::Symbol) = haskey(h.d, k)
+function Base.push!(h::MVHistory, k::Symbol, i, val)
+    if !haskey(h, k)
+        h.d[k] = (Any[i], Any[val])
+    else
+        inds, vals = h.d[k]
+        push!(inds, i)
+        push!(vals, val)
+    end
+end
+Base.get(h::MVHistory, k::Symbol) = h.d[k]
+Base.length(h::MVHistory, k::Symbol) = length(h.d[k])
 
 Tracks() = Tracks(MVHistory(),
                   0,
@@ -213,7 +236,7 @@ function show_tracks(io::IO, s::Tracks, M::AbstractUnivariateZeroMethod)
             io,
             if !(isa(xi, Complex) || isa(fxi, Complex))
             @sprintf(
-                "%s%s = %.17g,\t %s%s = %.17g",
+                "%s%s = % -20.17g %s%s = % -20.17g",
                 "x",
                 sprint(io -> unicode_subscript(io, i)),
                 float(xi),
@@ -225,7 +248,7 @@ function show_tracks(io::IO, s::Tracks, M::AbstractUnivariateZeroMethod)
             # support for complex values
             # Issue 336.  XXX can improve this output XXX
             @sprintf(
-                "%s%s = (%.17g, %.17g),\t %s%s = (%.17g, %.17g)",
+                "%s%s = (% -20.17g, % -20.17g),\t %s%s = (% -20.17g, % -20.17g)",
                 "x",
                 sprint(io -> Roots.unicode_subscript(io, i)),
                 real(xi),
@@ -253,7 +276,7 @@ function show_tracks(io::IO, s::Tracks, M::AbstractBracketingMethod)
         println(
             io,
             @sprintf(
-                "(%s%s, %s%s) = ( %.17g, %.17g )",
+                "(%s%s, %s%s) = ( % -20.17g, % -20.17g )",
                 "a",
                 sprint(io -> unicode_subscript(io, j - 1)),
                 "b",
@@ -266,6 +289,10 @@ function show_tracks(io::IO, s::Tracks, M::AbstractBracketingMethod)
     end
     println(io, "")
 end
+
+
+
+
 
 ## --- these could be deleted as methods ...
 #=
