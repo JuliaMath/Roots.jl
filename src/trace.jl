@@ -50,14 +50,14 @@ Results of univariate zero finding:
 
 Trace:
 x₁ =  0                   fx₁ = -2
-x₃ =  2                   fx₃ =  2
+x₂ =  2                   fx₂ =  2
 x₃ =  1                   fx₃ = -1
-x₃ =  1.3333333333333333  fx₃ = -0.22222222222222232
-x₃ =  1.4285714285714286  fx₃ =  0.04081632653061229
-x₃ =  1.4137931034482758  fx₃ = -0.0011890606420930094
-x₃ =  1.4142114384748701  fx₃ = -6.0072868388605372e-06
-x₃ =  1.4142135626888697  fx₃ =  8.9314555751229818e-10
-x₃ =  1.4142135623730947  fx₃ = -8.8817841970012523e-16
+x₄ =  1.3333333333333333  fx₄ = -0.22222222222222232
+x₅ =  1.4285714285714286  fx₅ =  0.04081632653061229
+x₆ =  1.4137931034482758  fx₆ = -0.0011890606420930094
+x₇ =  1.4142114384748701  fx₇ = -6.0072868388605372e-06
+x₈ =  1.4142135626888697  fx₈ =  8.9314555751229818e-10
+x₉ =  1.4142135623730947  fx₉ = -8.8817841970012523e-16
 
 julia> tracker = Roots.Tracks()
 Algorithm has not been run
@@ -76,8 +76,8 @@ Results of univariate zero finding:
 
 Trace:
 (a₁, b₁) = (  3                  ,  4                   )
-(a₄, b₄) = (  3                  ,  3.157162792479947   )
-(a₄, b₄) = (  3.1415926144917452 ,  3.1415926926910007  )
+(a₂, b₂) = (  3                  ,  3.157162792479947   )
+(a₃, b₃) = (  3.1415926144917452 ,  3.1415926926910007  )
 (a₄, b₄) = (  3.1415926535897931 ,  3.141592653589794   )
 ```
 
@@ -191,14 +191,15 @@ Base.show(io::IO, l::NullTracks) = nothing
 
 Base.show(io::IO, l::Tracks) = show_trace(io, l.method, l.nmethod, l)
 
-function show_trace(io::IO, M::𝑀, N::𝑁, tracks) where {𝑀, 𝑁}
+function show_trace(io::IO, M, N, tracks)
     flag = tracks.convergence_flag
     if flag == :algorithm_not_run
         print(io, "Algorithm has not been run")
         return nothing
     end
 
-    n = haskey(tracks.h, nameof(𝑁)) ? length(tracks.h, nameof(𝑀)) : 0
+    𝑀, 𝑁 = nameof(typeof(M)), nameof(typeof(N))
+    n = haskey(tracks.h, 𝑁) ? length(tracks.h, 𝑀) : 0
     converged = !isnan(tracks.alpha)
     println(io, "Results of univariate zero finding:\n")
     if converged
@@ -267,11 +268,12 @@ function show_tracks(io::IO, s::Tracks, M::AbstractBracketingMethod)
     # show (a,b)
     h = s.h
     𝑀 = nameof(typeof(M))
-    i₀ = haskey(h, Symbol(typeof(s.nmethod))) ? length(h, 𝑀) : 0
+    𝑁 = nameof(typeof(s.nmethod))
+    i₀ = haskey(h.d, 𝑁) ? length(h, 𝑀) : 0
     ind, ab =  get(s.h, 𝑀)
 
     for (i, (a, b)) in zip(ind, ab)
-        j = i₀ + 1 + (i + 1)
+        j = i₀ + 1 + i
 
         println(
             io,
