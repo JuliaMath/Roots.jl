@@ -44,6 +44,8 @@ implementation details may change without notice.) The methods
 `empty!`, to reset the `Tracks` object; `get`, to get the tracks;
 `last`, to get the value converted to, may be of interest.
 
+[The following is now deprecated.]
+
 If you only want to print the information, but you don't need it later, this can conveniently be
 done by passing `verbose=true` to the root-finding function. This will not
 effect the return value, which will still be the root of the function.

@@ -318,8 +318,9 @@ longer super-linear. This is the case here, where `Order2` uses $51$
 function calls, `Order8` uses $42$, and `Order0` takes  $80$. The `Roots.Order2B` method is useful
 when a multiplicity is expected; on this problem it takes ``17`` function calls.
 
-To investigate an algorithm and its convergence, the argument
-`verbose=true` may be specified. A `Roots.Tracks` object can be used to store the intermediate values.
+A `Roots.Tracks` object can be used to store the intermediate values and can be displayed.
+
+It is now deprecated to use the `verbose=true` argument to investigate an algorithm and its convergence.
 
 
 For some functions, adjusting the default tolerances may be necessary

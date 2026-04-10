@@ -18,7 +18,7 @@ Interface to one of several methods for finding zeros of a univariate function, 
 * `xatol`, `xrtol`: absolute and relative tolerance to decide if `xₙ₊₁ ≈ xₙ`
 * `atol`, `rtol`: absolute and relative tolerance to decide if `f(xₙ) ≈ 0`
 * `maxiters`: specify the maximum number of iterations the algorithm can take.
-* `verbose::Bool`: specifies if details about algorithm should be shown
+* `verbose::Bool`: specifies if details about algorithm should be shown [Deprecated; use `tracks`]
 * `tracks`: allows specification of `Tracks` objects
 
 # Extended help
@@ -199,7 +199,8 @@ ERROR: Roots.ConvergenceFailed("Algorithm failed to converge")
 
 # Tracing
 
-Passing `verbose=true` will show details on the steps of the algorithm.
+Passing `verbose=true` will show details on the steps of the algorithm. [This is deprecated, use `tracks`.]
+
 The `tracks` argument allows
 the passing of a [`Roots.Tracks`](@ref) object to record the values of `x` and `f(x)` used in
 the algorithm.
@@ -217,6 +218,7 @@ function find_zero(
     tracks::AbstractTracks=NullTracks(),
     kwargs...,
 )
+
     xstar = solve(
         ZeroProblem(f, x0),
         M,
@@ -295,6 +297,7 @@ function init(
     tracks=NullTracks(),
     kwargs...,
 )
+
     F = Callable_Function(M, 𝑭𝑿.F, something(p′, p, missing))
     state = init_state(M, F, 𝑭𝑿.x₀)
     options = init_options(M, state; kwargs...)
@@ -354,7 +357,7 @@ The latter calls the following, which can be useful independently:
 Returns `NaN`, not an error like `find_zero`, when the problem can not
 be solved. Tested for zero allocations.
 
-
+The `verbose` keyword is deprecated; pass a `Tracks` object to trace the algorithm.
 
 ## Examples:
 
@@ -449,6 +452,14 @@ julia> order0(sin, 3)
 function solve!(P::ZeroProblemIterator; verbose=false)
     M, F, state, options, l = P.M, P.F, P.state, P.options, P.logger
 
+    if verbose !== false
+        Base.depwarn(
+            "The `verbose` keyword is deprecated. Pass a `tracks=Roots.Tracks()` object to the solver to see a trace.",
+            :solve!
+        )
+    end
+
+
     val, stopped = :not_converged, false
     ctr = 1
     log_step(l, M, state; init=true)
@@ -494,6 +505,7 @@ function solve(
     verbose=false,
     kwargs...,
 )
+
     Z = init(𝑭𝑿, M, p; verbose=verbose, kwargs...)
     solve!(Z; verbose=verbose)
 end
