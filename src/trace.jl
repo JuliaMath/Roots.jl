@@ -167,7 +167,12 @@ end
 
 log_fncall(l::Tracks, i=1) = (l.fncalls += i; nothing)
 log_iteration(l::Tracks, n=1) = (l.steps += n; nothing)
-log_message(l::Tracks, msg) = (l.message *= msg; nothing)
+function log_message(l::Tracks, msg)
+    cur = l.message
+    l.message = join(cur, msg)
+    nothing
+end
+
 log_convergence(l::Tracks, msg) = (l.convergence_flag=msg; nothing)
 log_last(l::Tracks, α) = (l.alpha=α; nothing)
 log_method(l::Tracks, method) = (l.method=method; nothing)
