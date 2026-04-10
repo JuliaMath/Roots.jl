@@ -55,19 +55,18 @@ bracketing =  [
 for T ∈ Ts
     for M ∈ bracketing
         # work on these!
-        if  (T == BigFloat && M == Roots.Bisection()) ||
-            (T == BigFloat && M == Roots.Brent()) ||
-            (T == BigFloat && M == Roots.Chandrapatla()) ||
-            (T == BigFloat && M == Roots.ITP()) ||
-            (T == BigFloat && M == Roots.ModAB()) ||
-            (T == BigFloat && M == Roots.Ridders())
-            continue
+        if  (T == BigFloat && M == Roots.ModAB()) ||
+            (T == BigFloat && M == Roots.ITP())  # log2 issues with _opt
+            JET.@test_call find_zero(f, (T(a), T(b)), M)
+            JET.@test_call find_zero(f, (T(a), T(b)), M; atol=.0001)
+            JET.@test_call solve(ZeroProblem(f, (T(a), T(b))), M)
+            JET.@test_call solve(ZeroProblem(F, (T(a), T(b))), M; atol=0.001)
         else
             JET.@test_opt find_zero(f, (T(a), T(b)), M)
             JET.@test_opt find_zero(f, (T(a), T(b)), M; atol=.0001)
+            JET.@test_opt solve(ZeroProblem(f, (T(a), T(b))), M)
+            JET.@test_opt solve(ZeroProblem(F, (T(a), T(b))), M; atol=0.001)
         end
-        JET.@test_opt solve(ZeroProblem(f, (T(a), T(b))), M)
-        JET.@test_opt solve(ZeroProblem(F, (T(a), T(b))), M; atol=0.001)
     end
 end
 

@@ -103,7 +103,8 @@ function init_options(
     δᵣ = get(d, :xrtol, get(d, :xreltol, defs[2]))
     maxiters = get(d, :maxiters, get(d, :maxevals, get(d, :maxsteps, defs[5])))
     strict = get(d, :strict, defs[6])
-    Roots.FExactOptions(δₐ, δᵣ, maxiters, strict)
+    #Roots.FExactOptions(δₐ, δᵣ, maxiters, strict)
+    UnivariateZeroOptions(δₐ, δᵣ, zero(S), zero(S), maxiters, strict)
 end
 
 # fn calls w/in calculateΔ

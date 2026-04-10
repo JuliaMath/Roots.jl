@@ -53,6 +53,7 @@ function init_options(M::AbstractUnivariateZeroMethod,
     maxiters = get(d, :maxiters, get(d, :maxevals, get(d, :maxsteps, defs[5])))
     strict = get(d, :strict, defs[6])
 
+    #=
     iszero(δₐ) &&
         iszero(δᵣ) &&
         iszero(ϵₐ) &&
@@ -60,7 +61,7 @@ function init_options(M::AbstractUnivariateZeroMethod,
         return ExactOptions(maxiters, strict)
     iszero(δₐ) && iszero(δᵣ) && return XExactOptions(ϵₐ, ϵᵣ, maxiters, strict)
     iszero(ϵₐ) && iszero(ϵᵣ) && return FExactOptions(δₐ, δᵣ, maxiters, strict)
-
+    =#
     return UnivariateZeroOptions(δₐ, δᵣ, ϵₐ, ϵᵣ, maxiters, strict)
 end
 
@@ -187,12 +188,23 @@ end
 
 ## --------------------------------------------------
 
-# test xₙ₊₁ - xₙ ≈ 0
+# testing xₙ₊₁ - xₙ ≈ 0
 function iszero_Δx(
     ::AbstractUnivariateZeroMethod,
     state::AbstractUnivariateZeroState,
-    options::O,
-) where {O<:Union{ExactOptions,XExactOptions}}
+    options
+)
+    a, b, fa, fb = state.xn0, state.xn1, state.fxn0, state.fxn1
+    δₐ, δᵣ = options.xabstol, options.xreltol
+    isapprox(a, b, atol=δₐ, rtol=δᵣ)
+end
+
+# this is for Bisection where we can go adjacent floating point values
+function iszero_Δx_xexact(
+    ::AbstractUnivariateZeroMethod,
+    state::AbstractUnivariateZeroState,
+    options,
+)
     a, b = state.xn0, state.xn1
     if b < a
         a, b = b, a
@@ -201,11 +213,12 @@ function iszero_Δx(
     nextfloat(float(a)) == float(b)
 end
 
-function iszero_Δx(
+# this is Alefeld, Potra, Shi criteria for termination
+function iszero_Δx_fexact(
     ::AbstractBracketingMethod,
     state::AbstractUnivariateZeroState,
-    options::O,
-) where {O<:Union{FExactOptions,UnivariateZeroOptions}}
+    options
+)
     a, b, fa, fb = state.xn0, state.xn1, state.fxn0, state.fxn1
     u, fu = choose_smallest(a, b, fa, fb)
     δₐ, δᵣ = options.xabstol, options.xreltol
@@ -213,15 +226,6 @@ function iszero_Δx(
     abs(b - a) ≤ δₓ
 end
 
-function iszero_Δx(
-    ::AbstractNonBracketingMethod,
-    state::AbstractUnivariateZeroState,
-    options::O,
-) where {O<:Union{FExactOptions,UnivariateZeroOptions}}
-    a, b, fa, fb = state.xn0, state.xn1, state.fxn0, state.fxn1
-    δₐ, δᵣ = options.xabstol, options.xreltol
-    isapprox(a, b, atol=δₐ, rtol=δᵣ)
-end
 
 # test when fconverged to ensure not runawa
 function is_small_Δx(
@@ -276,6 +280,10 @@ In `decide_convergence`, stopped values (and `:x_converged` when `strict=false`)
 
 """
 function assess_convergence(M::Any, state::AbstractUnivariateZeroState, options)
+    _assess_convergence(M, state, options)
+end
+
+function _assess_convergence(M, state, options)
     # return convergence_flag, boolean
     is_exact_zero_f(M, state, options) && return (:exact_zero, true)
     isnan_x(M, state) && return (:nan, true)
@@ -287,6 +295,39 @@ function assess_convergence(M::Any, state::AbstractUnivariateZeroState, options)
     return (:not_converged, false)
 end
 
+function assess_convergence(
+    M::AbstractBracketingMethod,
+    state::AbstractUnivariateZeroState,
+    options
+)
+
+    δₐ, δᵣ = options.xabstol, options.xreltol
+    ϵₐ, ϵᵣ = options.abstol, options.reltol
+
+    if iszero(δₐ) && iszero(δᵣ)
+        # return convergence_flag, boolean
+        # no check if f == ∞
+        is_exact_zero_f(M, state, options) && return (:exact_zero, true)
+        isnan_f(M, state) && return (:nan, true)
+
+        is_approx_zero_f(M, state, options) && return (:f_converged, true)
+        if typeof(state.xn1) ∈ (Float16, Float32, Float64)
+            iszero_Δx_xexact(M, state, options) && return (:x_converged, true)
+        else
+            iszero_Δx_fexact(M, state, options) && return (:x_converged, true)
+        end
+    elseif iszero(ϵₐ) && iszero(ϵᵣ) # FExact
+        (iszero(state.fxn1) || iszero(state.fxn0)) && return (:exact_zero, true)
+        (isnan(state.fxn1) || isnan(state.fxn0)) && return (:nan, true)
+        iszero_Δx_fexact(M, state, options) && return (:x_converged, true)
+    else
+        return _assess_convergence(M, state, options)
+    end
+
+    return (:not_converged, false)
+end
+
+#=
 function assess_convergence(
     M::AbstractBisection,
     state::AbstractUnivariateZeroState,
@@ -319,7 +360,7 @@ function assess_convergence(
 
     return (:not_converged, false)
 end
-
+=#
 # state has stopped, this identifies if it has converged
 
 #=
