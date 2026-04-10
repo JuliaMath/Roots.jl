@@ -69,11 +69,11 @@ end
 
 function init_options(
     M::ITP,
-    state::AbstractUnivariateZeroState{T,S};
+    state::ITPState{T,S,R};
     kwargs...,
-) where {T,S}
+) where {T,S,R}
     d = kwargs
-    defs = default_tolerances(M, T, S)
+    defs = default_tolerances(M, state)
     δₐ = get(d, :xatol, get(d, :xabstol, defs[1]))
     δᵣ = get(d, :xrtol, get(d, :xreltol, defs[2]))
     ϵₐ = get(d, :atol, get(d, :abstol, defs[3]))

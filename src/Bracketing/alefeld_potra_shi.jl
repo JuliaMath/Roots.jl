@@ -89,11 +89,11 @@ end
 # avoid type-stability issue due to dynamic dispatch based on kwargs
 function init_options(
     M::AbstractAlefeldPotraShi,
-    state::AbstractUnivariateZeroState{T,S};
+    state::AbstractAlefeldPotraShiState{T,S};
     kwargs...,
 ) where {T,S}
     d = kwargs
-    defs = default_tolerances(M, T, S)
+    defs = default_tolerances(M, state)
     # warn if atol or rtol are passed in
     if haskey(d, :atol) || haskey(d, :rtol)
         @warn "This bracketing method only has tolerances `xatol` and `xrtol`. Any settings for `atol` or `rtol` are ignored."

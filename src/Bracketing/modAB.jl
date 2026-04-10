@@ -97,7 +97,7 @@ initial_fncalls(M::ModAB) = 2
 # find_zero(x ->  x < eps(0.0) ? -1.0 : 1.0, (-Inf, Inf), Roots.ModAB())
 # maxiters for T ∈ (Float16, Float32, Float64) need only be N + X
 # where X is 16,32,or 64, N is -Int(log2(eps(T))) ÷ 2 + 1
-function default_tolerances(::ModAB, ::Type{T}, ::Type{S}) where {T,S}
+function default_tolerances(::ModAB, ::AbstractUnivariateZeroState{T, S}) where {T,S}
     xatol = 2 * eps(zero(T)) * oneunit(real(T)) # not quite 0
     xrtol = eps(real(T))  # unitless
     atol = 4 * eps(real(float(S))) * oneunit(real(S))

@@ -35,7 +35,7 @@ FalsePosition
 FalsePosition(x=:anderson_bjork) = FalsePosition{x}()
 
 # 12 is tough; needs more evaluations
-function default_tolerances(::FalsePosition{12}, ::Type{T}, ::Type{S}) where {T,S}
+function default_tolerances(::FalsePosition{12}, ::AbstractUnivariateZeroState{T, S}) where {T,S}
     xatol = eps(real(T)) * oneunit(real(T))
     xrtol = eps(real(T))  # unitless
     atol = 4 * eps(real(float(S))) * oneunit(real(S))

@@ -77,8 +77,7 @@ For other types, default non-zero tolerances for `xatol` and `xrtol` are given.
 """
 function default_tolerances(
     ::AbstractBisectionMethod,
-    ::Type{T},
-    ::Type{S′},
+    ::AbstractUnivariateZeroState{T,S′}
 ) where {T<:FloatNN,S′}
     S = real(float(S′))
     xatol = 0 * oneunit(S)
@@ -91,7 +90,8 @@ function default_tolerances(
 end
 
 # not float uses some non-zero tolerances for `x`
-function default_tolerances(::AbstractBisectionMethod, ::Type{T′}, ::Type{S′}) where {T′,S′}
+function default_tolerances(::AbstractBisectionMethod,
+                            ::AbstractUnivariateZeroState{T′, S′}) where {T′,S′}
     T, S = real(float(T′)), real(float(S′))
     xatol = eps(T)^3 * oneunit(T)
     xrtol = eps(T) * one(T) # unitless

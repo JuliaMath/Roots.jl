@@ -41,7 +41,7 @@ function log_step(l::Tracks, M::AbstractBracketingMethod, state; init::Bool=fals
 end
 
 # use xatol, xrtol only, but give some breathing room over the strict ones and cap number of steps
-function default_tolerances(::AbstractBracketingMethod, ::Type{T}, ::Type{S}) where {T,S}
+function default_tolerances(::AbstractBracketingMethod, ::AbstractUnivariateZeroState{T, S}) where {T,S}
     xatol = eps(real(T))^3 * oneunit(real(T))
     xrtol = eps(real(T))  # unitless
     atol = zero(oneunit(real(S)))

@@ -30,18 +30,22 @@ struct ExactOptions <: AbstractUnivariateZeroOptions
     strict::Bool
 end
 
+#=
 init_options(
     M::AbstractUnivariateZeroMethod,
     state::AbstractUnivariateZeroState{T,S};
     kwargs...,
 ) where {T,S} = init_options(M, T, S; kwargs...)
-
+=#
 # this function is an issue (#446) it is type unstable.
 # this is a fall back now, but in #446 more
 # specific choices based on M are made.
-function init_options(M, T=Float64, S=Float64; kwargs...)
+#function init_options(M, T=Float64, S=Float64; kwargs...)
+function init_options(M::AbstractUnivariateZeroMethod,
+                      state::AbstractUnivariateZeroState{T,S};
+                      kwargs...) where {T,S}
     d = kwargs
-    defs = default_tolerances(M, T, S)
+    defs = default_tolerances(M, state)
     δₐ = get(d, :xatol, get(d, :xabstol, defs[1]))
     δᵣ = get(d, :xrtol, get(d, :xreltol, defs[2]))
     ϵₐ = get(d, :atol, get(d, :abstol, defs[3]))
@@ -66,7 +70,7 @@ function init_options(
     kwargs...,
 ) where {T,S}
     d = kwargs
-    defs = default_tolerances(M, T, S)
+    defs = default_tolerances(M, state)
     δₐ = get(d, :xatol, get(d, :xabstol, defs[1]))
     δᵣ = get(d, :xrtol, get(d, :xreltol, defs[2]))
     ϵₐ = get(d, :atol, get(d, :abstol, defs[3]))
@@ -80,7 +84,7 @@ end
 ## --------------------------------------------------
 
 """
-    default_tolerances(M::AbstractUnivariateZeroMethod, [T], [S])
+    default_tolerances(M::AbstractUnivariateZeroMethod, state::AbstractUnivariateZeroState{T,S})
 
 The default tolerances for most methods are `xatol=eps(T)`,
 `xrtol=eps(T)`, `atol=4eps(S)`, and `rtol=4eps(S)`, with the proper
@@ -90,12 +94,9 @@ tolerances are unitless). For `Complex{T}` values, `T` is used.
 The number of iterations is limited by `maxiters=40`.
 
 """
-default_tolerances(M::AbstractUnivariateZeroMethod) =
-    default_tolerances(M, Float64, Float64)
 function default_tolerances(
     ::AbstractUnivariateZeroMethod,
-    ::Type{T},
-    ::Type{S},
+    ::AbstractUnivariateZeroState{T, S}
 ) where {T,S}
     xatol = eps(real(T)) * oneunit(real(T))
     xrtol = eps(real(T))  # unitless
