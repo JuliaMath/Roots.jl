@@ -348,8 +348,6 @@ The latter calls the following, which can be useful independently:
 Returns `NaN`, not an error like `find_zero`, when the problem can not
 be solved. Tested for zero allocations.
 
-The `verbose` keyword is deprecated; pass a `Tracks` object to trace the algorithm.
-
 ## Examples:
 
 ```jldoctest find_zero
@@ -442,14 +440,6 @@ julia> order0(sin, 3)
 """
 function solve!(P::ZeroProblemIterator)
     M, F, state, options, l = P.M, P.F, P.state, P.options, P.logger
-
-    if verbose !== false
-        Base.depwarn(
-            "The `verbose` keyword is deprecated. Pass a `tracks=Roots.Tracks()` object to the solver to see a trace.",
-            :solve!
-        )
-    end
-
 
     val, stopped = :not_converged, false
     ctr = 1
