@@ -230,8 +230,8 @@ function show_trace(io::IO, M, N, tracks)
     end
     println(io, "")
     println(io, "Trace:")
-    #show_tracks(io, tracks, M)
-    #!isnothing(N) && show_tracks(io, tracks, N)
+    show_tracks(io, tracks, M)
+    !isnothing(N) && show_tracks(io, tracks, N)
 
 end
 
