@@ -230,43 +230,25 @@ function show_trace(io::IO, M, N, tracks)
     end
     println(io, "")
     println(io, "Trace:")
-    show_tracks(io, tracks, M)
-    !isnothing(N) && show_tracks(io, tracks, N)
+    #show_tracks(io, tracks, M)
+    #!isnothing(N) && show_tracks(io, tracks, N)
+
 end
 
+# XXX of @printf here triggers a possible error flag with JET.
 function show_tracks(io::IO, s::Tracks, M::AbstractUnivariateZeroMethod)
     # show (x,f(x))
     𝑀 = nameof(typeof(M))
     ind, xf =  get(s.h, 𝑀)
     for (i, (xi, fxi)) ∈ zip(ind, xf)
-        println(
-            io,
-            if !(isa(xi, Complex) || isa(fxi, Complex))
-            @sprintf(
-                "%s%s = % -20.17g %s%s = % -20.17g",
-                "x",
-                sprint(io -> unicode_subscript(io, i)),
-                float(xi),
-                "fx",
-                sprint(io -> unicode_subscript(io, i)),
-                float(fxi)
-            )
-            else
-            # support for complex values
-            # Issue 336.  XXX can improve this output XXX
-            @sprintf(
-                "%s%s = (% -20.17g, % -20.17g),\t %s%s = (% -20.17g, % -20.17g)",
-                "x",
-                sprint(io -> Roots.unicode_subscript(io, i)),
-                real(xi),
-                imag(xi),
-                "fx",
-                sprint(io -> Roots.unicode_subscript(io, i)),
-                real(fxi),
-                imag(fxi)
-            )
-            end
-        )
+        𝑖 = sprint(io -> unicode_subscript(io, i))
+        if !(isa(xi, Complex) || isa(fxi, Complex))
+            @printf(io,  "%s%s = % -20.17g \t %s%s = % -20.17g\n",
+                    "x", 𝑖, float(xi), "fx", 𝑖, float(fxi))
+        else
+            @printf(io, "%s%s = (% -20.17g, % -20.17g),\t %s%s = (% -20.17g, % -20.17g)\n",
+                    "x", 𝑖, real(xi), imag(xi), "fx", 𝑖, real(fxi), imag(fxi))
+        end
     end
 end
 
@@ -279,23 +261,11 @@ function show_tracks(io::IO, s::Tracks, M::AbstractBracketingMethod)
     ind, ab =  get(s.h, 𝑀)
 
     for (i, (a, b)) in zip(ind, ab)
-        j = i₀ + 1 + i
-
-        println(
-            io,
-            @sprintf(
-                "(%s%s, %s%s) = ( % -20.17g, % -20.17g )",
-                "a",
-                sprint(io -> unicode_subscript(io, j - 1)),
-                "b",
-                sprint(io -> unicode_subscript(io, j - 1)),
-                a,
-                b
-            )
-        )
-
+        j = i₀ + i
+        𝑗 = sprint(io -> unicode_subscript(io, j))
+        @printf(io, "(%s%s, %s%s) = ( % -20.17g, % -20.17g )\n",
+                "a", 𝑗, "b", 𝑗, a, b)
     end
-    println(io, "")
 end
 
 

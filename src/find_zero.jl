@@ -2,7 +2,8 @@
 
     find_zero(f, x0, M, [N::AbstractBracketingMethod], [p=nothing]; kwargs...)
 
-Interface to one of several methods for finding zeros of a univariate function, e.g. solving ``f(x)=0``.
+Interface to one of several iterative, numeric methods for finding zeros of a univariate function,
+i.e.. solving ``f(x)=0``.
 
 # Arguments
 ## Positional arguments
@@ -387,7 +388,7 @@ julia> solve!(problem)
 ```
 
 The keyword argument `p` may be used if the function(s) to be solved
-depend on a parameter in their second positional argument (e.g.,
+depend on a parameter in their second positional argument (
 `f(x, p)`). For example
 
 ```jldoctest find_zero
