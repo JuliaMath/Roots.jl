@@ -128,7 +128,7 @@ __middle(x::Number, y::Number) = x / 2 + y / 2
 # Use the usual float rules for combining non-finite numbers
 # do division over unsigned integers with bit shift
 # then reinterpret in original floating point
-# repeat as we were getting (mis?)-flagged by JET using a union
+# repeat as we were getting flagged by JET using a union
 function __middle(x::Float64, y::Float64)
     S = UInt64
     xint = reinterpret(S, abs(x))
