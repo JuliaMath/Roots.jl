@@ -158,8 +158,12 @@ function fzero(f, x0::Number; kwargs...)
     derivative_free(f, x; kwargs...)
 end
 
-function fzero(f, x0, M::AbstractUnivariateZeroMethod; kwargs...)
-    find_zero(FnWrapper(f), x0, M; kwargs...)
+function fzero(f, x0, M::AbstractUnivariateZeroMethod; verbose=false, tracks=NullTracks(), kwargs...)
+
+    tracks = (verbose && isa(tracks, NullTracks)) ? Tracks() : tracks
+    α = find_zero(FnWrapper(f), x0, M; tracks, kwargs...)
+    verbose && display(tracks)
+    α
 end
 
 function fzero(
@@ -167,26 +171,45 @@ function fzero(
     x0,
     M::AbstractUnivariateZeroMethod,
     N::AbstractBracketingMethod;
+    verbose = false,
+    tracks = NullTracks(),
     kwargs...,
 )
-    find_zero(FnWrapper(f), x0, M, N; kwargs...)
+
+    tracks = (verbose && isa(tracks, NullTracks)) ? Tracks() : tracks
+    a = find_zero(FnWrapper(f), x0, M, N; tracks, kwargs...)
+    verbose && display(tracks)
+    a
 end
 
-function fzero(f, bracket::Tuple{T,S}; kwargs...) where {T<:Number,S<:Number}
+function fzero(f, bracket::Tuple{T,S}; verbose=false, tracks=NullTracks(), kwargs...) where {T<:Number,S<:Number}
     d = Dict(kwargs...)
+    tracks = (verbose && isa(tracks, NullTracks)) ? Tracks() : tracks
     if haskey(d, :order)
-        find_zero(FnWrapper(f), bracket, _method_lookup[d[:order]]; kwargs...)
+        val = find_zero(FnWrapper(f), bracket, _method_lookup[d[:order]]; tracks,  kwargs...)
     else
-        find_zero(FnWrapper(f), bracket, Bisection(); kwargs...)
+        val = find_zero(FnWrapper(f), bracket, Bisection(); tracks, kwargs...)
     end
+    verbose && display(tracks)
+    val
 end
 
 fzero(f, a::Number, b::Number, args...; kwargs...) = fzero(f, (a, b), args...; kwargs...)
 
-fzero(f, x; kwargs...) = find_zero(FnWrapper(f), x; kwargs...)
+function fzero(f, x; verbose=false, tracks=NullTracks(), kwargs...)
+    tracks = (verbose && isa(tracks, NullTracks)) ? Tracks() : tracks
+    α = find_zero(FnWrapper(f), x; kwargs...)
+    verbose && display(tracks)
+    α
+end
 
-fzero(f::Function, fp::Function, x0::Real; kwargs...) =
-    find_zero((f, fp), x0, Newton(); kwargs...)
+function fzero(f::Function, fp::Function, x0::Real; verbose=false, tracks=NullTracks(),kwargs...)
+    tracks = (verbose && isa(tracks, NullTracks)) ? Tracks() : tracks
+    α = find_zero((f, fp), x0, Newton(); tracks, kwargs...)
+    verbose && display(tracks)
+    α
+end
+
 
 # match fzero up with find_zero
 _method_lookup = Dict(
@@ -220,7 +243,7 @@ _method_lookup = Dict(
     "16"        => Order16(),
 )
 
-@noinline function derivative_free(f, x0; order=0, kwargs...)
+@noinline function derivative_free(f, x0; verbose::Bool=false, tracks=NullTracks(), order=0, kwargs...)
     if haskey(_method_lookup, order)
         M = _method_lookup[order]
     else
@@ -240,7 +263,10 @@ _method_lookup = Dict(
         end
     end
 
-    find_zero(FnWrapper(f), x0, M; d...)
+    tracks = (verbose && isa(tracks, NullTracks)) ? Tracks() : tracks
+    a = find_zero(FnWrapper(f), x0, M; tracks, d...)
+    verbose && display(tracks)
+    a
 end
 
 ## fzeros

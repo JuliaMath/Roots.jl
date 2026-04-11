@@ -18,7 +18,6 @@ Interface to one of several methods for finding zeros of a univariate function, 
 * `xatol`, `xrtol`: absolute and relative tolerance to decide if `xₙ₊₁ ≈ xₙ`
 * `atol`, `rtol`: absolute and relative tolerance to decide if `f(xₙ) ≈ 0`
 * `maxiters`: specify the maximum number of iterations the algorithm can take.
-* `verbose::Bool`: specifies if details about algorithm should be shown [Deprecated; use `tracks`]
 * `tracks`: allows specification of `Tracks` objects
 
 # Extended help
@@ -99,7 +98,6 @@ functions is used. For the classical algorithms, a function returning
 * `rtol`  - relative tolerance for `f(x)` values.
 * `maxiters`   - limit on maximum number of iterations.
 * `strict` - if `false` (the default), when the algorithm stops, possible zeros are checked with a relaxed tolerance.
-* `verbose` - if `true` a trace of the algorithm will be shown on successful completion. See the internal [`Roots.Tracks`](@ref) object to save this trace.
 
 See the help string for `Roots.assess_convergence` for details on
 convergence. See the help page for `Roots.default_tolerances(method)`
@@ -199,8 +197,6 @@ ERROR: Roots.ConvergenceFailed("Algorithm failed to converge")
 
 # Tracing
 
-Passing `verbose=true` will show details on the steps of the algorithm. [This is deprecated, use `tracks`.]
-
 The `tracks` argument allows
 the passing of a [`Roots.Tracks`](@ref) object to record the values of `x` and `f(x)` used in
 the algorithm.
@@ -214,7 +210,6 @@ function find_zero(
     M::AbstractUnivariateZeroMethod,
     p′=nothing;
     p=nothing,
-    verbose=false,
     tracks::AbstractTracks=NullTracks(),
     kwargs...,
 )
@@ -223,7 +218,6 @@ function find_zero(
         ZeroProblem(f, x0),
         M,
         p′ === nothing ? p : p′;
-        verbose=verbose,
         tracks=tracks,
         kwargs...,
     )
@@ -293,7 +287,6 @@ function init(
     M::AbstractUnivariateZeroMethod,
     p′=nothing;
     p=nothing,
-    verbose::Bool=false,
     tracks=NullTracks(),
     kwargs...,
 )
@@ -301,9 +294,8 @@ function init(
     F = Callable_Function(M, 𝑭𝑿.F, something(p′, p, missing))
     state = init_state(M, F, 𝑭𝑿.x₀)
     options = init_options(M, state; kwargs...)
-    l = Tracks(verbose, tracks, state)
-    incfn(l, initial_fncalls(M))
-    ZeroProblemIterator(M, nothing, F, state, options, l)
+    incfn(tracks, initial_fncalls(M))
+    ZeroProblemIterator(M, nothing, F, state, options, tracks)
 end
 
 function init(𝑭𝑿::ZeroProblem, p′=nothing; kwargs...)
@@ -331,8 +323,7 @@ end
     solve!(P::ZeroProblemIterator)
     solve(fx::ZeroProblem, [M], [N]; p=nothing, kwargs...)
     init(fx::ZeroProblem, [M], [N];
-         p=nothing,
-         verbose=false, tracks=NullTracks(), kwargs...)
+         p=nothing, tracks=NullTracks(), kwargs...)
 
 Solve for the zero of a scalar-valued univariate function specified through `ZeroProblem` or
 `ZeroProblemIterator` using the `CommonSolve` interface.
@@ -356,8 +347,6 @@ The latter calls the following, which can be useful independently:
 
 Returns `NaN`, not an error like `find_zero`, when the problem can not
 be solved. Tested for zero allocations.
-
-The `verbose` keyword is deprecated; pass a `Tracks` object to trace the algorithm.
 
 ## Examples:
 
@@ -416,7 +405,7 @@ This would be recommended, as there is no recompilation due to the function chan
 For use with broadcasting, `p` may also be the last positional argument.
 
 
-The argument `verbose=true` for `init` instructs that steps to be logged;
+Pass a `Roots.Tracks()` object to log the steps in the algorithm.
 
 The iterator interface allows for the creation of hybrid solutions,
 such as is used when two methods are passed to `solve`.
@@ -449,16 +438,8 @@ julia> order0(sin, 3)
 ```
 
 """
-function solve!(P::ZeroProblemIterator; verbose=false)
+function solve!(P::ZeroProblemIterator)
     M, F, state, options, l = P.M, P.F, P.state, P.options, P.logger
-
-    if verbose !== false
-        Base.depwarn(
-            "The `verbose` keyword is deprecated. Pass a `tracks=Roots.Tracks()` object to the solver to see a trace.",
-            :solve!
-        )
-    end
-
 
     val, stopped = :not_converged, false
     ctr = 1
@@ -481,20 +462,18 @@ function solve!(P::ZeroProblemIterator; verbose=false)
     log_convergence(l, val)
     log_method(l, M)
     log_last(l, α)
-    verbose && display(l)
 
     α
 end
 
-# thread verbose through
 """
-    solve(fx::ZeroProblem, args...; verbose=false, kwargs...)
+    solve(fx::ZeroProblem, args...; kwargs...)
 
 Disptaches to `solve!(init(fx, args...; kwargs...))`. See [`solve!`](@ref) for details.
 """
-function solve(𝑭𝑿::ZeroProblem, args...; verbose=false, kwargs...)
-    Z = init(𝑭𝑿, args...; verbose=verbose, kwargs...)
-    solve!(Z; verbose=verbose)
+function solve(𝑭𝑿::ZeroProblem, args...; kwargs...)
+    Z = init(𝑭𝑿, args...; kwargs...)
+    solve!(Z; )
 end
 
 # avoid splatting (issue #323, caused allocations)
@@ -502,12 +481,10 @@ function solve(
     𝑭𝑿::ZeroProblem,
     M::AbstractUnivariateZeroMethod,
     p=nothing;
-    verbose=false,
     kwargs...,
 )
-
-    Z = init(𝑭𝑿, M, p; verbose=verbose, kwargs...)
-    solve!(Z; verbose=verbose)
+    Z = init(𝑭𝑿, M, p; kwargs...)
+    solve!(Z)
 end
 
 # Optional iteration interface to handle looping

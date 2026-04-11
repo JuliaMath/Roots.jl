@@ -27,10 +27,12 @@ initial_fncalls(::AbstractAlefeldPotraShi) = 3 # worst case assuming fx₀, fx�
 
 ## initial step, needs to log a,b,d
 function log_step(l::Tracks, M::AbstractAlefeldPotraShi, state; init::Bool=false)
+    h, 𝑀 = l.h, nameof(typeof(M))
     a, b, c = state.xn0, state.xn1, state.d
-    init && push!(l.abₛ, extrema((a, b, c)))
+    init && push!(h, 𝑀, 1, extrema((a, b, c)))
     init && log_iteration(l, 1) # take an initial step
-    push!(l.abₛ, (a, b))
+    n = haskey(h, 𝑀) ? length(h, 𝑀) : 1
+    push!(h, 𝑀, n + 1, (a, b))
     !init && log_iteration(l, 1)
     nothing
 end
@@ -87,11 +89,11 @@ end
 # avoid type-stability issue due to dynamic dispatch based on kwargs
 function init_options(
     M::AbstractAlefeldPotraShi,
-    state::AbstractUnivariateZeroState{T,S};
+    state::AbstractAlefeldPotraShiState{T,S};
     kwargs...,
 ) where {T,S}
     d = kwargs
-    defs = default_tolerances(M, T, S)
+    defs = default_tolerances(M, state)
     # warn if atol or rtol are passed in
     if haskey(d, :atol) || haskey(d, :rtol)
         @warn "This bracketing method only has tolerances `xatol` and `xrtol`. Any settings for `atol` or `rtol` are ignored."

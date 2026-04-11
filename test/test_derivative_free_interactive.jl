@@ -450,7 +450,7 @@ end
 function COC(M, f, x0, alpha=missing)
     op = precision(BigFloat)
     setprecision(BigFloat, 8 * 256)
-    tracks = Roots.Tracks(BigFloat[], BigFloat[])
+    tracks = Roots.Tracks()
     try
         find_zero(f, big(x0), M, tracks=tracks)
     catch err
@@ -460,13 +460,17 @@ function COC(M, f, x0, alpha=missing)
     setprecision(BigFloat, op)
 
     if ismissing(alpha)
-        fs = tracks.fs
+        𝑀 = nameof(typeof(M))
+        inds, xfs = get(tracks, 𝑀)
+        fs = last.(xfs)
         [
             Float64(log(abs(fs[k + 2] / fs[k + 1])) / log(abs(fs[k + 1] / fs[k]))) for
             k in 1:(length(fs) - 4)
         ]
     else
-        xs = tracks.xs
+        𝑀 = nameof(typeof(M))
+        inds, xfs = get(tracks, 𝑀)
+        xs = first.(xfs)
         es = xs .- alpha
         [Float64(log(abs(es[k + 1])) / log(abs(es[k]))) for k in 1:(length(xs) - 3)]
     end
@@ -557,7 +561,7 @@ function compare_convergence(Ms; F=identity)
         fn_, x0, xstar = u
         fn = F(fn_)
         for M in Ms
-            tracks = Roots.Tracks(BigFloat, BigFloat)
+            tracks = Roots.Tracks()#BigFloat, BigFloat)
             a = try
                 find_zero(fn, x0, M, tracks=tracks)
             catch err

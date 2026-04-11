@@ -318,9 +318,7 @@ longer super-linear. This is the case here, where `Order2` uses $51$
 function calls, `Order8` uses $42$, and `Order0` takes  $80$. The `Roots.Order2B` method is useful
 when a multiplicity is expected; on this problem it takes ``17`` function calls.
 
-A `Roots.Tracks` object can be used to store the intermediate values and can be displayed.
-
-It is now deprecated to use the `verbose=true` argument to investigate an algorithm and its convergence.
+To investigate an algorithm and its convergence a `Roots.Tracks` object can be used to store the intermediate values.
 
 
 For some functions, adjusting the default tolerances may be necessary
@@ -1241,7 +1239,7 @@ The main algorithm is implemented in the `update_state` method. The `@reset` mac
 ```julia
 julia> import Roots.Accessors: @reset;
 
-julia> function Roots.update_state(::Chandrapatla, F, o, options, l=NullTracks())
+julia> function Roots.update_state(::Chandrapatla, F, o, options, l=Roots.NullTracks())
 
     b, a, c = o.xn1, o.xn0, o.c
     fb, fa, fc = o.fxn1, o.fxn0, o.fc
