@@ -481,10 +481,10 @@ end
 function solve(
     𝑭𝑿::ZeroProblem,
     M::AbstractUnivariateZeroMethod,
-    p=nothing;
+    p′=nothing;
     kwargs...,
 )
-    Z = init(𝑭𝑿, M, p; kwargs...)
+    Z = init(𝑭𝑿, M, p′; kwargs...)
     solve!(Z)
 end
 

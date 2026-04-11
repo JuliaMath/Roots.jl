@@ -27,39 +27,11 @@ function init_options(M::AbstractUnivariateZeroMethod,
     strict = get(d, :strict, defs[6])
 
     exact = :nothing
-    if iszero(δₐ) && iszero(δᵣ) && iszero(ϵₐ) && iszero(ϵᵣ)
-        exact = :exact
-    elseif iszero(δₐ) && iszero(δᵣ)
+    if iszero(δₐ) && iszero(δᵣ)
         exact = :xexact
     elseif iszero(ϵₐ) && iszero(ϵᵣ)
         exact = :fexact
     end
-    return UnivariateZeroOptions(δₐ, δᵣ, ϵₐ, ϵᵣ, maxiters, strict, exact)
-end
-
-function init_options(
-    M::AbstractNonBracketingMethod,
-    state::AbstractUnivariateZeroState{T,S};
-    kwargs...,
-) where {T,S}
-    d = kwargs
-    defs = default_tolerances(M, state)
-    δₐ = get(d, :xatol, get(d, :xabstol, defs[1]))
-    δᵣ = get(d, :xrtol, get(d, :xreltol, defs[2]))
-    ϵₐ = get(d, :atol, get(d, :abstol, defs[3]))
-    ϵᵣ = get(d, :rtol, get(d, :reltol, defs[4]))
-    maxiters = get(d, :maxiters, get(d, :maxevals, get(d, :maxsteps, defs[5])))
-    strict = get(d, :strict, defs[6])
-
-    exact = :nothing
-    if iszero(δₐ) && iszero(δᵣ) && iszero(ϵₐ) && iszero(ϵᵣ)
-        exact = :exact
-    elseif iszero(δₐ) && iszero(δᵣ)
-        exact = :xexact
-    elseif iszero(ϵₐ) && iszero(ϵᵣ)
-        exact = :fexact
-    end
-
     return UnivariateZeroOptions(δₐ, δᵣ, ϵₐ, ϵᵣ, maxiters, strict, exact)
 end
 
@@ -191,8 +163,17 @@ function iszero_Δx_fexact(
     abs(b - a) ≤ δₓ
 end
 
+function iszero_Δx_exact(M::AbstractBracketingMethod,
+                         state::AbstractUnivariateZeroState{T,S},
+                         options) where {T, S}
+    if T ∈ (Float16, Float32, Float64)
+        iszero_Δx_xexact(M, state, options)
+    else
+        iszero_Δx_fexact(M, state, options)
+    end
+end
 
-# test when fconverged to ensure not runawa
+# test when fconverged to ensure not runaway
 function is_small_Δx(
     M::AbstractUnivariateZeroMethod,
     state::AbstractUnivariateZeroState,
@@ -268,18 +249,13 @@ function assess_convergence(
     if options.exact == :xexact || options.exact == :exact
         # return convergence_flag, boolean
         # no check if f == ∞
-        is_exact_zero_f(M, state, options) && return (:exact_zero, true)
-        isnan_f(M, state) && return (:nan, true)
-
+        is_exact_zero_f(M, state, options)  && return (:exact_zero, true)
+        isnan_f(M, state)                   && return (:nan, true)
         is_approx_zero_f(M, state, options) && return (:f_converged, true)
-        if typeof(state.xn1) ∈ (Float16, Float32, Float64)
-            iszero_Δx_xexact(M, state, options) && return (:x_converged, true)
-        else
-            iszero_Δx_fexact(M, state, options) && return (:x_converged, true)
-        end
+        iszero_Δx_exact(M, state, options)  && return (:x_converged, true)
     elseif options.exact == :fexact
-        (iszero(state.fxn1) || iszero(state.fxn0)) && return (:exact_zero, true)
-        (isnan(state.fxn1) || isnan(state.fxn0)) && return (:nan, true)
+        is_exact_zero_f(M, state, options)  && return (:exact_zero, true)
+        isnan_f(M, state)                   && return (:nan, true)
         iszero_Δx_fexact(M, state, options) && return (:x_converged, true)
     else
         return _assess_convergence(M, state, options)
@@ -331,7 +307,7 @@ function decide_convergence(
     ## if strict=true or the tolerance for f is 0 this will return xn1 if x_converged
     ## if strict == false, this will also check f(xn) ~ - with a relaxed
     ## tolerance
-    fexact = options.exact == :exact || options.exact == :fexact
+    fexact = options.exact == :fexact
     if options.strict || fexact
         val == :x_converged && return xn1
         !fexact && is_approx_zero_f(M, state, options) && return xn1
@@ -341,6 +317,10 @@ function decide_convergence(
             # The :xexact case isn't always spelled out in the type, so
             # we replicate a bit here
             δ, ϵ = options.abstol, options.reltol
+            if (iszero(δ) && iszero(ϵ)) && (options.exact != :xexact)
+                error("Hah")
+            end
+
             iszero(δ) && iszero(ϵ) && return xn1
             is_approx_zero_f(M, state, options, true) && return xn1
         elseif val == :not_converged
@@ -357,7 +337,7 @@ end
 
 # assumes stopped = :x_converged
 function decide_convergence(
-    ::AbstractBracketingMethod,
+    M::AbstractBracketingMethod,
     F,
     state::AbstractUnivariateZeroState,
     options,
@@ -371,9 +351,10 @@ function decide_convergence(
     isnan(fa) && return a
     isnan(fb) && return b
 
-    # get as close as possible with one extra function call when closeness
-    # is requested
-    if b == nextfloat(nextfloat(float(a)))
+    # get as close as possible with one extra function call
+    # when exact closeness is possible
+    a₊₊ = nextfloat(nextfloat(float(a)))
+    if b == a₊₊
         c = nextfloat(float(a))
         fc = first(F(c))
         m = minimum(abs, (fa, fb, fc))
@@ -382,5 +363,5 @@ function decide_convergence(
         return b
     end
 
-    abs(fa) < abs(fb) ? a : b
+    return (abs(fa) < abs(fb)) ? a : b
 end
