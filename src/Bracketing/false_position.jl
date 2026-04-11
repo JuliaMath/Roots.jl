@@ -86,14 +86,14 @@ galdino = Dict{Union{Int,Symbol},Function}(
     :2 => (fa, fb, fx) -> (fa - fb) / 2,
     :3 => (fa, fb, fx) -> (fa - fx) / (2 + fx / fb),
     :4 => (fa, fb, fx) -> (fa - fx) / (1 + fx / fb)^2,
-    :5 => (fa, fb, fx) -> (fa - fx) / (1.5 + fx / fb)^2,
+    :5 => (fa, fb, fx) -> (fa - fx) / (3*one(fa)/2  + fx / fb)^2,
     :6 => (fa, fb, fx) -> (fa - fx) / (2 + fx / fb)^2,
     :7 => (fa, fb, fx) -> (fa + fx) / (2 + fx / fb)^2,
     :8 => (fa, fb, fx) -> fa / 2,
     :9 => (fa, fb, fx) -> fa / (1 + fx / fb)^2,
     :10 => (fa, fb, fx) -> (fa - fx) / 4,
     :11 => (fa, fb, fx) -> fx * fa / (fb + fx),
-    :12 => (fa, fb, fx) -> (fa * (1 - fx / fb > 0 ? 1 - fx / fb : 1 / 2)),
+    :12 => (fa, fb, fx) -> (fa * (1 - fx / fb > 0 ? 1 - fx / fb : one(fa)/2)),
 )
 
 # give common names

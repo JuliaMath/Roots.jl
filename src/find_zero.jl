@@ -2,13 +2,13 @@
 
     find_zero(f, x0, M, [N::AbstractBracketingMethod], [p=nothing]; kwargs...)
 
-Interface to one of several iterative, numeric methods for finding zeros of a univariate function,
-i.e.. solving ``f(x)=0``.
+Interface to one of several iterative, numeric methods for finding zeros of a
+scalar-values univariate function, i.e.. solving ``f(x)=0``.
 
 # Arguments
 ## Positional arguments
 
-* `f`: the function (univariate or `f(x,p)` with `p` holding parameters)
+* `f`: the function (scalar-valued, univariate or `f(x,p)` with `p` holding parameters)
 * `x0`: the initial condition (a value, initial values, or bracketing interval)
 * `M`: some `AbstractUnivariateZeroMethod` specifying the solver
 * `N`: some bracketing method, when specified creates a hybrid method
@@ -46,9 +46,9 @@ in case of failure.
 A method is specified to indicate which algorithm to employ:
 
 * There are methods where a bracket is specified: [`Bisection`](@ref),
-  [`A42`](@ref), [`AlefeldPotraShi`](@ref), [`Roots.Brent`](@ref),
+  [`A42`](@ref), [`AlefeldPotraShi`](@ref), [`Roots.ModAB`](@ref), [`Roots.Brent`](@ref),
   among others. Bisection is the default for basic floating point
-  types, but `A42` generally requires far fewer iterations.
+  types, `A42` generally requires far fewer iterations, as does `ModAB`.
 
 * There are several derivative-free methods: cf. [`Order0`](@ref),
   [`Order1`](@ref) (also [`Roots.Secant`](@ref)), [`Order2`](@ref)
@@ -107,7 +107,7 @@ for details on the default tolerances.
 In general, with floating point numbers, convergence must be
 understood as not an absolute statement. Even if mathematically `α` is
 an answer and `xstar` the floating point realization, it may be that
-`f(xstar) - f(α)  ≈ xstar ⋅  f'(α) ⋅ eps(α)`, so the role of tolerances must be
+`f(xstar) - f(α)  ≈ xstar ⋅ f'(α) ⋅ eps(α)`, so the role of tolerances must be
 appreciated, and at times specified.
 
 For the `Bisection` methods, convergence is guaranteed over `Float64`
@@ -163,7 +163,7 @@ julia> find_zero(sin, (3, 4), A42())              # fewer function calls than Bi
 julia> find_zero(sin, (3, 4), FalsePosition(8))   # 1 of 12 possible algorithms for false position
 3.141592653589793
 
-julia> find_zero((sin,cos), 3.0, Roots.Newton())  # use Newton's method
+julia> find_zero((sin, cos), 3.0, Roots.Newton()) # use Newton's method
 3.141592653589793
 
 julia> find_zero((sin, cos, x->-sin(x)), 3.0, Roots.Halley())  # use Halley's method
@@ -283,6 +283,11 @@ Base.show(io::IO, Z::ZeroProblemIterator) =
 ## p is both a keyword and positional
 ## positional allows broadcasting
 ## keyword more explicit
+function init(𝑭𝑿::ZeroProblem, p′=nothing; kwargs...)
+    M = length(𝑭𝑿.x₀) == 1 ? Order0() : AlefeldPotraShi()
+    init(𝑭𝑿, M, p′; kwargs...)
+end
+
 function init(
     𝑭𝑿::ZeroProblem,
     M::AbstractUnivariateZeroMethod,
@@ -297,11 +302,6 @@ function init(
     options = init_options(M, state; kwargs...)
     incfn(tracks, initial_fncalls(M))
     ZeroProblemIterator(M, nothing, F, state, options, tracks)
-end
-
-function init(𝑭𝑿::ZeroProblem, p′=nothing; kwargs...)
-    M = length(𝑭𝑿.x₀) == 1 ? Order0() : AlefeldPotraShi()
-    init(𝑭𝑿, M, p′; kwargs...)
 end
 
 function init(
@@ -326,7 +326,7 @@ end
     init(fx::ZeroProblem, [M], [N];
          p=nothing, tracks=NullTracks(), kwargs...)
 
-Solve for the zero of a scalar-valued univariate function specified through `ZeroProblem` or
+Solve for a zero of a scalar-valued univariate function specified through `ZeroProblem` or
 `ZeroProblemIterator` using the `CommonSolve` interface.
 
 The defaults for `M` and `N` depend on the `ZeroProblem`: if `x0` is a

@@ -29,20 +29,15 @@ find_zero((f, f', f'', f'''), big(x0), Roots.Thukral3B()) #  2 iterations; ≈ 8
 R. Thukral, JOURNAL OF ADVANCES IN MATHEMATICS 13(3):7230-7237, DOI: [10.24297/jam.v13i3.6146](https://doi.org/10.24297/jam.v13i3.6146).
 """
 abstract type AbstractThukralBMethod <: AbstractHalleyLikeMethod end
-initial_fncalls(M::AbstractThukralBMethod) = fn_argout(M)
-fn_argout(::AbstractThukralBMethod) = 1
 
-struct Thukral2B <: AbstractThukralBMethod end
-fn_argout(::Thukral2B) = 3
+struct ThukralB{N} <: AbstractThukralBMethod end
+const Thukral2B = ThukralB{2}
+const Thukral3B = ThukralB{3}
+const Thukral4B = ThukralB{4}
+const Thukral5B = ThukralB{5}
 
-struct Thukral3B <: AbstractThukralBMethod end
-fn_argout(::Thukral3B) = 4
-
-struct Thukral4B <: AbstractThukralBMethod end
-fn_argout(::Thukral4B) = 5
-
-struct Thukral5B <: AbstractThukralBMethod end
-fn_argout(::Thukral5B) = 6
+initial_fncalls(::ThukralB{N}) where {N} =  N
+fn_argout(::ThukralB{N}) where N = N + 1
 
 struct ThukralBState{N,T,S} <: AbstractUnivariateZeroState{T,S}
     xn1::T
@@ -52,31 +47,34 @@ struct ThukralBState{N,T,S} <: AbstractUnivariateZeroState{T,S}
     fxn0::S
 end
 
-function init_state(M::AbstractThukralBMethod, F::Callable_Function, x)
+function init_state(M::ThukralB{N}, F::Callable_Function, x) where N
     x₁ = float(first(x))
     fx₁, Δs = F(x₁)
-    state = init_state(M, F, nan(x₁), x₁, nan(fx₁), fx₁; Δs=Δs)
+    S = eltype(fx₁)
+    state = init_state(M, F, nan(x₁), x₁, nan(fx₁), fx₁; Δs = ntuple(i -> S(Δs[i]), Val(N)))
 end
 
 function init_state(
-    M::AbstractThukralBMethod,
+    M::ThukralB{N},
     F,
     x₀::T,
     x₁::T,
     fx₀::S,
     fx₁::S;
-    Δs=NTuple{0,S}(),
-) where {T,S}
-    ThukralBState(promote(x₁, x₀)..., NTuple{fn_argout(M) - 1,T}(Δs), promote(fx₁, fx₀)...)
+    Δs=NTuple{N,S}(),
+) where {T,S,N}
+    x1, x0 = promote(x₁, x₀)
+    fx1, fx0 = promote(fx₁, fx₀)
+    ThukralBState(x1, x0, Δs, fx1, fx0)
 end
 
 function update_state(
-    M::AbstractThukralBMethod,
+    M::ThukralB{N},
     F,
     o::AbstractUnivariateZeroState{T,S},
     options,
     l=NullTracks(),
-) where {T,S}
+) where {T,S,N}
     x₀ = o.xn1
 
     Δ = compute_thukral_Δ(M, o)
@@ -88,14 +86,14 @@ function update_state(
 
     @reset o.xn0 = x₀
     @reset o.fxn0 = o.fxn1
-    @reset o.Δs = NTuple{fn_argout(M) - 1,T}(Δs)
+    @reset o.Δs = ntuple(i -> T(Δs[i]), Val(N))
     @reset o.xn1 = x₁
     @reset o.fxn1 = fx₁
 
     return (o, false)
 end
 
-function compute_thukral_Δ(M::Thukral2B, o)
+function compute_thukral_Δ(M::ThukralB{2}, o)
     r₁, r₂ = o.Δs
     t₁, t₂ = 1 / r₁, 1 / r₂
     Δ = one(o.xn1)
@@ -103,7 +101,7 @@ function compute_thukral_Δ(M::Thukral2B, o)
     Δ
 end
 
-function compute_thukral_Δ(M::Thukral3B, o)
+function compute_thukral_Δ(M::ThukralB{3}, o)
     r₁, r₂, r₃ = o.Δs
     t₁, t₂, t₃ = 1 / r₁, 1 / r₂, 1 / r₃
     Δ = (2t₁ - 2t₂)
@@ -111,7 +109,7 @@ function compute_thukral_Δ(M::Thukral3B, o)
     Δ
 end
 
-function compute_thukral_Δ(M::Thukral4B, o)
+function compute_thukral_Δ(M::ThukralB{4}, o)
     r₁, r₂, r₃, r₄ = o.Δs
     t₁, t₂, t₃, t₄ = 1 / r₁, 1 / r₂, 1 / r₃, 1 / r₄
     Δ = 6t₁^2 - 9t₁ * t₂ + 3t₂ * t₃
@@ -119,7 +117,7 @@ function compute_thukral_Δ(M::Thukral4B, o)
     Δ
 end
 
-function compute_thukral_Δ(M::Thukral5B, o)
+function compute_thukral_Δ(M::ThukralB{5}, o)
     r₁, r₂, r₃, r₄, r₅ = o.Δs
     t₁, t₂, t₃, t₄, t₅ = 1 / r₁, 1 / r₂, 1 / r₃, 1 / r₄, 1 / r₅
     Δ = 24 * t₁^3 - 48t₁^2 * t₂ + 16 * t₁ * t₂ * t₃ - 4 * t₂ * t₃ * t₄ + 12t₁ * t₂^2
