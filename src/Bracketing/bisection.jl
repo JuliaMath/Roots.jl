@@ -121,23 +121,35 @@ end
 ## Alternative "mean" definition that operates on the binary representation
 ## of a float. Using this definition, bisection will never take more than
 ## 64 steps (over Float64)
-__middle(x::Float64, y::Float64) = __middle(Float64, UInt64, x, y)
-__middle(x::Float32, y::Float32) = __middle(Float32, UInt32, x, y)
-__middle(x::Float16, y::Float16) = __middle(Float16, UInt16, x, y)
+
 ## fallback for non FloatNN number types
 __middle(x::Number, y::Number) = x / 2 + y / 2
 
-function __middle(T, S, x, y)
-    # Use the usual float rules for combining non-finite numbers
-    # do division over unsigned integers with bit shift
+# Use the usual float rules for combining non-finite numbers
+# do division over unsigned integers with bit shift
+# then reinterpret in original floating point
+# repeat as we were getting flagged by JET using a union
+function __middle(x::Float64, y::Float64)
+    S = UInt64
     xint = reinterpret(S, abs(x))
     yint = reinterpret(S, abs(y))
     mid = (xint + yint) >> 1
-
-    # reinterpret in original floating point
-    sign(x + y) * reinterpret(T, mid)
+    sign(x + y) * reinterpret(Float64, mid)
 end
-
+function __middle(x::Float32, y::Float32)
+    S = UInt32
+    xint = reinterpret(S, abs(x))
+    yint = reinterpret(S, abs(y))
+    mid = (xint + yint) >> 1
+    sign(x + y) * reinterpret(Float32, mid)
+end
+function __middle(x::Float16, y::Float16)
+    S = UInt16
+    xint = reinterpret(S, abs(x))
+    yint = reinterpret(S, abs(y))
+    mid = (xint + yint) >> 1
+    sign(x + y) * reinterpret(Float16, mid)
+end
 ## --------------------------------------------------
 
 function update_state(

@@ -138,7 +138,8 @@ function evalf(
 ) where {N,S<:Val{N},T<:Val{true},𝑭,P<:Nothing}
     fi = map(f -> f(x), F.f) #recommended on Slack to not allocate
     R = typeof(float(first(fi)))
-    convert(NTuple{N,R}, fi)
+    return ntuple(i -> R(fi[i]), Val(N))
+    #convert(NTuple{N,R}, fi)
 end
 
 function evalf(F::Callable_Function{S,T,𝑭,P}, x) where {N,S<:Val{N},T<:Val{true},𝑭,P}
@@ -953,6 +954,8 @@ function lmm_coefficients(::LithBoonkkampIJzerman{3,1}, xs, fs)
 
     return (a0, a1, a2), (b0, b1, b2)
 end
+
+# 4,1??
 
 function lmm_coefficients(::LithBoonkkampIJzerman{S,1}, xs, fs) where {S}
     error("not computed")

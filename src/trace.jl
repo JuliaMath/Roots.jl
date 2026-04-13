@@ -49,15 +49,15 @@ Results of univariate zero finding:
 * stopped as |f(x_n)| ≤ max(δ, |x|⋅ϵ) using δ = atol, ϵ = rtol
 
 Trace:
-x₁ =  0                   fx₁ = -2
-x₂ =  2                   fx₂ =  2
-x₃ =  1                   fx₃ = -1
-x₄ =  1.3333333333333333  fx₄ = -0.22222222222222232
-x₅ =  1.4285714285714286  fx₅ =  0.04081632653061229
-x₆ =  1.4137931034482758  fx₆ = -0.0011890606420930094
-x₇ =  1.4142114384748701  fx₇ = -6.0072868388605372e-06
-x₈ =  1.4142135626888697  fx₈ =  8.9314555751229818e-10
-x₉ =  1.4142135623730947  fx₉ = -8.8817841970012523e-16
+x₁ =  0                   	 fx₁ = -2
+x₂ =  2                   	 fx₂ =  2
+x₃ =  1                   	 fx₃ = -1
+x₄ =  1.3333333333333333  	 fx₄ = -0.22222222222222232
+x₅ =  1.4285714285714286  	 fx₅ =  0.04081632653061229
+x₆ =  1.4137931034482758  	 fx₆ = -0.0011890606420930094
+x₇ =  1.4142114384748701  	 fx₇ = -6.0072868388605372e-06
+x₈ =  1.4142135626888697  	 fx₈ =  8.9314555751229818e-10
+x₉ =  1.4142135623730947  	 fx₉ = -8.8817841970012523e-16
 
 julia> tracker = Roots.Tracks()
 Algorithm has not been run
@@ -167,11 +167,17 @@ end
 
 log_fncall(l::Tracks, i=1) = (l.fncalls += i; nothing)
 log_iteration(l::Tracks, n=1) = (l.steps += n; nothing)
-log_message(l::Tracks, msg) = (l.message *= msg; nothing)
+function log_message(l::Tracks, msg)
+    cur = l.message
+    l.message = join(cur, msg)
+    nothing
+end
+
 log_convergence(l::Tracks, msg) = (l.convergence_flag=msg; nothing)
 log_last(l::Tracks, α) = (l.alpha=α; nothing)
 log_method(l::Tracks, method) = (l.method=method; nothing)
 log_nmethod(l::Tracks, method) = (l.nmethod=method; nothing)
+
 
 # reset tracker
 Base.empty!(l::NullTracks) = nothing
@@ -226,41 +232,23 @@ function show_trace(io::IO, M, N, tracks)
     println(io, "Trace:")
     show_tracks(io, tracks, M)
     !isnothing(N) && show_tracks(io, tracks, N)
+
 end
 
+# XXX of @printf here triggers a possible error flag with JET.
 function show_tracks(io::IO, s::Tracks, M::AbstractUnivariateZeroMethod)
     # show (x,f(x))
     𝑀 = nameof(typeof(M))
     ind, xf =  get(s.h, 𝑀)
     for (i, (xi, fxi)) ∈ zip(ind, xf)
-        println(
-            io,
-            if !(isa(xi, Complex) || isa(fxi, Complex))
-            @sprintf(
-                "%s%s = % -20.17g %s%s = % -20.17g",
-                "x",
-                sprint(io -> unicode_subscript(io, i)),
-                float(xi),
-                "fx",
-                sprint(io -> unicode_subscript(io, i)),
-                float(fxi)
-            )
-            else
-            # support for complex values
-            # Issue 336.  XXX can improve this output XXX
-            @sprintf(
-                "%s%s = (% -20.17g, % -20.17g),\t %s%s = (% -20.17g, % -20.17g)",
-                "x",
-                sprint(io -> Roots.unicode_subscript(io, i)),
-                real(xi),
-                imag(xi),
-                "fx",
-                sprint(io -> Roots.unicode_subscript(io, i)),
-                real(fxi),
-                imag(fxi)
-            )
-            end
-        )
+        𝑖 = sprint(io -> unicode_subscript(io, i))
+        if !(isa(xi, Complex) || isa(fxi, Complex))
+            @printf(io,  "%s%s = % -20.17g \t %s%s = % -20.17g\n",
+                    "x", 𝑖, float(xi), "fx", 𝑖, float(fxi))
+        else
+            @printf(io, "%s%s = (% -20.17g, % -20.17g),\t %s%s = (% -20.17g, % -20.17g)\n",
+                    "x", 𝑖, real(xi), imag(xi), "fx", 𝑖, real(fxi), imag(fxi))
+        end
     end
 end
 
@@ -273,23 +261,11 @@ function show_tracks(io::IO, s::Tracks, M::AbstractBracketingMethod)
     ind, ab =  get(s.h, 𝑀)
 
     for (i, (a, b)) in zip(ind, ab)
-        j = i₀ + 1 + i
-
-        println(
-            io,
-            @sprintf(
-                "(%s%s, %s%s) = ( % -20.17g, % -20.17g )",
-                "a",
-                sprint(io -> unicode_subscript(io, j - 1)),
-                "b",
-                sprint(io -> unicode_subscript(io, j - 1)),
-                a,
-                b
-            )
-        )
-
+        j = i₀ + i
+        𝑗 = sprint(io -> unicode_subscript(io, j))
+        @printf(io, "(%s%s, %s%s) = ( % -20.17g, % -20.17g )\n",
+                "a", 𝑗, "b", 𝑗, a, b)
     end
-    println(io, "")
 end
 
 

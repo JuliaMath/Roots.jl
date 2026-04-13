@@ -12,7 +12,7 @@ function _fz(f, a, b, no_pts, k=4)
     zs
 end
 
-function _fz!(zs, f, a::T, b, no_pts, k=4) where {T}
+function _fz!(zs, f, a::T, b, no_pts, k::Int=4) where {T}
     pts = range(a, stop=b, length=(no_pts - 1) * k + 1)
     n::Int = length(pts)
 
