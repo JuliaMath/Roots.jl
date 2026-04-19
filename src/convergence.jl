@@ -13,10 +13,11 @@ struct UnivariateZeroOptions{Q,R,S,T} <: AbstractUnivariateZeroOptions
     exact::Symbol
 end
 
-
-function init_options(M::AbstractUnivariateZeroMethod,
-                      state::AbstractUnivariateZeroState{T,S};
-                      kwargs...) where {T,S}
+function init_options(
+    M::AbstractUnivariateZeroMethod,
+    state::AbstractUnivariateZeroState{T,S};
+    kwargs...,
+) where {T,S}
     d = kwargs
     defs = default_tolerances(M, state)
     δₐ = get(d, :xatol, get(d, :xabstol, defs[1]))
@@ -50,7 +51,7 @@ The number of iterations is limited by `maxiters=40`.
 """
 function default_tolerances(
     ::AbstractUnivariateZeroMethod,
-    ::AbstractUnivariateZeroState{T, S}
+    ::AbstractUnivariateZeroState{T,S},
 ) where {T,S}
     xatol = eps(real(T)) * oneunit(real(T))
     xrtol = eps(real(T))  # unitless
@@ -129,7 +130,7 @@ end
 function iszero_Δx(
     ::AbstractUnivariateZeroMethod,
     state::AbstractUnivariateZeroState,
-    options
+    options,
 )
     a, b, fa, fb = state.xn0, state.xn1, state.fxn0, state.fxn1
     δₐ, δᵣ = options.xabstol, options.xreltol
@@ -154,7 +155,7 @@ end
 function iszero_Δx_fexact(
     ::AbstractBracketingMethod,
     state::AbstractUnivariateZeroState,
-    options
+    options,
 )
     a, b, fa, fb = state.xn0, state.xn1, state.fxn0, state.fxn1
     u, fu = choose_smallest(a, b, fa, fb)
@@ -163,9 +164,11 @@ function iszero_Δx_fexact(
     abs(b - a) ≤ δₓ
 end
 
-function iszero_Δx_exact(M::AbstractBracketingMethod,
-                         state::AbstractUnivariateZeroState{T,S},
-                         options) where {T, S}
+function iszero_Δx_exact(
+    M::AbstractBracketingMethod,
+    state::AbstractUnivariateZeroState{T,S},
+    options,
+) where {T,S}
     if T ∈ (Float16, Float32, Float64)
         iszero_Δx_xexact(M, state, options)
     else
@@ -177,7 +180,7 @@ end
 function is_small_Δx(
     M::AbstractUnivariateZeroMethod,
     state::AbstractUnivariateZeroState,
-    options
+    options,
 )
     δ = _unitless(abs(state.xn1 - state.xn0))
     δₐ, δᵣ = options.xabstol, options.xreltol
@@ -244,18 +247,18 @@ end
 function assess_convergence(
     M::AbstractBracketingMethod,
     state::AbstractUnivariateZeroState,
-    options
+    options,
 )
     if options.exact == :xexact || options.exact == :exact
         # return convergence_flag, boolean
         # no check if f == ∞
-        is_exact_zero_f(M, state, options)  && return (:exact_zero, true)
-        isnan_f(M, state)                   && return (:nan, true)
+        is_exact_zero_f(M, state, options) && return (:exact_zero, true)
+        isnan_f(M, state) && return (:nan, true)
         is_approx_zero_f(M, state, options) && return (:f_converged, true)
-        iszero_Δx_exact(M, state, options)  && return (:x_converged, true)
+        iszero_Δx_exact(M, state, options) && return (:x_converged, true)
     elseif options.exact == :fexact
-        is_exact_zero_f(M, state, options)  && return (:exact_zero, true)
-        isnan_f(M, state)                   && return (:nan, true)
+        is_exact_zero_f(M, state, options) && return (:exact_zero, true)
+        isnan_f(M, state) && return (:nan, true)
         iszero_Δx_fexact(M, state, options) && return (:x_converged, true)
     else
         return _assess_convergence(M, state, options)
@@ -263,7 +266,6 @@ function assess_convergence(
 
     return (:not_converged, false)
 end
-
 
 #=
 """
@@ -311,7 +313,7 @@ function decide_convergence(
     if options.strict || fexact
         val == :x_converged && return xn1
         !fexact && is_approx_zero_f(M, state, options) && return xn1
-        fexact  && is_exact_zero_f(M, state, options) && return xn1
+        fexact && is_exact_zero_f(M, state, options) && return xn1
     else
         if val == :x_converged
             # The :xexact case isn't always spelled out in the type, so

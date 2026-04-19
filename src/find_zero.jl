@@ -214,14 +214,7 @@ function find_zero(
     tracks::AbstractTracks=NullTracks(),
     kwargs...,
 )
-
-    xstar = solve(
-        ZeroProblem(f, x0),
-        M,
-        p′ === nothing ? p : p′;
-        tracks=tracks,
-        kwargs...,
-    )
+    xstar = solve(ZeroProblem(f, x0), M, p′ === nothing ? p : p′; tracks=tracks, kwargs...)
 
     isnan(xstar) && throw(ConvergenceFailed("Algorithm failed to converge"))
 
@@ -296,7 +289,6 @@ function init(
     tracks=NullTracks(),
     kwargs...,
 )
-
     F = Callable_Function(M, 𝑭𝑿.F, something(p′, p, missing))
     state = init_state(M, F, 𝑭𝑿.x₀)
     options = init_options(M, state; kwargs...)
@@ -474,16 +466,11 @@ Disptaches to `solve!(init(fx, args...; kwargs...))`. See [`solve!`](@ref) for d
 """
 function solve(𝑭𝑿::ZeroProblem, args...; kwargs...)
     Z = init(𝑭𝑿, args...; kwargs...)
-    solve!(Z; )
+    solve!(Z;)
 end
 
 # avoid splatting (issue #323, caused allocations)
-function solve(
-    𝑭𝑿::ZeroProblem,
-    M::AbstractUnivariateZeroMethod,
-    p′=nothing;
-    kwargs...,
-)
+function solve(𝑭𝑿::ZeroProblem, M::AbstractUnivariateZeroMethod, p′=nothing; kwargs...)
     Z = init(𝑭𝑿, M, p′; kwargs...)
     solve!(Z)
 end

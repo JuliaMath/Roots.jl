@@ -35,7 +35,10 @@ FalsePosition
 FalsePosition(x=:anderson_bjork) = FalsePosition{x}()
 
 # 12 is tough; needs more evaluations
-function default_tolerances(::FalsePosition{12}, ::AbstractUnivariateZeroState{T, S}) where {T,S}
+function default_tolerances(
+    ::FalsePosition{12},
+    ::AbstractUnivariateZeroState{T,S},
+) where {T,S}
     xatol = eps(real(T)) * oneunit(real(T))
     xrtol = eps(real(T))  # unitless
     atol = 4 * eps(real(float(S))) * oneunit(real(S))
@@ -86,7 +89,7 @@ galdino = Dict{Union{Int,Symbol},Function}(
     :2 => (fa, fb, fx) -> (fa - fb) / 2,
     :3 => (fa, fb, fx) -> (fa - fx) / (2 + fx / fb),
     :4 => (fa, fb, fx) -> (fa - fx) / (1 + fx / fb)^2,
-    :5 => (fa, fb, fx) -> (fa - fx) / (3*one(fa)/2  + fx / fb)^2,
+    :5 => (fa, fb, fx) -> (fa - fx) / (3*one(fa)/2 + fx / fb)^2,
     :6 => (fa, fb, fx) -> (fa - fx) / (2 + fx / fb)^2,
     :7 => (fa, fb, fx) -> (fa + fx) / (2 + fx / fb)^2,
     :8 => (fa, fb, fx) -> fa / 2,

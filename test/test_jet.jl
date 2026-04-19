@@ -2,7 +2,6 @@ using Test
 using JET
 using Printf
 
-
 @testset "JET: test package" begin
     JET.test_package(Roots, ignored_modules=(AnyFrameModule(Printf),))
 end
@@ -13,8 +12,8 @@ f(x) = x^2 - 2
 df(x) = 2x
 ddf(x) = 2
 dddf(x) = 0
-F = (f, df, ddf,dddf)
-a, b = 1,2
+F = (f, df, ddf, dddf)
+a, b = 1, 2
 
 @testset "JET: derivative free" begin
     derivative_free = [
@@ -37,15 +36,15 @@ a, b = 1,2
         Roots.LithBoonkkampIJzerman(4, 0),
         Roots.LithBoonkkampIJzerman(5, 0),
         Roots.Sidi(2),
-        Roots.Sidi(3)
+        Roots.Sidi(3),
     ]
 
-    for T ∈ Ts
-        for M ∈ derivative_free
+    for T in Ts
+        for M in derivative_free
             JET.@test_opt find_zero(f, T(a), M)
             JET.@test_call find_zero(f, T(a), M)
-            JET.@test_opt find_zero(f, T(a), M; atol=.0001)
-            JET.@test_call find_zero(f, T(a), M; atol=.0001)
+            JET.@test_opt find_zero(f, T(a), M; atol=0.0001)
+            JET.@test_call find_zero(f, T(a), M; atol=0.0001)
             JET.@test_opt solve(ZeroProblem(f, T(a)), M)
             JET.@test_call solve(ZeroProblem(f, T(a)), M)
             JET.@test_opt solve(ZeroProblem(f, T(a)), M; atol=0.001)
@@ -54,9 +53,8 @@ a, b = 1,2
     end
 end
 
-
 @testset "JET: bracketing" begin
-    bracketing =  [
+    bracketing = [
         Roots.A42(),
         Roots.AlefeldPotraShi(),
         Roots.Bisection(),
@@ -67,22 +65,21 @@ end
         Roots.Ridders(),
     ]
 
-    for T ∈ Ts
-        for M ∈ bracketing
-            if  (T == BigFloat && M == Roots.ModAB()) ||
-                (T == BigFloat && M == Roots.ITP())
+    for T in Ts
+        for M in bracketing
+            if (T == BigFloat && M == Roots.ModAB()) || (T == BigFloat && M == Roots.ITP())
                 # log2 issues with _opt
                 JET.@test_call find_zero(f, (T(a), T(b)), M)
-                JET.@test_call find_zero(f, (T(a), T(b)), M; atol=.0001)
+                JET.@test_call find_zero(f, (T(a), T(b)), M; atol=0.0001)
                 JET.@test_call solve(ZeroProblem(f, (T(a), T(b))), M)
                 JET.@test_call solve(ZeroProblem(F, (T(a), T(b))), M; atol=0.001)
             else
                 JET.@test_opt find_zero(f, (T(a), T(b)), M)
-                JET.@test_opt find_zero(f, (T(a), T(b)), M; atol=.0001)
+                JET.@test_opt find_zero(f, (T(a), T(b)), M; atol=0.0001)
                 JET.@test_opt solve(ZeroProblem(f, (T(a), T(b))), M)
                 JET.@test_opt solve(ZeroProblem(F, (T(a), T(b))), M; atol=0.001)
                 JET.@test_call find_zero(f, (T(a), T(b)), M)
-                JET.@test_call find_zero(f, (T(a), T(b)), M; atol=.0001)
+                JET.@test_call find_zero(f, (T(a), T(b)), M; atol=0.0001)
                 JET.@test_call solve(ZeroProblem(f, (T(a), T(b))), M)
                 JET.@test_call solve(ZeroProblem(F, (T(a), T(b))), M; atol=0.001)
             end
@@ -91,18 +88,18 @@ end
 end
 
 @testset "JET: FalsePosition" begin
-    for T ∈ Ts
-        for i ∈ 1:12
+    for T in Ts
+        for i in 1:12
             M = FalsePosition(i)
             JET.@test_opt find_zero(f, (T(a), T(b)), M)
-            JET.@test_opt find_zero(f, (T(a), T(b)), M; atol=.0001)
+            JET.@test_opt find_zero(f, (T(a), T(b)), M; atol=0.0001)
             JET.@test_opt solve(ZeroProblem(f, (T(a), T(b))), M)
             JET.@test_opt solve(ZeroProblem(F, (T(a), T(b))), M; atol=0.001)
             JET.@test_call find_zero(f, (T(a), T(b)), M)
-            JET.@test_call find_zero(f, (T(a), T(b)), M; atol=.0001)
+            JET.@test_call find_zero(f, (T(a), T(b)), M; atol=0.0001)
             JET.@test_call solve(ZeroProblem(f, (T(a), T(b))), M)
             JET.@test_call solve(ZeroProblem(F, (T(a), T(b))), M; atol=0.001)
-            end
+        end
     end
 end
 
@@ -127,17 +124,16 @@ end
         Roots.LithBoonkkampIJzerman(2, 3),
     ]
 
-    for T ∈ Ts
-        for M ∈ derivative
+    for T in Ts
+        for M in derivative
             JET.@test_opt find_zero(F, T(a), M)
-            JET.@test_opt find_zero(F, T(a), M; atol=.0001)
+            JET.@test_opt find_zero(F, T(a), M; atol=0.0001)
             JET.@test_opt solve(ZeroProblem(F, T(a)), M)
             JET.@test_opt solve(ZeroProblem(F, T(a)), M; atol=0.001)
             JET.@test_call find_zero(F, T(a), M)
-            JET.@test_call find_zero(F, T(a), M; atol=.0001)
+            JET.@test_call find_zero(F, T(a), M; atol=0.0001)
             JET.@test_call solve(ZeroProblem(F, T(a)), M)
             JET.@test_call solve(ZeroProblem(F, T(a)), M; atol=0.001)
-
         end
     end
 end
