@@ -602,7 +602,7 @@ end
     find_zero(sin, 3.0, Roots.Sidi(1); tracks=Lsidi)
     find_zero(sin, 3.0, Roots.Secant(); tracks=Lsec)
     𝐿₁, 𝐿₂ = nameof(typeof(Roots.Sidi(1))), nameof(typeof(Roots.Secant()))
-    _,xfs₁ = get(Lsidi.h, 𝐿₁)
-    _,xfs₂ = get(Lsec.h, 𝐿₂)
+    _, xfs₁ = get(Lsidi.h, 𝐿₁)
+    _, xfs₂ = get(Lsec.h, 𝐿₂)
     @test xfs₁[3:end] == xfs₂[3:end] # drop x₀x₁ ordering
 end

@@ -4,7 +4,6 @@
 ## when no logging this should get optimized out
 ## when logging, this allocates
 
-
 abstract type AbstractTracks end
 
 """
@@ -102,7 +101,7 @@ end
 # mimic MVHistory from ValueHistories
 # we only need a fraction of the feature set and avoid dependencies
 struct MVHistory
-    d::Dict{Symbol, Any}
+    d::Dict{Symbol,Any}
 end
 
 function MVHistory()
@@ -123,15 +122,7 @@ end
 Base.get(h::MVHistory, k::Symbol) = h.d[k]
 Base.length(h::MVHistory, k::Symbol) = length(first(h.d[k]))
 
-Tracks() = Tracks(MVHistory(),
-                  0,
-                  0,
-                  :algorithm_not_run,
-                  "",
-                  NaN,
-                  nothing,
-                  nothing
-                  )
+Tracks() = Tracks(MVHistory(), 0, 0, :algorithm_not_run, "", NaN, nothing, nothing)
 
 # default for no logging
 struct NullTracks <: AbstractTracks end
@@ -177,7 +168,6 @@ log_convergence(l::Tracks, msg) = (l.convergence_flag=msg; nothing)
 log_last(l::Tracks, α) = (l.alpha=α; nothing)
 log_method(l::Tracks, method) = (l.method=method; nothing)
 log_nmethod(l::Tracks, method) = (l.nmethod=method; nothing)
-
 
 # reset tracker
 Base.empty!(l::NullTracks) = nothing
@@ -232,22 +222,39 @@ function show_trace(io::IO, M, N, tracks)
     println(io, "Trace:")
     show_tracks(io, tracks, M)
     !isnothing(N) && show_tracks(io, tracks, N)
-
 end
 
 # XXX of @printf here triggers a possible error flag with JET.
 function show_tracks(io::IO, s::Tracks, M::AbstractUnivariateZeroMethod)
     # show (x,f(x))
     𝑀 = nameof(typeof(M))
-    ind, xf =  get(s.h, 𝑀)
-    for (i, (xi, fxi)) ∈ zip(ind, xf)
+    ind, xf = get(s.h, 𝑀)
+    for (i, (xi, fxi)) in zip(ind, xf)
         𝑖 = sprint(io -> unicode_subscript(io, i))
         if !(isa(xi, Complex) || isa(fxi, Complex))
-            @printf(io,  "%s%s = % -20.17g \t %s%s = % -20.17g\n",
-                    "x", 𝑖, float(xi), "fx", 𝑖, float(fxi))
+            @printf(
+                io,
+                "%s%s = % -20.17g \t %s%s = % -20.17g\n",
+                "x",
+                𝑖,
+                float(xi),
+                "fx",
+                𝑖,
+                float(fxi)
+            )
         else
-            @printf(io, "%s%s = (% -20.17g, % -20.17g),\t %s%s = (% -20.17g, % -20.17g)\n",
-                    "x", 𝑖, real(xi), imag(xi), "fx", 𝑖, real(fxi), imag(fxi))
+            @printf(
+                io,
+                "%s%s = (% -20.17g, % -20.17g),\t %s%s = (% -20.17g, % -20.17g)\n",
+                "x",
+                𝑖,
+                real(xi),
+                imag(xi),
+                "fx",
+                𝑖,
+                real(fxi),
+                imag(fxi)
+            )
         end
     end
 end
@@ -258,19 +265,14 @@ function show_tracks(io::IO, s::Tracks, M::AbstractBracketingMethod)
     𝑀 = nameof(typeof(M))
     𝑁 = nameof(typeof(s.nmethod))
     i₀ = haskey(h.d, 𝑁) ? length(h, 𝑀) : 0
-    ind, ab =  get(s.h, 𝑀)
+    ind, ab = get(s.h, 𝑀)
 
     for (i, (a, b)) in zip(ind, ab)
         j = i₀ + i
         𝑗 = sprint(io -> unicode_subscript(io, j))
-        @printf(io, "(%s%s, %s%s) = ( % -20.17g, % -20.17g )\n",
-                "a", 𝑗, "b", 𝑗, a, b)
+        @printf(io, "(%s%s, %s%s) = ( % -20.17g, % -20.17g )\n", "a", 𝑗, "b", 𝑗, a, b)
     end
 end
-
-
-
-
 
 ## --- these could be deleted as methods ...
 #=

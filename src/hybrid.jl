@@ -25,9 +25,7 @@ end
 # * limit steps so as not too far or too near the previous one
 # * if not decreasing, use a quad step upto 4 times to bounce out of trap, if possible
 # First uses M, then N if bracket is identified
-function solve!(
-    𝐙::ZeroProblemIterator{𝐌,𝐍};
-) where {𝐌,𝐍<:AbstractBracketingMethod}
+function solve!(𝐙::ZeroProblemIterator{𝐌,𝐍};) where {𝐌,𝐍<:AbstractBracketingMethod}
     M, N, F, state, options, l = 𝐙.M, 𝐙.N, 𝐙.F, 𝐙.state, 𝐙.options, 𝐙.logger
 
     incfn(l, 2)

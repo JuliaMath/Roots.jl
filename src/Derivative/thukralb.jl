@@ -36,8 +36,8 @@ const Thukral3B = ThukralB{3}
 const Thukral4B = ThukralB{4}
 const Thukral5B = ThukralB{5}
 
-initial_fncalls(::ThukralB{N}) where {N} =  N
-fn_argout(::ThukralB{N}) where N = N + 1
+initial_fncalls(::ThukralB{N}) where {N} = N
+fn_argout(::ThukralB{N}) where {N} = N + 1
 
 struct ThukralBState{N,T,S} <: AbstractUnivariateZeroState{T,S}
     xn1::T
@@ -47,11 +47,11 @@ struct ThukralBState{N,T,S} <: AbstractUnivariateZeroState{T,S}
     fxn0::S
 end
 
-function init_state(M::ThukralB{N}, F::Callable_Function, x) where N
+function init_state(M::ThukralB{N}, F::Callable_Function, x) where {N}
     x₁ = float(first(x))
     fx₁, Δs = F(x₁)
     S = eltype(fx₁)
-    state = init_state(M, F, nan(x₁), x₁, nan(fx₁), fx₁; Δs = ntuple(i -> S(Δs[i]), Val(N)))
+    state = init_state(M, F, nan(x₁), x₁, nan(fx₁), fx₁; Δs=ntuple(i -> S(Δs[i]), Val(N)))
 end
 
 function init_state(
