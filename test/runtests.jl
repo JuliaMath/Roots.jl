@@ -23,20 +23,23 @@ avg(x) = sum(x) / length(x)
 include("./test_find_zero.jl")
 include("./test_bracketing.jl")
 include("./test_derivative_free.jl")
-include("./test_simple.jl")
 include("./test_find_zeros.jl")
-include("./test_fzero.jl")
 include("./test_newton.jl")
 include("./test_chain_rules.jl")
-include("./test_simple.jl")
 
 include("./test_composable.jl")
 VERSION >= v"1.6.0" && include("./test_allocations.jl")
 VERSION >= v"1.9.0" && include("./test_extensions.jl")
 VERSION >= v"1.12.0" && include("./test_jet.jl")
+@testset "Aqua" begin
+    Aqua.test_all(Roots)
+end
 
 #include("./runbenchmarks.jl")
 #include("./benchmark-bracketing-methods.jl")
 #include("./test_derivative_free_interactive.jl")
 
-Aqua.test_all(Roots)
+
+# deprecated
+include("./test_fzero.jl")
+include("./test_simple.jl")

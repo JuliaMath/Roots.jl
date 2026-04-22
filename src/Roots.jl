@@ -23,8 +23,6 @@ import CommonSolve
 import CommonSolve: solve, solve!, init
 using Accessors
 
-export fzero, fzeros, secant_method
-
 export find_zero,
     find_zeros,
     ZeroProblem,
@@ -80,11 +78,16 @@ include("Derivative/thukralb.jl")
 include("Derivative/lith.jl")
 
 include("find_zeros.jl")
-include("simple.jl")
-include("alternative_interfaces.jl")
 
 if !isdefined(Base, :get_extension)
     include("../ext/RootsChainRulesCoreExt.jl")
 end
+
+## ---- deprecated
+include("deprecated/simple.jl")
+export secant_method
+include("deprecated/alternative_interfaces.jl")
+export fzero, fzeros
+
 
 end

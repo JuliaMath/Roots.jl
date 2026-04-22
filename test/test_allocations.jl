@@ -102,11 +102,3 @@ import BenchmarkTools
         @test @inferred solve(ZeroProblem(sin, 3.0f0)) ≈ pi
     end
 end
-
-@testset "simple: zero allocations" begin
-    @test BenchmarkTools.@ballocated(Roots.bisection(sin, 3, 4)) == 0
-    @test BenchmarkTools.@ballocated(Roots.secant_method(sin, 3)) == 0
-    @test BenchmarkTools.@ballocated(Roots.muller(sin, 2.9, 3.0, 3.1)) == 0
-    @test BenchmarkTools.@ballocated(Roots.newton((sin, cos), 3)) == 0
-    @test BenchmarkTools.@ballocated(Roots.dfree(sin, 3)) == 0
-end
