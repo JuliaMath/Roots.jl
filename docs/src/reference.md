@@ -311,6 +311,7 @@ Roots.bisection
 Roots.muller
 Roots.newton
 Roots.dfree
+Roots.modab
 ```
 
 

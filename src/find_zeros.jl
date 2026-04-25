@@ -2,6 +2,215 @@
 
 # Algorithm due to @djsegal in https://github.com/JuliaMath/Roots.jl/pull/113
 
+## -----
+## Bisection
+##
+## Essentially from Jason Merrill https://gist.github.com/jwmerrill/9012954
+## cf. http://squishythinking.com/2014/02/22/bisecting-floats/
+## This also borrows a trick from https://discourse.julialang.org/t/simple-and-fast-bisection/14886
+## where we keep x1 so that y1 is negative, and x2 so that y2 is positive
+## this allows the use of signbit over y1*y2 < 0 which avoid < and a multiplication
+## this has a small, but noticeable impact on performance.
+"""
+    bisection(f, a, b; [xatol, xrtol])
+
+Performs bisection method to find a zero of a continuous
+function.
+
+It is assumed that `(a,b)` is a bracket, that is, the function has
+different signs at `a` and `b`. The interval `(a,b)` is converted to floating point
+and shrunk when `a` or `b` is infinite. The function `f` may be infinite for
+the typical case. If `f` is not continuous, the algorithm may find
+jumping points over the x axis, not just zeros.
+
+
+If non-trivial tolerances are specified, the process will terminate
+when the bracket `(a,b)` satisfies `isapprox(a, b, atol=xatol,
+rtol=xrtol)`. For zero tolerances, the default, for `Float64`, `Float32`,
+or `Float16` values, the process will terminate at a value `x` with
+`f(x)=0` or `f(x)*f(prevfloat(x)) < 0 ` or `f(x) * f(nextfloat(x)) <
+0`. For other number types, the `Roots.A42` method is used.
+
+"""
+function bisection(f, a::Number, b::Number; xatol=nothing, xrtol=nothing)
+    x1, x2 = adjust_bracket(float.((a, b)))
+    T = eltype(x1)
+
+    atol = xatol === nothing ? zero(T) : abs(xatol)
+    rtol = xrtol === nothing ? zero(one(T)) : abs(xrtol)
+    CT = iszero(atol) && iszero(rtol) ? Val(:exact) : Val(:inexact)
+
+    x1, x2 = float(x1), float(x2)
+    y1, y2 = f(x1), f(x2)
+
+    _unitless(y1 * y2) >= 0 && error("the interval provided does not bracket a root")
+
+    if isneg(y2)
+        x1, x2, y1, y2 = x2, x1, y2, y1
+    end
+
+    xm = Roots._middle(x1, x2) # for possibly mixed sign x1, x2
+    ym = f(xm)
+
+    while true
+        if has_converged(CT, x1, x2, xm, ym, atol, rtol)
+            return xm
+        end
+
+        if isneg(ym)
+            x1, y1 = xm, ym
+        else
+            x2, y2 = xm, ym
+        end
+
+        xm = Roots.__middle(x1, x2)
+        ym = f(xm)
+    end
+end
+
+# -0.0 not returned by __middle, so isneg true on [-Inf, 0.0)
+@inline isneg(x::T) where {T<:AbstractFloat} = signbit(x)
+@inline isneg(x) = _unitless(x) < 0
+
+@inline function has_converged(::Val{:exact}, x1, x2, m, ym, atol, rtol)
+    iszero(ym) && return true
+    isnan(ym) && return true
+    x1 != m && m != x2 && return false
+    return true
+end
+
+@inline function has_converged(::Val{:inexact}, x1, x2, m, ym, atol, rtol)
+    iszero(ym) && return true
+    isnan(ym) && return true
+    val = abs(x1 - x2) <= atol + max(abs(x1), abs(x2)) * rtol
+    return val
+end
+
+## ----
+## --------------------------------------------------
+
+## This is basically Order0(), but with different, default, tolerances employed
+## It takes more function calls, but works harder to find exact zeros
+## where exact means either iszero(fx), adjacent floats have sign change, or
+## abs(fxn) <= 8 eps(xn)
+"""
+    dfree(f, xs)
+
+A more robust secant method implementation
+
+Solve for `f(x) = 0` using an algorithm from *Personal Calculator Has Key
+to Solve Any Equation f(x) = 0*, the SOLVE button from the
+[HP-34C](http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1979-12.pdf).
+
+This is also implemented as the `Order0` method for `find_zero`.
+
+The initial values can be specified as a pair of two values, as in
+`(a,b)` or `[a,b]`, or as a single value, in which case a value of `b`
+is computed, possibly from `fb`.  The basic idea is to follow the
+secant method to convergence unless:
+
+* a bracket is found, in which case `AlefeldPotraShi` is used;
+
+* the secant method is not converging, in which case a few steps of a
+  quadratic method are used to see if that improves matters.
+
+Convergence occurs when `f(m) == 0`, there is a sign change between
+`m` and an adjacent floating point value, or `f(m) <= 2^3*eps(m)`.
+
+A value of `NaN` is returned if the algorithm takes too many steps
+before identifying a zero.
+
+# Examples
+
+```julia
+Roots.dfree(x -> x^5 - x - 1, 1.0)
+```
+
+"""
+function dfree(f, xs)
+    if length(xs) == 1
+        a = float(xs[1])
+        fa = f(a)
+
+        h = eps(one(a))^(1 / 3)
+        da = h * oneunit(a) + abs(a) * h^2 # adjust for if eps(a) > h
+        b = float(a + da)
+        fb = f(b)
+    else
+        a, b = promote(float(xs[1]), float(xs[2]))
+        fa, fb = f(a), f(b)
+    end
+
+    nan = (0 * a) / (0 * a) # try to preserve type
+    cnt, MAXCNT = 0, 5 * ceil(Int, -log(eps(one(a))))  # must be higher for BigFloat
+    MAXQUAD = 3
+
+    if abs(fa) > abs(fb)
+        a, fa, b, fb = b, fb, a, fa
+    end
+
+    # we keep a, b, fa, fb, gamma, fgamma
+    quad_ctr = 0
+    while !iszero(fb)
+        cnt += 1
+
+        if sign(fa) * sign(fb) < 0
+            return solve(ZeroProblem(f, (a, b))) # faster than bisection(f, a, b)
+        end
+
+        # take a secant step
+        gamma = float(b - (b - a) * fb / (fb - fa))
+        # modify if gamma is too small or too big
+        if iszero(abs(gamma - b))
+            gamma = b + 1 / 1000 * abs(b - a)  # too small
+        elseif abs(gamma - b) >= 100 * abs(b - a)
+            gamma = b + sign(gamma - b) * 100 * abs(b - a)  ## too big
+        end
+        fgamma = f(gamma)
+
+        # change sign
+        if sign(fgamma) * sign(fb) < 0
+            return solve(ZeroProblem(f, (gamma, b))) # faster than bisection(f, gamma, b)
+        end
+
+        # decreasing
+        if abs(fgamma) < abs(fb)
+            a, fa, b, fb = b, fb, gamma, fgamma
+            quad_ctr = 0
+            cnt < MAXCNT && continue
+        end
+
+        gamma = float(quad_vertex(a, fa, b, fb, gamma, fgamma))
+        fgamma = f(gamma)
+        # decreasing now?
+        if abs(fgamma) < abs(fb)
+            a, fa, b, fb = b, fb, gamma, fgamma
+            quad_ctr = 0
+            cnt < MAXCNT && continue
+        end
+
+        quad_ctr += 1
+        if (quad_ctr > MAXQUAD) || (cnt > MAXCNT) || iszero(gamma - b) || isnan(gamma)
+            bprev, bnext = prevfloat(b), nextfloat(b)
+            fbprev, fbnext = f(bprev), f(bnext)
+            sign(fb) * sign(fbprev) < 0 && return b
+            sign(fb) * sign(fbnext) < 0 && return b
+            for (u, fu) in ((b, fb), (bprev, fbprev), (bnext, fbnext))
+                abs(fu) / oneunit(fu) <= 2^3 * eps(u / oneunit(u)) && return u
+            end
+            return nan # Failed.
+        end
+
+        if abs(fgamma) < abs(fb)
+            b, fb, a, fa = gamma, fgamma, b, fb
+        else
+            a, fa = gamma, fgamma
+        end
+    end
+    b
+end
+
+
 # A naive approach to find zeros: split (a,b) by n points, look into each for a zero
 # * k is oversampling rate for bisection. (It is relatively cheap to check for a bracket so we
 #   oversample our intervals looking for brackets

@@ -10,88 +10,6 @@
 # `Roots.dfree(f, xs)`  (Order0) more robust secant method
 #
 
-## Bisection
-##
-## Essentially from Jason Merrill https://gist.github.com/jwmerrill/9012954
-## cf. http://squishythinking.com/2014/02/22/bisecting-floats/
-## This also borrows a trick from https://discourse.julialang.org/t/simple-and-fast-bisection/14886
-## where we keep x1 so that y1 is negative, and x2 so that y2 is positive
-## this allows the use of signbit over y1*y2 < 0 which avoid < and a multiplication
-## this has a small, but noticeable impact on performance.
-"""
-    bisection(f, a, b; [xatol, xrtol])
-
-Performs bisection method to find a zero of a continuous
-function.
-
-It is assumed that `(a,b)` is a bracket, that is, the function has
-different signs at `a` and `b`. The interval `(a,b)` is converted to floating point
-and shrunk when `a` or `b` is infinite. The function `f` may be infinite for
-the typical case. If `f` is not continuous, the algorithm may find
-jumping points over the x axis, not just zeros.
-
-
-If non-trivial tolerances are specified, the process will terminate
-when the bracket `(a,b)` satisfies `isapprox(a, b, atol=xatol,
-rtol=xrtol)`. For zero tolerances, the default, for `Float64`, `Float32`,
-or `Float16` values, the process will terminate at a value `x` with
-`f(x)=0` or `f(x)*f(prevfloat(x)) < 0 ` or `f(x) * f(nextfloat(x)) <
-0`. For other number types, the `Roots.A42` method is used.
-
-"""
-function bisection(f, a::Number, b::Number; xatol=nothing, xrtol=nothing)
-    x1, x2 = adjust_bracket(float.((a, b)))
-    T = eltype(x1)
-
-    atol = xatol === nothing ? zero(T) : abs(xatol)
-    rtol = xrtol === nothing ? zero(one(T)) : abs(xrtol)
-    CT = iszero(atol) && iszero(rtol) ? Val(:exact) : Val(:inexact)
-
-    x1, x2 = float(x1), float(x2)
-    y1, y2 = f(x1), f(x2)
-
-    _unitless(y1 * y2) >= 0 && error("the interval provided does not bracket a root")
-
-    if isneg(y2)
-        x1, x2, y1, y2 = x2, x1, y2, y1
-    end
-
-    xm = Roots._middle(x1, x2) # for possibly mixed sign x1, x2
-    ym = f(xm)
-
-    while true
-        if has_converged(CT, x1, x2, xm, ym, atol, rtol)
-            return xm
-        end
-
-        if isneg(ym)
-            x1, y1 = xm, ym
-        else
-            x2, y2 = xm, ym
-        end
-
-        xm = Roots.__middle(x1, x2)
-        ym = f(xm)
-    end
-end
-
-# -0.0 not returned by __middle, so isneg true on [-Inf, 0.0)
-@inline isneg(x::T) where {T<:AbstractFloat} = signbit(x)
-@inline isneg(x) = _unitless(x) < 0
-
-@inline function has_converged(::Val{:exact}, x1, x2, m, ym, atol, rtol)
-    iszero(ym) && return true
-    isnan(ym) && return true
-    x1 != m && m != x2 && return false
-    return true
-end
-
-@inline function has_converged(::Val{:inexact}, x1, x2, m, ym, atol, rtol)
-    iszero(ym) && return true
-    isnan(ym) && return true
-    val = abs(x1 - x2) <= atol + max(abs(x1), abs(x2)) * rtol
-    return val
-end
 
 #=
 """
@@ -107,6 +25,7 @@ Not exported
 """
 =#
 function a42(f, ab; atol=nothing, rtol=nothing, λ=0.7, μ=0.5)
+    #Base.depwarn("`a42(f, ab)` is deprecated; use `find_zero(f, ab, Roots.AlefeldPotraShi())` instead.", :a42)
     a, b = adjust_bracket(ab)
     δ₀ = b - a
     fa, fb = f(a), f(b)
@@ -182,6 +101,97 @@ function a42(f, ab; atol=nothing, rtol=nothing, λ=0.7, μ=0.5)
 end
 
 """
+    modab(f, left, right, args...; kwargs...)
+
+Implementation of "Modified Anderson-Bjork’s method for solving non-linear equations in structural mechanics" by N Ganchovski and A Traykov. Code contributed by @Proektsoft-EOOD in issue [#487](https://github.com/JuliaMath/Roots.jl/issues/487)
+
+This is a modified Anderson-Bjork bracketing algorithm which takes the least number of iterations over a wide-ranging test suite.
+"""
+function modab(f, left::Real, right::Real, target::Real=0.0; precision::Float64=1e-14, maxIter::Int=200)
+    #Base.depwarn("`modab(f, left, right)` is deprecated; use `find_zero(f, (left, right), Roots.ModAB())` instead.", :a42)
+    x1, x2 = min(left, right), max(left, right)
+    y1 = f(x1) - target
+    abs(y1) <= precision && return x1
+    y2 = f(x2) - target
+    abs(y2) <= precision && return x2
+    eps1 = precision * 1e-3
+    eps2 = precision * (x2 - x1)
+    if abs(target) >= 1
+        eps1 *= abs(target)
+    else
+        eps1 = 0
+    end
+    side = 0
+    bisection = true
+    C = 16 # safety factor for threshold corresponding to 4 iterations = 2^4
+    threshold = x2 - x1  # Threshold to fall back to bisection if AB fails to shrink the interval enough
+    # calculate k on each bisection step with account for local function properties and symmetry
+    for i in 1:maxIter
+        local x3, y3
+        if bisection
+            x3 = (x1 + x2) / 2
+            y3 = f(x3) - target  # Function value at midpoint
+            ym = (y1 + y2) / 2 # Ordinate of chord at midpoint
+            r = 1 - abs(ym / (y2 - y1)) # Symmetry factor
+            k = r * r # Deviation factor
+            # Check if the function is close enough to linear
+            if abs(ym - y3) < k * (abs(y3) + abs(ym))
+                bisection = false
+                threshold = (x2 - x1) * C
+            end
+        else
+            x3 = (x1 * y2 - y1 * x2) / (y2 - y1)
+            if x3 <= x1
+                x3 = x1
+                y3 = y1
+            elseif x3 >= x2
+                x3 = x2
+                y3 = y2
+            else
+                y3 = f(x3) - target
+            end
+            threshold /= 2
+        end
+
+        if abs(y3) <= eps1 || abs(x2 - x1) <= eps2 # Convergence check
+            return x3
+        end
+
+        if sign(y1) == sign(y3)
+            if side == 1
+                m = 1 - y3 / y1
+                if m <= 0
+                    y2 /= 2
+                else
+                    y2 *= m
+                end
+            elseif !bisection
+                side = 1
+            end
+            x1, y1 = x3, y3
+        else
+            if side == -1
+                m = 1 - y3 / y2
+                if m <= 0
+                    y1 /= 2
+                else
+                    y1 *= m
+                end
+            elseif !bisection
+                side = -1
+            end
+            x2, y2 = x3, y3
+        end
+        if x2 - x1 > threshold # in case AB failed to shrink the interval enough
+            bisection = true
+            side = 0
+        end
+    end
+    return NaN
+end
+
+## --- non bracketing
+"""
     secant_method(f, xs; [atol=0.0, rtol=8eps(), maxevals=1000])
 
 Perform secant method to solve `f(x) = 0.`
@@ -224,6 +234,7 @@ function secant_method(
     rtol=8eps(one(float(real(first(xs))))),
     maxevals=100,
 )
+    #Base.depwarn("`secant_method(f, xs)` is deprecated; use `find_zero(f, xs, Secant())` instead.", :secant_method)
     if length(xs) == 1 # secant needs x0, x1; only x0 given
         a = float(xs[1])
 
@@ -238,6 +249,7 @@ function secant_method(
 end
 
 function secant(f, a::T, b::T, atol=zero(T), rtol=8eps(T), maxevals=100) where {T}
+    #Base.depwarn("`secant(f, a, b)` is deprecated; use `find_zero(f, (a,b), Secant())` instead.", :secant)
     nan = (0a) / (0a)
     cnt = 0
 
@@ -314,6 +326,7 @@ function muller(
     xrtol=nothing,
     maxevals=300,
 ) where {T}
+    #Base.depwarn("`muller(f, x)` is deprecated; use `find_zero(f, x, Roots.Muller())` instead.", :muller)
     @assert old ≠ older ≠ oldest ≠ old # we want q to be non-degenerate
     xᵢ₋₂, xᵢ₋₁, xᵢ = oldest, older, old
     fxᵢ₋₂, fxᵢ₋₁ = f(xᵢ₋₂), f(xᵢ₋₁)
@@ -409,6 +422,7 @@ If the convergence fails, will return a `ConvergenceFailed` error.
 =#
 newton(f::Tuple, x0; kwargs...) = newton(TupleWrapper(f[1], f[2]), x0; kwargs...)
 function newton(f, x0; xatol=nothing, xrtol=nothing, maxevals=100)
+    #Base.depwarn("`newton(f, x0)` is deprecated; use `find_zero(f, x0, Roots.Newton())` instead.", :newton)
     x = float(x0)
     T = typeof(x)
     atol = xatol !== nothing ? xatol : oneunit(T) * (eps(one(T)))^(4 / 5)
@@ -430,126 +444,98 @@ function newton(f, x0; xatol=nothing, xrtol=nothing, maxevals=100)
 
     throw(ConvergenceFailed("No convergence"))
 end
+## newton, halley, quadratic_inverse, superhalley, chebyshevlike
+"""
+    Roots.newton(f, fp, x0; kwargs...)
+
+Implementation of Newton's method: `xᵢ₊₁ =  xᵢ - f(xᵢ)/f'(xᵢ)`.
+
+Arguments:
+
+* `f::Function` -- function to find zero of
+
+* `fp::Function` -- the derivative of `f`.
+
+* `x0::Number` -- initial guess. For Newton's method this may be complex.
+
+With the `ForwardDiff` package derivatives may be computed automatically. For example,  defining
+`D(f) = x -> ForwardDiff.derivative(f, float(x))` allows `D(f)` to be used for the first derivative.
+
+Keyword arguments are passed to `find_zero` using the `Roots.Newton()` method.
+
+See also `Roots.newton((f,fp), x0)` and `Roots.newton(fΔf, x0)` for simpler implementations.
+
+"""
+function newton(f, fp, x0; kwargs...)
+    #Base.depwarn("`newton(f,fp, x0)` is deprecated; use `find_zero((f,fp), x0, Roots.Newton())` instead.", :newton)
+    find_zero((f, fp), x0, Newton(); kwargs...)
+end
 
 ## --------------------------------------------------
-
-## This is basically Order0(), but with different, default, tolerances employed
-## It takes more function calls, but works harder to find exact zeros
-## where exact means either iszero(fx), adjacent floats have sign change, or
-## abs(fxn) <= 8 eps(xn)
+#=
 """
-    dfree(f, xs)
+    Roots.halley(f, fp, fpp, x0; kwargs...)
 
-A more robust secant method implementation
+Implementation of Halley's method (cf `?Roots.Halley()`).
 
-Solve for `f(x) = 0` using an algorithm from *Personal Calculator Has Key
-to Solve Any Equation f(x) = 0*, the SOLVE button from the
-[HP-34C](http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1979-12.pdf).
+Arguments:
 
-This is also implemented as the `Order0` method for `find_zero`.
+* `f::Function` -- function to find zero of
 
-The initial values can be specified as a pair of two values, as in
-`(a,b)` or `[a,b]`, or as a single value, in which case a value of `b`
-is computed, possibly from `fb`.  The basic idea is to follow the
-secant method to convergence unless:
+* `fp::Function` -- derivative of `f`.
 
-* a bracket is found, in which case `AlefeldPotraShi` is used;
+* `fpp:Function` -- second derivative of `f`.
 
-* the secant method is not converging, in which case a few steps of a
-  quadratic method are used to see if that improves matters.
+* `x0::Number` -- initial guess
 
-Convergence occurs when `f(m) == 0`, there is a sign change between
-`m` and an adjacent floating point value, or `f(m) <= 2^3*eps(m)`.
+With the `ForwardDiff` package derivatives may be computed automatically. For example,  defining
+`D(f) = x -> ForwardDiff.derivative(f, float(x))` allows `D(f)` and `D(D(f))` to be used for the first and second
+derivatives, respectively.
 
-A value of `NaN` is returned if the algorithm takes too many steps
-before identifying a zero.
-
-# Examples
-
-```julia
-Roots.dfree(x -> x^5 - x - 1, 1.0)
-```
+Keyword arguments are passed to `find_zero` using the `Roots.Halley()` method.
 
 """
-function dfree(f, xs)
-    if length(xs) == 1
-        a = float(xs[1])
-        fa = f(a)
+=#
+function halley(f, fp, fpp, x0; kwargs...)
+    #Base.depwarn("`halley(f,fp,fpp, x0)` is deprecated; use `find_zero((f, fp, fpp), x0, Roots.Halley())` instead.", :halley)
+    find_zero((f, fp, fpp), x0, Halley(); kwargs...)
+end
 
-        h = eps(one(a))^(1 / 3)
-        da = h * oneunit(a) + abs(a) * h^2 # adjust for if eps(a) > h
-        b = float(a + da)
-        fb = f(b)
-    else
-        a, b = promote(float(xs[1]), float(xs[2]))
-        fa, fb = f(a), f(b)
-    end
+#=
+"""
+    Roots.quadratic_inverse(f, fp, fpp, x0; kwargs...)
 
-    nan = (0 * a) / (0 * a) # try to preserve type
-    cnt, MAXCNT = 0, 5 * ceil(Int, -log(eps(one(a))))  # must be higher for BigFloat
-    MAXQUAD = 3
+Implementation of the quadratic inverse method (cf `?Roots.QuadraticInverse()`).
 
-    if abs(fa) > abs(fb)
-        a, fa, b, fb = b, fb, a, fa
-    end
+Arguments:
 
-    # we keep a, b, fa, fb, gamma, fgamma
-    quad_ctr = 0
-    while !iszero(fb)
-        cnt += 1
+* `f::Function` -- function to find zero of
 
-        if sign(fa) * sign(fb) < 0
-            return solve(ZeroProblem(f, (a, b))) # faster than bisection(f, a, b)
-        end
+* `fp::Function` -- derivative of `f`.
 
-        # take a secant step
-        gamma = float(b - (b - a) * fb / (fb - fa))
-        # modify if gamma is too small or too big
-        if iszero(abs(gamma - b))
-            gamma = b + 1 / 1000 * abs(b - a)  # too small
-        elseif abs(gamma - b) >= 100 * abs(b - a)
-            gamma = b + sign(gamma - b) * 100 * abs(b - a)  ## too big
-        end
-        fgamma = f(gamma)
+* `fpp:Function` -- second derivative of `f`.
 
-        # change sign
-        if sign(fgamma) * sign(fb) < 0
-            return solve(ZeroProblem(f, (gamma, b))) # faster than bisection(f, gamma, b)
-        end
+* `x0::Number` -- initial guess
 
-        # decreasing
-        if abs(fgamma) < abs(fb)
-            a, fa, b, fb = b, fb, gamma, fgamma
-            quad_ctr = 0
-            cnt < MAXCNT && continue
-        end
+With the `ForwardDiff` package derivatives may be computed automatically. For example,  defining
+`D(f) = x -> ForwardDiff.derivative(f, float(x))` allows `D(f)` and `D(D(f))` to be used for the first and second
+derivatives, respectively.
 
-        gamma = float(quad_vertex(a, fa, b, fb, gamma, fgamma))
-        fgamma = f(gamma)
-        # decreasing now?
-        if abs(fgamma) < abs(fb)
-            a, fa, b, fb = b, fb, gamma, fgamma
-            quad_ctr = 0
-            cnt < MAXCNT && continue
-        end
+Keyword arguments are passed to `find_zero` using the `Roots.QuadraticInverse()` method.
 
-        quad_ctr += 1
-        if (quad_ctr > MAXQUAD) || (cnt > MAXCNT) || iszero(gamma - b) || isnan(gamma)
-            bprev, bnext = prevfloat(b), nextfloat(b)
-            fbprev, fbnext = f(bprev), f(bnext)
-            sign(fb) * sign(fbprev) < 0 && return b
-            sign(fb) * sign(fbnext) < 0 && return b
-            for (u, fu) in ((b, fb), (bprev, fbprev), (bnext, fbnext))
-                abs(fu) / oneunit(fu) <= 2^3 * eps(u / oneunit(u)) && return u
-            end
-            return nan # Failed.
-        end
+"""
+=#
+function quadratic_inverse(f, fp, fpp, x0; kwargs...)
+    #Base.depwarn("`quadratic_inverse(f,fp,fpp, x0)` is deprecated; use `find_zero((f, fp, fpp), x0, Roots.QuadraticInverse())` instead.", :quadratic_inverse)
+    find_zero((f, fp, fpp), x0, QuadraticInverse(); kwargs...)
+end
 
-        if abs(fgamma) < abs(fb)
-            b, fb, a, fa = gamma, fgamma, b, fb
-        else
-            a, fa = gamma, fgamma
-        end
-    end
-    b
+function superhalley(f, fp, fpp, x0; kwargs...)
+    #Base.depwarn("`superhalley(f,fp,fpp, x0)` is deprecated; use `find_zero((f, fp, fpp), x0, Roots.SuperHalley())` instead.", :superhalley)
+    find_zero((f, fp, fpp), x0, SuperHalley(); kwargs...)
+end
+
+function chebyshev_like(f, fp, fpp, x0; kwargs...)
+    #Base.depwarn("`chebyshev_like(f,fp,fpp, x0)` is deprecated; use `find_zero((f, fp, fpp), x0, Roots.ChebyshevLike())` instead.", :chebyshev_like)
+    find_zero((f, fp, fpp), x0, ChebyshevLike(); kwargs...)
 end
