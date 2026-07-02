@@ -4,7 +4,7 @@
 ### Benchmarking tests
 ## We have
 ##
-## * visualize_diagonostics(which): to see summaries of the methods
+## * visualize_diagnostics(which): to see summaries of the methods
 ## over the different functions with which in (:summary, :counts,
 ## :residuals)
 ##
@@ -102,7 +102,7 @@ function vvta1(vs, T)
 end
 
 ## Return Dict of arrays
-function create_diagonostics(Ms, Fs, nms)
+function create_diagnostics(Ms, Fs, nms)
     @assert length(nms) == length(Ms)
 
     out = Array{Any}(undef, length(Ms), length(Fs))
@@ -367,7 +367,7 @@ end
 ## Main interface for interactive use
 fname = joinpath(@__DIR__, "derivative_free_diagnostics.json")
 elide_ascii(x, n=12) = length(x) > n ? x[1:(n - 3)] * "..." * x[(end - 1):end] : x
-function create_diagonostics()
+function create_diagnostics()
     meths = [
         Order0(),
         Order1(),
@@ -388,12 +388,12 @@ function create_diagonostics()
     Ms = [(f, b) -> find_zero(f, b, M) for M in meths] # F(f,b), name
     nms = elide_ascii.([replace(string(M), r"^Roots." => "") for M in meths])
     Fs = known_functions
-    create_diagonostics(Ms, Fs, nms)
+    create_diagnostics(Ms, Fs, nms)
 end
 ## write out current diagnostic test
 function write_out()
-    println("Creating diagonostics to save")
-    write_out(fname, create_diagonostics())
+    println("Creating diagnostics to save")
+    write_out(fname, create_diagnostics())
 end
 
 ## visualize state
@@ -404,7 +404,7 @@ Show diagnostics summary
 
 `which` is one of  `(:all, :summary, :counts, :residuals)`
 """
-visualize_diagnostics(which=:summary) = visualize_diagnostics(create_diagonostics(), which)
+visualize_diagnostics(which=:summary) = visualize_diagnostics(create_diagnostics(), which)
 
 ## identify regressions from currently saved state
 """
@@ -420,7 +420,7 @@ function identify_regressions()
         return String[] # empty
     end
 
-    Dnew = create_diagonostics()
+    Dnew = create_diagnostics()
     Dold = read_in(fname)
     out = identify_regressions(Dnew, Dold)
 
@@ -430,7 +430,7 @@ end
 ## tests for newton, halley
 import ForwardDiff: derivative
 D(f, n=1) = n > 1 ? D(D(f), n - 1) : x -> derivative(f, float(x))
-function derivative_based_diagonostics()
+function derivative_based_diagnostics()
     Ms = (
         (f, b) -> Roots.find_zero((f, D(f)), b, Roots.Newton()),
         (f, b) -> Roots.find_zero((f, D(f), D(f, 2)), b, Roots.Halley()),
@@ -439,7 +439,7 @@ function derivative_based_diagonostics()
     )
     nms = ("Newton", "Halley", "Schroder", "Order5")
     Fs = known_functions
-    create_diagonostics(Ms, Fs, nms)
+    create_diagnostics(Ms, Fs, nms)
 end
 
 ## Order of convergence
