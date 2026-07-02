@@ -24,6 +24,7 @@ find_zero(sin, 3, Roots.Sidi(2))
 """
 struct Sidi{k} <: AbstractSecantMethod end
 Sidi(k::Int) = Sidi{k}()
+initial_fncalls(::Sidi{K}) where K = K + 1
 
 struct SidiState{T,S} <: AbstractUnivariateZeroState{T,S}
     xn1::T
@@ -37,7 +38,7 @@ end
 function init_state(M::Sidi{k}, F::Callable_Function, x) where {k}
     x₀, x₁ = x₀x₁(x)
     fx₀, xs, fs = _init_sidi(F, (x₀, x₁), k)
-    state = SidiState(xs[k], xs[k + 1], fx₀, fs[1], xs, fs)
+    state = SidiState(xs[k+1], xs[k], fs[1], fx₀, xs, fs)
 end
 
 function update_state(
@@ -103,6 +104,7 @@ function _init_sidi(f, x, k)
             xⱼ = xs[j] = xⱼ₋₁ - fs[1] / pk′
         end
         Δ = f(xⱼ)
+        j == k && (fx₀ = Δ) # initial value for x₁
         for i in 2:j
             Δ₀ = fs[i - 1]
             fs[i - 1] = Δ
