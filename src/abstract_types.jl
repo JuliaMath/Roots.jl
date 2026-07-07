@@ -4,9 +4,11 @@ Base.broadcastable(method::AbstractUnivariateZeroMethod) = Ref(method)
 
 abstract type AbstractBracketingMethod <: AbstractUnivariateZeroMethod end
 abstract type AbstractBisectionMethod <: AbstractBracketingMethod end
+abstract type AbstractRegulaFalsiMethod <: AbstractBracketingMethod end
 
 abstract type AbstractNonBracketingMethod <: AbstractUnivariateZeroMethod end
 abstract type AbstractSecantMethod <: AbstractNonBracketingMethod end
+
 
 abstract type AbstractDerivativeMethod <: AbstractNonBracketingMethod end
 abstract type AbstractNewtonLikeMethod <: AbstractDerivativeMethod end

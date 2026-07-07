@@ -1,4 +1,4 @@
-struct FalsePosition{R} <: AbstractSecantMethod end
+struct FalsePosition{R} <: AbstractRegulaFalsiMethod end
 
 """
 
@@ -30,26 +30,12 @@ Examples
 ```
 find_zero(x -> x^5 - x - 1, (-2, 2), FalsePosition())
 ```
+
+Note: The alternative `RegulaFalsi` method provides most of this and seems to suffer less from numerical issues.
+
 """
 FalsePosition
 FalsePosition(x=:anderson_bjork) = FalsePosition{x}()
-
-# 12 is tough; needs more evaluations
-function default_tolerances(
-    ::FalsePosition{12},
-    ::AbstractUnivariateZeroState{T,S},
-) where {T,S}
-    xatol = eps(real(T)) * oneunit(real(T))
-    xrtol = eps(real(T))  # unitless
-    atol = 4 * eps(real(float(S))) * oneunit(real(S))
-    rtol = 4 * eps(real(float(S))) * one(real(S))
-    maxiters = 250
-    strict = false
-    (xatol, xrtol, atol, rtol, maxiters, strict)
-end
-
-init_state(M::FalsePosition, F, x₀, x₁, fx₀, fx₁) =
-    init_state(Bisection(), F, x₀, x₁, fx₀, fx₁)
 
 function update_state(
     method::FalsePosition,
@@ -82,6 +68,28 @@ function update_state(
     return (o, false)
 end
 
+galdino_reduction(::FalsePosition{1}, fa, fb, fx) = fa * fb / (fb + fx)
+galdino_reduction(::FalsePosition{2}, fa, fb, fx) = (fa - fb) / 2
+galdino_reduction(::FalsePosition{3}, fa, fb, fx) = (fa - fx) / (2 + fx / fb)
+galdino_reduction(::FalsePosition{4}, fa, fb, fx) = (fa - fx) / (1 + fx / fb)^2
+galdino_reduction(::FalsePosition{5}, fa, fb, fx) = (fa - fx) / (3*one(fa)/2 + fx / fb)^2
+galdino_reduction(::FalsePosition{6}, fa, fb, fx) = (fa - fx) / (2 + fx / fb)^2
+galdino_reduction(::FalsePosition{7}, fa, fb, fx) = (fa + fx) / (2 + fx / fb)^2
+galdino_reduction(::FalsePosition{8}, fa, fb, fx) = fa / 2
+galdino_reduction(::FalsePosition{9}, fa, fb, fx) = fa / (1 + fx / fb)^2
+galdino_reduction(::FalsePosition{10}, fa, fb, fx) = (fa - fx) / 4
+galdino_reduction(::FalsePosition{11}, fa, fb, fx) = fx * fa / (fb + fx)
+galdino_reduction(::FalsePosition{12}, fa, fb, fx) = (fa * (1 - fx / fb > 0 ? 1 - fx / fb : one(fa)/2))
+
+galdino_reduction(::FalsePosition{:pegasus}, fa, fb, fx) = galdino_reduction(FalsePosition(1), fa, fb, fx)
+galdino_reduction(::FalsePosition{:Pegasus}, fa, fb, fx) = galdino_reduction(FalsePosition(1), fa, fb, fx)
+galdino_reduction(::FalsePosition{:illinois}, fa, fb, fx) = galdino_reduction(FalsePosition(8), fa, fb, fx)
+galdino_reduction(::FalsePosition{:Illinois}, fa, fb, fx) = galdino_reduction(FalsePosition(8), fa, fb, fx)
+galdino_reduction(::FalsePosition{:anderson_bjork}, fa, fb, fx) = galdino_reduction(FalsePosition(12), fa, fb, fx)
+galdino_reduction(::FalsePosition{:AndersonBjork}, fa, fb, fx) = galdino_reduction(FalsePosition(12), fa, fb, fx)
+
+
+#=
 # the 12 reduction factors offered by Galdino
 # In RootsTesting.jl, we can see :12 has many more failures.
 galdino = Dict{Union{Int,Symbol},Function}(
@@ -112,3 +120,4 @@ end
         $f(fa, fb, fx)
     end
 end
+=#

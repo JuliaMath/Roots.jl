@@ -20,6 +20,9 @@ import BenchmarkTools
         Roots.Brent(),
         Roots.Ridders(),
         Roots.ITP(),
+        Roots.RegulaFalsi(:AndersonBjork),
+        Roots.RegulaFalsi(:Illinois),
+        Roots.RegulaFalsi(:Ford3),
     ) # not FalsePosition()
     Ns = (Roots.Newton(), Roots.Halley(), Roots.Schroder())
     for M in Ms

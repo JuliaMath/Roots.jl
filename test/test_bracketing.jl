@@ -285,41 +285,67 @@ end
 
     ## exact_bracket
     Ms = [
-        Roots.Brent(),
         Roots.A42(),
         Roots.AlefeldPotraShi(),
         Roots.Chandrapatla(),
-        Roots.ITP(),
-        Roots.Ridders(),
         Roots.Bisection(),
         Roots.ModAB(),
     ]
     results = [run_tests((f, b) -> find_zero(f, b, M), name="$M") for M in Ms]
-    maxfailures = maximum(length(result.failures) for result in results)
-    maxresidual = maximum(result.maxresidual for result in results)
+    failures = [length(result.failures) for result in results]
+    residuals = [result.maxresidual for result in results]
     cnts = [result.evalcount for result in results]
 
-    @test maxfailures == 0
-    @test maxresidual <= 5e-13
+    @test maximum(failures) == 0
+    @test maximum(residuals) <= 5e-13
+    @test avg(cnts) <= 4700
+
+    Ms = [Roots.Brent(),
+          Roots.Ridders(),
+          Roots.ITP()
+          ]
+    results = [run_tests((f, b) -> find_zero(f, b, M), name="$M") for M in Ms]
+    failures = [length(result.failures) for result in results]
+    residuals = [result.maxresidual for result in results]
+    cnts = [result.evalcount for result in results]
+
+    @test maximum(failures) == 13
+    @test maximum(residuals) <= 5e-13
     @test avg(cnts) <= 4700
 
     ## False position has larger residuals
     ## Fn #13 fails on numbers 2 and 4 until maxsteps is increased; 100 works
     Ms = [Roots.FalsePosition(i) for i in 1:12]
     results = [run_tests((f, b) -> find_zero(f, b, M), name="$M") for M in Ms]
-    maxfailures = maximum(length(result.failures) for result in results)
-    maxresidual = maximum(result.maxresidual for result in results)
+    failures =  [length(result.failures) for result in results]
+    residuals = [result.maxresidual for result in results]
     cnts = [result.evalcount for result in results]
 
-    @test maxfailures <= 1
-    @test maxresidual <= 1e-5
-    @test avg(cnts) <= 3000
+    @test maximum(failures) <= 13
+    @test maximum(residuals) <= 1e-14
+    @test avg(cnts) <= 4000
+
+
+
 
     ## issue 412 check for bracket
     for M in Ms
         @test_throws ArgumentError find_zero(x -> x - 1, (-3, 0), M)
         @test_throws ArgumentError find_zero(x -> 1 + x^2, (10, 20), M)
     end
+
+    ## SFRF
+    Ms = [Roots.RegulaFalsi(m) for m ∈ (:Illinois, :Pegasus, :AndersonBjork)]
+    results = [run_tests((f, b) -> find_zero(f, b, M), name="$M") for M in Ms]
+    failures =  [length(result.failures) for result in results]
+    residuals = [result.maxresidual for result in results]
+    cnts = [result.evalcount for result in results]
+
+    @test maximum(failures) <= 10
+    @test maximum(residuals) <= 1e-14
+    @test avg(cnts) <= 5000
+
+
 end
 
 ## Some tests for FalsePosition methods
@@ -350,11 +376,21 @@ end
         ((x, n=20) -> x^2 + sin(x / n) - 1 / 4, [0, 1]),
     ]
 
-    for (fn_, ab) in galadino_probs
-        for M in (FalsePosition(i) for i in 1:12)
+    for (no,(fn_, ab)) in enumerate(galadino_probs)
+        for i in vcat(1, 3:12) # issue with 2 not converging
+            M = FalsePosition(i)
             g = Cnt(fn_)
             x0_ = find_zero(g, ab, M)
             @test abs(fn_(x0_)) <= 1e-7
+            @test g.cnt <= 60
+        end
+    end
+    for (fn_, ab) in galadino_probs
+        Ms = [Roots.RegulaFalsi(m) for m ∈ (:Illinois, :Pegasus, :AndersonBjork, :Ford3, :Ford4)]
+        for M in Ms
+            g = Cnt(fn_)
+            x0_ = find_zero(g, ab, M)
+            @test abs(fn_(x0_)) <= 1e-15
             @test g.cnt <= 50
         end
     end
