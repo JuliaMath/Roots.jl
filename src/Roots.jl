@@ -60,6 +60,7 @@ include("Bracketing/brent.jl")
 include("Bracketing/ridders.jl")
 include("Bracketing/itp.jl")
 include("Bracketing/chandrapatlu.jl")
+include("Bracketing/regula_falsi.jl")
 include("Bracketing/false_position.jl")
 include("Bracketing/modAB.jl")
 

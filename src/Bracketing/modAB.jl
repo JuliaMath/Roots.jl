@@ -48,13 +48,17 @@ julia> F = Cnt(f); x = find_zero(F, (a,b), Roots.ModAB()); (x, F.cnt)
 
 * That the value found in the example by `ModAB` and `Bisection` agree only through the first 5 decimal points is due to the `ModAB` algorithm stopping on small `f(xₙ)` values, as `Bisection` iterates up to the last floating point bit unless it finds an exact numeric zero.
 
-## Reference
+## References
 
 N Ganchovski and A Traykov 2023 IOP Conf. Ser.: Mater. Sci. Eng. 1276 012010
 
 DOI 10.1088/1757-899X/1276/1/012010
 
 [https://iopscience.iop.org/article/10.1088/1757-899X/1276/1/012010](https://iopscience.iop.org/article/10.1088/1757-899X/1276/1/012010)
+
+Improvements to the Modified Anderson–Björck (modAB) Root-Finding Algorithm
+by Nedelcho Ganchovski, Oscar Smith,Christopher Rackauckas, Lachezar Tomov, and Alexander Traykov
+[https://doi.org/10.3390/a19050332](https://doi.org/10.3390/a19050332)
 
 
 A new high order method of regula falsi type for computing a root of an equation; Ned Anderson & Åke Björck. [https://link.springer.com/article/10.1007/BF01951936](https://link.springer.com/article/10.1007/BF01951936).

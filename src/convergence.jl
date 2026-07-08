@@ -87,15 +87,17 @@ end
 
 ## test f ≈ 0 not f == 0
 function is_approx_zero_f(
-    ::AbstractUnivariateZeroMethod,
+    ::M,
     state::AbstractUnivariateZeroState,
     options::O,
-) where {O<:AbstractUnivariateZeroOptions}
+) where {M <: Union{AbstractUnivariateZeroMethod, AbstractRegulaFalsiMethod},
+         O<:AbstractUnivariateZeroOptions}
     ab, afb = abs(state.xn1), abs(state.fxn1)
     ϵₐ, ϵᵣ = options.abstol, options.reltol
     Δ = max(_unitless(ϵₐ), _unitless(ab) * ϵᵣ)
     afb ≤ Δ * oneunit(afb)
 end
+
 
 ## test f ≈ 0 not f == 0
 function is_approx_zero_f(
@@ -341,10 +343,13 @@ end
 function decide_convergence(
     M::AbstractBracketingMethod,
     F,
-    state::AbstractUnivariateZeroState,
+    state::AbstractUnivariateZeroState{T,S},
     options,
     val,
-)
+) where {T, S}
+
+    val == :not_converged && return nan(T) * state.xn1
+
     a, b = state.xn0, state.xn1
     fa, fb = state.fxn0, state.fxn1
 
@@ -364,6 +369,8 @@ function decide_convergence(
         abs(fa) == m && return a
         return b
     end
+
+
 
     return (abs(fa) < abs(fb)) ? a : b
 end
