@@ -87,37 +87,3 @@ galdino_reduction(::FalsePosition{:illinois}, fa, fb, fx) = galdino_reduction(Fa
 galdino_reduction(::FalsePosition{:Illinois}, fa, fb, fx) = galdino_reduction(FalsePosition(8), fa, fb, fx)
 galdino_reduction(::FalsePosition{:anderson_bjork}, fa, fb, fx) = galdino_reduction(FalsePosition(12), fa, fb, fx)
 galdino_reduction(::FalsePosition{:AndersonBjork}, fa, fb, fx) = galdino_reduction(FalsePosition(12), fa, fb, fx)
-
-
-#=
-# the 12 reduction factors offered by Galdino
-# In RootsTesting.jl, we can see :12 has many more failures.
-galdino = Dict{Union{Int,Symbol},Function}(
-    :1 => (fa, fb, fx) -> fa * fb / (fb + fx),
-    :2 => (fa, fb, fx) -> (fa - fb) / 2,
-    :3 => (fa, fb, fx) -> (fa - fx) / (2 + fx / fb),
-    :4 => (fa, fb, fx) -> (fa - fx) / (1 + fx / fb)^2,
-    :5 => (fa, fb, fx) -> (fa - fx) / (3*one(fa)/2 + fx / fb)^2,
-    :6 => (fa, fb, fx) -> (fa - fx) / (2 + fx / fb)^2,
-    :7 => (fa, fb, fx) -> (fa + fx) / (2 + fx / fb)^2,
-    :8 => (fa, fb, fx) -> fa / 2,
-    :9 => (fa, fb, fx) -> fa / (1 + fx / fb)^2,
-    :10 => (fa, fb, fx) -> (fa - fx) / 4,
-    :11 => (fa, fb, fx) -> fx * fa / (fb + fx),
-    :12 => (fa, fb, fx) -> (fa * (1 - fx / fb > 0 ? 1 - fx / fb : one(fa)/2)),
-)
-
-# give common names
-for (nm, i) in [(:pegasus, 1), (:illinois, 8), (:anderson_bjork, 12)]
-    galdino[nm] = galdino[i]
-end
-
-# from Chris Elrod; https://raw.githubusercontent.com/chriselrod/AsymptoticPosteriors.jl/master/src/false_position.jl
-@generated function galdino_reduction(methods::FalsePosition{R}, fa, fb, fx) where {R}
-    f = galdino[R]
-    quote
-        $Expr(:meta, :inline)
-        $f(fa, fb, fx)
-    end
-end
-=#

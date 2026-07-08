@@ -1,23 +1,21 @@
-struct ScalingFactorRegulaFalsi{R} <: AbstractRegulaFalsiMethod end
+struct RegulaFalsi{R} <: AbstractRegulaFalsiMethod end
 
 """
-
-    ScalingFactorRegulaFalsi(M::Symbol=AndersonBjork)
     RegulaFalsi{M}
+    ScalingFactorRegulaFalsi(M::Symbol=AndersonBjork)
     SCRF{M}
 
 Implements several different *scaling factor* regular falsi methods following Diaz and Perez. The regular falsi method uses the secant method to find the next value with a bracketing interval providing the history. This is a linearly convergent method. By scaling, or adjusting, the ``f(x_i)`` values, superlinear convergence can be achieved.
 
-The scaling factor refers to the ``f(x_i)`` values being scaled by `γ` which is dynamically computed based on ``\\xi=f(x_{i+1})/f(x_i)`` and ``\\zeta = -f(x_{i+1}) / f(x_{i-1})``.
+The scaling factor refers to the `f(xᵢ)` values being scaled by `γ` which is dynamically computed based on `ξ = f(xᵢ₊₁}) / f(xᵢ)` and `ζ = - f(xᵢ₊₁}) / f(xᵢ₋₁)`.
 
-The value for `M` is in `(:classic, :Illinois, :GIll01, :Pegasus, :AndersonBjork, :AB_GIll01, :Ford3, :Ford4,)`. The defaults is :AndersonBjork.
+The value for `M` is one of `Roots._regula_falsi_names` or  `(:classic, :Illinois, :GIll01, :Pegasus, :AndersonBjork, :AB_GIll01, :Ford3, :Ford4)`. The default is :AndersonBjork.
 
+# Examples
 
-
-Examples
 ```
-find_zero(x -> x^5 - x - 1, (-2, 2), ScalingFactorRegulaFalsi())
-find_zero(x -> x^5 - x - 1, (-2, 2), ScalingFactorRegulaFalsi(:Illinois))
+find_zero(x -> x^5 - x - 1, (-2, 2), RegulaFalsi())           # default :AndersonBjork
+find_zero(x -> x^5 - x - 1, (-2, 2), RegulaFalsi(:Illinois))
 ```
 
 New scaling factors can be introduced by defining a method for `Fᵧ(::ScalingFactorRegulaFalsi{M},  ξ::T, ζ::T) where T` and then calling with `ScalingFactorRegulaFalsi{M}` for `M` a symbol.
@@ -31,31 +29,33 @@ Convergence rates from the reference paper are:
 5. `:Ford4`---Ford fourth method: p = 1.681.
 
 
-References:
+# References:
 
 *A common framework for modified Regula Falsi methods and new methods of this kind* by Julio M. Fernández-Díaz, César O. Menéndez-Pérez [url](https://digibuo.uniovi.es/dspace/bitstream/handle/10651/66581/1-s2.0-S0378475422004335-main.pdf)
 
-Note: Compared to similar methods in `FalsePosition` the parameterization used here has fewer issues with floating point differencees.
+!!! note
+    Compared to similar methods in `FalsePosition` the parameterization used here has fewer issues with floating point differences and should be preferred.
 
 """
-ScalingFactorRegulaFalsi
-ScalingFactorRegulaFalsi(x=:AndersonBjork) = ScalingFactorRegulaFalsi{x}()
-const RegulaFalsi{R} = ScalingFactorRegulaFalsi{R}
-const SCRF{R} = ScalingFactorRegulaFalsi{R}
+RegulaFalsi
+RegulaFalsi(x=:AndersonBjork) = RegulaFalsi{x}()
+const ScalingFactorRegulaFalsi{R} = RegulaFalsi{R}
+const SCRF{R} = RegulaFalsi{R}
 
 # for testing, this might be helpful
 _regula_falsi_names = (:classic, :Illinois, :GIll01, :Pegasus, :AndersonBjork, :AB_GIll01, :Ford3, :Ford4)
 
 # factors
-Fᵧ(::ScalingFactorRegulaFalsi{:classic}, ξ::T, ζ::T) where T = one(T)
-Fᵧ(::ScalingFactorRegulaFalsi{:Illinois}, ξ::T, ζ::T) where T = one(T)/2
-Fᵧ(::ScalingFactorRegulaFalsi{:GIll01}, ξ::T, ζ::T) where T = one(T)/10 # Generalized Illinois method with γ = 0.1
-Fᵧ(::ScalingFactorRegulaFalsi{:Pegasus}, ξ::T, ζ::T) where T = one(T) / (one(T) + ξ)
-Fᵧ(::ScalingFactorRegulaFalsi{:AndersonBjork}, ξ::T, ζ::T) where T = ξ < 1 ? (one(T) - ξ) : one(T)/2
-Fᵧ(::ScalingFactorRegulaFalsi{:AB_GIll01}, ξ::T, ζ::T) where T = max(one(T) - ξ,one(T)/10) # AB + Generalized Illinois method with γ = 0.1
-Fᵧ(::ScalingFactorRegulaFalsi{:Ford3},  ξ::T, ζ::T) where T = (one(T) - ξ + ζ) / (one(T) - ζ)
-Fᵧ(::ScalingFactorRegulaFalsi{:Ford4},  ξ::T, ζ::T) where T = one(T) - ξ + ζ
+Fᵧ(::RegulaFalsi{:classic}, ξ::T, ζ::T)       where T = one(T)
+Fᵧ(::RegulaFalsi{:Illinois}, ξ::T, ζ::T)      where T = one(T)/2
+Fᵧ(::RegulaFalsi{:GIll01}, ξ::T, ζ::T)        where T = one(T)/10 # Generalized Illinois method with γ = 0.1
+Fᵧ(::RegulaFalsi{:Pegasus}, ξ::T, ζ::T)       where T = one(T) / (one(T) + ξ)
+Fᵧ(::RegulaFalsi{:AndersonBjork}, ξ::T, ζ::T) where T = ξ < 1 ? (one(T) - ξ) : one(T)/2
+Fᵧ(::RegulaFalsi{:AB_GIll01}, ξ::T, ζ::T)     where T = max(one(T) - ξ,one(T)/10) # AB + Generalized Illinois method with γ = 0.1, though paper conditions on no. of steps
+Fᵧ(::RegulaFalsi{:Ford3},  ξ::T, ζ::T)        where T = (one(T) - ξ + ζ) / (one(T) - ζ)
+Fᵧ(::RegulaFalsi{:Ford4},  ξ::T, ζ::T)        where T = one(T) - ξ + ζ
 
+# take one step so the :right/:left is set up
 function init_state(M::AbstractRegulaFalsiMethod, F, x₀::S, x₁::S, fx₀::T, fx₁::T) where {S, T}
     assert_bracket(fx₀,fx₁)
 
@@ -69,12 +69,13 @@ function init_state(M::AbstractRegulaFalsiMethod, F, x₀::S, x₁::S, fx₀::T,
     end
     UnivariateZeroState(c, a, fc, fa)
 end
+
 initial_fncalls(M::AbstractRegulaFalsiMethod) = 3
 
 function default_tolerances(
-    ::ScalingFactorRegulaFalsi{K},
-    ::AbstractUnivariateZeroState{T,S},
-) where {K, T,S}
+    ::AbstractRegulaFalsiMethod,
+    ::AbstractUnivariateZeroState{T, S},
+) where {T, S}
     xatol = eps(T)^3 * oneunit(T)
     xrtol = eps(T) * one(T) # unitless
     atol = 0 * oneunit(S)
@@ -86,7 +87,7 @@ end
 
 
 function update_state(
-    M::ScalingFactorRegulaFalsi,
+    M::RegulaFalsi,
     fs,
     o::AbstractUnivariateZeroState{T,S},
     options,
@@ -100,18 +101,15 @@ function update_state(
     if (c == xₙ₋₁ || c == xₙ) # try midpoint o/w this is stuck
         c = xₙ₋₁/2 + xₙ/2
     end
+
     fc::S = fs(c)
-
     incfn(l)
-
 
     iszero(fc) && return (_set(o, (c, fc)), true)
 
     xₙ₊₁, f̂xₙ₊₁ = c, fc
 
-    if sign(f̂xₙ) * sign(fc) < 0
-        xₙ, f̂xₙ = xₙ, f̂xₙ
-    elseif sign(f̂xₙ) * sign(fc) > 0
+    if sign(f̂xₙ) * sign(fc) > 0 # stuck on same side as last time, scale other side
         ξ::S = fc / f̂xₙ     # \xi
         ζ::S = - fc / f̂xₙ₋₁ # \zeta
         γ::S =  Fᵧ(M, ξ, ζ)

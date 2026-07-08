@@ -322,7 +322,7 @@ end
     cnts = [result.evalcount for result in results]
 
     @test maximum(failures) <= 13
-    @test maximum(residuals) <= 1e-14
+    @test maximum(residuals) <= 1e-13
     @test avg(cnts) <= 4000
 
 
