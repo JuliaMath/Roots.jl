@@ -5,7 +5,7 @@ struct RegulaFalsi{R} <: AbstractRegulaFalsiMethod end
     ScalingFactorRegulaFalsi(M::Symbol=AndersonBjork)
     SCRF{M}
 
-Implements several different *scaling factor* regular falsi methods following Diaz and Perez. The regular falsi method uses the secant method to find the next value with a bracketing interval providing the history. This is a linearly convergent method. By scaling, or adjusting, the ``f(x_i)`` values, superlinear convergence can be achieved.
+Implements several different *scaling factor* *regular falsi* methods following Diaz and Perez. The *regula falsi* method uses the secant method to find the next value with a bracketing interval providing the history. This is a linearly convergent method. By scaling, or adjusting, the ``f(x_i)`` values, superlinear convergence can be achieved.
 
 The scaling factor refers to the `f(xᵢ)` values being scaled by `γ` which is dynamically computed based on `ξ = f(xᵢ₊₁}) / f(xᵢ)` and `ζ = - f(xᵢ₊₁}) / f(xᵢ₋₁)`.
 
@@ -22,7 +22,7 @@ New scaling factors can be introduced by defining a method for `Fᵧ(::ScalingFa
 
 Convergence rates from the reference paper are:
 
-1. `:classic`---Classic Regula Falsi: p = 1 (linear).
+1. `:classic`---Classic *regula falsi*: p = 1 (linear).
 2. `:Illinois`---Illinois method: p = 1.442.
 3. `:Pegasus`---Pegasus method: p = 1.642.
 4. `:AndersonBjork`---A&B method: 1.681 < p < 1.710.
