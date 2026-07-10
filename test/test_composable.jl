@@ -95,6 +95,6 @@ using Measurements
             @test find_zero(f, x₀, M) ≈ -2.0
         end
         @test find_zero(f, measurement(0.0, 0.1), Secant()) ≈ -2.0
-        @test_broken find_zero(f, measurement(0.0, 0.1)) ≈ -2.0 # XXX fails with some bracketing methods
+        @test find_zero(f, measurement(0.0, 0.1)) ≈ -2.0
     end
 end

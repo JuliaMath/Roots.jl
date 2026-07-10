@@ -309,7 +309,7 @@ end
     residuals = [result.maxresidual for result in results]
     cnts = [result.evalcount for result in results]
 
-    @test maximum(failures) == 13
+    @test maximum(failures) <= 10
     @test maximum(residuals) <= 5e-13
     @test avg(cnts) <= 4700
 
@@ -321,7 +321,7 @@ end
     residuals = [result.maxresidual for result in results]
     cnts = [result.evalcount for result in results]
 
-    @test maximum(failures) <= 13
+    @test maximum(failures) == 0
     @test maximum(residuals) <= 1e-13
     @test avg(cnts) <= 4000
 
@@ -335,7 +335,7 @@ end
     end
 
     ## SFRF
-    Ms = [Roots.RegulaFalsi(m) for m ∈ (:Illinois, :Pegasus, :AndersonBjork)]
+    Ms = [Roots.RegulaFalsi(m) for m ∈ (:Illinois, :Pegasus, :AndersonBjork, :Ford3, :Ford4)]
     results = [run_tests((f, b) -> find_zero(f, b, M), name="$M") for M in Ms]
     failures =  [length(result.failures) for result in results]
     residuals = [result.maxresidual for result in results]
