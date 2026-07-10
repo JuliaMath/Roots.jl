@@ -348,8 +348,15 @@ function decide_convergence(
     val,
 ) where {T, S}
 
-    val == :not_converged && return nan(T) * state.xn1
-
+    if val == :not_converged
+        #return nan(T) * state.xn1
+        xs = (state.xn0, state.xn1)
+        fxs = (state.fxn0, state.fxn1)
+        m,i = findmin(abs, fxs)
+        δ = 16 * min(16*eps(T), eps(maximum(abs, xs))) # relative tolerance based on x
+        Real(m/oneunit(m)) <= δ  && return xs[i]
+        return nan(T) * state.xn1
+    end
     a, b = state.xn0, state.xn1
     fa, fb = state.fxn0, state.fxn1
 
