@@ -349,14 +349,38 @@ function decide_convergence(
 ) where {T, S}
 
     if val == :not_converged
-        #return nan(T) * state.xn1
+        # check relaxed convergence on Δx, f(x)
+
         xs = (state.xn0, state.xn1)
         fxs = (state.fxn0, state.fxn1)
+        mx = maximum(abs, xs)
         m,i = findmin(abs, fxs)
+
+        Δ = abs(xs[1] - xs[2])
+        ϵ = 256 * max(options.xabstol, mx * sqrt(options.xreltol))
+        Δ ≤ ϵ && return xs[i]
+
+        atol = max(options.abstol, eps(T))
+        rtol = max(options.reltol, eps(T))
         δ = 16 * min(16*eps(T), eps(maximum(abs, xs))) # relative tolerance based on x
         Real(m/oneunit(m)) <= δ  && return xs[i]
+
+        # XXX there should be an error thrown,
+        # but will relaix if https://github.com/lrnv/Copulas.jl/issues/375 isn't resolved
+        #=
+        msg = """
+            xs = $xs, Δ = $(abs(xs[1] - xs[2]))
+            fxs = $fxs
+            xopts = $(options.xreltol), $(options.xabstol)
+            fopts = $(options.reltol), $(options.abstol)
+            strict = $(options.strict)
+        """
+        error(msg)
+        =#
+
         return nan(T) * state.xn1
     end
+
     a, b = state.xn0, state.xn1
     fa, fb = state.fxn0, state.fxn1
 
@@ -376,8 +400,6 @@ function decide_convergence(
         abs(fa) == m && return a
         return b
     end
-
-
 
     return (abs(fa) < abs(fb)) ? a : b
 end
