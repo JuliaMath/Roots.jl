@@ -21,7 +21,7 @@ This implementation deviates slightly from the printed algorithm, as it may use 
     These algorithms do not check the size of `f` for convergence, so the `atol` or `rtol` are not utilized.
 """
 =#
-abstract type AbstractAlefeldPotraShi <: AbstractBracketingMethod end
+abstract type AbstractAlefeldPotraShi <: AbstractNonStrictBracketingMethod end
 
 initial_fncalls(::AbstractAlefeldPotraShi) = 3 # worst case assuming fx₀, fx₁,fc must be computed
 

@@ -348,41 +348,31 @@ function decide_convergence(
     val,
 ) where {T, S}
 
+    a, b = xs = state.xn0, state.xn1
+    fa, fb = fxs = state.fxn0, state.fxn1
+
     if val == :not_converged
-        # check relaxed convergence on Δx, f(x)
+        if !options.strict
+            # check relaxed convergence on Δx, f(x)
+            # Δ ≤ 2^8 * max(δ + |x|⋅ϵ)
+            # |f(x)| ≤ 16*min(16δ + |x|⋅ϵ) -- 0 by default
+            m,i = findmin(abs, fxs)
+            mx = maximum(abs, xs)
 
-        xs = (state.xn0, state.xn1)
-        fxs = (state.fxn0, state.fxn1)
-        mx = maximum(abs, xs)
-        m,i = findmin(abs, fxs)
 
-        Δ = abs(xs[1] - xs[2])
-        ϵ = 256 * max(options.xabstol, mx * sqrt(options.xreltol))
-        Δ ≤ ϵ && return xs[i]
+            Δ = abs(xs[1] - xs[2])
+            ϵ = 256 * max(options.xabstol, mx * sqrt(options.xreltol))
+            _unitless(Δ) ≤ _unitless(ϵ) && return xs[i]
 
-        atol = max(options.abstol, eps(T))
-        rtol = max(options.reltol, eps(T))
-        δ = 16 * min(16*eps(T), eps(maximum(abs, xs))) # relative tolerance based on x
-        Real(m/oneunit(m)) <= δ  && return xs[i]
-
-        # XXX there should be an error thrown,
-        # but will relaix if https://github.com/lrnv/Copulas.jl/issues/375 isn't resolved
-        #=
-        msg = """
-            xs = $xs, Δ = $(abs(xs[1] - xs[2]))
-            fxs = $fxs
-            xopts = $(options.xreltol), $(options.xabstol)
-            fopts = $(options.reltol), $(options.abstol)
-            strict = $(options.strict)
-        """
-        error(msg)
-        =#
+            atol = max(eps(oneunit(real(S))), options.abstol)
+            rtol = max(eps(one(real(S))), options.xreltol)
+            δ = 16 * min(16*atol, maximum(abs, xs) * rtol)
+            _unitless(m) ≤ _unitless(δ)  && return xs[i]
+        end
 
         return nan(T) * state.xn1
     end
 
-    a, b = state.xn0, state.xn1
-    fa, fb = state.fxn0, state.fxn1
 
     iszero(fa) && return a
     iszero(fb) && return b

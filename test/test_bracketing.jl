@@ -309,7 +309,7 @@ end
     residuals = [result.maxresidual for result in results]
     cnts = [result.evalcount for result in results]
 
-    @test maximum(failures) <= 10
+    @test maximum(failures) <= 0
     @test maximum(residuals) <= 5e-13
     @test avg(cnts) <= 4700
 

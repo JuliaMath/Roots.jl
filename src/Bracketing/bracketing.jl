@@ -54,6 +54,20 @@ function default_tolerances(
     (xatol, xrtol, atol, rtol, maxevals, strict)
 end
 
+# Non strict has check on non convergence with relaxed tolerances
+function default_tolerances(
+    ::AbstractNonStrictBracketingMethod,
+    ::AbstractUnivariateZeroState{T,S},
+) where {T,S}
+    xatol = eps(real(T))^3 * oneunit(real(T))
+    xrtol = eps(real(T))  # unitless
+    atol = zero(oneunit(real(S)))
+    rtol = zero(one(real(S)))
+    maxevals = 60
+    strict = false
+    (xatol, xrtol, atol, rtol, maxevals, strict)
+end
+
 ## --------------------------------------------------
 
 const bracketing_error = """The interval [a,b] is not a bracketing interval.

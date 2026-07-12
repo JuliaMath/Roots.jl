@@ -21,7 +21,7 @@ Suggested on
 by `@TheLateKronos`, who supplied the original version of the code.
 
 """
-struct ITP{T,S} <: AbstractBracketingMethod
+struct ITP{T,S} <: AbstractNonStrictBracketingMethod
     κ₁::T
     κ₂::S
     n₀::Int
