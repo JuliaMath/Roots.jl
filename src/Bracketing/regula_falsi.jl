@@ -98,7 +98,9 @@ function update_state(
     f̂xₙ₋₁::S, f̂xₙ::S = o.fxn0, o.fxn1
 
     c::T = (xₙ₋₁ * f̂xₙ - xₙ * f̂xₙ₋₁) / (f̂xₙ - f̂xₙ₋₁)
-    if (c == xₙ₋₁ || c == xₙ) # try midpoint o/w this is stuck
+
+    ϵ = maximum(abs, (xₙ, xₙ₋₁)) * √eps(T)  # some engineering to avoid short moves
+    if abs(c - xₙ) ≤ ϵ || abs(c - xₙ₋₁) ≤ ϵ
         c = xₙ₋₁/2 + xₙ/2
     end
 

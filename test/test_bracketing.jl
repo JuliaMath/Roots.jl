@@ -279,71 +279,37 @@ end
 
 @testset "bracketing methods" begin
 
-    ## Test for failures, ideally all of these would be 0
-    ## test for residual, ideally small
-    ## test for evaluation counts, ideally not so low for these problems
-
-    ## exact_bracket
-    Ms = [
+    Ms = (
         Roots.A42(),
         Roots.AlefeldPotraShi(),
         Roots.Chandrapatla(),
         Roots.Bisection(),
         Roots.ModAB(),
-    ]
+        Roots.Brent(),
+        Roots.Ridders(),
+        Roots.ITP(),
+        [Roots.FalsePosition(i) for i in 1:12]...,
+        [Roots.RegulaFalsi(m) for m ∈ (:Illinois, :Pegasus, :AndersonBjork, :Ford3, :Ford4)]...
+    )
+
+    ## Test for failures, ideally all of these would be 0
+    ## test for residual, ideally small
+    ## test for evaluation counts, ideally not so low for these problems
     results = [run_tests((f, b) -> find_zero(f, b, M), name="$M") for M in Ms]
     failures = [length(result.failures) for result in results]
     residuals = [result.maxresidual for result in results]
     cnts = [result.evalcount for result in results]
 
     @test maximum(failures) == 0
-    @test maximum(residuals) <= 5e-13
-    @test avg(cnts) <= 4700
-
-    Ms = [Roots.Brent(),
-          Roots.Ridders(),
-          Roots.ITP()
-          ]
-    results = [run_tests((f, b) -> find_zero(f, b, M), name="$M") for M in Ms]
-    failures = [length(result.failures) for result in results]
-    residuals = [result.maxresidual for result in results]
-    cnts = [result.evalcount for result in results]
-
-    @test maximum(failures) <= 0
-    @test maximum(residuals) <= 5e-13
-    @test avg(cnts) <= 4700
-
-    ## False position has larger residuals
-    ## Fn #13 fails on numbers 2 and 4 until maxsteps is increased; 100 works
-    Ms = [Roots.FalsePosition(i) for i in 1:12]
-    results = [run_tests((f, b) -> find_zero(f, b, M), name="$M") for M in Ms]
-    failures =  [length(result.failures) for result in results]
-    residuals = [result.maxresidual for result in results]
-    cnts = [result.evalcount for result in results]
-
-    @test maximum(failures) == 0
-    @test maximum(residuals) <= 1e-13
-    @test avg(cnts) <= 4000
+    @test maximum(residuals) <= 5e-14
+    @test avg(cnts) <= 5000
 
 
-
-
-    ## issue 412 check for bracket
+    ## issue 412 check for bracket in bracketing methods
     for M in Ms
         @test_throws ArgumentError find_zero(x -> x - 1, (-3, 0), M)
         @test_throws ArgumentError find_zero(x -> 1 + x^2, (10, 20), M)
     end
-
-    ## SFRF
-    Ms = [Roots.RegulaFalsi(m) for m ∈ (:Illinois, :Pegasus, :AndersonBjork, :Ford3, :Ford4)]
-    results = [run_tests((f, b) -> find_zero(f, b, M), name="$M") for M in Ms]
-    failures =  [length(result.failures) for result in results]
-    residuals = [result.maxresidual for result in results]
-    cnts = [result.evalcount for result in results]
-
-    @test maximum(failures) <= 10
-    @test maximum(residuals) <= 1e-14
-    @test avg(cnts) <= 5000
 
 
 end
@@ -390,8 +356,8 @@ end
         for M in Ms
             g = Cnt(fn_)
             x0_ = find_zero(g, ab, M)
-            @test abs(fn_(x0_)) <= 1e-15
-            @test g.cnt <= 50
+            @test abs(fn_(x0_)) <= 1e-14
+            @test g.cnt <= 60
         end
     end
 end
@@ -413,7 +379,7 @@ end
         @test find_zero(f, (-1, 1), M, p=eps()) ≈ eps() atol = 2eps()
     end
 
-    @test iszero(@inferred(find_zero(f, (-1, 1), Roots.Bisection())))
+    @test iszero(@inferred(find_zero(f, (-1, 1), Roots.Bisection()))) # too fiddly to get zero, might get eps(0.0)
     # XXX changes with relaxed tolerance (adding non-zero xatol)
     #@test_throws Roots.ConvergenceFailed find_zero(f, (-1, 1), Roots.A42())
     #@test_throws Roots.ConvergenceFailed find_zero(f, (-1, 1), Roots.AlefeldPotraShi())

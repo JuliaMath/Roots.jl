@@ -348,48 +348,50 @@ function decide_convergence(
     val,
 ) where {T, S}
 
-    a, b = xs = state.xn0, state.xn1
-    fa, fb = fxs = state.fxn0, state.fxn1
+    b, a = xs = state.xn1, state.xn0
+    fb, fa = fxs = state.fxn1, state.fxn0
+    m,i = findmin(abs, fxs)
+    α = xs[i]
 
-    if val == :not_converged
+    if val == :exact_zero
+        return α
+    elseif val == :x_converged
+        # when exact closeness is *possible*
+        # get as close as possible with one extra function call
+        u, v, fu, fv = a < b ? (a, b, fa, fb) : (b, a, fb, fa)
+        u₊ = nextfloat(float(u))
+        u₊₊ = nextfloat(u₊)
+        if v == u₊₊
+            fu₊ = first(F(u₊))
+            m, i = findmin(abs, (fu, fu₊, fv))
+            return (u, u₊, v)[i]
+        else
+            return α
+        end
+    elseif val == :not_converged
         if !options.strict
             # check relaxed convergence on Δx, f(x)
             # Δ ≤ 2^8 * max(δ + |x|⋅ϵ)
             # |f(x)| ≤ 16*min(16δ + |x|⋅ϵ) -- 0 by default
-            m,i = findmin(abs, fxs)
             mx = maximum(abs, xs)
-
 
             Δ = abs(xs[1] - xs[2])
             ϵ = 256 * max(options.xabstol, mx * sqrt(options.xreltol))
-            _unitless(Δ) ≤ _unitless(ϵ) && return xs[i]
+            _unitless(Δ) ≤ _unitless(ϵ) && return α
 
             atol = max(eps(oneunit(real(S))), options.abstol)
             rtol = max(eps(one(real(S))), options.xreltol)
             δ = 16 * min(16*atol, maximum(abs, xs) * rtol)
-            _unitless(m) ≤ _unitless(δ)  && return xs[i]
+            _unitless(m) ≤ _unitless(δ)  && return α
         end
-
         return nan(T) * state.xn1
     end
 
-
-    iszero(fa) && return a
-    iszero(fb) && return b
     isnan(fa) && return a
     isnan(fb) && return b
+    iszero(fa) && return a
+    iszero(fb) && return b
 
-    # get as close as possible with one extra function call
-    # when exact closeness is possible
-    a₊₊ = nextfloat(nextfloat(float(a)))
-    if b == a₊₊
-        c = nextfloat(float(a))
-        fc = first(F(c))
-        m = minimum(abs, (fa, fb, fc))
-        abs(fc) == m && return c
-        abs(fa) == m && return a
-        return b
-    end
+    return α
 
-    return (abs(fa) < abs(fb)) ? a : b
 end
