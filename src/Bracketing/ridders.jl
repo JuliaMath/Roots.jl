@@ -23,7 +23,7 @@ true
 `f=F', g=F''/2, h=F'''/6`, suggesting converence at rate `≈ 1.839...`. It uses two function evaluations per step, so
  its order of convergence is `≈ 1.225...`.
 """
-struct Ridders <: AbstractBracketingMethod end
+struct Ridders <: AbstractNonStrictBracketingMethod end
 
 function update_state(
     M::Ridders,

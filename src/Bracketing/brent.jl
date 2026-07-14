@@ -7,7 +7,7 @@ This method uses a choice of inverse quadratic interpolation or a secant
 step, falling back on bisection if necessary.
 
 """
-struct Brent <: AbstractBracketingMethod end
+struct Brent <: AbstractNonStrictBracketingMethod end
 
 struct BrentState{T,S} <: AbstractUnivariateZeroState{T,S}
     xn1::T
