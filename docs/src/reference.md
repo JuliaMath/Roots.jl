@@ -230,8 +230,10 @@ good example.
 | Bracketing      | Brent                        | ``\leq 1.89\dots``     | ``1``   | ``\leq 1.89\dots``                    |
 | Bracketing      | ITP                          | ``\leq \varphi``       | ``1``   | ``\leq \varphi``                      |
 | Bracketing      | Ridders                      | ``1.83\dots``          | ``2``   | ``1.225\dots``                          |
-| Bracketing      | FalsePosition{:Illinois}     | ``1.442\dots``         | ``1``   | ``1.442\dots``                        |
-| Bracketing      | RegulaFalsi{:AndersonBjork}  | ``1.681\dots``         | ``1``   | ``1.442\dots``                        |
+| Bracketing      | RegularFalsi{:classic}       | ``1``                  | ``1``   | ``1``                                 |
+| Bracketing      | RegularFalsi{:Illinois}      | ``1.442\dots``         | ``1``   | ``1.442\dots``                        |
+| Bracketing      | RegulaFalsi{:AndersonBjork}  | ``1.681\dots``         | ``1``   | ``1.681\dots``                        |
+| Bracketing      | RegulaFalsi{:Ford4}          | ``1.681\dots``         | ``1``   | ``1.681\dots``                        |
 | Bracketing      | ModAB                        | ``≈1.7\dots``          | ``1``   | ``1.7\dots``                          |
 | Bracketing      | LithBoonkkampIJzermanBracket | ``2.91``               | ``3``   | ``1.427\dots``                        |
 | Robust          | King                         | ``\varphi=1.618\dots`` | ``2``   | ``1.272\dots``                        |
