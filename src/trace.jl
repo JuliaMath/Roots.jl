@@ -32,13 +32,13 @@ julia> using Roots
 julia> f(x) = x^2-2
 f (generic function with 1 method)
 
-julia> tracker = Roots.Tracks()
+julia> tracks = Roots.Tracks()
 Algorithm has not been run
 
-julia> find_zero(f, (0, 2), Roots.Secant(), tracks=tracker) ≈ √2
+julia> find_zero(f, (0, 2), Roots.Secant(); tracks) ≈ √2 # keyword match
 true
 
-julia> tracker
+julia> tracks
 Results of univariate zero finding:
 
 * Converged to: 1.4142135623730947
@@ -58,13 +58,13 @@ x₇ =  1.4142114384748701  	 fx₇ = -6.0072868388605372e-06
 x₈ =  1.4142135626888697  	 fx₈ =  8.9314555751229818e-10
 x₉ =  1.4142135623730947  	 fx₉ = -8.8817841970012523e-16
 
-julia> tracker = Roots.Tracks()
+julia> tracks = Roots.Tracks()
 Algorithm has not been run
 
-julia> find_zero(sin, (3, 4), Roots.A42(), tracks=tracker) ≈ π
+julia> find_zero(sin, (3, 4), Roots.A42(); tracks) ≈ π
 true
 
-julia> tracker
+julia> tracks
 Results of univariate zero finding:
 
 * Converged to: 3.141592653589793

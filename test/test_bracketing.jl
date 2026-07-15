@@ -302,7 +302,7 @@ end
 
     @test maximum(failures) == 0
     @test maximum(residuals) <= 5e-14
-    @test avg(cnts) <= 5000
+    @test avg(cnts) <= 4000
 
 
     ## issue 412 check for bracket in bracketing methods

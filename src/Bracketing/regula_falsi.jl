@@ -99,7 +99,7 @@ function update_state(
 
     c::T = (xₙ₋₁ * f̂xₙ - xₙ * f̂xₙ₋₁) / (f̂xₙ - f̂xₙ₋₁)
 
-    ϵ = maximum(abs, (xₙ, xₙ₋₁)) * √eps(T)  # some engineering to avoid short moves
+    ϵ = abs(xₙ - xₙ₋₁) * sqrt(eps(T)) # some engineering to avoid short moves
     if abs(c - xₙ) ≤ ϵ || abs(c - xₙ₋₁) ≤ ϵ
         c = xₙ₋₁/2 + xₙ/2
     end

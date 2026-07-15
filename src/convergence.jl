@@ -216,6 +216,8 @@ If algorithm hasn't converged this returns `(:not_converged, false)`.
 
 If algorithm has stopped or converged, return flag and `true`. Flags are:
 
+* :`exact_zero` if `|f(xn1)| == 0`
+
 * `:x_converged` if `xn1 ≈ xn`, typically with non-zero tolerances specified.
 
 * `:f_converged` if  `|f(xn1)| < max(atol, |xn1|*rtol)`
