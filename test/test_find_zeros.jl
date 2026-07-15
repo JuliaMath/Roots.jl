@@ -2,6 +2,7 @@
 
 using Roots
 using Test
+using BenchmarkTools
 
 mutable struct CallableFunction
     f
@@ -135,4 +136,27 @@ end
         rts = find_zeros(x -> cos(x) - x / 10, T(0.0), T(10.0))
         @test eltype(rts) == T
     end
+end
+
+@testset "dfree/bisection" begin
+
+    # dfree
+    fpoly = x -> x^5 - x - 1
+    xrt = Roots.dfree(fpoly, 1.0)
+    @test abs(fpoly(xrt)) <= 1e-14
+
+    @test BenchmarkTools.@ballocated(Roots.dfree(sin, 3)) == 0
+
+    # bisection
+    # bisection
+    xrt = Roots.bisection(sin, 3.0, 4.0)
+    @test isapprox(xrt, pi)
+
+    xrt = Roots.bisection(sin, 3.0, 4.0, xatol=1e-3)
+    @test abs(sin(xrt)) >= 1e-7  # not to0 close
+
+    xrt = Roots.bisection(sin, big(3.0), big(4.0))
+    @test isapprox(xrt, pi)
+    @test BenchmarkTools.@ballocated(Roots.bisection(sin, 3, 4)) == 0
+
 end

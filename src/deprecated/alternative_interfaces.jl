@@ -1,90 +1,6 @@
 ## Some **legacy** alternative interfaces.
-
+## These should be deprecated!
 ## several named interfaces to methods
-## newton, halley, quadratic_inverse, superhalley, chebyshevlike
-"""
-    Roots.newton(f, fp, x0; kwargs...)
-
-Implementation of Newton's method: `xᵢ₊₁ =  xᵢ - f(xᵢ)/f'(xᵢ)`.
-
-Arguments:
-
-* `f::Function` -- function to find zero of
-
-* `fp::Function` -- the derivative of `f`.
-
-* `x0::Number` -- initial guess. For Newton's method this may be complex.
-
-With the `ForwardDiff` package derivatives may be computed automatically. For example,  defining
-`D(f) = x -> ForwardDiff.derivative(f, float(x))` allows `D(f)` to be used for the first derivative.
-
-Keyword arguments are passed to `find_zero` using the `Roots.Newton()` method.
-
-See also `Roots.newton((f,fp), x0)` and `Roots.newton(fΔf, x0)` for simpler implementations.
-
-"""
-newton(f, fp, x0; kwargs...) = find_zero((f, fp), x0, Newton(); kwargs...)
-
-## --------------------------------------------------
-#=
-"""
-    Roots.halley(f, fp, fpp, x0; kwargs...)
-
-Implementation of Halley's method (cf `?Roots.Halley()`).
-
-Arguments:
-
-* `f::Function` -- function to find zero of
-
-* `fp::Function` -- derivative of `f`.
-
-* `fpp:Function` -- second derivative of `f`.
-
-* `x0::Number` -- initial guess
-
-With the `ForwardDiff` package derivatives may be computed automatically. For example,  defining
-`D(f) = x -> ForwardDiff.derivative(f, float(x))` allows `D(f)` and `D(D(f))` to be used for the first and second
-derivatives, respectively.
-
-Keyword arguments are passed to `find_zero` using the `Roots.Halley()` method.
-
-"""
-=#
-halley(f, fp, fpp, x0; kwargs...) = find_zero((f, fp, fpp), x0, Halley(); kwargs...)
-
-#=
-"""
-    Roots.quadratic_inverse(f, fp, fpp, x0; kwargs...)
-
-Implementation of the quadratic inverse method (cf `?Roots.QuadraticInverse()`).
-
-Arguments:
-
-* `f::Function` -- function to find zero of
-
-* `fp::Function` -- derivative of `f`.
-
-* `fpp:Function` -- second derivative of `f`.
-
-* `x0::Number` -- initial guess
-
-With the `ForwardDiff` package derivatives may be computed automatically. For example,  defining
-`D(f) = x -> ForwardDiff.derivative(f, float(x))` allows `D(f)` and `D(D(f))` to be used for the first and second
-derivatives, respectively.
-
-Keyword arguments are passed to `find_zero` using the `Roots.QuadraticInverse()` method.
-
-"""
-=#
-quadratic_inverse(f, fp, fpp, x0; kwargs...) =
-    find_zero((f, fp, fpp), x0, QuadraticInverse(); kwargs...)
-
-superhalley(f, fp, fpp, x0; kwargs...) =
-    find_zero((f, fp, fpp), x0, SuperHalley(); kwargs...)
-
-chebyshev_like(f, fp, fpp, x0; kwargs...) =
-    find_zero((f, fp, fpp), x0, ChebyshevLike(); kwargs...)
-
 ## --------------------------------------------------
 
 ## MATLAB interface to find_zero
@@ -152,10 +68,23 @@ fzero(sin, cos, 3)             # use Newton's method
     This has the advantage of making the first use of the function `f` faster, but subsequent uses slower.
 
 """
-function fzero(f, x0::Number; kwargs...)
-    x = float(x0)
-    isinf(x) && throw(ConvergenceFailed("An initial value must be finite"))
-    derivative_free(f, x; kwargs...)
+function fzero(f, x0; order=nothing, verbose=false, tracks=NullTracks(), kwargs...)
+    #Base.depwarn("`fzero(f, x0)` is deprecated; use `find_zero(f, x0)` instead.", :fzero)
+
+    M = haskey(_method_lookup, order) ? _method_lookup[order] :
+        isa(x0, Tuple) ? Bisection() :
+        isa(x0, Number) ? Order0() :
+        Order0()
+    tracks = (verbose && !isa(tracks, NullTracks)) ? Tracks() : NullTracks()
+    @noinline α = find_zero(FnWrapper(f), x0, M; tracks, kwargs...)
+    verbose && display(tracks)
+    α
+end
+
+
+function fzero(f, a::Number, b::Number, args...; kwargs...)
+    #Base.depwarn("`fzero(f, a, b)` is deprecated; use `find_zero(f, (a,b))` instead.", :fzero)
+    fzero(f, (a, b), args...; kwargs...)
 end
 
 function fzero(
@@ -166,6 +95,7 @@ function fzero(
     tracks=NullTracks(),
     kwargs...,
 )
+    #Base.depwarn("`fzero(f, x0, M)` is deprecated; use `find_zero(f, x0, M)` instead.", :fzero)
     tracks = (verbose && isa(tracks, NullTracks)) ? Tracks() : tracks
     α = find_zero(FnWrapper(f), x0, M; tracks, kwargs...)
     verbose && display(tracks)
@@ -181,37 +111,11 @@ function fzero(
     tracks=NullTracks(),
     kwargs...,
 )
+    #Base.depwarn("`fzero(f, x0, M, N)` is deprecated; use `find_zero(f, x0, M, N)` instead.", :fzero)
     tracks = (verbose && isa(tracks, NullTracks)) ? Tracks() : tracks
     a = find_zero(FnWrapper(f), x0, M, N; tracks, kwargs...)
     verbose && display(tracks)
     a
-end
-
-function fzero(
-    f,
-    bracket::Tuple{T,S};
-    verbose=false,
-    tracks=NullTracks(),
-    kwargs...,
-) where {T<:Number,S<:Number}
-    d = Dict(kwargs...)
-    tracks = (verbose && isa(tracks, NullTracks)) ? Tracks() : tracks
-    if haskey(d, :order)
-        val = find_zero(FnWrapper(f), bracket, _method_lookup[d[:order]]; tracks, kwargs...)
-    else
-        val = find_zero(FnWrapper(f), bracket, Bisection(); tracks, kwargs...)
-    end
-    verbose && display(tracks)
-    val
-end
-
-fzero(f, a::Number, b::Number, args...; kwargs...) = fzero(f, (a, b), args...; kwargs...)
-
-function fzero(f, x; verbose=false, tracks=NullTracks(), kwargs...)
-    tracks = (verbose && isa(tracks, NullTracks)) ? Tracks() : tracks
-    α = find_zero(FnWrapper(f), x; kwargs...)
-    verbose && display(tracks)
-    α
 end
 
 function fzero(
@@ -222,8 +126,10 @@ function fzero(
     tracks=NullTracks(),
     kwargs...,
 )
+    #Base.depwarn("`fzero(f, fp, x0)` is deprecated; use `find_zero((f, fp), x0, Roots.Newton())` instead.", :fzero)
+    M = Newton()
     tracks = (verbose && isa(tracks, NullTracks)) ? Tracks() : tracks
-    α = find_zero((f, fp), x0, Newton(); tracks, kwargs...)
+    α = find_zero((f, fp), x0, M; tracks, kwargs...)
     verbose && display(tracks)
     α
 end
@@ -260,38 +166,7 @@ _method_lookup = Dict(
     "16"        => Order16(),
 )
 
-@noinline function derivative_free(
-    f,
-    x0;
-    verbose::Bool=false,
-    tracks=NullTracks(),
-    order=0,
-    kwargs...,
-)
-    if haskey(_method_lookup, order)
-        M = _method_lookup[order]
-    else
-        throw(ArgumentError("Invalid order specified. See ?fzero."))
-    end
 
-    # d = (kv[1] == :ftol ? :atol=>kv[2] :
-    #      kv[1] == :ftolrel ? :rtol=>kv[2] :
-    #      kv[1] == :xtol ? :xatol=>kv[2] :
-    #      kv[1] == :xtolrel ? xrtol=>kv[2] :
-    #      kv[1] => kv[1] for kv in kwargs)
-
-    d = Dict(kwargs...)
-    for (o, n) in ((:ftol, :atol), (:ftolrel, :rtol), (:xtol, :xatol), (:xtolrel, :xrtol))
-        if haskey(d, o)
-            d[n] = d[o]
-        end
-    end
-
-    tracks = (verbose && isa(tracks, NullTracks)) ? Tracks() : tracks
-    a = find_zero(FnWrapper(f), x0, M; tracks, d...)
-    verbose && display(tracks)
-    a
-end
 
 ## fzeros
 """
@@ -303,6 +178,7 @@ Searches for all zeros of `f` within an interval `(a,b)`. Assumes neither `a` or
 Compatibility interface for [`find_zeros`](@ref).
 """
 function fzeros(f, a::Number, b::Number; kwargs...)
+    #Base.depwarn("`fzeros(f, a, b)` is deprecated; use `find_zeros(f, (a,b)) instead.", :fzeros)
     find_zeros(FnWrapper(f), float(a), float(b); kwargs...)
 end
 fzeros(f, ab; kwargs...) = fzeros(f, _extrema(ab)...; kwargs...)
