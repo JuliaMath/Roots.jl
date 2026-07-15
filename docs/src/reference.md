@@ -251,7 +251,7 @@ Identifying when an algorithm converges or diverges requires specifications of t
 
 In the case of exact bisection, convergence is mathematically
 guaranteed. For floating point numbers, either an *exact* zero is
-found, or the bracketing interval can be subdivided into ``[a_n,b_n]``
+found, or the bracketing interval can *not* be subdivided into ``[a_n,b_n]``
 with ``a_n`` and ``b_n`` being adjacent floating point values. That is
 ``b_n-a_n`` is as small as possible in floating point numbers. This can
 be considered a stopping criteria in ``\Delta x``. For early termination
@@ -267,7 +267,7 @@ determine closeness.
 Relying on the closeness of two ``x`` values will not be adequate for
 all problems, as there are examples where the difference
 ``\Delta_n=|x_n-x_{n-1}|`` can be quite small, ``0`` even, yet ``f(x_n)`` is
-not near a ``0``. As such, for non-bracketing methods, a check on the
+not near a ``0``. As well, a final step which should make $\Delta_n$ small enough, might get derailed due to floating point issues. As such, for non-bracketing methods and for some non-strict bracketing methods, a check on the
 size of ``f(x_n)`` is also used. As we find floating point
 approximations to ``\alpha``, the zero, we must consider values small
 when ``f(\alpha(1+\epsilon))`` is small. By Taylor's approximation, we
