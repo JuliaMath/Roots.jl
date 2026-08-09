@@ -90,14 +90,15 @@ function is_approx_zero_f(
     ::M,
     state::AbstractUnivariateZeroState,
     options::O,
-) where {M <: Union{AbstractUnivariateZeroMethod, AbstractRegulaFalsiMethod},
-         O<:AbstractUnivariateZeroOptions}
+) where {
+    M<:Union{AbstractUnivariateZeroMethod,AbstractRegulaFalsiMethod},
+    O<:AbstractUnivariateZeroOptions,
+}
     ab, afb = abs(state.xn1), abs(state.fxn1)
     ϵₐ, ϵᵣ = options.abstol, options.reltol
     Δ = max(_unitless(ϵₐ), _unitless(ab) * ϵᵣ)
     afb ≤ Δ * oneunit(afb)
 end
-
 
 ## test f ≈ 0 not f == 0
 function is_approx_zero_f(
@@ -348,11 +349,10 @@ function decide_convergence(
     state::AbstractUnivariateZeroState{T,S},
     options,
     val,
-) where {T, S}
-
+) where {T,S}
     b, a = xs = state.xn1, state.xn0
     fb, fa = fxs = state.fxn1, state.fxn0
-    m,i = findmin(abs, fxs)
+    m, i = findmin(abs, fxs)
     α = xs[i]
 
     if val == :exact_zero
@@ -384,7 +384,7 @@ function decide_convergence(
             atol = max(eps(oneunit(real(S))), options.abstol)
             rtol = max(eps(one(real(S))), options.xreltol)
             δ = 16 * min(16*atol, maximum(abs, xs) * rtol)
-            _unitless(m) ≤ _unitless(δ)  && return α
+            _unitless(m) ≤ _unitless(δ) && return α
         end
         return nan(T) * state.xn1
     end
@@ -395,5 +395,4 @@ function decide_convergence(
     iszero(fb) && return b
 
     return α
-
 end

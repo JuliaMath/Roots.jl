@@ -43,21 +43,29 @@ const ScalingFactorRegulaFalsi{R} = RegulaFalsi{R}
 const SCRF{R} = RegulaFalsi{R}
 
 # for testing, this might be helpful
-_regula_falsi_names = (:classic, :Illinois, :GIll01, :Pegasus, :AndersonBjork, :AB_GIll01, :Ford3, :Ford4)
+_regula_falsi_names =
+    (:classic, :Illinois, :GIll01, :Pegasus, :AndersonBjork, :AB_GIll01, :Ford3, :Ford4)
 
 # factors
-Fᵧ(::RegulaFalsi{:classic}, ξ::T, ζ::T)       where T = one(T)
-Fᵧ(::RegulaFalsi{:Illinois}, ξ::T, ζ::T)      where T = one(T)/2
-Fᵧ(::RegulaFalsi{:GIll01}, ξ::T, ζ::T)        where T = one(T)/10 # Generalized Illinois method with γ = 0.1
-Fᵧ(::RegulaFalsi{:Pegasus}, ξ::T, ζ::T)       where T = one(T) / (one(T) + ξ)
-Fᵧ(::RegulaFalsi{:AndersonBjork}, ξ::T, ζ::T) where T = ξ < 1 ? (one(T) - ξ) : one(T)/2
-Fᵧ(::RegulaFalsi{:AB_GIll01}, ξ::T, ζ::T)     where T = max(one(T) - ξ,one(T)/10) # AB + Generalized Illinois method with γ = 0.1, though paper conditions on no. of steps
-Fᵧ(::RegulaFalsi{:Ford3},  ξ::T, ζ::T)        where T = (one(T) - ξ + ζ) / (one(T) - ζ)
-Fᵧ(::RegulaFalsi{:Ford4},  ξ::T, ζ::T)        where T = one(T) - ξ + ζ
+Fᵧ(::RegulaFalsi{:classic}, ξ::T, ζ::T) where {T}       = one(T)
+Fᵧ(::RegulaFalsi{:Illinois}, ξ::T, ζ::T) where {T}      = one(T)/2
+Fᵧ(::RegulaFalsi{:GIll01}, ξ::T, ζ::T) where {T}        = one(T)/10 # Generalized Illinois method with γ = 0.1
+Fᵧ(::RegulaFalsi{:Pegasus}, ξ::T, ζ::T) where {T}       = one(T) / (one(T) + ξ)
+Fᵧ(::RegulaFalsi{:AndersonBjork}, ξ::T, ζ::T) where {T} = ξ < 1 ? (one(T) - ξ) : one(T)/2
+Fᵧ(::RegulaFalsi{:AB_GIll01}, ξ::T, ζ::T) where {T}     = max(one(T) - ξ, one(T)/10) # AB + Generalized Illinois method with γ = 0.1, though paper conditions on no. of steps
+Fᵧ(::RegulaFalsi{:Ford3}, ξ::T, ζ::T) where {T}         = (one(T) - ξ + ζ) / (one(T) - ζ)
+Fᵧ(::RegulaFalsi{:Ford4}, ξ::T, ζ::T) where {T}         = one(T) - ξ + ζ
 
 # take one step so the :right/:left is set up
-function init_state(M::AbstractRegulaFalsiMethod, F, x₀::S, x₁::S, fx₀::T, fx₁::T) where {S, T}
-    assert_bracket(fx₀,fx₁)
+function init_state(
+    M::AbstractRegulaFalsiMethod,
+    F,
+    x₀::S,
+    x₁::S,
+    fx₀::T,
+    fx₁::T,
+) where {S,T}
+    assert_bracket(fx₀, fx₁)
 
     c::T = (x₀ * fx₁ - x₁ * fx₀) / (fx₁ - fx₀)
     fc::S = F(c)
@@ -74,8 +82,8 @@ initial_fncalls(M::AbstractRegulaFalsiMethod) = 3
 
 function default_tolerances(
     ::AbstractRegulaFalsiMethod,
-    ::AbstractUnivariateZeroState{T, S},
-) where {T, S}
+    ::AbstractUnivariateZeroState{T,S},
+) where {T,S}
     xatol = eps(T)^3 * oneunit(T)
     xrtol = eps(T) * one(T) # unitless
     atol = 0 * oneunit(S)
@@ -85,7 +93,6 @@ function default_tolerances(
     (xatol, xrtol, atol, rtol, maxiters, strict)
 end
 
-
 function update_state(
     M::RegulaFalsi,
     fs,
@@ -93,7 +100,6 @@ function update_state(
     options,
     l=NullTracks(),
 ) where {T,S}
-
     xₙ₋₁::T, xₙ::T = o.xn0, o.xn1
     f̂xₙ₋₁::S, f̂xₙ::S = o.fxn0, o.fxn1
 
@@ -114,8 +120,8 @@ function update_state(
     if sign(f̂xₙ) * sign(fc) > 0 # stuck on same side as last time, scale other side
         ξ::S = fc / f̂xₙ     # \xi
         ζ::S = - fc / f̂xₙ₋₁ # \zeta
-        γ::S =  Fᵧ(M, ξ, ζ)
-        γ =  max(zero(ξ), min(one(ξ), γ))
+        γ::S = Fᵧ(M, ξ, ζ)
+        γ = max(zero(ξ), min(one(ξ), γ))
 
         xₙ = xₙ₋₁
         f̂xₙ = γ * f̂xₙ₋₁

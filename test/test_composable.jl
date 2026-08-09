@@ -91,7 +91,7 @@ using Measurements
         c = measurement(-10.0, 0.1)
         f(x) = a * x^2 + b * x + c
         x₀ = (measurement(-3.0, 0.1), measurement(0.0, 0.1))
-        for M in (Secant(),  Bisection())
+        for M in (Secant(), Bisection())
             @test find_zero(f, x₀, M) ≈ -2.0
         end
         @test find_zero(f, measurement(0.0, 0.1), Secant()) ≈ -2.0

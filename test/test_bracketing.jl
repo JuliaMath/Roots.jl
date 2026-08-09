@@ -278,7 +278,6 @@ end
 # end
 
 @testset "bracketing methods" begin
-
     Ms = (
         Roots.A42(),
         Roots.AlefeldPotraShi(),
@@ -289,7 +288,10 @@ end
         Roots.Ridders(),
         Roots.ITP(),
         [Roots.FalsePosition(i) for i in 1:12]...,
-        [Roots.RegulaFalsi(m) for m ∈ (:Illinois, :Pegasus, :AndersonBjork, :Ford3, :Ford4)]...
+        [
+            Roots.RegulaFalsi(m) for
+            m in (:Illinois, :Pegasus, :AndersonBjork, :Ford3, :Ford4)
+        ]...,
     )
 
     ## Test for failures, ideally all of these would be 0
@@ -304,14 +306,11 @@ end
     @test maximum(residuals) <= 5e-14
     @test avg(cnts) <= 4000
 
-
     ## issue 412 check for bracket in bracketing methods
     for M in Ms
         @test_throws ArgumentError find_zero(x -> x - 1, (-3, 0), M)
         @test_throws ArgumentError find_zero(x -> 1 + x^2, (10, 20), M)
     end
-
-
 end
 
 ## Some tests for FalsePosition methods
@@ -342,7 +341,7 @@ end
         ((x, n=20) -> x^2 + sin(x / n) - 1 / 4, [0, 1]),
     ]
 
-    for (no,(fn_, ab)) in enumerate(galadino_probs)
+    for (no, (fn_, ab)) in enumerate(galadino_probs)
         for i in vcat(1, 3:12) # issue with 2 not converging
             M = FalsePosition(i)
             g = Cnt(fn_)
@@ -352,7 +351,10 @@ end
         end
     end
     for (fn_, ab) in galadino_probs
-        Ms = [Roots.RegulaFalsi(m) for m ∈ (:Illinois, :Pegasus, :AndersonBjork, :Ford3, :Ford4)]
+        Ms = [
+            Roots.RegulaFalsi(m) for
+            m in (:Illinois, :Pegasus, :AndersonBjork, :Ford3, :Ford4)
+        ]
         for M in Ms
             g = Cnt(fn_)
             x0_ = find_zero(g, ab, M)

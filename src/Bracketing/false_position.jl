@@ -79,11 +79,18 @@ galdino_reduction(::FalsePosition{8}, fa, fb, fx) = fa / 2
 galdino_reduction(::FalsePosition{9}, fa, fb, fx) = fa / (1 + fx / fb)^2
 galdino_reduction(::FalsePosition{10}, fa, fb, fx) = (fa - fx) / 4
 galdino_reduction(::FalsePosition{11}, fa, fb, fx) = fx * fa / (fb + fx)
-galdino_reduction(::FalsePosition{12}, fa, fb, fx) = (fa * (1 - fx / fb > 0 ? 1 - fx / fb : one(fa)/2))
+galdino_reduction(::FalsePosition{12}, fa, fb, fx) =
+    (fa * (1 - fx / fb > 0 ? 1 - fx / fb : one(fa)/2))
 
-galdino_reduction(::FalsePosition{:pegasus}, fa, fb, fx) = galdino_reduction(FalsePosition(1), fa, fb, fx)
-galdino_reduction(::FalsePosition{:Pegasus}, fa, fb, fx) = galdino_reduction(FalsePosition(1), fa, fb, fx)
-galdino_reduction(::FalsePosition{:illinois}, fa, fb, fx) = galdino_reduction(FalsePosition(8), fa, fb, fx)
-galdino_reduction(::FalsePosition{:Illinois}, fa, fb, fx) = galdino_reduction(FalsePosition(8), fa, fb, fx)
-galdino_reduction(::FalsePosition{:anderson_bjork}, fa, fb, fx) = galdino_reduction(FalsePosition(12), fa, fb, fx)
-galdino_reduction(::FalsePosition{:AndersonBjork}, fa, fb, fx) = galdino_reduction(FalsePosition(12), fa, fb, fx)
+galdino_reduction(::FalsePosition{:pegasus}, fa, fb, fx) =
+    galdino_reduction(FalsePosition(1), fa, fb, fx)
+galdino_reduction(::FalsePosition{:Pegasus}, fa, fb, fx) =
+    galdino_reduction(FalsePosition(1), fa, fb, fx)
+galdino_reduction(::FalsePosition{:illinois}, fa, fb, fx) =
+    galdino_reduction(FalsePosition(8), fa, fb, fx)
+galdino_reduction(::FalsePosition{:Illinois}, fa, fb, fx) =
+    galdino_reduction(FalsePosition(8), fa, fb, fx)
+galdino_reduction(::FalsePosition{:anderson_bjork}, fa, fb, fx) =
+    galdino_reduction(FalsePosition(12), fa, fb, fx)
+galdino_reduction(::FalsePosition{:AndersonBjork}, fa, fb, fx) =
+    galdino_reduction(FalsePosition(12), fa, fb, fx)
