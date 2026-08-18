@@ -34,7 +34,7 @@ or `Float16` values, the process will terminate at a value `x` with
 """
 function bisection(f, a::Number, b::Number; xatol=nothing, xrtol=nothing)
     x1, x2 = adjust_bracket(float.((a, b)))
-    T = eltype(x1)
+    T = typeof(x1)
 
     atol = xatol === nothing ? zero(T) : abs(xatol)
     rtol = xrtol === nothing ? zero(one(T)) : abs(xrtol)
