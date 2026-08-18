@@ -50,12 +50,12 @@ import Roots: newton, halley, superhalley, quadratic_inverse, chebyshev_like
     @test real(Roots.newton(x -> x^3 - 1, x -> 3x^2, 1 + 10im)) ≈ (-1 / 2)
 
     ## Issue #143 test with new interface
-    Roots.newton(sin, cos, 3.0) ≈ π # uses find_zero
-    Roots.newton((sin, cos), 3.0) ≈ π # uses simple
+    @test Roots.newton(sin, cos, 3.0) ≈ π # uses find_zero
+    @test Roots.newton((sin, cos), 3.0) ≈ π # uses simple
 
     fdf = x -> (sin(x), sin(x) / cos(x))  # (f, f/f')
     @test Roots.find_zero(fdf, 3.0, Roots.Newton()) ≈ π # uses find_zero
-    Roots.newton(fdf, 3.0) ≈ π # uses simple
+    @test Roots.newton(fdf, 3.0) ≈ π # uses simple
 
 
 

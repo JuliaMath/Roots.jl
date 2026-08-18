@@ -75,7 +75,9 @@ function fzero(f, x0; order=nothing, verbose=false, tracks=NullTracks(), kwargs.
         isa(x0, Tuple) ? Bisection() :
         isa(x0, Number) ? Order0() :
         Order0()
-    tracks = (verbose && !isa(tracks, NullTracks)) ? Tracks() : NullTracks()
+    if verbose && isa(tracks, NullTracks))
+        tracks = Tracks()
+    end
     @noinline α = find_zero(FnWrapper(f), x0, M; tracks, kwargs...)
     verbose && display(tracks)
     α

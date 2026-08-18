@@ -153,7 +153,7 @@ end
     @test isapprox(xrt, pi)
 
     xrt = Roots.bisection(sin, 3.0, 4.0, xatol=1e-3)
-    @test abs(sin(xrt)) >= 1e-7  # not to0 close
+    @test abs(sin(xrt)) >= 1e-7  # not too close
 
     xrt = Roots.bisection(sin, big(3.0), big(4.0))
     @test isapprox(xrt, pi)
