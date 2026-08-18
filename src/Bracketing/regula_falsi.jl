@@ -2,12 +2,12 @@ struct RegulaFalsi{R} <: AbstractRegulaFalsiMethod end
 
 """
     RegulaFalsi{M}
-    ScalingFactorRegulaFalsi(M::Symbol=AndersonBjork)
+    ScalingFactorRegulaFalsi(M::Symbol=:AndersonBjork)
     SCRF{M}
 
 Implements several different *scaling factor* *regula falsi* methods following Diaz and Perez. The *regula falsi* method uses the secant method to find the next value with a bracketing interval providing the history. This is a linearly convergent method. By scaling, or adjusting, the ``f(x_i)`` values, superlinear convergence can be achieved.
 
-The scaling factor refers to the `f(xᵢ)` values being scaled by `γ` which is dynamically computed based on `ξ = f(xᵢ₊₁}) / f(xᵢ)` and `ζ = - f(xᵢ₊₁}) / f(xᵢ₋₁)`.
+The scaling factor refers to the `f(xᵢ)` values being scaled by `γ` which is dynamically computed based on `ξ = f(xᵢ₊₁) / f(xᵢ)` and `ζ = - f(xᵢ₊₁) / f(xᵢ₋₁)`.
 
 The value for `M` is one of `Roots._regula_falsi_names` or  `(:classic, :Illinois, :GIll01, :Pegasus, :AndersonBjork, :AB_GIll01, :Ford3, :Ford4)`. The default is :AndersonBjork.
 
@@ -60,11 +60,11 @@ Fᵧ(::RegulaFalsi{:Ford4}, ξ::T, ζ::T) where {T}         = one(T) - ξ + ζ
 function init_state(
     M::AbstractRegulaFalsiMethod,
     F,
-    x₀::S,
-    x₁::S,
-    fx₀::T,
-    fx₁::T,
-) where {S,T}
+    x₀::T,
+    x₁::T,
+    fx₀::S,
+    fx₁::S,
+) where {T,S}
     assert_bracket(fx₀, fx₁)
 
     c::T = (x₀ * fx₁ - x₁ * fx₀) / (fx₁ - fx₀)

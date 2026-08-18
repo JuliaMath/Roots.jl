@@ -230,8 +230,8 @@ good example.
 | Bracketing      | Brent                        | ``\leq 1.89\dots``     | ``1``   | ``\leq 1.89\dots``                    |
 | Bracketing      | ITP                          | ``\leq \varphi``       | ``1``   | ``\leq \varphi``                      |
 | Bracketing      | Ridders                      | ``1.83\dots``          | ``2``   | ``1.225\dots``                          |
-| Bracketing      | RegularFalsi{:classic}       | ``1``                  | ``1``   | ``1``                                 |
-| Bracketing      | RegularFalsi{:Illinois}      | ``1.442\dots``         | ``1``   | ``1.442\dots``                        |
+| Bracketing      | RegulaFalsi{:classic}       | ``1``                  | ``1``   | ``1``                                 |
+| Bracketing      | RegulaFalsi{:Illinois}      | ``1.442\dots``         | ``1``   | ``1.442\dots``                        |
 | Bracketing      | RegulaFalsi{:AndersonBjork}  | ``1.681\dots``         | ``1``   | ``1.681\dots``                        |
 | Bracketing      | RegulaFalsi{:Ford4}          | ``1.681\dots``         | ``1``   | ``1.681\dots``                        |
 | Bracketing      | ModAB                        | ``≈1.7\dots``          | ``1``   | ``1.7\dots``                          |
@@ -315,6 +315,7 @@ Roots.bisection
 Roots.muller
 Roots.newton
 Roots.dfree
+Roots.modab
 ```
 
 
