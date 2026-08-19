@@ -153,6 +153,8 @@ fzero(sin, cos, 3)             # use Newton's method
 
 """
 function fzero(f, x0::Number; kwargs...)
+    Base.depwarn("`fzero(f, x0)` is deprecated; use `find_zero(f, x0)` instead.", :fzero)
+
     x = float(x0)
     isinf(x) && throw(ConvergenceFailed("An initial value must be finite"))
     derivative_free(f, x; kwargs...)
@@ -166,6 +168,8 @@ function fzero(
     tracks=NullTracks(),
     kwargs...,
 )
+    Base.depwarn("`fzero(f, x0, M)` is deprecated; use `find_zero(f, x0, M)` instead.", :fzero)
+
     tracks = (verbose && isa(tracks, NullTracks)) ? Tracks() : tracks
     α = find_zero(FnWrapper(f), x0, M; tracks, kwargs...)
     verbose && display(tracks)
@@ -181,6 +185,8 @@ function fzero(
     tracks=NullTracks(),
     kwargs...,
 )
+    Base.depwarn("`fzero(f, x0, M, N)` is deprecated; use `find_zero(f, x0, M, N)` instead.", :fzero)
+
     tracks = (verbose && isa(tracks, NullTracks)) ? Tracks() : tracks
     a = find_zero(FnWrapper(f), x0, M, N; tracks, kwargs...)
     verbose && display(tracks)
@@ -194,6 +200,9 @@ function fzero(
     tracks=NullTracks(),
     kwargs...,
 ) where {T<:Number,S<:Number}
+    Base.depwarn("`fzero(f, (a,b))` is deprecated; use `find_zero(f, (a,b))` instead.", :fzero)
+
+
     d = Dict(kwargs...)
     tracks = (verbose && isa(tracks, NullTracks)) ? Tracks() : tracks
     if haskey(d, :order)
@@ -208,6 +217,7 @@ end
 fzero(f, a::Number, b::Number, args...; kwargs...) = fzero(f, (a, b), args...; kwargs...)
 
 function fzero(f, x; verbose=false, tracks=NullTracks(), kwargs...)
+    Base.depwarn("`fzero(f, x)` is deprecated; use `find_zero(f, x)` instead.", :fzero)
     tracks = (verbose && isa(tracks, NullTracks)) ? Tracks() : tracks
     α = find_zero(FnWrapper(f), x; kwargs...)
     verbose && display(tracks)
@@ -222,6 +232,7 @@ function fzero(
     tracks=NullTracks(),
     kwargs...,
 )
+    Base.depwarn("`fzero(f, fp, x0)` is deprecated; use `find_zero((f,fp), x0)` instead.", :fzero)
     tracks = (verbose && isa(tracks, NullTracks)) ? Tracks() : tracks
     α = find_zero((f, fp), x0, Newton(); tracks, kwargs...)
     verbose && display(tracks)
@@ -303,6 +314,7 @@ Searches for all zeros of `f` within an interval `(a,b)`. Assumes neither `a` or
 Compatibility interface for [`find_zeros`](@ref).
 """
 function fzeros(f, a::Number, b::Number; kwargs...)
+    Base.depwarn("`fzeros(f, a,b)` is deprecated; use `find_zeros(f, a, b)` instead.", :fzero)
     find_zeros(FnWrapper(f), float(a), float(b); kwargs...)
 end
 fzeros(f, ab; kwargs...) = fzeros(f, _extrema(ab)...; kwargs...)
