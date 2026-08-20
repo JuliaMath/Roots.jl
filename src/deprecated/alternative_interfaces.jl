@@ -83,7 +83,7 @@ Keyword arguments are passed to `find_zero` using the `Roots.QuadraticInverse()`
 """
 =#
 function quadratic_inverse(f, fp, fpp, x0; kwargs...)
-    Base.depwarn("`quadratic_inverse(f, fp, fpp,  x0)` is deprecated; use `find_zero((f,fp, fpp), x0, Roots.Quadratic_Inverse())` instead.", :quadratic_inverse)
+    Base.depwarn("`quadratic_inverse(f, fp, fpp,  x0)` is deprecated; use `find_zero((f,fp, fpp), x0, Roots.QuadraticInverse())` instead.", :quadratic_inverse)
 
     find_zero((f, fp, fpp), x0, QuadraticInverse(); kwargs...)
 end
