@@ -1,3 +1,19 @@
+```@raw html
+---
+layout: home
+hero:
+  name: Roots.jl
+  text: solve f(x) = 0
+  tagline: Root finding functions for Julia
+  actions:
+    - theme: alt
+      text: View on GitHub
+      link: https://github.com/JuliaMath/Roots.jl
+  image:
+    src: /logo.png
+    alt: Roots.jl
+```
+
 # Roots.jl
 
 Documentation for [Roots.jl](https://github.com/JuliaMath/Roots.jl)
@@ -21,7 +37,7 @@ specification of a method. These include:
   computations allows. Other methods include `A42`,
   `AlefeldPotraShi`, `Roots.Brent`, `Roots.Chandrapatlu`,
   `Roots.ITP`, `Roots.Ridders`, `Roots.ModAB`, and ``12``-flavors of
-  `FalsePosition` and a few in `RegularFalsi`. The default bracketing method for
+  `FalsePosition` and a few in `RegulaFalsi`. The default bracketing method for
   the basic floating-point types is `Bisection` , as it is more robust to some inputs,
   but `Roots.ModAB`, `A42` and `AlefeldPotraShi` typically converge in a few
   iterations and are more performant.

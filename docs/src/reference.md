@@ -142,13 +142,14 @@ Roots.Chandrapatla
 Roots.Ridders
 Roots.ITP
 Roots.ModAB
-Roots.RegulaFalsi
 FalsePosition
 Roots.LithBoonkkampIJzermanBracket
 Roots.BracketedHalley
 Roots.BracketedChebyshev
 Roots.BracketedSchroder
 ```
+
+XXX why does Roots.RegulaFalsi fail
 
 ## Non-simple zeros
 
@@ -210,38 +211,38 @@ quadratic). For robust methods, generally ``1`` additional function
 call is needed to achieve the convergence rate, `Schroder` being a
 good example.
 
-| Type            | Method                       | Order                  | F evals | Asymptotic efficiency                 |
-|:--------------- | :--------------------------- | :--------------------- | :------ | :------------------------------------ |
-| Hybrid          | Order0                       |                        |         | ``\approx 1.618\dots``                |
-| Derivative Free | Secant                       | ``\varphi=1.618\dots`` | ``1``   | ``1.618\dots``                        |
-| Derivative Free | Steffensen                   | ``2``                  | ``2``   | ``1.414\dots``                        |
-| Derivative Free | Order5                       | ``5``                  | ``4``   | ``1.495\dots``                        |
-| Derivative Free | Order8                       | ``8``                  | ``4``   | ``1.681\dots``                        |
-| Derivative Free | Order16                      | ``16``                 | ``5``   | ``1.718\dots``                        |
-| Classical       | Newton                       | ``2``                  | ``2``   | ``1.414\dots``                        |
-| Classical       | Halley                       | ``3``                  | ``3``   | ``1.442\dots``                        |
-| Classical       | QuadraticInverse             | ``3``                  | ``3``   | ``1.442\dots``                        |
-| Classical       | ChebyshevLike                | ``3``                  | ``3``   | ``1.442\dots``                        |
-| Classical       | SuperHalley                  | ``3``                  | ``3``   | ``1.442\dots``                        |
-| MultiStep       | LithBoonkkampIJzerman{S,D}   | ``p^s=\sum p^k(d+\sigma_k)`` | ``D+1`` | varies, ``1.92\dots`` max       |
-| Bracketing      | BisectionExact               | ``1``                  | ``1``   | ``1``                                 |
-| Bracketing      | A42                          | ``(2 + 7^{1/2})``      | ``3,4`` |``(2 + 7^{1/2})^{1/3} = 1.6686\dots``  |
-| Bracketing      | AlefeldPotraShi              |                        | ``3,4`` | ``1.618\dots``                        |
-| Bracketing      | Brent                        | ``\leq 1.89\dots``     | ``1``   | ``\leq 1.89\dots``                    |
-| Bracketing      | ITP                          | ``\leq \varphi``       | ``1``   | ``\leq \varphi``                      |
-| Bracketing      | Ridders                      | ``1.83\dots``          | ``2``   | ``1.225\dots``                          |
-| Bracketing      | RegularFalsi{:classic}       | ``1``                  | ``1``   | ``1``                                 |
-| Bracketing      | RegularFalsi{:Illinois}      | ``1.442\dots``         | ``1``   | ``1.442\dots``                        |
-| Bracketing      | RegulaFalsi{:AndersonBjork}  | ``1.681\dots``         | ``1``   | ``1.681\dots``                        |
-| Bracketing      | RegulaFalsi{:Ford4}          | ``1.681\dots``         | ``1``   | ``1.681\dots``                        |
-| Bracketing      | ModAB                        | ``≈1.7\dots``          | ``1``   | ``1.7\dots``                          |
-| Bracketing      | LithBoonkkampIJzermanBracket | ``2.91``               | ``3``   | ``1.427\dots``                        |
-| Robust          | King                         | ``\varphi=1.618\dots`` | ``2``   | ``1.272\dots``                        |
-| Robust          | Esser                        | ``2``                  | ``3``   | ``1.259\dots``                        |
-| Robust          | Schroder                     | ``2``                  | ``3``   | ``1.259\dots``                        |
-| Robust          | Thukral3                     | ``3``                  | ``4``   | ``1.316\dots``                        |
-| Robust          | Thukral4                     | ``4``                  | ``5``   | ``1.319\dots``                        |
-| Robust          | Thukral5                     | ``5``                  | ``6``   | ``1.307\dots``                        |
+| Type            | Method                       | Order                  | F evals | Asymptotic efficiency                 | Reference |
+|:--------------- | :--------------------------- | :--------------------- | :------ | :------------------------------------ |:----------|
+| Hybrid          | Order0                       |                        |         | ``\approx 1.618\dots``                |[Order0](@cite)|
+| Derivative Free | Secant                       | ``\varphi=1.618\dots`` | ``1``   | ``1.618\dots``                        ||
+| Derivative Free | Steffensen                   | ``2``                  | ``2``   | ``1.414\dots``                        ||
+| Derivative Free | Order5                       | ``5``                  | ``4``   | ``1.495\dots``                        |[Order5](@cite)|
+| Derivative Free | Order8                       | ``8``                  | ``4``   | ``1.681\dots``                        |[Order8](@cite)|
+| Derivative Free | Order16                      | ``16``                 | ``5``   | ``1.718\dots``                        |[Order16](@cite)|
+| Classical       | Newton                       | ``2``                  | ``2``   | ``1.414\dots``                        ||
+| Classical       | Halley                       | ``3``                  | ``3``   | ``1.442\dots``                        ||
+| Classical       | QuadraticInverse             | ``3``                  | ``3``   | ``1.442\dots``                        |[Chebyshev](@cite)|
+| Classical       | ChebyshevLike                | ``3``                  | ``3``   | ``1.442\dots``                        |[ChebyshevLike](@cite)|
+| Classical       | SuperHalley                  | ``3``                  | ``3``   | ``1.442\dots``                        |[SuperHalley](@cite)|
+| MultiStep       | LithBoonkkampIJzerman{S,D}   | ``p^s=\sum p^k(d+\sigma_k)`` | ``D+1`` | varies, ``1.92\dots`` max       |[LithBoonkkampIJzerman](@cite)|
+| Bracketing      | BisectionExact               | ``1``                  | ``1``   | ``1``                                 ||
+| Bracketing      | A42                          | ``(2 + 7^{1/2})``      | ``3,4`` |``(2 + 7^{1/2})^{1/3} = 1.6686\dots``  |[AlefeldPotraShi](@cite)|
+| Bracketing      | AlefeldPotraShi              |                        | ``3,4`` | ``1.618\dots``                        |[AlefeldPotraShi](@cite)|
+| Bracketing      | Brent                        | ``\leq 1.89\dots``     | ``1``   | ``\leq 1.89\dots``                    ||
+| Bracketing      | ITP                          | ``\leq \varphi``       | ``1``   | ``\leq \varphi``                      |[ITP](@cite)|
+| Bracketing      | Ridders                      | ``1.83\dots``          | ``2``   | ``1.225\dots``                          |[Ridders](@cite)|
+| Bracketing      | RegulaFalsi{:classic}       | ``1``                  | ``1``   | ``1``                                 |[RegulaFalsi](@cite)|
+| Bracketing      | RegulaFalsi{:Illinois}      | ``1.442\dots``         | ``1``   | ``1.442\dots``                        |[RegulaFalsi](@cite)|
+| Bracketing      | RegulaFalsi{:AndersonBjork}  | ``1.681\dots``         | ``1``   | ``1.681\dots``                        |[RegulaFalsi](@cite)|
+| Bracketing      | RegulaFalsi{:Ford4}          | ``1.681\dots``         | ``1``   | ``1.681\dots``                        |[RegulaFalsi](@cite)|
+| Bracketing      | ModAB                        | ``≈1.7\dots``          | ``1``   | ``1.7\dots``                          |[ModAB](@cite)|
+| Bracketing      | LithBoonkkampIJzermanBracket | ``2.91``               | ``3``   | ``1.427\dots``                        |[LithBoonkkampIJzerman](@cite)|
+| Robust          | King                         | ``\varphi=1.618\dots`` | ``2``   | ``1.272\dots``                        |[King](@cite)|
+| Robust          | Esser                        | ``2``                  | ``3``   | ``1.259\dots``                        |[Esser](@cite)|
+| Robust          | Schroder                     | ``2``                  | ``3``   | ``1.259\dots``                        |[Schroder](@cite)|
+| Robust          | Thukral3B                     | ``3``                  | ``4``   | ``1.316\dots``                        |[ThukralB](@cite)|
+| Robust          | Thukral4B                     | ``4``                  | ``5``   | ``1.319\dots``                        |[ThukralB](@cite)|
+| Robust          | Thukral5B                     | ``5``                  | ``6``   | ``1.307\dots``                        |[ThukralB](@cite)|
 
 
 
@@ -335,4 +336,166 @@ To get detailed information about the solution and data from each iteration  a `
 
 ```@docs
 Roots.Tracks
+```
+
+## Implementation details
+
+The basic shell to find zeros of a function allowing for different methods is a bit more complicated than just programming a simple loop for each method. `Julia`'s multiple dispatch makes the approach quite uniform, allowing `find_zero(f, x0, M)` to solve ``f(x) = 0`` in many different manners with the same iteration scheme, described below.
+
+### Arguments to `find_zero`
+
+The `find_zero` function is called with three necessary things:
+
+* A function (or functions)
+* A starting point (or points)
+* A method (or methods); the basic unit of dispatch
+
+#### CallableFunction
+
+The function or functions needed for evaluation is typically just some callable object. However, for some methods, like Newton's method, two or more functions are needed. When two (or more) functions are needed they can be passed in a tuple (e.g. `(sin,cos)`) *or* as a single function returning `(f, f/f', f'/f'', ...)`. To keep a similar interface, the `Callable_Function` struct is given.
+
+Consider these examples:
+
+```@example details
+using Roots # hide
+F = Roots.Callable_Function(Roots.Secant(), sin)
+F(3)
+```
+
+or
+
+```@example details
+F = Roots.Callable_Function(Roots.Newton(), (sin, cos))
+F(3)
+```
+
+pr
+
+```@example details
+F = Roots.Callable_Function(Roots.Newton(), x -> (sin(x), sin(x)/cos(x)))
+F(3)
+```
+
+The details of how many values are needed for the algorithm is provided by `Roots.fn_argout(M)`:
+
+```@example details
+Roots.fn_argout(Roots.Secant()), Roots.fn_argout(Roots.Newton())
+```
+
+#### The initial guess
+
+For Newton's method, the initial guess is a nearby single number; for the Secant method, the initial guess is a nearby set of two numbers; for Bisection, the initial guess is two numbers which form a *bracketing* interval.
+
+Eventually, all ``x`` values specified are coerced to a floating point value.
+
+For a single value, there isn't more to discuss; for two values, there is more detail.
+
+For a secant step, if only a single number is specified, another one is generated. The utility function `_default_secant_step` does this. The suggested step depends on the scale of the single value.
+
+```@example details
+Roots._default_secant_step(1.0), Roots._default_secant_step(1e16)
+```
+
+For a bracketing method, `Roots.assert_bracket` is called on ``f(a)`` and ``f(b)``.
+
+```@example details
+Roots.assert_bracket(-1.0, 1.0) # checks if product of their signs is negative
+```
+
+Bracketing intervals can be specified by any object that has `extrema` defined and for which that call returns two distinct values.
+
+
+#### Methods
+
+Methods are specified through an instance, such as `Roots.Secant()`. Many are exported and do not need qualification. There are some methods which depend on parameters. Examples are
+
+```@example details
+Roots.LithBoonkkampIJzerman(3,2), Roots.Sidi(2)
+```
+
+As mentioned elsewhere, when a method is omitted there are two different defaults:
+
+* if the initial guess has distinct values returned by `extrema`, these are assumed to be a bracketing interval and a bracketing algorithm is called (which depends on the number type, though typically this is bisection over 64-bit floating point values.)
+
+* if the initial guess is a single number, then the `Order0` method is called. This is a *hybrid* method which begins with *guarded* secant steps but will switch to a bracketing method *if* a bracketing interval is identified. Bracketing methods are guaranteed to converge. Other hybrid methods can be specified by specifying *two* methods, e.g.,  `find_zero(f, x0, M, N)`.
+
+
+### Setup
+
+The main algorithm uses the `CommonSolve` setup where a problem is initialized and then solved.
+
+#### ZeroProblem
+
+The `init` function of `CommonSolve` must dispatch on an object. `ZeroProblem` bundles the function(s) and initial guess into such an object.
+
+```@example details
+Roots.ZeroProblem(sin, 4)
+```
+
+#### `init`
+
+
+This `ZeroProblem` object and the method(s) are then passed to `init` which
+
+* Uses the method and function(s) to create a `Callable_Function` object, possibly incoporating a parameter passed to `find_zero` or `solve`.
+
+* Uses the method, the `Callable_Function` object, and the intial guess to create a "state" object.
+
+##### State objects
+
+The basic state object holds the last two ``x``-values and their corresponding ``f(x)`` values. Some methods require more detail and so there are specialized states. An example would be the `ModABState` which also records a count and a flag for an algorithm which switches during the iteration. The state object has ``x``-values of type `T <: AbstractFloat`; the ``f(x)`` values may be of a different type.
+
+```@example details
+M = Roots.Secant()
+f, x0 = sin, 3.0
+Z = ZeroProblem(f, x0)
+F = Roots.Callable_Function(M, Z.F)
+state = Roots.init_state(M, F, Z.x₀)
+```
+
+##### Options object
+
+The method, the state, and the keyword arguments are used to create an options object which holds the tolerances. Keyword arguments overide the default arguments which are method and state dependent (the state carries the types).
+
+```@example details
+o = Roots.init_options(M, state; atol=1e-8)
+```
+
+The options record the absolute and relative tolerance in the ``x`` and ``f(x)`` values (`atol` above sets `abstol`--the fourth argument--in the struct), the maximum number of iterations and two flags for convergence checking.
+
+
+
+### Algorithm
+
+With the method, the function, the state object, the options object, and a logging object, the algorithm is ready to be run.
+
+There are two main functions:
+
+#### `update_state`
+
+This method depends on the method, the function, the state, the options, and the logger. The method updates the state according to the algorithm (States are immutable, so it really creates a new state each time). This method typically generates the next ``x`` value and its ``y`` value and then shifts these to the most recent. The `update_state` method passes back the updated state object *and* a flag in cases some numeric value is identified which should stop the algorithm.
+
+#### `assess_convergence`
+
+Convergence is assessed differently based on the method. Bracketing methods may only check on the size of ``x_n - x_{n-1}``, where as secant-like methods might also check the size of the residual ``f(x_n)``. If these are small, the function returns a flag to stop.
+
+
+#### `decide_convergence`
+
+The two function above are in a loop, the number of times each is called is compared and compared to the `maxiters` value for the method (or passed through `maxiters`). If too many steps are needed the algorithm stops.
+
+A stopped algorithm might or might not have *converged*.
+
+It is possible the value is numerically close to an answer, but the tolerances might have been too tight or the algorithm might just have failed. Deciding between these scenarios is doen by `decide_convergence` which (if instructed by the value of `strict`) utilizes a relaxed set of tolerances to see if convergence has occured. Most bracketing methods don't use this, as convergence upto floating point limits can typically be guaranteed, but secant-like methods utilize this.
+
+By allowing very strict tolerance in the algorithm with relaxed tolerance in the final decision, more accuracy can be expected than with just a relaxed initial tolerance.
+
+If convergence is decided, then the value identified is returned.
+
+If convergence is not decided, then `solve` returns a typed `NaN` value. The `find_zero` method errors when this happens, `solve` just returns `NaN`.
+
+
+## Bibliography
+
+```@bibliography
 ```

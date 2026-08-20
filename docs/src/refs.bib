@@ -1,0 +1,292 @@
+# one for each method, keyed by method name(ish)
+
+## Bracketing
+
+@article{AlefeldPotraShi,
+author = {Alefeld, G. E. and Potra, F. A. and Shi, Yixun},
+title = {Algorithm 748: enclosing zeros of continuous functions},
+year = {1995},
+issue_date = {Sept. 1995},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {21},
+number = {3},
+issn = {0098-3500},
+url = {https://doi.org/10.1145/210089.210111},
+doi = {10.1145/210089.210111},
+abstract = {Two efficient algorithms for enclosing a zero of a continuous function are presented. They are similar to the recent methods, but together with quadratic interpolation they make essential use of inverse cubic interpolation as well. Since asymptotically the inverse cubic interpolation is always chosen by the algorithms, they achieve higher-efficiency indices: 1.6529… for the first algorithm, and 1.6686… for the second one. It is proved that the second algorithm is optimal in a certain family. Numerical experiments show that the two new methods compare well with recent methods, as well as with the efficient solvers of Dekker, Brent, Bus and Dekker, and Le. The second method from the present article has the best behavior of all 12 methods especially when the termination tolerance is small.},
+journal = {ACM Trans. Math. Softw.},
+month = sep,
+pages = {327-–344},
+numpages = {18},
+keywords = {asymptotic efficiency index, enclosing method, inverse cubic interpolation, quadratic interpolation, simple root}
+}
+
+### Brent
+
+### Chandrapatlu
+@article{Chandrupatla1,
+title = {A new hybrid quadratic/bisection algorithm for finding the zero of a nonlinear function without using derivatives},
+journal = {Advances in Engineering Software},
+volume = {28},
+number = {3},
+pages = {145-149},
+year = {1997},
+issn = {0965-9978},
+doi = {10.1016/S0965-9978(96)00051-8},
+url = {https://www.sciencedirect.com/science/article/pii/S0965997896000518},
+author = {Tirupathi R. Chandrupatla},
+keywords = {zero finding, root finding, nonlinear functions},
+abstract = {A new algorithm for finding the zero of a nonlinear function without using derivatives is presented here. The algorithm starts after an initial interval bracketing the zero has been established. We start with an initial bisection step. Using the two new interval points and the point just discarded, conditions for the applicability of inverse quadratic interpolation are checked. These conditions are systematically developed and derived in the paper. Inverse quadratic interpolation is used if applicable and bisection is used otherwise. The algorithm has been tried on several test functions and compared with Brent's algorithm for the same convergence criteria.}
+}
+
+### ITP
+@Inbook{ITP,
+author="Argyros, I. K.
+and Hern{\'a}ndez-Verón, M. A.
+and Rubio, M. J.",
+editor="Dutta, Hemen
+and Kočinac, Ljubiša D. R.
+and Srivastava, Hari M.",
+title="On the Convergence of Secant-Like Methods",
+bookTitle="Current Trends in Mathematical Analysis and Its Interdisciplinary Applications",
+year={2019},
+publisher="Springer International Publishing",
+address="Cham",
+pages="141--183",
+abstract="In this chapter, our first idea is to improve the speed of convergence of the Secant method by means of iterative processes free of derivatives of the operator in their algorithms. To achieve this, we consider a uniparametric family of Secant-like methods previously constructed. We analyze the semilocal convergence of this uniparametric family of iterative processes by using a technique that consists of a new system of recurrence relations.",
+isbn="978-3-030-15242-0",
+doi= {10.1007/978-3-030-15242-0_5},
+url="https://doi.org/10.1007/978-3-030-15242-0_5"
+}
+
+### ModAB
+@Article{ModAB,
+AUTHOR = {Ganchovski, Nedelcho and Smith, Oscar and Rackauckas, Christopher and Tomov, Lachezar and Traykov, Alexander},
+TITLE = {Improvements to the Modified Anderson–Björck (modAB) Root-Finding Algorithm},
+JOURNAL = {Algorithms},
+VOLUME = {19},
+YEAR = {2026},
+NUMBER = {5},
+ARTICLE-NUMBER = {332},
+URL = {1999-4893/19/5/332},
+ISSN = {1999-4893},
+ABSTRACT = {The Modified Anderson–Björck method is a new, robust, and efficient bracketing root-finding algorithm. It combines bisection with the Anderson–Björk method to achieve both fast performance and worst-case optimality. It relies on linearity check criteria for switching methods and uses Anderson–Björk corrections to overcome the fixed endpoint issue of false-position. Initial benchmarks of this method have shown certain performance advantages compared to other methods, such as Ridders, Brent and ITP. In this paper, we propose further improvements to this method and perform some additional analysis and benchmarks of its behavior and performance.},
+doi = {10.3390/a19050332}
+}
+
+
+### RegulaFalsi
+@article{RegulaFalsi,
+title = {A common framework for modified Regula Falsi methods and new methods of this kind},
+journal = {Mathematics and Computers in Simulation},
+volume = {205},
+pages = {678-696},
+year = {2023},
+issn = {0378-4754},
+doi = {10.1016/j.matcom.2022.10.019},
+url = {https://www.sciencedirect.com/science/article/pii/S0378475422004335},
+author = {Julio M. Fernández-Díaz and César O. Menéndez-Pérez},
+keywords = {Real function zeros, Modified Regula Falsi, Bracketing, Global convergence},
+abstract = {We show that the modified Regula Falsi methods based on a scaling factor (Scaling Factor Regula Falsi, SFRF) have a common framework, and that the scaling factor depends only on two dimensionless parameters. This common framework allows for the comparison of different methods and their possible combination, without hybridization for treating some difficult cases, such as multiple roots. With this framework we prove, for all SFRF methods, the global convergence of the successive approximations to the root, and also the convergence of the bracketing interval radius to zero, for both simple and multiple roots. We show that SFRF methods only occasionally need a small scaling factor to make the radius of the interval go to zero. This way, the accumulation of the approximations to the root near an interval limit that some improvements of Regula Falsi methods suffer from is cured. As an example, new SFRF methods are exposed. One is specific for multiple roots of known multiplicity, and greatly outperforms pure bisection. Another, developed for simple roots, compares well with other methods belonging to numerical libraries that are widely used by the scientific community, and for multiple roots the new method outperforms them. The new framework could also allow the development of other SFRF methods overperforming the previously known ones.}
+}
+
+
+### Ridders
+@ARTICLE{Ridders,
+author={Ridders, C.},
+  journal={IEEE Transactions on Circuits and Systems},
+  title={A new algorithm for computing a single root of a real continuous function},
+  year={1979},
+  volume={26},
+  number={11},
+  pages={979-980},
+  keywords={Band pass filters;Polynomials;Hydrogen;Iterative algorithms;Convergence;Circuit synthesis;Circuit theory;Attenuation;Transfer functions;Equations},
+  doi={10.1109/TCS.1979.1084580}}
+
+### Mullers
+
+## DerivativeFree
+
+### Esser
+@article{Esser,
+ pages         = {367--369},
+ author        = {Esser, H.},
+ isbn          = {1436-5057},
+ journal       = {Computing},
+ title         = {Eine stets quadratisch konvergente Modifikation des Steffensen-Verfahrens},
+ number        = {4},
+ doi           = {10.1007/BF02253547},
+ year          = {1975},
+ url           = {https://doi.org/10.1007/BF02253547},
+ volume        = {14},
+}
+
+### King
+@article{King,
+author = {King, Richard F.},
+title = {A Family of Fourth Order Methods for Nonlinear Equations},
+journal = {SIAM Journal on Numerical Analysis},
+volume = {10},
+number = {5},
+pages = {876-879},
+year = {1973},
+doi = {10.1137/0710072},
+}
+
+### Schroder
+@Article{Schroder,
+  author = 	 {Schröder, E},
+  title = 	 {Über unendlich viele Algorithmen zur Auflösung der Gleichungen},
+  journal = 	 {Math. Ann},
+  year = 	 1870,
+  volume = 	 2,
+  pages = 	 {317--365}}
+
+### Order0
+@Article{Order0,
+  author = 	 {William M. Kahan},
+  title = 	 {Personal Calculator Has Key to Solve Any Equation f(x)=0},
+  journal = 	 {Hewlett-Packard Journal},
+  year = 	 1979,
+  volume = 	 30,
+  number = 	 12,
+  pages = 	 {20--26}
+  url = {https://hparchive.com/Journals/HPJ-1979-12.pdf}}
+
+### Order5
+@Article{Order5,
+  author = 	 {M. Kumar and A.K. Singh and A.Srivastava},
+  title = 	 {A new fifth order derivative free Newton-type method for solving nonlinear equations},
+  journal = 	 {Applied Mathematics and Information Sciences},
+  year = 	 {2015},
+  volume = 	 {9},
+  number = 	 {3},
+  pages = 	 {6}}
+
+### Order8
+@article{Order8,
+author = {Thukral, Rajinder},
+title = {New Eighth-Order Derivative-Free Methods for Solving Nonlinear Equations},
+journal = {International Journal of Mathematics and Mathematical Sciences},
+volume = {2012},
+number = {1},
+doi = {10.1155/2012/493456},
+url = {https://onlinelibrary.wiley.com/doi/abs/10.1155/2012/493456},
+eprint = {https://onlinelibrary.wiley.com/doi/pdf/10.1155/2012/493456},
+abstract = {A new family of eighth-order derivative-free methods for solving nonlinear equations is presented. It is proved that these methods have the convergence order of eight. These new methods are derivative-free and only use four evaluations of the function per iteration. In fact, we have obtained the optimal order of convergence which supports the Kung and Traub conjecture. Kung and Traub conjectured that the multipoint iteration methods, without memoryXu based on n evaluations could achieve optimal convergence order of 2n−1. Thus, we present new derivative-free methods which agree with Kung and Traub conjecture for n = 4. Numerical comparisons are made to demonstrate the performance of the methods presented.},
+year = {2012}
+}
+
+### Order16
+@misc{Order16,
+author = {Thukral, Rajinder},
+	title = {{N}ew {S}ixteenth-{O}rder {D}erivative-{F}ree {M}ethods for {S}olving {N}onlinear {E}quations --- article.sapub.org},
+	howpublished = {{http://article.sapub.org/10.5923.j.ajcam.20120203.08.html}}
+}
+
+### Secant
+
+
+### Sidi
+@misc{Sidi,
+      title={Generalization of the Secant Method for Nonlinear Equations (extended version)},
+      author={Avram Sidi},
+      year={2020},
+      eprint={2012.04248},
+      archivePrefix={arXiv},
+      primaryClass={math.NA},
+      url={https://arxiv.org/abs/2012.04248},
+}
+
+
+### Steffensen
+
+## Derivative
+
+### Newton
+
+### Halley
+
+### Chebyshev
+@article{Chebyshev,
+author = {Grau-Sanchez, Miquel and Gutierrez, Jose M.},
+title = {Some variants of the Chebyshev-Halley family of methods with fifth order of convergence},
+year = {2010},
+issue_date = {March 2010},
+publisher = {Taylor \& Francis, Inc.},
+address = {USA},
+volume = {87},
+number = {4},
+issn = {0020-7160},
+url = {https://doi.org/10.1080/00207160802208358},
+doi = {10.1080/00207160802208358},
+abstract = {In this paper we present some techniques for constructing high-order iterative methods in order to approximate the zeros of a non-linear equation f(x)=0, starting from a well-known family of cubic iterative processes. The first technique is based on an additional functional evaluation that allows us to increase the order of convergence from three to five. With the second technique, we make some changes aimed at minimizing the calculus of inverses. Finally, looking for a better efficiency, we eliminate terms that contribute to the error equation from sixth order onwards. The paper contains a comparative study of the asymptotic error constants of the methods and some theoretical and numerical examples that illustrate the given results. We also analyse the efficiency of the aforementioned methods, by showing some numerical examples with a set of test functions and by using adaptive multi-precision arithmetic in the computation.},
+journal = {Int. J. Comput. Math.},
+month = mar,
+pages = {818–833},
+numpages = {16},
+keywords = {Chebyshev-Halley method, computational efficiency, iterative methods, non-linear equations, order of convergence}
+}
+
+### ChebyshevLike
+
+
+@Article{ChebyshevLike,
+  author = 	 {J. A. Ezquerro and J. M. Gutiérrez and M. A. Hernández and M. A. Salanova},
+  title = 	 {Chebyshev-like methods and quadratic equations},
+  journal = 	 {Journal of Numerical Analysis and Approximation Theory},
+  year = 	 1999,
+  volume = 	 28,
+  number = 	 1,
+  doi =          {10.33993/jnaat281-634},
+  url = {https://ictp.acad.ro/jnaat/journal/article/view/1999-vol28-no1-art3}
+  }
+
+### SuperHalley
+@article{SuperHalley,
+title = {An acceleration of Newton's method: Super-Halley method},
+journal = {Applied Mathematics and Computation},
+volume = {117},
+number = {2},
+pages = {223-239},
+year = {2001},
+issn = {0096-3003},
+doi = {10.1016/S0096-3003(99)00175-7},
+url = {https://www.sciencedirect.com/science/article/pii/S0096300399001757},
+author = {J.M. Gutiérrez and M.A. Hernández},
+keywords = {Non-linear equation, Newton's method, Kantorovich assumptions, Iterative processes, Third order method},
+abstract = {From a study of the convexity we give an acceleration for Newton's method and obtain a new third order method. Then we use this method for solving non-linear equations in Banach spaces, establishing conditions on convergence, existence and uniqueness of solution, as well as error estimates}
+}
+
+### Lith
+@article{LithBoonkkampIJzerman,
+title = {Full linear multistep methods as root-finders},
+journal = {Applied Mathematics and Computation},
+volume = {320},
+pages = {190-201},
+year = {2018},
+issn = {0096-3003},
+doi = {10.1016/j.amc.2017.09.003},
+url = {https://www.sciencedirect.com/science/article/pii/S0096300317306239},
+author = {Bart S. van Lith and Jan H.M. ten Thije Boonkkamp and Wilbert L. IJzerman},
+keywords = {Root-finder, Nonlinear equation, Linear multistep methods, Iterative methods, Convergence rate},
+abstract = {Root-finders based on full linear multistep methods (LMMs) use previous function values, derivatives and root estimates to iteratively find a root of a nonlinear function. As ODE solvers, full LMMs are typically not zero-stable. However, used as root-finders, the interpolation points are convergent so that such stability issues are circumvented. A general analysis is provided based on inverse polynomial interpolation, which is used to prove a fundamental barrier on the convergence rate of any LMM-based method. We show, using numerical examples, that full LMM-based methods perform excellently. Finally, we also provide a robust implementation based on Brent’s method that is guaranteed to converge.}
+}
+
+
+### ThukralB
+
+@article{ThukralB,
+author = {Thukral, Rajinder},
+title = {Introduction to Higher-Order Iterative Methods for Finding Multiple Roots of Nonlinear Equations},
+journal = {Journal of Mathematics},
+volume = {2013},
+number = {1},
+pages = {404635},
+doi = {10.1155/2013/404635},
+url = {https://onlinelibrary.wiley.com/doi/abs/10.1155/2013/404635},
+eprint = {https://onlinelibrary.wiley.com/doi/pdf/10.1155/2013/404635},
+abstract = {We introduce two higher-order iterative methods for finding multiple zeros of nonlinear equations. Per iteration the new methods require three evaluations of function and one of its first derivatives. It is proved that the two methods have a convergence of order five or six.},
+year = {2013}
+}
