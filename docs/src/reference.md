@@ -149,8 +149,6 @@ Roots.BracketedChebyshev
 Roots.BracketedSchroder
 ```
 
-XXX why does Roots.RegulaFalsi fail
-
 ## Non-simple zeros
 
 The order of convergence for most methods is for *simple* zeros, values ``\alpha`` where ``f(x) = (x-\alpha) \cdot g(x)``, with ``g(\alpha)`` being non-zero. For methods which are of order ``k`` for non-simple zeros, usually an additional function call is needed per step. For example, this is the case for `Roots.Newton` as compared to `Roots.Schroder`.
@@ -350,7 +348,7 @@ The `find_zero` function is called with three necessary things:
 * A starting point (or points)
 * A method (or methods); the basic unit of dispatch
 
-#### CallableFunction
+#### `Callable_Function`
 
 The function or functions needed for evaluation is typically just some callable object. However, for some methods, like Newton's method, two or more functions are needed. When two (or more) functions are needed they can be passed in a tuple (e.g. `(sin,cos)`) *or* as a single function returning `(f, f/f', f'/f'', ...)`. To keep a similar interface, the `Callable_Function` struct is given.
 
@@ -369,7 +367,7 @@ F = Roots.Callable_Function(Roots.Newton(), (sin, cos))
 F(3)
 ```
 
-pr
+or
 
 ```@example details
 F = Roots.Callable_Function(Roots.Newton(), x -> (sin(x), sin(x)/cos(x)))
