@@ -1,5 +1,6 @@
 ENV["GKSwstype"] = "100"
-using Documenter
+using Documenter, DocumenterCodeBlocks
+using DocumenterCitations, DocumenterLandingPage
 using Roots
 
 
@@ -17,7 +18,10 @@ makedocs(
     ],
     doctestfilters = [
         r"(?<=\d\.\d{12})\d+", # Ignore any digit after the 12th decimal place
-    ]
+    ],
+plugins = [LandingPage(),
+           CodeBlocks(),
+           CitationBibliography("src/refs.bib")],
 )
 
 deploydocs(
