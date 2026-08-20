@@ -120,6 +120,7 @@ Order5
 Order8
 Order16
 Roots.Sidi
+Roots.Muller
 ```
 
 
@@ -218,6 +219,7 @@ good example.
 | Derivative Free | Order5                       | ``5``                  | ``4``   | ``1.495\dots``                        |[Order5](@cite)|
 | Derivative Free | Order8                       | ``8``                  | ``4``   | ``1.681\dots``                        |[Order8](@cite)|
 | Derivative Free | Order16                      | ``16``                 | ``5``   | ``1.718\dots``                        |[Order16](@cite)|
+| Derivative Free | Muller                       | ``1.839\dots``         | ``1``   | ``1.839\dots``                        |[Muller's method](https://en.wikipedia.org/wiki/Muller%27s_method)|
 | Classical       | Newton                       | ``2``                  | ``2``   | ``1.414\dots``                        ||
 | Classical       | Halley                       | ``3``                  | ``3``   | ``1.442\dots``                        ||
 | Classical       | QuadraticInverse             | ``3``                  | ``3``   | ``1.442\dots``                        |[Chebyshev](@cite)|
