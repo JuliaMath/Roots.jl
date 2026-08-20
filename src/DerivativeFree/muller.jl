@@ -11,9 +11,7 @@ of the polynomial `f` at those points, the next approximation `xᵢ₊₁` is pr
 
 Excerpt and the algorithm taken from W.H. Press, S.A. Teukolsky, W.T. Vetterling and B.P. Flannery *Numerical Recipes in C*, Cambridge University Press (2002), p. 371.
 
-
-Note that the method may return a complex result even for real initial values
-as this depends on the function.
+Muller's method can return complex zeros if the initial guess is complex.
 
 """
 struct Muller <: AbstractSecantMethod end
@@ -80,7 +78,7 @@ function update_state(
             throw(
                 DomainError(
                     Δ,
-                    "Discriminant is negative and the function most likely has complex roots. You might want to call muller with complex input.",
+                    "Discriminant is negative and the function most likely has complex roots. You might use the `Roots.Muller()` method with complex input.",
                 ),
             )
     end
