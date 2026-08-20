@@ -142,6 +142,7 @@ Roots.Chandrapatla
 Roots.Ridders
 Roots.ITP
 Roots.ModAB
+Roots.RegulaFalsi
 FalsePosition
 Roots.LithBoonkkampIJzermanBracket
 Roots.BracketedHalley
