@@ -23,7 +23,10 @@ Keyword arguments are passed to `find_zero` using the `Roots.Newton()` method.
 See also `Roots.newton((f,fp), x0)` and `Roots.newton(fΔf, x0)` for simpler implementations.
 
 """
-newton(f, fp, x0; kwargs...) = find_zero((f, fp), x0, Newton(); kwargs...)
+function newton(f, fp, x0; kwargs...)
+    Base.depwarn("`newton(f, fp, x0)` is deprecated; use `find_zero((f,fp), x0, Roots.Newton())` instead.", :newton)
+    find_zero((f, fp), x0, Newton(); kwargs...)
+end
 
 ## --------------------------------------------------
 #=
@@ -50,7 +53,10 @@ Keyword arguments are passed to `find_zero` using the `Roots.Halley()` method.
 
 """
 =#
-halley(f, fp, fpp, x0; kwargs...) = find_zero((f, fp, fpp), x0, Halley(); kwargs...)
+function halley(f, fp, fpp, x0; kwargs...)
+    Base.depwarn("`halley(f, fp, fpp,  x0)` is deprecated; use `find_zero((f,fp, fpp), x0, Roots.Halley())` instead.", :halley)
+    find_zero((f, fp, fpp), x0, Halley(); kwargs...)
+end
 
 #=
 """
@@ -76,14 +82,23 @@ Keyword arguments are passed to `find_zero` using the `Roots.QuadraticInverse()`
 
 """
 =#
-quadratic_inverse(f, fp, fpp, x0; kwargs...) =
+function quadratic_inverse(f, fp, fpp, x0; kwargs...)
+    Base.depwarn("`quadratic_inverse(f, fp, fpp,  x0)` is deprecated; use `find_zero((f,fp, fpp), x0, Roots.Quadratic_Inverse())` instead.", :quadratic_inverse)
+
     find_zero((f, fp, fpp), x0, QuadraticInverse(); kwargs...)
+end
 
-superhalley(f, fp, fpp, x0; kwargs...) =
+function superhalley(f, fp, fpp, x0; kwargs...)
+        Base.depwarn("`superhalley(f, fp, fpp,  x0)` is deprecated; use `find_zero((f,fp, fpp), x0, Roots.SuperHalley())` instead.", :superhalley)
+
     find_zero((f, fp, fpp), x0, SuperHalley(); kwargs...)
+end
 
-chebyshev_like(f, fp, fpp, x0; kwargs...) =
+function chebyshev_like(f, fp, fpp, x0; kwargs...)
+        Base.depwarn("`chebyshev_like(f, fp, fpp,  x0)` is deprecated; use `find_zero((f,fp, fpp), x0, Roots.ChebyshevLike())` instead.", :chebyshev_like)
+
     find_zero((f, fp, fpp), x0, ChebyshevLike(); kwargs...)
+end
 
 ## --------------------------------------------------
 
