@@ -437,9 +437,9 @@ Roots.ZeroProblem(sin, 4)
 
 This `ZeroProblem` object and the method(s) are then passed to `init` which
 
-* Uses the method and function(s) to create a `Callable_Function` object, possibly incoporating a parameter passed to `find_zero` or `solve`.
+* Uses the method and function(s) to create a `Callable_Function` object, possibly incorporating a parameter passed to `find_zero` or `solve`.
 
-* Uses the method, the `Callable_Function` object, and the intial guess to create a "state" object.
+* Uses the method, the `Callable_Function` object, and the initial guess to create a "state" object.
 
 ##### State objects
 
@@ -455,7 +455,7 @@ state = Roots.init_state(M, F, Z.x₀)
 
 ##### Options object
 
-The method, the state, and the keyword arguments are used to create an options object which holds the tolerances. Keyword arguments overide the default arguments which are method and state dependent (the state carries the types).
+The method, the state, and the keyword arguments are used to create an options object which holds the tolerances. Keyword arguments override the default arguments which are method and state dependent (the state carries the types).
 
 ```@example details
 o = Roots.init_options(M, state; atol=1e-8)
@@ -486,7 +486,7 @@ The two function above are in a loop, the number of times each is called is comp
 
 A stopped algorithm might or might not have *converged*.
 
-It is possible the value is numerically close to an answer, but the tolerances might have been too tight or the algorithm might just have failed. Deciding between these scenarios is doen by `decide_convergence` which (if instructed by the value of `strict`) utilizes a relaxed set of tolerances to see if convergence has occured. Most bracketing methods don't use this, as convergence upto floating point limits can typically be guaranteed, but secant-like methods utilize this.
+It is possible the value is numerically close to an answer, but the tolerances might have been too tight or the algorithm might just have failed. Deciding between these scenarios is done by `decide_convergence` which (if instructed by the value of `strict`) utilizes a relaxed set of tolerances to see if convergence has occurred. Most bracketing methods don't use this, as convergence upto floating point limits can typically be guaranteed, but secant-like methods utilize this.
 
 By allowing very strict tolerance in the algorithm with relaxed tolerance in the final decision, more accuracy can be expected than with just a relaxed initial tolerance.
 
