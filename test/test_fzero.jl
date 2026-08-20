@@ -1,6 +1,7 @@
 using Test
 import Roots.fzero
 
+## Deprecated functions
 ## Test `fzero` interface to `find_zero`
 ## test `fzeros` interface for functions
 
