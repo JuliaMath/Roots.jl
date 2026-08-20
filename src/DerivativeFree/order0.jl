@@ -7,7 +7,7 @@ slower, alternative to the other derivative-free root-finding
 methods. The implementation roughly follows the algorithm described in
 *Personal Calculator Has Key to Solve Any Equation ``f(x) = 0``*, the
 SOLVE button from the
-[HP-34C](http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1979-12.pdf).
+[HP-34C](https://hparchive.com/Journals/HPJ-1979-12.pdf).
 The basic idea is to use a secant step. If along the way a bracket is
 found, switch to a bracketing algorithm, using `AlefeldPotraShi`.  If the secant
 step fails to decrease the function value, a quadratic step is used up
