@@ -17,7 +17,7 @@ as this depends on the function.
 
 """
 struct Muller <: AbstractSecantMethod end
-initial_fncall(::Muller) = 3
+initial_fncalls(::Muller) = 3
 
 struct MullerState{T,S} <: AbstractUnivariateZeroState{T,S}
     xn2::T
@@ -33,14 +33,14 @@ end
 function _muller_bootstrap(f::Callable_Function, x::Number)
     a, b =  x₀x₁(float(x))
     fa, fb = f.((a,b))
-    c = b + fb * (b-a)/(fb-fa)
+    c = b - fb * (b-a)/(fb-fa)
     fc = f(c)
     (a,b,c,fa,fb,fc)
 end
 function _muller_bootstrap(f::Callable_Function, x1::Number, x2::Number)
     a, b =  x₀x₁((float(x1), float(x2)))
     fa, fb = f.((a,b))
-    c = b + fb * (b-a)/(fb-fa)
+    c = b - fb * (b-a)/(fb-fa)
     fc = f(c)
     (a,b,c,fa,fb,fc)
 end
@@ -80,7 +80,7 @@ function update_state(
             throw(
                 DomainError(
                     Δ,
-                    "Discriminant is negative and the function most likely has #complex roots. You might want to call muller with complex input.",
+                    "Discriminant is negative and the function most likely has complex roots. You might want to call muller with complex input.",
                 ),
             )
     end
@@ -89,8 +89,14 @@ function update_state(
     d⁺ = B + Δ
     d⁻ = B - Δ
     den = abs(d⁺) > abs(d⁻) ? d⁺ : d⁻
+    inc = (c - b) * 2C / den
 
-    x =  c - (c - b) * 2C / den
+    if isissue(inc)
+        log_message(l, "Increment `Δx` has issues. ")
+        return o, true
+    end
+
+    x =  c - inc
     fx = first(F(x))
 
     # check for oddity?
