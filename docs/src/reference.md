@@ -437,7 +437,7 @@ As mentioned elsewhere, when a method is omitted there are two different default
 
 * if the initial guess has distinct values returned by `extrema`, these are assumed to be a bracketing interval and a bracketing algorithm is called (which depends on the number type, though typically this is bisection over 64-bit floating point values.)
 
-* if the initial guess is a single number, then the `Order0` method is called. This is a *hybrid* method which begins with *guarded* secant steps but will switch to a bracketing method *if* a bracketing interval is identified. Bracketing methods are guaranteed to converge. Other hybrid methods can be specified by specifying *two* methods, e.g., y`find_zero(f, x0, M, N)`.
+* if the initial guess is a single number, then the `Order0` method is called. This is a *hybrid* method which begins with *guarded* secant steps but will switch to a bracketing method *if* a bracketing interval is identified. Bracketing methods are guaranteed to converge. Other hybrid methods can be specified by specifying *two* methods, e.g., `find_zero(f, x0, M, N)`.
 
 
 ### Setup
