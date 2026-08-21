@@ -42,3 +42,4 @@ Aqua.test_all(Roots)
 
 # deprecated
 include("./test_fzero.jl")
+include("./test_alternatives.jl")

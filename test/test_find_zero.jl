@@ -431,8 +431,6 @@ end
         @test @inferred(find_zero(x -> x + 1, (-1, 1))) == -1
     end
 
-    ## issue #178 passing through method
-    @test fzero(sin, 3, 4, Roots.Brent()) ≈ π
 
     ## issue #188 with A42
     f = let a = 0.18
