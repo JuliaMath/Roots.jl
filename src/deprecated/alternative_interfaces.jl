@@ -166,6 +166,9 @@ fzero(sin, cos, 3)             # use Newton's method
     Unlike `find_zero`, `fzero` does not specialize on the type of the function argument.
     This has the advantage of making the first use of the function `f` faster, but subsequent uses slower.
 
+!!! note
+    The `fzero` function is deprecated and will be removed in the next breaking change of the `Roots` package.
+
 """
 function fzero(f, x0::Number; kwargs...)
     Base.depwarn("`fzero(f, x0)` is deprecated; use `find_zero(f, x0)` instead.", :fzero)
@@ -327,9 +330,13 @@ end
 Searches for all zeros of `f` within an interval `(a,b)`. Assumes neither `a` or `b` is a zero.
 
 Compatibility interface for [`find_zeros`](@ref).
+
+!!! note
+    The `fzeros` function is deprecated and will be removed in the next breaking change of the `Roots` package.
+
 """
 function fzeros(f, a::Number, b::Number; kwargs...)
-    Base.depwarn("`fzeros(f, a,b)` is deprecated; use `find_zeros(f, a, b)` instead.", :fzero)
+    Base.depwarn("`fzeros(f, a,b)` is deprecated; use `find_zeros(f, a, b)` instead.", :fzeros)
     find_zeros(FnWrapper(f), float(a), float(b); kwargs...)
 end
 fzeros(f, ab; kwargs...) = fzeros(f, _extrema(ab)...; kwargs...)
