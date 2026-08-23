@@ -21,9 +21,8 @@ import Roots.newton,
           2.414213562373095
 
     ## test with Complex input
-    @test real(find_zero((x -> x^3 - 1, x -> 3x^2), 1 + im,   Roots.Newton())) ≈ 1.0
+    @test real(find_zero((x -> x^3 - 1, x -> 3x^2), 1 + im, Roots.Newton())) ≈ 1.0
     @test real(find_zero((x -> x^3 - 1, x -> 3x^2), 1 + 10im, Roots.Newton())) ≈ (-1 / 2)
-
 
     fdf = x -> (sin(x), sin(x) / cos(x))  # (f, f/f')
     @test Roots.find_zero(fdf, 3.0, Roots.Newton()) ≈ π # uses find_zero

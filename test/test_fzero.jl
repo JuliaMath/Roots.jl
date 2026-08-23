@@ -71,5 +71,4 @@ import Roots.fzero
 
     ## issue #178 passing through method
     @test fzero(sin, 3, 4, Roots.Brent()) ≈ π
-
 end

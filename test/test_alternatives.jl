@@ -21,5 +21,4 @@ import Roots.newton,
     ## Issue #143 test with new interface
     Roots.newton(sin, cos, 3.0) ≈ π # uses find_zero
     Roots.newton((sin, cos), 3.0) ≈ π # uses simple
-
 end
