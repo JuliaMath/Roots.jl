@@ -24,7 +24,10 @@ See also `Roots.newton((f,fp), x0)` and `Roots.newton(fΔf, x0)` for simpler imp
 
 """
 function newton(f, fp, x0; kwargs...)
-    Base.depwarn("`newton(f, fp, x0)` is deprecated; use `find_zero((f,fp), x0, Roots.Newton())` instead.", :newton)
+    Base.depwarn(
+        "`newton(f, fp, x0)` is deprecated; use `find_zero((f,fp), x0, Roots.Newton())` instead.",
+        :newton,
+    )
     find_zero((f, fp), x0, Newton(); kwargs...)
 end
 
@@ -54,7 +57,10 @@ Keyword arguments are passed to `find_zero` using the `Roots.Halley()` method.
 """
 =#
 function halley(f, fp, fpp, x0; kwargs...)
-    Base.depwarn("`halley(f, fp, fpp,  x0)` is deprecated; use `find_zero((f,fp, fpp), x0, Roots.Halley())` instead.", :halley)
+    Base.depwarn(
+        "`halley(f, fp, fpp,  x0)` is deprecated; use `find_zero((f,fp, fpp), x0, Roots.Halley())` instead.",
+        :halley,
+    )
     find_zero((f, fp, fpp), x0, Halley(); kwargs...)
 end
 
@@ -83,19 +89,28 @@ Keyword arguments are passed to `find_zero` using the `Roots.QuadraticInverse()`
 """
 =#
 function quadratic_inverse(f, fp, fpp, x0; kwargs...)
-    Base.depwarn("`quadratic_inverse(f, fp, fpp,  x0)` is deprecated; use `find_zero((f,fp, fpp), x0, Roots.QuadraticInverse())` instead.", :quadratic_inverse)
+    Base.depwarn(
+        "`quadratic_inverse(f, fp, fpp,  x0)` is deprecated; use `find_zero((f,fp, fpp), x0, Roots.QuadraticInverse())` instead.",
+        :quadratic_inverse,
+    )
 
     find_zero((f, fp, fpp), x0, QuadraticInverse(); kwargs...)
 end
 
 function superhalley(f, fp, fpp, x0; kwargs...)
-        Base.depwarn("`superhalley(f, fp, fpp,  x0)` is deprecated; use `find_zero((f,fp, fpp), x0, Roots.SuperHalley())` instead.", :superhalley)
+    Base.depwarn(
+        "`superhalley(f, fp, fpp,  x0)` is deprecated; use `find_zero((f,fp, fpp), x0, Roots.SuperHalley())` instead.",
+        :superhalley,
+    )
 
     find_zero((f, fp, fpp), x0, SuperHalley(); kwargs...)
 end
 
 function chebyshev_like(f, fp, fpp, x0; kwargs...)
-        Base.depwarn("`chebyshev_like(f, fp, fpp,  x0)` is deprecated; use `find_zero((f,fp, fpp), x0, Roots.ChebyshevLike())` instead.", :chebyshev_like)
+    Base.depwarn(
+        "`chebyshev_like(f, fp, fpp,  x0)` is deprecated; use `find_zero((f,fp, fpp), x0, Roots.ChebyshevLike())` instead.",
+        :chebyshev_like,
+    )
 
     find_zero((f, fp, fpp), x0, ChebyshevLike(); kwargs...)
 end
@@ -186,7 +201,10 @@ function fzero(
     tracks=NullTracks(),
     kwargs...,
 )
-    Base.depwarn("`fzero(f, x0, M)` is deprecated; use `find_zero(f, x0, M)` instead.", :fzero)
+    Base.depwarn(
+        "`fzero(f, x0, M)` is deprecated; use `find_zero(f, x0, M)` instead.",
+        :fzero,
+    )
 
     tracks = (verbose && isa(tracks, NullTracks)) ? Tracks() : tracks
     α = find_zero(FnWrapper(f), x0, M; tracks, kwargs...)
@@ -203,7 +221,10 @@ function fzero(
     tracks=NullTracks(),
     kwargs...,
 )
-    Base.depwarn("`fzero(f, x0, M, N)` is deprecated; use `find_zero(f, x0, M, N)` instead.", :fzero)
+    Base.depwarn(
+        "`fzero(f, x0, M, N)` is deprecated; use `find_zero(f, x0, M, N)` instead.",
+        :fzero,
+    )
 
     tracks = (verbose && isa(tracks, NullTracks)) ? Tracks() : tracks
     a = find_zero(FnWrapper(f), x0, M, N; tracks, kwargs...)
@@ -218,8 +239,10 @@ function fzero(
     tracks=NullTracks(),
     kwargs...,
 ) where {T<:Number,S<:Number}
-    Base.depwarn("`fzero(f, (a,b))` is deprecated; use `find_zero(f, (a,b))` instead.", :fzero)
-
+    Base.depwarn(
+        "`fzero(f, (a,b))` is deprecated; use `find_zero(f, (a,b))` instead.",
+        :fzero,
+    )
 
     d = Dict(kwargs...)
     tracks = (verbose && isa(tracks, NullTracks)) ? Tracks() : tracks
@@ -250,7 +273,10 @@ function fzero(
     tracks=NullTracks(),
     kwargs...,
 )
-    Base.depwarn("`fzero(f, fp, x0)` is deprecated; use `find_zero((f,fp), x0)` instead.", :fzero)
+    Base.depwarn(
+        "`fzero(f, fp, x0)` is deprecated; use `find_zero((f,fp), x0)` instead.",
+        :fzero,
+    )
     tracks = (verbose && isa(tracks, NullTracks)) ? Tracks() : tracks
     α = find_zero((f, fp), x0, Newton(); tracks, kwargs...)
     verbose && display(tracks)
@@ -336,7 +362,10 @@ Compatibility interface for [`find_zeros`](@ref).
 
 """
 function fzeros(f, a::Number, b::Number; kwargs...)
-    Base.depwarn("`fzeros(f, a,b)` is deprecated; use `find_zeros(f, a, b)` instead.", :fzeros)
+    Base.depwarn(
+        "`fzeros(f, a,b)` is deprecated; use `find_zeros(f, a, b)` instead.",
+        :fzeros,
+    )
     find_zeros(FnWrapper(f), float(a), float(b); kwargs...)
 end
 fzeros(f, ab; kwargs...) = fzeros(f, _extrema(ab)...; kwargs...)
