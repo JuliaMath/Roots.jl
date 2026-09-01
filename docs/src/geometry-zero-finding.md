@@ -230,7 +230,7 @@ p
 ```
 
 
-We can see graphically that for this function and the chosen values, the inverse quadratic and inverse cubic fits are very close to the actual zero, suggesting a rapid convergence. `Roots.Brent()`, `Roots.Chandrapatlu()`, and `Roots.AlefeldPotraShi()` are different bracketing methods which use an inverse quadratic step *when* the algorithm deems it productive, falling back to other estimates when not. Similarly, the inverse cubic step is utilized by `Roots.A42()`, as possible. The `LithBoonkkampIJzerman{S,0}` methods use ``S`` previous points (``S \geq 2``) and the corresponding inverse polynomial step to progress. Since these are not bracketed, the algorithms are only guaranteed to converge for nearby initial guesses.
+We can see graphically that for this function and the chosen values, the inverse quadratic and inverse cubic fits are very close to the actual zero, suggesting a rapid convergence. `Roots.Brent()`, `Roots.Chandrupatla()`, and `Roots.AlefeldPotraShi()` are different bracketing methods which use an inverse quadratic step *when* the algorithm deems it productive, falling back to other estimates when not. Similarly, the inverse cubic step is utilized by `Roots.A42()`, as possible. The `LithBoonkkampIJzerman{S,0}` methods use ``S`` previous points (``S \geq 2``) and the corresponding inverse polynomial step to progress. Since these are not bracketed, the algorithms are only guaranteed to converge for nearby initial guesses.
 
 
 ## Higher derivative variations on Newton's method

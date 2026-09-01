@@ -59,7 +59,7 @@ end
         Roots.AlefeldPotraShi(),
         Roots.Bisection(),
         Roots.Brent(),
-        Roots.Chandrapatla(),
+        Roots.Chandrupatla(),
         Roots.ITP(),
         Roots.ModAB(),
         Roots.Ridders(),
