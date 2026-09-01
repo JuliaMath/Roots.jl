@@ -11,7 +11,7 @@ Chandrupatla's algorithm chooses between an inverse quadratic step or a bisectio
 
 """
 struct Chandrupatla <: AbstractNonStrictBracketingMethod end
-const Chandrapatla = Chandrupatla # old mis-spelling
+const Chandrapatla = Chandrupatla # old misspelling
 
 struct ChandrupatlaState{T,S} <: AbstractUnivariateZeroState{T,S}
     xn1::T
