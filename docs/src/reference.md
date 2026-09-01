@@ -154,7 +154,7 @@ Bisection
 Roots.A42
 Roots.AlefeldPotraShi
 Roots.Brent
-Roots.Chandrapatla
+Roots.Chandrupatla
 Roots.Ridders
 Roots.ITP
 Roots.ModAB

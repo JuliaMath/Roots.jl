@@ -1199,18 +1199,18 @@ julia> [find_zero(f, (interval(u).lo, interval(u).hi)) for u ∈ rts if u.status
 
 To add a solver the minimum needed is a type to declare the solver and an `update_state` method. In this example, we also define a state object, as the algorithm, as employed, uses more values stored than the default.
 
-The [Wikipedia](https://en.wikipedia.org/wiki/Brent%27s_method) page for Brent's method suggest a modern improvement, Chandrapatla's method, described [here](https://www.google.com/books/edition/Computational_Physics/cC-8BAAAQBAJ?hl=en&gbpv=1&pg=PA95&printsec=frontcover). That description is mostly followed below and in the package implementation `Roots.Chandrapatla`.
+The [Wikipedia](https://en.wikipedia.org/wiki/Brent%27s_method) page for Brent's method suggest a modern improvement, Chandrupatla's method, described [here](https://www.google.com/books/edition/Computational_Physics/cC-8BAAAQBAJ?hl=en&gbpv=1&pg=PA95&printsec=frontcover). That description is mostly followed below and in the package implementation `Roots.Chandrupatla`.
 
-To implement Chandrapatla's algorithm we first define a type to indicate the method:
+To implement Chandrupatla's algorithm we first define a type to indicate the method:
 
 ```julia
-julia> struct Chandrapatla <: Roots.AbstractBracketingMethod end
+julia> struct Chandrupatla <: Roots.AbstractBracketingMethod end
 ```
 
 For this method, the default state object isn't sufficient, as the algorithm tracks three values, not the default two. Here we define a state object for this type:
 
 ```julia
-julia> struct ChandrapatlaState{T,S} <: Roots.AbstractUnivariateZeroState{T,S}
+julia> struct ChandrupatlaState{T,S} <: Roots.AbstractUnivariateZeroState{T,S}
     xn1::T
     xn0::T
     c::T
@@ -1224,10 +1224,10 @@ end
 An `init_state` method can be used by some methods to add more detail to the basic state object. Here it starts the old value, `c`, off as `a` as a means to ensure an initial bisection step.
 
 ```julia
-julia> function Roots.init_state(::Chandrapatla, F, x₀, x₁, fx₀, fx₁)
+julia> function Roots.init_state(::Chandrupatla, F, x₀, x₁, fx₀, fx₁)
     a, b, fa, fb = x₁, x₀, fx₁, fx₀
     c, fc = a, fa
-    ChandrapatlaState(b, a, c, fb, fa, fc)
+    ChandrupatlaState(b, a, c, fb, fa, fc)
 end
 ```
 
@@ -1236,7 +1236,7 @@ The main algorithm is implemented in the `update_state` method. The `@reset` mac
 ```julia
 julia> import Roots.Accessors: @reset;
 
-julia> function Roots.update_state(::Chandrapatla, F, o, options, l=Roots.NullTracks())
+julia> function Roots.update_state(::Chandrupatla, F, o, options, l=Roots.NullTracks())
 
     b, a, c = o.xn1, o.xn0, o.c
     fb, fa, fc = o.fxn1, o.fxn0, o.fc
@@ -1245,7 +1245,7 @@ julia> function Roots.update_state(::Chandrapatla, F, o, options, l=Roots.NullTr
     ξ = (a - b) / (c - b)
     ϕ = (fa - fb) / (fc - fb)
     ϕ² = ϕ^2
-    Δ = (ϕ² < ξ) && (1 - 2ϕ + ϕ² < 1 - ξ) # Chandrapatla's inequality to determine next step
+    Δ = (ϕ² < ξ) && (1 - 2ϕ + ϕ² < 1 - ξ) # Chandrupatla's inequality to determine next step
 
     xₜ = Δ ? Roots.inverse_quadratic_step(a, b, c, fa, fb, fc) : a/2 + b/2
 
@@ -1278,12 +1278,12 @@ This algorithm chooses between an inverse quadratic step or a bisection step dep
 To see that the algorithm works, we have:
 
 ```julia
-julia> find_zero(sin, (3,4), Chandrapatla())
+julia> find_zero(sin, (3,4), Chandrupatla())
 3.1415926535897927
 
-julia> find_zero(x -> exp(x) - x^4, (8,9), Chandrapatla())
+julia> find_zero(x -> exp(x) - x^4, (8,9), Chandrupatla())
 8.613169456441398
 
-julia> find_zero(x -> x^5 - x - 1, (1,2), Chandrapatla())
+julia> find_zero(x -> x^5 - x - 1, (1,2), Chandrupatla())
 1.1673039782614185
 ```

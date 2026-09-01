@@ -281,7 +281,7 @@ end
     Ms = (
         Roots.A42(),
         Roots.AlefeldPotraShi(),
-        Roots.Chandrapatla(),
+        Roots.Chandrupatla(),
         Roots.Bisection(),
         Roots.ModAB(),
         Roots.Brent(),
@@ -419,7 +419,7 @@ end
         Roots.AlefeldPotraShi(),
         Roots.Brent(),
         Roots.Ridders(),
-        Roots.Chandrapatla(),
+        Roots.Chandrupatla(),
         Roots.ITP(),
         Roots.FalsePosition(),
     )

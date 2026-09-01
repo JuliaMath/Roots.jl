@@ -1,18 +1,19 @@
 """
-    Roots.Chandrapatla()
+    Roots.Chandrupatla()
 
-Use [Chandrapatla's
+Use [Chandrupatla's
 algorithm](https://doi.org/10.1016/S0965-9978(96)00051-8)
 (cf. [Scherer](https://www.google.com/books/edition/Computational_Physics/cC-8BAAAQBAJ?hl=en&gbpv=1&pg=PA95&printsec=frontcover))
 to solve ``f(x) = 0``.
 
-Chandrapatla's algorithm chooses between an inverse quadratic step or a bisection step based on a computed inequality.
+Chandrupatla's algorithm chooses between an inverse quadratic step or a bisection step based on a computed inequality.
 
 
 """
-struct Chandrapatla <: AbstractNonStrictBracketingMethod end
+struct Chandrupatla <: AbstractNonStrictBracketingMethod end
+const Chandrapatla = Chandrupatla # old mis-spelling
 
-struct ChandrapatlaState{T,S} <: AbstractUnivariateZeroState{T,S}
+struct ChandrupatlaState{T,S} <: AbstractUnivariateZeroState{T,S}
     xn1::T
     xn0::T
     c::T  # keep xₙ₋₂ around for quadratic step
@@ -22,17 +23,17 @@ struct ChandrapatlaState{T,S} <: AbstractUnivariateZeroState{T,S}
 end
 
 # a = most recent, b prior
-function init_state(::Chandrapatla, F, x₀, x₁, fx₀, fx₁)
+function init_state(::Chandrupatla, F, x₀, x₁, fx₀, fx₁)
     a, b, fa, fb = x₁, x₀, fx₁, fx₀
     assert_bracket(fa, fb)
     c, fc = a, fa
-    ChandrapatlaState(promote(a, b, c)..., promote(fa, fb, fc)...)
+    ChandrupatlaState(promote(a, b, c)..., promote(fa, fb, fc)...)
 end
 
 function update_state(
-    ::Chandrapatla,
+    ::Chandrupatla,
     F,
-    o::ChandrapatlaState{T,S},
+    o::ChandrupatlaState{T,S},
     options,
     l=NullTracks(),
 ) where {T,S}
@@ -44,7 +45,7 @@ function update_state(
     ξ = (a - b) / (c - b)
     ϕ = (fa - fb) / (fc - fb)
     ϕ² = ϕ^2
-    Δ = (ϕ² < ξ) && (1 - 2ϕ + ϕ² < 1 - ξ) # Chandrapatla's inequality to determine next step
+    Δ = (ϕ² < ξ) && (1 - 2ϕ + ϕ² < 1 - ξ) # Chandrupatla's inequality to determine next step
 
     xₜ::T = Δ ? inverse_quadratic_step(a, b, c, fa, fb, fc) : _middle(a, b)
 
