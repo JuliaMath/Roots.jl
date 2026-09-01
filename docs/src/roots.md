@@ -1199,7 +1199,7 @@ julia> [find_zero(f, (interval(u).lo, interval(u).hi)) for u ∈ rts if u.status
 
 To add a solver the minimum needed is a type to declare the solver and an `update_state` method. In this example, we also define a state object, as the algorithm, as employed, uses more values stored than the default.
 
-The [Wikipedia](https://en.wikipedia.org/wiki/Brent%27s_method) page for Brent's method suggest a modern improvement, Chandrupatla's method, described [here](https://www.google.com/books/edition/Computational_Physics/cC-8BAAAQBAJ?hl=en&gbpv=1&pg=PA95&printsec=frontcover). That description is mostly followed below and in the package implementation `Roots.Chandrupatla`.
+The [Wikipedia](https://en.wikipedia.org/wiki/Brent%27s_method) page for Brent's method suggests a modern improvement, Chandrupatla's method, described [here](https://www.google.com/books/edition/Computational_Physics/cC-8BAAAQBAJ?hl=en&gbpv=1&pg=PA95&printsec=frontcover). That description is mostly followed below and in the package implementation `Roots.Chandrupatla`.
 
 To implement Chandrupatla's algorithm we first define a type to indicate the method:
 

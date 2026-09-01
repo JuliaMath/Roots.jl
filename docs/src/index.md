@@ -35,7 +35,7 @@ specification of a method. These include:
   exploiting floating point storage conventions leading to an exact
   zero or a bracketing interval as small as floating point
   computations allows. Other methods include `A42`,
-  `AlefeldPotraShi`, `Roots.Brent`, `Roots.Chandrupatlu`,
+  `AlefeldPotraShi`, `Roots.Brent`, `Roots.Chandrupatla`,
   `Roots.ITP`, `Roots.Ridders`, `Roots.ModAB`, and ``12``-flavors of
   `FalsePosition` and a few in `RegulaFalsi`. The default bracketing method for
   the basic floating-point types is `Bisection` , as it is more robust to some inputs,
