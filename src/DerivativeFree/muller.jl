@@ -26,26 +26,24 @@ struct MullerState{T,S} <: AbstractUnivariateZeroState{T,S}
     fxn0::S
 end
 
-
-
 function _muller_bootstrap(f::Callable_Function, x::Number)
-    a, b =  x₀x₁(float(x))
-    fa, fb = f.((a,b))
+    a, b = x₀x₁(float(x))
+    fa, fb = f.((a, b))
     c = b - fb * (b-a)/(fb-fa)
     fc = f(c)
-    (a,b,c,fa,fb,fc)
+    (a, b, c, fa, fb, fc)
 end
 function _muller_bootstrap(f::Callable_Function, x1::Number, x2::Number)
-    a, b =  x₀x₁((float(x1), float(x2)))
-    fa, fb = f.((a,b))
+    a, b = x₀x₁((float(x1), float(x2)))
+    fa, fb = f.((a, b))
     c = b - fb * (b-a)/(fb-fa)
     fc = f(c)
-    (a,b,c,fa,fb,fc)
+    (a, b, c, fa, fb, fc)
 end
 function _muller_bootstrap(f::Callable_Function, x1::Number, x2::Number, x3)
     a, b, c = float.((x1, x2, x3))
     fa, fb, fc = f(a), f(b), f(c)
-    (a,b,c,fa,fb,fc)
+    (a, b, c, fa, fb, fc)
 end
 
 function init_state(M::Muller, F::Callable_Function, x)
@@ -61,7 +59,6 @@ function update_state(
     options,
     l=NullTracks(),
 ) where {T,S}
-
     a, b, c = o.xn0, o.xn1, o.xn2
     fa, fb, fc = o.fxn0, o.fxn1, o.fxn2
 
@@ -74,13 +71,14 @@ function update_state(
     C = q1 * fc
 
     Δ = B^2 - 4A * C
-    if typeof(Δ) <: Real && Δ < 0 &&
-            throw(
-                DomainError(
-                    Δ,
-                    "Discriminant is negative and the function most likely has complex roots. You might use the `Roots.Muller()` method with complex input.",
-                ),
-            )
+    if typeof(Δ) <: Real &&
+       Δ < 0 &&
+       throw(
+           DomainError(
+               Δ,
+               "Discriminant is negative and the function most likely has complex roots. You might use the `Roots.Muller()` method with complex input.",
+           ),
+       )
     end
 
     Δ = √Δ
@@ -94,7 +92,7 @@ function update_state(
         return o, true
     end
 
-    x =  c - inc
+    x = c - inc
     fx = first(F(x))
 
     # check for oddity?
@@ -106,7 +104,6 @@ function update_state(
     @reset o.fxn0 = fb
     @reset o.fxn1 = fc
     @reset o.fxn2 = fx
-
 
     return (o, false)
 end
