@@ -7,3 +7,5 @@ test/benchmarks.json
 Manifest.toml
 TODO.md
 default.profraw
+.idea/
+*.iml
