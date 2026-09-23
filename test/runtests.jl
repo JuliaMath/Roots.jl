@@ -30,6 +30,7 @@ include("./test_chain_rules.jl")
 include("./test_simple.jl")
 
 include("./test_composable.jl")
+include("./test_trim.jl")
 VERSION >= v"1.6.0" && include("./test_allocations.jl")
 VERSION >= v"1.9.0" && include("./test_extensions.jl")
 VERSION >= v"1.12.0" && include("./test_jet.jl")
