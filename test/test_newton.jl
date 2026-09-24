@@ -57,6 +57,16 @@ import Roots.newton,
         Roots.Bisection(),
     ) ≈ sqrt(2)
 
+    # quadratic vertex step of the hybrid method with multiple return values
+    @test isnan(
+        find_zero(
+            (x -> x^4 - x + 1, x -> 4x^3 - 1),
+            0.5,
+            Roots.Newton(),
+            Roots.Bisection(),
+        ),
+    )
+
     @test_throws Roots.ConvergenceFailed Roots.newton((x -> x^2 + 1, x -> 2x), 0)
 end
 
