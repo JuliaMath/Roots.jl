@@ -136,7 +136,7 @@ function solve!(𝐙::ZeroProblemIterator{𝐌,𝐍};) where {𝐌,𝐍<:Abstrac
             if isnan(r) || isinf(r)
                 state = state0
             else
-                fr = F(r)
+                fr = first(F(r))
                 incfn(l)
 
                 @reset state0.xn1 = r
