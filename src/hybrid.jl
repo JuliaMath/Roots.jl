@@ -83,9 +83,11 @@ function solve!(𝐙::ZeroProblemIterator{𝐌,𝐍};) where {𝐌,𝐍<:Abstrac
             r = b + sign(r - b) * ts * Δx
         end
 
-        @reset state0.xn1 = r
-        @reset state0.fxn1 = first(F(r))
-        incfn(l)
+        if adj
+            @reset state0.xn1 = r
+            @reset state0.fxn1 = first(F(r))
+            incfn(l)
+        end
 
         # a sign change after shortening?
         if sign(state.fxn1) * sign(state0.fxn1) < 0
