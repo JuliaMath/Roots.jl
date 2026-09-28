@@ -57,6 +57,12 @@ import Roots.newton,
         Roots.Bisection(),
     ) ≈ sqrt(2)
 
+    # no duplicate function evaluations after unshortened steps (#531)
+    xs = Float64[]
+    f = x -> (push!(xs, x); (exp(x) - 2, (exp(x) - 2) / exp(x)))
+    @test find_zero(f, 1.0, Roots.Newton(), Roots.ITP()) ≈ log(2)
+    @test all(!iszero, diff(xs))
+
     # quadratic vertex step of the hybrid method with multiple return values
     @test isnan(
         find_zero(
