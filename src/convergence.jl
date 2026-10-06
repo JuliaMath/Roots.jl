@@ -53,10 +53,10 @@ function default_tolerances(
     ::AbstractUnivariateZeroMethod,
     ::AbstractUnivariateZeroState{T,S},
 ) where {T,S}
-    xatol = eps(real(T)) * oneunit(real(T))
-    xrtol = eps(real(T))  # unitless
-    atol = 4 * eps(real(float(S))) * oneunit(real(S))
-    rtol = 4 * eps(real(float(S))) * one(real(S))
+    xatol = eps(one(real(T))) * oneunit(real(T))
+    xrtol = eps(one(real(T))) # unitless
+    atol = 4 * eps(one(real(float(S)))) * oneunit(real(S))
+    rtol = 4 * eps(one(real(float(S)))) * one(real(S)) # unitless
     maxiters = 40
     strict = false
     (xatol, xrtol, atol, rtol, maxiters, strict)
@@ -96,7 +96,7 @@ function is_approx_zero_f(
 }
     ab, afb = abs(state.xn1), abs(state.fxn1)
     ϵₐ, ϵᵣ = options.abstol, options.reltol
-    Δ = max(_unitless(ϵₐ), _unitless(ab) * ϵᵣ)
+    Δ = max(_unitless(ϵₐ), _unitless(ab) * _unitless(ϵᵣ))
     afb ≤ Δ * oneunit(afb)
 end
 
@@ -128,6 +128,12 @@ function is_approx_zero_f(
 end
 
 ## --------------------------------------------------
+function __isapprox(a, b; atol=eps(), rtol=eps())
+    # bypass isapprox Real type constraint
+    a′, b′ = promote(a, b)
+    a == b && return true
+    return (isfinite(a) && isfinite(b) && abs(a-b) <= max(atol, rtol*max(abs(a′), abs(b′))))
+end
 
 # testing xₙ₊₁ - xₙ ≈ 0
 function iszero_Δx(
@@ -137,7 +143,7 @@ function iszero_Δx(
 )
     a, b, fa, fb = state.xn0, state.xn1, state.fxn0, state.fxn1
     δₐ, δᵣ = options.xabstol, options.xreltol
-    isapprox(a, b, atol=δₐ, rtol=δᵣ)
+    __isapprox(a, b, atol=δₐ, rtol=δᵣ)
 end
 
 # this is for Bisection where we can go adjacent floating point values

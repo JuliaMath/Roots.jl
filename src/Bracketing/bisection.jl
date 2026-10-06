@@ -95,8 +95,8 @@ function default_tolerances(
     ::AbstractUnivariateZeroState{T′,S′},
 ) where {T′,S′}
     T, S = real(float(T′)), real(float(S′))
-    xatol = eps(T)^3 * oneunit(T)
-    xrtol = eps(T) * one(T) # unitless
+    xatol = eps(one(T))^3 * oneunit(T)
+    xrtol = eps(one(T)) * one(T) # unitless
     atol = 0 * oneunit(S)
     rtol = 0 * one(S)
     maxiters = typemax(Int)

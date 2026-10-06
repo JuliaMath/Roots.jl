@@ -45,8 +45,8 @@ function default_tolerances(
     ::AbstractBracketingMethod,
     ::AbstractUnivariateZeroState{T,S},
 ) where {T,S}
-    xatol = eps(real(T))^3 * oneunit(real(T))
-    xrtol = eps(real(T))  # unitless
+    xatol = eps(one(real(T)))^3 * oneunit(real(T))
+    xrtol = eps(one(real(T)))  # unitless
     atol = zero(oneunit(real(S)))
     rtol = zero(one(real(S)))
     maxevals = 60
@@ -59,8 +59,8 @@ function default_tolerances(
     ::AbstractNonStrictBracketingMethod,
     ::AbstractUnivariateZeroState{T,S},
 ) where {T,S}
-    xatol = eps(real(T))^3 * oneunit(real(T))
-    xrtol = eps(real(T))  # unitless
+    xatol = eps(one(real(T)))^3 * oneunit(real(T))
+    xrtol = eps(one(real(T)))  # unitless
     atol = zero(oneunit(real(S)))
     rtol = zero(one(real(S)))
     maxevals = 60
