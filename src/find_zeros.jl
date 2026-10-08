@@ -68,7 +68,7 @@ Base.show(io::IO, alpha::Interval) = print(io, "($(alpha.a), $(alpha.b))")
 
 # check if f(a) is non zero using tolerances max(atol, eps()), rtol
 function _non_zero(fa, a::T, atol, rtol) where {T}
-    a, r = atol, abs(a) * rtol * oneunit(fa) / oneunit(a), oneunit(fa) * eps(T)
+    a, r = atol, abs(a) * rtol * oneunit(fa) / oneunit(a), oneunit(fa) * eps(one(T))
     return abs(fa) >= max(promote(a, r)...)
 end
 
@@ -76,7 +76,7 @@ end
 # to (zm+, zn-) where both are non-zeros, as defined above
 function find_non_zero(f, a::T, barrier, xatol, xrtol, atol, rtol) where {T}
     nan = (0 * a) / (0 * a) # try to get typed NaN
-    xtol = max(xatol, abs(a) * xrtol, oneunit(a) * eps(T))
+    xtol = max(xatol, abs(a) * xrtol, oneunit(a) * eps(one(T)))
     sgn = barrier > a ? 1 : -1
     ctr = 0
     x = a + 2^ctr * sgn * xtol
@@ -323,8 +323,8 @@ function find_zeros(f, a, b=nothing; no_pts=12, k=8, naive=false, kwargs...)
     T, S     = real(eltype(a0)), real(eltype(fa0))
     xatol::T = get(d, :xatol, eps(one(T))^(4 / 5) * oneunit(T))
     xrtol    = get(d, :xrtol, eps(one(T)) * one(T))
-    atol::S  = get(d, :atol, eps(float(S)) * oneunit(S))
-    rtol     = get(d, :rtol, eps(float(S)) * one(S))
+    atol::S  = get(d, :atol, eps(one(float(S))) * oneunit(S))
+    rtol     = get(d, :rtol, eps(one(float(S))) * one(S))
 
     zs = T[]  # collect zeros
 
