@@ -103,8 +103,8 @@ initial_fncalls(M::ModAB) = 2
 # where X is 16,32,or 64, N is -Int(log2(eps(T))) ÷ 2 + 1
 function default_tolerances(::ModAB, ::AbstractUnivariateZeroState{T,S}) where {T,S}
     xatol = 2 * eps(zero(T)) * oneunit(real(T)) # not quite 0
-    xrtol = eps(real(T))  # unitless
-    atol = 4 * eps(real(float(S))) * oneunit(real(S))
+    xrtol = eps(one(real(T)))  # unitless
+    atol = 4 * eps(one(real(float(S)))) * oneunit(real(S))
     rtol = zero(real(S))
     maxiters = 3 * (-Int(log2(eps(T))) + 1)
     strict = true
