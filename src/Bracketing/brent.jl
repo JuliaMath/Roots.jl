@@ -48,7 +48,9 @@ function update_state(
     fa, fb, fc = state.fxn0, state.fxn1, state.fc
 
     # next step depends on points; inverse quadratic unless a repeated value zeroes its denominator
-    s = fa == fc || fb == fc ? float(secant_step(a, b, fa, fb)) : float(inverse_quadratic_step(a, b, c, fa, fb, fc))
+    s =
+        fa == fc || fb == fc ? float(secant_step(a, b, fa, fb)) :
+        float(inverse_quadratic_step(a, b, c, fa, fb, fc))
     (isnan(s) || isinf(s)) && (s = float(secant_step(a, b, fa, fb)))
 
     # guard step

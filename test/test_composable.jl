@@ -87,7 +87,6 @@ using Measurements
         @test Roots.is_small_Δx(prob.M, prob.state, prob.options) isa Bool  # does not throw
     end
 
-
     # Polynomials
     @testset "find zero(s) with Polynomials" begin
         m = s = 1.0
