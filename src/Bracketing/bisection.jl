@@ -130,27 +130,12 @@ __middle(x::Number, y::Number) = x / 2 + y / 2
 # Use the usual float rules for combining non-finite numbers
 # do division over unsigned integers with bit shift
 # then reinterpret in original floating point
-# repeat as we were getting flagged by JET using a union
-function __middle(x::Float64, y::Float64)
-    S = UInt64
+function __middle(x::T, y::T) where {T<:Union{Float16,Float32,Float64}}
+    S = Base.uinttype(T)
     xint = reinterpret(S, abs(x))
     yint = reinterpret(S, abs(y))
     mid = (xint + yint) >> 1
-    sign(x + y) * reinterpret(Float64, mid)
-end
-function __middle(x::Float32, y::Float32)
-    S = UInt32
-    xint = reinterpret(S, abs(x))
-    yint = reinterpret(S, abs(y))
-    mid = (xint + yint) >> 1
-    sign(x + y) * reinterpret(Float32, mid)
-end
-function __middle(x::Float16, y::Float16)
-    S = UInt16
-    xint = reinterpret(S, abs(x))
-    yint = reinterpret(S, abs(y))
-    mid = (xint + yint) >> 1
-    sign(x + y) * reinterpret(Float16, mid)
+    sign(x + y) * reinterpret(T, mid)
 end
 ## --------------------------------------------------
 

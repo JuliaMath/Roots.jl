@@ -53,11 +53,7 @@ end
 # set d, ee to a
 function init_state(::AbstractAlefeldPotraShi, F, x₀, x₁, fx₀, fx₁; c=nothing, fc=nothing)
     a, b, fa, fb = x₀, x₁, fx₀, fx₁
-    iszero(fa) && return AbstractAlefeldPotraShiState(
-        promote(b, a, a, a)...,
-        promote(fb, fa, fa, fa)...,
-    )
-    iszero(fb) && return AbstractAlefeldPotraShiState(
+    (iszero(fa) || iszero(fb)) && return AbstractAlefeldPotraShiState(
         promote(b, a, a, a)...,
         promote(fb, fa, fa, fa)...,
     )

@@ -42,7 +42,7 @@ end
 
 # use xatol, xrtol only, but give some breathing room over the strict ones and cap number of steps
 function default_tolerances(
-    ::AbstractBracketingMethod,
+    M::AbstractBracketingMethod,
     ::AbstractUnivariateZeroState{T,S},
 ) where {T,S}
     xatol = eps(one(real(T)))^3 * oneunit(real(T))
@@ -50,23 +50,13 @@ function default_tolerances(
     atol = zero(oneunit(real(S)))
     rtol = zero(one(real(S)))
     maxevals = 60
-    strict = true
+    strict = _strict(M)
     (xatol, xrtol, atol, rtol, maxevals, strict)
 end
 
 # Non strict has check on non convergence with relaxed tolerances
-function default_tolerances(
-    ::AbstractNonStrictBracketingMethod,
-    ::AbstractUnivariateZeroState{T,S},
-) where {T,S}
-    xatol = eps(one(real(T)))^3 * oneunit(real(T))
-    xrtol = eps(one(real(T)))  # unitless
-    atol = zero(oneunit(real(S)))
-    rtol = zero(one(real(S)))
-    maxevals = 60
-    strict = false
-    (xatol, xrtol, atol, rtol, maxevals, strict)
-end
+_strict(::AbstractBracketingMethod) = true
+_strict(::AbstractNonStrictBracketingMethod) = false
 
 ## --------------------------------------------------
 
