@@ -260,7 +260,7 @@ function assess_convergence(
     state::AbstractUnivariateZeroState,
     options,
 )
-    if options.exact == :xexact || options.exact == :exact
+    if options.exact == :xexact
         # return convergence_flag, boolean
         # no check if f == ∞
         is_exact_zero_f(M, state, options) && return (:exact_zero, true)
@@ -295,7 +295,7 @@ function decide_convergence(
     xn0, xn1 = state.xn0, state.xn1
     fxn1 = state.fxn1
 
-    val ∈ (:f_converged, :exact_zero, :converged) && return xn1
+    val ∈ (:f_converged, :exact_zero) && return xn1
 
     ## XXX this could be problematic
     if val == :nan
@@ -314,7 +314,6 @@ function decide_convergence(
         # else
         return nan(T) * xn1
     end
-    val == :inf_nan && return xn1
 
     ## stopping is a heuristic, x_converged can mask issues
     ## if strict=true or the tolerance for f is 0 this will return xn1 if x_converged

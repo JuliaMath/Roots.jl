@@ -81,8 +81,4 @@ include("find_zeros.jl")
 include("simple.jl")
 include("deprecated/alternative_interfaces.jl")
 
-if !isdefined(Base, :get_extension)
-    include("../ext/RootsChainRulesCoreExt.jl")
-end
-
 end
