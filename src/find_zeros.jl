@@ -6,30 +6,30 @@
 # * k is oversampling rate for bisection. (It is relatively cheap to check for a bracket so we
 #   oversample our intervals looking for brackets
 # * assumes f(a) *not* a zero
-function _fz(f, a, b, no_pts, k=4)
-    zs = Real[]
-    _fz!(zs, f, a, b, no_pts, k)
-    zs
-end
-
-function _fz!(zs, f, a::T, b, no_pts, k::Int=4) where {T}
+# * fa, fb are f(a), f(b); fs, sfs are buffers for the function values and their signs
+function _fz!(zs, fs, sfs, f, a::T, b, fa, fb, no_pts, k::Int=4) where {T}
     pts = range(a, stop=b, length=(no_pts - 1) * k + 1)
     n::Int = length(pts)
 
-    fs = f.(pts)
-    sfs = sign.(fs)
+    resize!(fs, n)
+    resize!(sfs, n)
+    for i in 1:n
+        x = pts[i]
+        fs[i] = x == a ? fa : x == b ? fb : f(x)
+        sfs[i] = sign(fs[i])
+    end
 
     u::T = first(pts)  # keep track of bigger interval
     found_bisection_zero = false
 
-    for (i, x) in enumerate(pts[1:end])
+    for (i, x) in enumerate(pts)
         q, r = divrem(i - 1, k)
 
         if i > 1 && iszero(r)
             v::T = x
             if !found_bisection_zero
                 try
-                    p1::T = identify_starting_point(u, v, sfs[(i - k):i])
+                    p1::T = identify_starting_point(u, v, view(sfs, (i - k):i))
                     rt::T = dfree(f, p1)
                     if !isnan(rt) && u < rt <= v
                         push!(zs, rt)
@@ -47,7 +47,7 @@ function _fz!(zs, f, a::T, b, no_pts, k::Int=4) where {T}
                 push!(zs, pts[i + 1])
             elseif sfs[i] * sfs[i + 1] < 0
                 found_bisection_zero = true
-                rt = bisection(f, x, pts[i + 1])
+                rt = _bisection(f, x, pts[i + 1], fs[i], fs[i + 1], zero(T), zero(one(T)))
                 push!(zs, rt)
             end
         end
@@ -58,9 +58,12 @@ end
 
 # the algorithm first scans for zeros using the naive approach, then
 # splits (a,b) by these zeros. This struct holds the subintervals
-struct Interval{T}
+# along with the function values at the endpoints
+struct Interval{T,S}
     a::T
     b::T
+    fa::S
+    fb::S
     depth::Int
 end
 
@@ -74,35 +77,40 @@ end
 
 # After splitting by zeros we have intervals (zm, zn) this is used to shrink
 # to (zm+, zn-) where both are non-zeros, as defined above
+# returns (x, f(x)); x is NaN if no such point is found
 function find_non_zero(f, a::T, barrier, xatol, xrtol, atol, rtol) where {T}
     nan = (0 * a) / (0 * a) # try to get typed NaN
     xtol = max(xatol, abs(a) * xrtol, oneunit(a) * eps(one(T)))
     sgn = barrier > a ? 1 : -1
     ctr = 0
     x = a + 2^ctr * sgn * xtol
-    while !_non_zero(f(x), x, atol, rtol)
+    fx = f(x)
+    while !_non_zero(fx, x, atol, rtol)
         ctr += 1
         x += 2^ctr * sgn * xtol
-        ((sgn > 0 && x > barrier) || (sgn < 0 && x < barrier)) && return nan
-        ctr > 100 && return nan
+        ((sgn > 0 && x > barrier) || (sgn < 0 && x < barrier)) && return (nan, fx)
+        ctr > 100 && return (nan, fx)
+        fx = f(x)
     end
 
-    x
+    x, fx
 end
 
 # split a < z1 < z2 < ... < zn < b into intervals (a+,z1-), (z1+, z2-), ...
 # where possible; push! onto ints
 function make_intervals!(ints, f, a, b, zs, depth, xatol, xrtol, atol, rtol)
-    pts = vcat(a, zs, b)
+    n = length(zs)
+    for j in 0:n
+        u = j == 0 ? a : zs[j]
+        v = j == n ? b : zs[j + 1]
 
-    for (u, v) in zip(pts[1:(end - 1)], pts[2:end])
-        ur = find_non_zero(f, u, v, xatol, xrtol, atol, rtol)
+        ur, fur = find_non_zero(f, u, v, xatol, xrtol, atol, rtol)
         isnan(ur) && continue
 
-        vl = find_non_zero(f, v, u, xatol, xrtol, atol, rtol)
+        vl, fvl = find_non_zero(f, v, u, xatol, xrtol, atol, rtol)
         isnan(vl) && continue
 
-        push!(ints, Interval(ur, vl, depth))
+        push!(ints, eltype(ints)(ur, vl, fur, fvl, depth))
     end
 end
 
@@ -113,16 +121,11 @@ function approx_close(z1, z2, xatol, xrtol)
 end
 
 # is proposed not near xs? (false and we add proposed)
+# xs is sorted
 function not_near(proposed, xs, xatol, xrtol)
     n = length(xs)
     n <= 1 && return true
-    ind = n + 1
-    for (i, rt) in enumerate(xs)
-        if proposed < rt
-            ind = i
-            break
-        end
-    end
+    ind = searchsortedlast(xs, proposed) + 1 # first index with proposed < xs[ind]
     if ind > 1 # xs[ind-1] <= propose < xs[ind]
         rt = xs[ind - 1]
         approx_close(proposed, rt, xatol, xrtol) && return false
@@ -308,7 +311,19 @@ julia> find_zeros(g, -20, 20)
 ```
 
 """
-function find_zeros(f, a, b=nothing; no_pts=12, k=8, naive=false, kwargs...)
+function find_zeros(
+    f,
+    a,
+    b=nothing;
+    no_pts=12,
+    k=8,
+    naive=false,
+    xatol=nothing,
+    xrtol=nothing,
+    atol=nothing,
+    rtol=nothing,
+    kwargs...,
+)
     if b === nothing
         a0, b0 = map(float, _extrema(a))
     else
@@ -319,30 +334,32 @@ function find_zeros(f, a, b=nothing; no_pts=12, k=8, naive=false, kwargs...)
 
     # set tolerances if not specified
     fa0, fb0 = promote(float(f(a0)), float(f(b0)))
-    d        = Dict(kwargs...)
-    T, S     = real(eltype(a0)), real(eltype(fa0))
-    xatol::T = get(d, :xatol, eps(one(T))^(4 / 5) * oneunit(T))
-    xrtol    = get(d, :xrtol, eps(one(T)) * one(T))
-    atol::S  = get(d, :atol, eps(one(float(S))) * oneunit(S))
-    rtol     = get(d, :rtol, eps(one(float(S))) * one(S))
+    T, S = real(eltype(a0)), real(eltype(fa0))
+    R = typeof(fa0)
+    xatol′::T = something(xatol, eps(one(T))^(4 / 5) * oneunit(T))
+    xrtol′ = something(xrtol, eps(one(T)) * one(T))
+    atol′::S = something(atol, eps(one(float(S))) * oneunit(S))
+    rtol′ = something(rtol, eps(one(float(S))) * one(S))
+    xatol, xrtol, atol, rtol = xatol′, xrtol′, atol′, rtol′
 
     zs = T[]  # collect zeros
+    fs, sfs = R[], typeof(sign(fa0))[] # buffers for _fz!
 
     # check endpoints for exact zeros, then narrow
     abs(fa0) * oneunit(T) / oneunit(S) <= 8 * eps(a0) && push!(zs, a0)
     abs(fb0) * oneunit(T) / oneunit(S) <= 8 * eps(b0) && push!(zs, b0)
-    a0 = find_non_zero(f, a0, b0, xatol, xrtol, atol, rtol)
-    b0 = find_non_zero(f, b0, a0, xatol, xrtol, atol, rtol)
+    a0, fa0 = find_non_zero(f, a0, b0, xatol, xrtol, atol, rtol)
+    b0, fb0 = find_non_zero(f, b0, a0, xatol, xrtol, atol, rtol)
 
     (isnan(a0) || isnan(b0)) && throw(DomainError("no non-zero initial points found."))
-    _fz!(zs, f, a0, b0, no_pts, k)  # initial zeros
+    _fz!(zs, fs, sfs, f, a0, b0, fa0, fb0, no_pts, k)  # initial zeros
 
-    ints = Interval{T}[] # collect subintervals
+    ints = Interval{T,R}[] # collect subintervals
     !naive &&
         !isempty(zs) &&
         make_intervals!(ints, f, a0, b0, zs, 1, xatol, xrtol, atol, rtol)
 
-    nzs = T[]
+    nzs, azs = T[], T[]
     cnt = 0
 
     while !naive && !isempty(ints)
@@ -362,36 +379,42 @@ function find_zeros(f, a, b=nothing; no_pts=12, k=8, naive=false, kwargs...)
 
         empty!(nzs)
         if sub_no_pts >= 2
-            _fz!(nzs, f, i.a, i.b, sub_no_pts, k)
+            _fz!(nzs, fs, sfs, f, i.a, i.b, i.fa, i.fb, sub_no_pts, k)
         end
 
         if !isempty(nzs)
-            azs = filter(rt -> not_near(rt, zs, xatol, xrtol), nzs) # trim out nearby roots
+            # trim out nearby roots
+            empty!(azs)
+            for rt in nzs
+                not_near(rt, zs, xatol, xrtol) && push!(azs, rt)
+            end
             length(azs) == 0 && continue
-            append!(zs, azs)
-            sort!(zs)
+            for rt in azs # insert, keeping zs sorted
+                insert!(zs, searchsortedfirst(zs, rt), rt)
+            end
             i.depth > 4 && continue
             make_intervals!(ints, f, i.a, i.b, azs, i.depth + 1, xatol, xrtol, atol, rtol)
         end
     end
 
     length(zs) <= 1 && return zs
-    sort!(zs)
 
     # may identify same zero with nearby values along the way
     # this trims out with a relaxed tolerance on how close
     # nearby roots can be. Default is epsilon^(2/5) ≈ 5e-7
-    inds = Int[1]
+    # zs is sorted; compact in place
+    j = 1
     z1 = first(zs)
     for i in 2:length(zs)
         z2 = zs[i]
         if !approx_close(z1, z2, xatol, xrtol)
-            push!(inds, i)
+            j += 1
+            zs[j] = z2
         end
         z1 = z2
     end
 
-    return zs[inds]
+    return resize!(zs, j)
 end
 
 # solve interface
