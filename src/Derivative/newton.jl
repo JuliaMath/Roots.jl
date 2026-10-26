@@ -4,8 +4,7 @@ function log_step(l::Tracks, M::AbstractDerivativeMethod, state; init=false)
     init && push!(h, 𝑀, 1, (state.xn0, state.fxn0))
     n = haskey(h, 𝑀) ? length(h, 𝑀) : 1
     push!(h, 𝑀, n + 1, (state.xn1, state.fxn1))
-    init && log_iteration(l, 1)
-    !init && log_iteration(l, 1)
+    log_iteration(l, 1) # also counts the setup step when init=true
     nothing
 end
 
