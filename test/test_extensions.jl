@@ -68,6 +68,24 @@ using ForwardDiff
         n = sqrt(a^2 + b^2)^3
         @test ForwardDiff.hessian(F, p) ≈ [b^2 -a*b; -a*b a^2] / n
     end
+
+    # gradient and hessian return plain numbers, not Duals
+    p = [1, 2]
+    @test eltype(ForwardDiff.gradient(F, p)) == Float64
+    @test eltype(ForwardDiff.hessian(F, p)) == Float64
+
+    # derivatives passed as a tuple, or f returning a tuple
+    f = (x, p) -> x^2 - p
+    fp = (x, p) -> 2x
+    fdf = (x, p) -> (x^2 - p, (x^2 - p) / (2x))
+    for Z in (ZeroProblem((f, fp), 1.0), ZeroProblem(fdf, 1.0))
+        F = p -> solve(Z, Roots.Newton(), p)
+        @test ForwardDiff.derivative(F, 2.0) ≈ 1 / (2sqrt(2))
+    end
+    g = (x, p) -> x^2 - p[1] * p[2]
+    gp = (x, p) -> 2x
+    F = p -> solve(ZeroProblem((g, gp), 1.0), Roots.Newton(), p)
+    @test ForwardDiff.gradient(F, [1.0, 2.0]) ≈ [2, 1] / (2sqrt(2))
 end
 
 using Unitful

@@ -303,7 +303,7 @@ function init(
     options::AbstractUnivariateZeroOptions=init_options(M, state),
     l::AbstractTracks=NullTracks(),
 )
-    ZeroProblemIterator(M, Nothing, Callable_Function(M, F), state, options, l)
+    ZeroProblemIterator(M, nothing, Callable_Function(M, F), state, options, l)
 end
 
 # helper for development use only

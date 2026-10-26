@@ -63,9 +63,10 @@ function ChainRulesCore.frule(
     # no `p`; make ZP.F the parameter (issue 408)
     foo = ZP.F
     zprob2 = ZeroProblem(|>, ZP.x₀)
-    nms = fieldnames(typeof(foo))
-    nt = NamedTuple{nms}(getfield(foo, n) for n in nms)
-    dfoo = ChainRulesCore.Tangent{typeof(foo)}(; nt...)
+    if Δq isa ChainRulesCore.AbstractZero
+        return solve(ZP, M; kwargs...), ChainRulesCore.ZeroTangent()
+    end
+    dfoo = Δq.F
 
     return ChainRulesCore.frule(
         config,
@@ -73,7 +74,8 @@ function ChainRulesCore.frule(
         solve,
         zprob2,
         M,
-        foo,
+        foo;
+        kwargs...,
     )
 end
 

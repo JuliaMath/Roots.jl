@@ -26,13 +26,13 @@ struct Sidi{k} <: AbstractSecantMethod end
 Sidi(k::Int) = Sidi{k}()
 initial_fncalls(::Sidi{K}) where {K} = K + 1
 
-struct SidiState{T,S} <: AbstractUnivariateZeroState{T,S}
+struct SidiState{T,S,R} <: AbstractUnivariateZeroState{T,S}
     xn1::T
     xn0::T
     fxn1::S
     fxn0::S
     xs::Vector{T}
-    fs::Vector{T}
+    fs::Vector{R}
 end
 
 function init_state(M::Sidi{k}, F::Callable_Function, x) where {k}

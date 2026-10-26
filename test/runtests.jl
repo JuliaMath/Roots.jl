@@ -33,7 +33,8 @@ include("./test_composable.jl")
 include("./test_trim.jl")
 VERSION >= v"1.6.0" && include("./test_allocations.jl")
 VERSION >= v"1.9.0" && include("./test_extensions.jl")
-VERSION >= v"1.12.0" && include("./test_jet.jl")
+# JET doesn't support prerelease (nightly) Julia versions
+VERSION >= v"1.12.0" && isempty(VERSION.prerelease) && include("./test_jet.jl")
 
 #include("./runbenchmarks.jl")
 #include("./benchmark-bracketing-methods.jl")
