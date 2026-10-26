@@ -26,7 +26,7 @@ function Roots.solve(ZP::ZeroProblem,
 
     xᵅ = solve(ZP, M, p; kwargs...)
 
-    f = ZP.F
+    f(x, p) = first(Roots.Callable_Function(M, ZP.F, p)(x))
     fₓ = derivative(_x -> f(_x, p), xᵅ)
     fₚ = derivative(_p -> f(xᵅ, _p), p)
 
@@ -47,9 +47,9 @@ function Roots.solve(ZP::ZeroProblem,
     p, dp = value.(𝐩), partials.(𝐩)
     xᵅ = solve(ZP, M, p; kwargs...)
 
-    f = ZP.F
+    f(x, p) = first(Roots.Callable_Function(M, ZP.F, p)(x))
     fₓ = derivative(_x -> f(_x, p), xᵅ)
-    fₚ = similar(𝐩)  # <-- need this, not output of gradient(p->f(x,p), p)
+    fₚ = similar(p)  # <-- need this, not output of gradient(p->f(x,p), p)
     gradient!(fₚ, _p -> f(xᵅ, _p), p)
 
     # x_and_dx

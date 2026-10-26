@@ -183,3 +183,9 @@ end
         end
     end
 end
+
+@testset "f and x of different types" begin
+    # Δs in ThukralB hold x-values
+    f, fp, fpp = x -> Float32(sin(x)), x -> Float32(cos(x)), x -> -Float32(sin(x))
+    @test find_zero((f, fp, fpp), 3.0, Roots.Thukral2B()) ≈ π atol = 1e-6
+end

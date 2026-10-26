@@ -50,8 +50,8 @@ end
 function init_state(M::ThukralB{N}, F::Callable_Function, x) where {N}
     x₁ = float(first(x))
     fx₁, Δs = F(x₁)
-    S = eltype(fx₁)
-    state = init_state(M, F, nan(x₁), x₁, nan(fx₁), fx₁; Δs=ntuple(i -> S(Δs[i]), Val(N)))
+    T = typeof(x₁)
+    state = init_state(M, F, nan(x₁), x₁, nan(fx₁), fx₁; Δs=ntuple(i -> T(Δs[i]), Val(N)))
 end
 
 function init_state(
@@ -61,7 +61,7 @@ function init_state(
     x₁::T,
     fx₀::S,
     fx₁::S;
-    Δs=NTuple{N,S}(),
+    Δs=ntuple(_ -> nan(x₁), Val(N)),
 ) where {T,S,N}
     x1, x0 = promote(x₁, x₀)
     fx1, fx0 = promote(fx₁, fx₀)

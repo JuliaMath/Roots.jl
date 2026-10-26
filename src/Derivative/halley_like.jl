@@ -226,7 +226,7 @@ struct BracketedChebyshev <: AbstractAlefeldPotraShi end
 fn_argout(::BracketedChebyshev) = 3
 fncalls_per_step(::BracketedChebyshev) = 3
 function calculateΔ(::BracketedChebyshev, F::Callable_Function, c, ps)
-    a, b = ps.a, ps.a
+    a, b = ps.a, ps.b
     fc, (Δ, Δ₂) = F(c)
     d = calculateΔ(QuadraticInverse(), Δ, Δ₂)
     !(a <= c - d <= b) && (d = Δ)        # Newton

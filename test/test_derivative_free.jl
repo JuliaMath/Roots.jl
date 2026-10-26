@@ -375,6 +375,9 @@ if !isinteractive()
             end
         end
 
+        # f(x) of a different type than x
+        @test find_zero(x -> Float32(fn(x)), x0, Roots.Sidi(2)) ≈ alpha atol = 1e-5
+
         for T in Ts
             xstar = Roots.find_zero((fn, D(fn, sqrt(eps(T)))), T(x0), Roots.Newton())
             @test xstar ≈ T(alpha) atol = max(sqrt(eps(T)), eps())

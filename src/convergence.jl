@@ -327,13 +327,7 @@ function decide_convergence(
         fexact && is_exact_zero_f(M, state, options) && return xn1
     else
         if val == :x_converged
-            # The :xexact case isn't always spelled out in the type, so
-            # we replicate a bit here
             δ, ϵ = options.abstol, options.reltol
-            if (iszero(δ) && iszero(ϵ)) && (options.exact != :xexact)
-                error("Hah")
-            end
-
             iszero(δ) && iszero(ϵ) && return xn1
             is_approx_zero_f(M, state, options, true) && return xn1
         elseif val == :not_converged

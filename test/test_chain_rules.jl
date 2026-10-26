@@ -80,15 +80,14 @@ F₃(p) = find_zero((x, p) -> cos(x) - p * x, (0, pi / 2), Bisection(), p)
     # ForwardDiff extension makes this fail.
     VERSION >= v"1.9.0" &&
         @test_broken first(Zygote.hessian(F₃, x)) ≈ first(Zygote.hessian(G₃, x))
-    # test_frule, test_rrule aren't successful
-    #=
-    # DimensionMismatch: arrays could not be broadcast to a common size; got a dimension with lengths 3 and 2
     test_frule(
         solve,
-        ZeroProblem(𝐺(2), (0.0, pi/2)),
+        ZeroProblem(𝐺(2.0), (0.0, pi / 2)),
         Roots.Bisection();
         check_inferred=false,
     )
+    # test_rrule isn't successful
+    #=
     # MethodError: no method matching keys(::NoTangent)
     test_rrule(
         solve,
