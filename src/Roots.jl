@@ -14,10 +14,6 @@ $(replace(read(joinpath(@__DIR__, "..", "README.md"), String), "```julia" => "``
 """
 module Roots
 
-if isdefined(Base, :Experimental) && isdefined(Base.Experimental, Symbol("@optlevel"))
-    @eval Base.Experimental.@optlevel 1
-end
-
 using Printf
 import CommonSolve
 import CommonSolve: solve, solve!, init
