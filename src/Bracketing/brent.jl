@@ -29,9 +29,7 @@ function init_state(::Brent, F, x₀, x₁, fx₀, fx₁)
     end
 
     # check if fu*fv ≥ 0
-    (iszero(fu) || iszero(fv)) &&
-        return BrentState(promote(u, v, v, v)..., promote(fu, fv, fv)..., true)
-    assert_bracket(fu, fv)
+    (iszero(fu) || iszero(fv)) || assert_bracket(fu, fv)
 
     BrentState(promote(u, v, v, v)..., promote(fu, fv, fv)..., true)
 end

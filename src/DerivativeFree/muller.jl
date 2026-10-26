@@ -26,13 +26,7 @@ struct MullerState{T,S} <: AbstractUnivariateZeroState{T,S}
     fxn0::S
 end
 
-function _muller_bootstrap(f::Callable_Function, x::Number)
-    a, b = x₀x₁(float(x))
-    fa, fb = f.((a, b))
-    c = b - fb * (b-a)/(fb-fa)
-    fc = f(c)
-    (a, b, c, fa, fb, fc)
-end
+_muller_bootstrap(f::Callable_Function, x::Number) = _muller_bootstrap(f, x₀x₁(float(x))...)
 function _muller_bootstrap(f::Callable_Function, x1::Number, x2::Number)
     a, b = x₀x₁((float(x1), float(x2)))
     fa, fb = f.((a, b))
@@ -71,14 +65,13 @@ function update_state(
     C = q1 * fc
 
     Δ = B^2 - 4A * C
-    if typeof(Δ) <: Real &&
-       Δ < 0 &&
-       throw(
-           DomainError(
-               Δ,
-               "Discriminant is negative and the function most likely has complex roots. You might use the `Roots.Muller()` method with complex input.",
-           ),
-       )
+    if typeof(Δ) <: Real && Δ < 0
+        throw(
+            DomainError(
+                Δ,
+                "Discriminant is negative and the function most likely has complex roots. You might use the `Roots.Muller()` method with complex input.",
+            ),
+        )
     end
 
     Δ = √Δ
