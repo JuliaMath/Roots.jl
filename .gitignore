@@ -9,3 +9,19 @@ TODO.md
 default.profraw
 .idea/
 *.iml
+# IDE / editor files
+.vscode/
+*.code-workspace
+.history/
+.project
+.settings/
+*.sublime-project
+*.sublime-workspace
+.vim/
+*.swp
+*.swo
+*~
+\#*\#
+.\#*
+.dir-locals.el
+.DS_Store
