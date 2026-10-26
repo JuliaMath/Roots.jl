@@ -45,10 +45,16 @@ function bisection(f, a::Number, b::Number; xatol=nothing, xrtol=nothing)
 
     atol = xatol === nothing ? zero(T) : abs(xatol)
     rtol = xrtol === nothing ? zero(one(T)) : abs(xrtol)
-    CT = iszero(atol) && iszero(rtol) ? Val(:exact) : Val(:inexact)
 
     x1, x2 = float(x1), float(x2)
     y1, y2 = f(x1), f(x2)
+
+    _bisection(f, x1, x2, y1, y2, atol, rtol)
+end
+
+# bisection when f(x1), f(x2) are already known
+function _bisection(f, x1, x2, y1, y2, atol, rtol)
+    CT = iszero(atol) && iszero(rtol) ? Val(:exact) : Val(:inexact)
 
     _unitless(y1 * y2) >= 0 && error("the interval provided does not bracket a root")
 

@@ -170,7 +170,7 @@ end
 function identify_starting_point(a, b, sfxs)
     N = length(sfxs) - 1
     p0 = a + (b - a) / 2
-    p1 = p0 + (b - a) / (2N) * sfxs[1] * sum(s for s in sfxs[2:(end - 1)])
+    p1 = p0 + (b - a) / (2N) * sfxs[1] * sum(view(sfxs, 2:N))
     p1
 end
 
