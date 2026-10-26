@@ -164,3 +164,22 @@ end
     @test solve(ZeroProblem(fdf1, (1, 2)), Roots.LithBoonkkampIJzermanBracket()) ≈ α
     @test solve(ZeroProblem(fdf1, (1, 2)), Roots.LithBoonkkampIJzermanBracket(), 1) ≈ α
 end
+
+@testset "Lith Boonkkamp IJzerman local order" begin
+    # one step from points within h of the root should have error O(h^((1+D)S));
+    # halving h should reduce the error by 2^((1+D)S)
+    setprecision(BigFloat, 2048) do
+        α = log(big(2))
+        function err(S, D, h)
+            xs = ntuple(i -> α + h * i, S)
+            fs = map(x -> exp(x) - 2, xs)
+            ds = ntuple(_ -> map(exp, xs), D)
+            abs(Roots.lmm(Roots.LithBoonkkampIJzerman{S,D}(), xs, fs, ds...) - α)
+        end
+        h = big(1) / 10^6
+        for (S, D) in ((1, 1), (1, 2), (1, 3), (1, 4), (1, 5), (1, 6),
+                       (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 6))
+            @test log2(err(S, D, h) / err(S, D, h / 2)) ≈ (1 + D) * S atol = 0.1
+        end
+    end
+end
