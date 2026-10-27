@@ -49,16 +49,13 @@ function update_state(
     l=NullTracks(),
 ) where {k,T,S}
     xs, fs = o.xs, o.fs
-    fxn1 = o.fxn1
-    _update_sidi!(F, xs, fs)
+    _update_sidi!(F, xs, fs) # updates xs, fs in place
 
     incfn(l)
     @reset o.xn0 = xs[k]
     @reset o.xn1 = xs[k + 1]
     @reset o.fxn0 = o.fxn1
     @reset o.fxn1 = fs[1]
-    @reset o.xs = xs
-    @reset o.fs = fs
 
     return (o, false)
 end
@@ -72,8 +69,7 @@ end
 # build up diagonal by diagonal
 # where pk' uses xs, fs to be computed
 # no good way to pre-compute fs to speed up, so here
-# we expect x to have 2 or more elements
-# but we compute each f(x)
+# x = (x₀, x₁); the remaining k-1 points are computed
 # This allocates, as it uses a vector to store xs, fs
 function _init_sidi(f, x, k)
     x₀ = first(x)
@@ -81,11 +77,6 @@ function _init_sidi(f, x, k)
 
     xs = Vector{typeof(x₀)}(undef, k+1)
     fs = Vector{typeof(fx₀)}(undef, k+1)
-
-    n = length(x)
-    for (i, xᵢ) in enumerate(x)
-        xs[i] = xᵢ
-    end
 
     xs[1] = x[1]
     xs[2] = x[2]
@@ -96,13 +87,9 @@ function _init_sidi(f, x, k)
 
     # build up diagonal by diagonal
     for j in 3:(k + 1)
-        if j ≤ n # xⱼ was specified
-            xⱼ = xs[j]
-        else
-            xⱼ₋₁ = xs[j - 1]
-            pk′ = evaluate_pk′(view(xs, 1:(j - 1)), view(fs, 1:(j - 1)))
-            xⱼ = xs[j] = xⱼ₋₁ - fs[1] / pk′
-        end
+        xⱼ₋₁ = xs[j - 1]
+        pk′ = evaluate_pk′(view(xs, 1:(j - 1)), view(fs, 1:(j - 1)))
+        xⱼ = xs[j] = xⱼ₋₁ - fs[1] / pk′
         Δ = f(xⱼ)
         j == k && (fx₀ = Δ) # initial value for x₁
         for i in 2:j

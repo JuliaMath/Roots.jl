@@ -1,10 +1,5 @@
 ##################################################
 
-# type to throw on successful convergence
-mutable struct StateConverged
-    x0::Number
-end
-
 # type to throw on failure
 mutable struct ConvergenceFailed
     reason::AbstractString
@@ -32,7 +27,6 @@ isissue(x) = iszero(x) || isnan(x) || isinf(x)
 
 # of (a,fa), (b,fb) choose pair where |f| is smallest
 @inline choose_smallest(a, b, fa, fb) = abs(fa) < abs(fb) ? (a, fa) : (b, fb)
-@inline sort_smallest(a, b, fa, fb) = abs(fa) < abs(fb) ? (a, b, fa, fb) : (b, a, fb, fa)
 
 # from an iterable extract a bracketing interval and promote to floating point values
 # used when an interval is desired
@@ -72,25 +66,6 @@ end
 
 # a bit better than a - fa/f_ab
 @inline secant_step(a, b, fa, fb) = a - fa * (b - a) / (fb - fa)
-
-function guarded_secant_step(alpha, beta, falpha, fbeta)
-    fp = (fbeta - falpha) / (beta - alpha)
-    Δ = fbeta / fp
-    ## odd, we get allocations if we define Delta, then beta - Delta
-    ## Δ = beta - fbeta * (beta - alpha) / (fbeta - falpha)
-
-    if isissue(Δ)
-        Δ = oneunit(alpha) / 1000
-    elseif abs(Δ) >= 100 * abs(alpha - beta) # guard runaway
-        Δ = sign(Δ) * 100 * min(oneunit(alpha), abs(alpha - beta))
-    end
-
-    if isissue(Δ)
-        return (alpha + (beta - alpha) * (0.5), true) # midpoint
-    else
-        return (beta - Δ, false)
-    end
-end
 
 #=
 """
@@ -160,13 +135,6 @@ end
 ## signum based iteration allows one to guarantee a valid starting point
 ## if N is big enough. (THough this depends on algorithm, a, b and function)
 ## N here would need to be tuned. But, as is, this may prove useful anyways.
-function identify_starting_point(f, a, b, N)
-    pts = range(a, stop=b, length=N + 1)
-    fxs = f.(pts)
-    sfxs = sign.(f.(pts))
-    identify_starting_point(a, b, sfxs)
-end
-
 function identify_starting_point(a, b, sfxs)
     N = length(sfxs) - 1
     p0 = a + (b - a) / 2
@@ -174,7 +142,6 @@ function identify_starting_point(a, b, sfxs)
     p1
 end
 
-## not used
 function _unicode_subscript(io, j)
     a = ("⁻", "", "", "₀", "₁", "₂", "₃", "₄", "₅", "₆", "₇", "₈", "₉")
     for i in string(j)

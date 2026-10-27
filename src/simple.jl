@@ -1,6 +1,6 @@
 # some simpler (and faster) implementations for root finding
 #
-# Not exported
+# Not exported, apart from `secant_method`
 #
 # These avoid the setup costs of the `find_zero` method, so should be faster
 # though they will take similar number of function calls.
