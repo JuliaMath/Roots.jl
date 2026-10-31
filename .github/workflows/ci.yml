@@ -63,7 +63,8 @@ jobs:
       - uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # required
-          fail_ci_if_error: true
+          # Dependabot PRs can't read secrets, so tokenless uploads to the protected branch fail
+          fail_ci_if_error: ${{ github.event.pull_request.user.login != 'dependabot[bot]' }}
           file: lcov.info
   trim:
     name: Trim check
