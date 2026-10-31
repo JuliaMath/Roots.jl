@@ -30,6 +30,17 @@ jobs:
           - windows-latest
         arch:
           - x64
+        exclude:
+          # macos-latest runners are Apple Silicon
+          - os: macos-latest
+            arch: x64
+        include:
+          - version: 'lts'
+            os: macos-latest
+            arch: aarch64
+          - version: '1'
+            os: macos-latest
+            arch: aarch64
     steps:
       - uses: actions/checkout@v6
       - uses: julia-actions/setup-julia@v2
@@ -52,7 +63,8 @@ jobs:
       - uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # required
-          fail_ci_if_error: true
+          # Dependabot PRs can't read secrets, so tokenless uploads to the protected branch fail
+          fail_ci_if_error: ${{ github.event.pull_request.user.login != 'dependabot[bot]' }}
           file: lcov.info
   trim:
     name: Trim check
