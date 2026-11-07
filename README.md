@@ -192,7 +192,11 @@ true
 ```
 
 Unlike `find_zero`, which errors on non-convergence, `solve` returns
-`NaN` on non-convergence.
+`NaN` on non-convergence. This applies to a correctly specified problem;
+invalid input can still throw an error. In particular, a bracketing method
+requires a valid bracketing interval. Two finite, nonzero endpoint function
+values with the same sign cause an `ArgumentError`, rather than a `NaN`
+result.
 
 This next example has a zero at `0.0`, but
 for most initial values will escape towards `±∞`, sometimes causing a
