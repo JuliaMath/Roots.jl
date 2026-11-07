@@ -338,8 +338,10 @@ The latter calls the following, which can be useful independently:
   the steps or not.
 * `solve!` to iterate to convergence.
 
-Returns `NaN`, not an error like `find_zero`, when the problem can not
-be solved. Tested for zero allocations.
+Returns `NaN`, not an error like `find_zero`, when the iteration fails to
+converge. Invalid input, such as a pair of endpoints that does not bracket
+a zero for a bracketing method, can still throw an error. Tested for zero
+allocations.
 
 ## Examples:
 

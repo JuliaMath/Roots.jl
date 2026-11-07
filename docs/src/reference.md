@@ -39,6 +39,23 @@ find_zeros
 
 The problem-algorithm-solve interface is a pattern popularized in `Julia` by the `DifferentialEquations.jl` suite of packages. This can be used as an alternative to `find_zero`. Unlike `find_zero`, `solve` will return `NaN` on non-convergence.
 
+This distinguishes an algorithm that fails to converge from an incorrectly
+specified problem. Invalid input can still throw an error. For a bracketing
+method, two finite, nonzero endpoint function values with the same sign do
+not define a valid bracket and cause an `ArgumentError`:
+
+```jldoctest reference
+julia> solve(ZeroProblem(x -> x^2 - 2, (1.0, 2.0)), Bisection()) ≈ sqrt(2)
+true
+
+julia> try
+           solve(ZeroProblem(x -> x^2 + 1, (-1.0, 1.0)), Bisection())
+       catch err
+           err isa ArgumentError
+       end
+true
+```
+
 ```@docs
 Roots.solve!
 Roots.solve
