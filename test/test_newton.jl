@@ -63,6 +63,25 @@ import Roots.newton,
     @test find_zero(f, 1.0, Roots.Newton(), Roots.ITP()) ≈ log(2)
     @test all(!iszero, diff(xs))
 
+    # no extra evaluations compared to Newton alone (#557) when
+    # - short Newton steps near the root would be lengthened past it (exp)
+    # - the last Newton step crosses the root within the tolerance of Newton (x^2)
+    for (g, x0, α) in (
+        (x -> (exp(x) - 2, (exp(x) - 2) / exp(x)), 1.0, log(2)),
+        (x -> (x^2 - 2, (x^2 - 2) / 2x), 3.0, sqrt(2)),
+    )
+        xs_hybrid, xs_newton = Float64[], Float64[]
+        @test find_zero(x -> (push!(xs_hybrid, x); g(x)), x0, Roots.Newton(), Roots.ITP()) ≈ α
+        @test find_zero(x -> (push!(xs_newton, x); g(x)), x0, Roots.Newton()) ≈ α
+        @test length(xs_hybrid) == length(xs_newton)
+    end
+
+    # a step that rounds to zero away from a root does not stop the hybrid method,
+    # e.g., after a wild initial guess (cf. Kahan, HP Journal, Dec. 1979, Fig. 7)
+    M, N = Secant(), Roots.AlefeldPotraShi()
+    @test find_zero(x -> x^3 - 2, (1e10, 2.0), M, N) ≈ cbrt(2)
+    @test find_zero(x -> exp(x) - 2, (700.0, 5.0), M, N) ≈ log(2)
+
     # quadratic vertex step of the hybrid method with multiple return values
     @test isnan(
         find_zero(

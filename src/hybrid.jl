@@ -22,7 +22,8 @@ end
 # [The SOLVE button from the
 # HP-34C](https://hparchive.com/Journals/HPJ-1979-12.pdf).
 # * use bracketing method if one is identified
-# * limit steps so as not too far or too near the previous one
+# * limit steps to at most 100 times the previous one (nearly horizontal secants)
+# * if a step rounds to zero away from a root, take a small step instead of stopping
 # * if not decreasing, use a quad step upto 4 times to bounce out of trap, if possible
 # First uses M, then N if bracket is identified
 function solve!(𝐙::ZeroProblemIterator{𝐌,𝐍};) where {𝐌,𝐍<:AbstractBracketingMethod}
@@ -49,7 +50,7 @@ function solve!(𝐙::ZeroProblemIterator{𝐌,𝐍};) where {𝐌,𝐍<:Abstrac
         state0, stopped = update_state(M, F, state0, options) # state0 is proposed step
 
         ## did we find a zero or a bracketing interval?
-        if iszero(state0.fxn1)
+        if iszero(state0.fxn1) || is_approx_zero_f(M, state0, options)
             state = state0
             break
         elseif sign(state0.fxn0) * sign(state0.fxn1) < 0
@@ -69,18 +70,19 @@ function solve!(𝐙::ZeroProblemIterator{𝐌,𝐍};) where {𝐌,𝐍<:Abstrac
             return α
         end
 
-        ## did we move too far?
+        ## Kahan's two amendments to the step
         adj = false
         r, a, b = state0.xn1, state.xn0, state.xn1
         Δr = abs(r - b)
         Δx = abs(b - a)
-        ts, TB = one(r) / 1000, 100 * one(r) # too small, too big
-        if Δr >= TB * Δx
+        if Δr >= 100 * Δx
+            # too big: limit nearly horizontal secants (Kahan: |γ - β| ≤ 100|β - α|)
             adj = true
-            r = b + sign(r - b) * TB * Δx  ## too big
-        elseif Δr <= ts * Δx
+            r = b + sign(r - b) * 100 * Δx
+        elseif iszero(Δr) && !iszero(Δx) && !is_approx_zero_f(M, state, options, true)
+            # step rounded to zero away from a root: persevere (Kahan, Fig. 7)
             adj = true
-            r = b + sign(r - b) * ts * Δx
+            r = b + sign(b - a) * Δx / 1000
         end
 
         if adj
@@ -90,7 +92,7 @@ function solve!(𝐙::ZeroProblemIterator{𝐌,𝐍};) where {𝐌,𝐍<:Abstrac
         end
 
         # a sign change after shortening?
-        if sign(state.fxn1) * sign(state0.fxn1) < 0
+        if sign(state.fxn1) * sign(state0.fxn1) < 0 && !is_approx_zero_f(M, state0, options)
             log_step(l, M, state)
             a, b = state.xn1, state0.xn1
             fa, fb = state.fxn1, state0.fxn1
