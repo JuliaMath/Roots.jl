@@ -221,7 +221,7 @@ function show_trace(io::IO, M, N, tracks)
     println(io, "")
     println(io, "Trace:")
     show_tracks(io, tracks, M)
-    !isnothing(N) && show_tracks(io, tracks, N)
+    !isnothing(N) && haskey(tracks.h, 𝑁) && show_tracks(io, tracks, N)
 end
 
 # XXX of @printf here triggers a possible error flag with JET.
