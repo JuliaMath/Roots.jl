@@ -63,6 +63,22 @@ import Roots.newton,
     @test find_zero(f, 1.0, Roots.Newton(), Roots.ITP()) ≈ log(2)
     @test all(!iszero, diff(xs))
 
+    # short Newton steps near a zero are not lengthened past it (#557)
+    for N in (Roots.ITP(), Roots.Bisection())
+        n = Ref(0)
+        g = x -> (n[] += 1; exp(x) - 2)
+        @test find_zero((g, exp), 1.0, Roots.Newton(), N) ≈ log(2)
+        m = Ref(0)
+        h = x -> (m[] += 1; exp(x) - 2)
+        find_zero((h, exp), 1.0, Roots.Newton())
+        @test n[] <= m[]
+    end
+
+    # trace display when the bracketing method is never used
+    tracks = Roots.Tracks()
+    find_zero((x -> exp(x) - 2, exp), 1.0, Roots.Newton(), Roots.ITP(); tracks)
+    @test occursin("Converged", sprint(Base.show, MIME("text/plain"), tracks))
+
     # quadratic vertex step of the hybrid method with multiple return values
     @test isnan(
         find_zero(

@@ -22,7 +22,8 @@ end
 # [The SOLVE button from the
 # HP-34C](https://hparchive.com/Journals/HPJ-1979-12.pdf).
 # * use bracketing method if one is identified
-# * limit steps so as not too far or too near the previous one
+# * limit steps so as not too far or too near the previous one; a very short
+#   step is kept if it at least halves |f| (superlinear convergence near a zero)
 # * if not decreasing, use a quad step upto 4 times to bounce out of trap, if possible
 # First uses M, then N if bracket is identified
 function solve!(𝐙::ZeroProblemIterator{𝐌,𝐍};) where {𝐌,𝐍<:AbstractBracketingMethod}
@@ -78,7 +79,10 @@ function solve!(𝐙::ZeroProblemIterator{𝐌,𝐍};) where {𝐌,𝐍<:Abstrac
         if Δr >= TB * Δx
             adj = true
             r = b + sign(r - b) * TB * Δx  ## too big
-        elseif Δr <= ts * Δx
+        elseif Δr <= ts * Δx && !(2 * abs(state0.fxn1) <= abs(state.fxn1))
+            # too small, unless |f| was at least halved; near a zero, superlinear
+            # methods (e.g. Newton) take steps much shorter than the previous
+            # one, and lengthening them overshoots the zero (#557)
             adj = true
             r = b + sign(r - b) * ts * Δx
         end
