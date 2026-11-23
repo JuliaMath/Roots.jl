@@ -50,10 +50,14 @@ function solve!(𝐙::ZeroProblemIterator{𝐌,𝐍};) where {𝐌,𝐍<:Abstrac
         state0, stopped = update_state(M, F, state0, options) # state0 is proposed step
 
         ## did we find a zero or a bracketing interval?
-        if iszero(state0.fxn1) || is_approx_zero_f(M, state0, options)
+        crossed = sign(state0.fxn0) * sign(state0.fxn1) < 0
+        if iszero(state0.fxn1) || (crossed && is_approx_zero_f(M, state0, options))
+            # an exact zero, or crossed the zero within the tolerance of M; a
+            # non-crossing step is only checked after limiting its size, as a
+            # far-off step may pass the relative tolerance with |f| not small
             state = state0
             break
-        elseif sign(state0.fxn0) * sign(state0.fxn1) < 0
+        elseif crossed
             log_step(l, M, state0)
             !isa(l, NullTracks) && log_message(
                 l,

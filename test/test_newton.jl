@@ -82,6 +82,17 @@ import Roots.newton,
     @test find_zero(x -> x^3 - 2, (1e10, 2.0), M, N) ≈ cbrt(2)
     @test find_zero(x -> exp(x) - 2, (700.0, 5.0), M, N) ≈ log(2)
 
+    # a far-off step without a sign change is not accepted as a zero by the
+    # relative tolerance |f(x)| ≤ |x|⋅rtol before its size is limited
+    f, fp = x -> 1 + atan(1e6x)^2, x -> 2atan(1e6x) * 1e6 / (1 + 1e12x^2) # no zero
+    @test isnan(find_zero((f, fp), 1e-5, Roots.Newton(), Roots.ITP()))
+    @test_throws Roots.ConvergenceFailed find_zero(f, 1e-5, Roots.Order0())
+
+    # trace display when the bracketing method is never used
+    tracks = Roots.Tracks()
+    find_zero((x -> exp(x) - 2, exp), 1.0, Roots.Newton(), Roots.ITP(); tracks)
+    @test occursin("Converged", sprint(Base.show, MIME("text/plain"), tracks))
+
     # quadratic vertex step of the hybrid method with multiple return values
     @test isnan(
         find_zero(
